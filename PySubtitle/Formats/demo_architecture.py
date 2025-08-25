@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from datetime import timedelta
 from PySubtitle.SubtitleLine import SubtitleLine
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from typing import Iterator, TextIO
@@ -115,7 +115,7 @@ def demo_format_agnostic_architecture():
     
     # 5. Show backward compatibility
     print("5. Backward Compatibility:")
-    sf = SubtitleFile()
+    sf = Subtitles()
     sf.LoadSubtitlesFromString(sample_srt)
     if sf.originals:
         print(f"   Loaded {len(sf.originals)} subtitles into SubtitleFile")

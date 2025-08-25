@@ -4,7 +4,7 @@ from datetime import datetime
 from typing import Any
 
 from PySubtitle.SettingsType import SettingsType
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 
 separator = "".center(60, "-")
 wide_separator = "".center(120, "-")
@@ -130,7 +130,7 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
         logger.info(separator)
 
         try:
-            subtitles = SubtitleFile(filepath)
+            subtitles = Subtitles(filepath)
             subtitles.LoadSubtitles()
 
             for options in test_options:

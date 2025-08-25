@@ -11,7 +11,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 from GUI.Commands.StartTranslationCommand import StartTranslationCommand
 
 from PySubtitle.SubtitleBatch import SubtitleBatch
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
 test_cases = [
@@ -109,7 +109,7 @@ class StartTranslationCommandTests(SubtitleTestCase):
                 self.fail("Failed to create test datamodel")
                 return
 
-            subtitles : SubtitleFile = datamodel.project.subtitles
+            subtitles : Subtitles = datamodel.project.subtitles
 
             commands : list = case.get('commands') or []
 
@@ -167,14 +167,14 @@ class StartTranslationCommandTests(SubtitleTestCase):
 
         return commands
 
-    def _validate_translated_batches(self, subtitles : SubtitleFile, command_data : dict):
+    def _validate_translated_batches(self, subtitles : Subtitles, command_data : dict):
         expected_translated_batches = command_data.get('expected_translated_batches', [])
         for scene_number, batch_number in expected_translated_batches:
             batch : SubtitleBatch = subtitles.GetBatch(scene_number, batch_number)
             self.assertIsNotNone(batch)
             self.assertTrue(batch.any_translated)
 
-    def _validate_untranslated_batches(self, subtitles : SubtitleFile, command_data : dict):
+    def _validate_untranslated_batches(self, subtitles : Subtitles, command_data : dict):
         expected_untranslated_batches = command_data.get('expected_untranslated_batches', [])
         for scene_number, batch_number in expected_untranslated_batches:
             batch : SubtitleBatch = subtitles.GetBatch(scene_number, batch_number)

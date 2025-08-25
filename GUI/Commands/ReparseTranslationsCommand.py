@@ -4,7 +4,7 @@ from GUI.ViewModel.ViewModelUpdate import ModelUpdate
 from GUI.ViewModel.ViewModelUpdateSection import BatchKey, LineKey, UpdateValue
 from PySubtitle.Options import Options
 from PySubtitle.SubtitleBatch import SubtitleBatch
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleTranslator import SubtitleTranslator
 from PySubtitle.Helpers.Localization import _
@@ -33,7 +33,7 @@ class ReparseTranslationsCommand(Command):
             raise CommandError(_("No project data"), command=self)
 
         project : SubtitleProject = self.datamodel.project
-        subtitles : SubtitleFile = project.subtitles
+        subtitles : Subtitles = project.subtitles
         options : Options = self.datamodel.project_options
         translation_provider : TranslationProvider|None = self.datamodel.translation_provider
 
@@ -93,7 +93,7 @@ class ReparseTranslationsCommand(Command):
             raise CommandError(_("No project data"), command=self)
 
         project : SubtitleProject = self.datamodel.project
-        subtitles : SubtitleFile = project.subtitles
+        subtitles : Subtitles = project.subtitles
         options = self.datamodel.project_options
         validator = SubtitleValidator(options)
 

@@ -8,7 +8,7 @@ from GUI.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtitle.Helpers.Time import GetTimeDelta
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleLine import SubtitleLine
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 
 from PySubtitle.SubtitleValidator import SubtitleValidator
 from PySubtitle.Helpers.Localization import _
@@ -26,7 +26,7 @@ class EditLineCommand(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
-        subtitles : SubtitleFile = self.datamodel.project.subtitles
+        subtitles : Subtitles = self.datamodel.project.subtitles
         if not subtitles:
             raise CommandError(_("Unable to edit batch because datamodel is invalid"), command=self)
 
@@ -94,7 +94,7 @@ class EditLineCommand(Command):
         if not self.undo_data:
             raise CommandError(_("No undo data available"), command=self)
 
-        subtitles : SubtitleFile = self.datamodel.project.subtitles
+        subtitles : Subtitles = self.datamodel.project.subtitles
 
         with subtitles.lock:
             batch : SubtitleBatch|None = subtitles.GetBatchContainingLine(self.line_number)

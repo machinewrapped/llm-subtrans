@@ -3,7 +3,7 @@ from PySubtitle.Helpers.TestCases import AddTranslations, PrepareSubtitles
 from PySubtitle.Options import Options
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleProject import SubtitleProject
 
 
@@ -12,7 +12,7 @@ def CreateTestDataModel(test_data : dict, options : Options|None = None) -> Proj
     Creates a ProjectDataModel from test data.
     """
     options = options or Options()
-    file : SubtitleFile = PrepareSubtitles(test_data, 'original')
+    file : Subtitles = PrepareSubtitles(test_data, 'original')
     project = SubtitleProject(options)
     project.subtitles = file
     project.UpdateProjectSettings(options)
@@ -30,7 +30,7 @@ def CreateTestDataModelBatched(test_data : dict, options : Options|None = None, 
 
     options = options or datamodel.project_options
 
-    subtitles : SubtitleFile = datamodel.project.subtitles
+    subtitles : Subtitles = datamodel.project.subtitles
     batcher = SubtitleBatcher(options.GetSettings())
     subtitles.AutoBatch(batcher)
 

@@ -6,7 +6,7 @@ from GUI.Commands.MergeLinesCommand import MergeLinesCommand
 from GUI.UnitTests.DataModelHelpers import CreateTestDataModelBatched
 from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
 class MergeLinesCommandTest(SubtitleTestCase):
@@ -39,7 +39,7 @@ class MergeLinesCommandTest(SubtitleTestCase):
         assert datamodel.project is not None  # Type narrowing for PyLance
         self.assertIsNotNone(datamodel.project.subtitles)
         
-        subtitles: SubtitleFile = datamodel.project.subtitles
+        subtitles: Subtitles = datamodel.project.subtitles
         undo_stack: list[MergeLinesCommand] = []
 
         for test_case in self.merge_lines_test_cases:

@@ -10,7 +10,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 from GUI.UnitTests.DataModelHelpers import CreateTestDataModelBatched
 from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
 class EditCommandsTests(SubtitleTestCase):
@@ -62,7 +62,7 @@ class EditCommandsTests(SubtitleTestCase):
             assert datamodel.project is not None  # Type narrowing for PyLance
             self.assertIsNotNone(datamodel.project.subtitles)
             
-            subtitles: SubtitleFile = datamodel.project.subtitles
+            subtitles: Subtitles = datamodel.project.subtitles
             undo_stack: list[Command] = []
 
             for command_data in test_case['tests']:
@@ -98,7 +98,7 @@ class EditCommandsTests(SubtitleTestCase):
             reference_subtitles = reference_datamodel.project.subtitles
             self._assert_same_as_reference(subtitles, reference_subtitles)
 
-    def EditSceneCommandTest(self, subtitles: SubtitleFile, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> Command:
+    def EditSceneCommandTest(self, subtitles: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> Command:
         scene_number: int = test_data['scene_number']
 
         scene = subtitles.GetScene(scene_number)
@@ -131,7 +131,7 @@ class EditCommandsTests(SubtitleTestCase):
 
         return edit_scene_command
 
-    def EditBatchCommandTest(self, subtitles: SubtitleFile, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> Command:
+    def EditBatchCommandTest(self, subtitles: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> Command:
         scene_number, batch_number = test_data['batch_number']
 
         scene = subtitles.GetScene(scene_number)
@@ -168,7 +168,7 @@ class EditCommandsTests(SubtitleTestCase):
 
         return edit_batch_command
 
-    def EditLineCommandTest(self, subtitles: SubtitleFile, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> Command:
+    def EditLineCommandTest(self, subtitles: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> Command:
         line_number: int = test_data['line_number']
 
         batch = subtitles.GetBatchContainingLine(line_number)

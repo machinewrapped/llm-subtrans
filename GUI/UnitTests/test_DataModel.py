@@ -3,7 +3,7 @@ from GUI.UnitTests.DataModelHelpers import CreateTestDataModel
 from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
 from PySubtitle.Options import Options, SettingsType
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleProject import SubtitleProject
 from GUI.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
@@ -25,7 +25,7 @@ class DataModelTests(SubtitleTestCase):
         project = SubtitleProject(global_options)
         
         # Simulate loading a subtitle file with project settings
-        project_file = SubtitleFile()
+        project_file = Subtitles()
         original_subtitles = chinese_dinner_data.get_str('original')
         if original_subtitles is None:
             self.fail("Couldn't load subtitles")
@@ -140,7 +140,7 @@ class DataModelTests(SubtitleTestCase):
         
         # Create first project
         project1 = SubtitleProject(global_options)
-        project1_file = SubtitleFile()
+        project1_file = Subtitles()
         original_subtitles1 = chinese_dinner_data.get_str('original')
         if original_subtitles1 is None:
             self.fail("Couldn't load subtitles")
@@ -155,7 +155,7 @@ class DataModelTests(SubtitleTestCase):
         
         # Create second project
         project2 = SubtitleProject(global_options)
-        project2_file = SubtitleFile()
+        project2_file = Subtitles()
         original_subtitles2 = chinese_dinner_data.get_str('original')
         if original_subtitles2 is None:
             self.fail("Couldn't load subtitles")
@@ -235,7 +235,7 @@ class DataModelTests(SubtitleTestCase):
         
         # Create project with different provider settings
         project = SubtitleProject(global_options)
-        project_file = SubtitleFile()
+        project_file = Subtitles()
         original_subtitles3 = chinese_dinner_data.get_str('original')
         if original_subtitles3 is None:
             self.fail("Couldn't load subtitles")
@@ -288,7 +288,7 @@ class DataModelTests(SubtitleTestCase):
         
         datamodel.UpdateSettings(new_settings)
         
-        # All settings should be updated since there's no project to restore from
+        # All settings should be updated since there's no project to restore from (this is a bit of a nonsense test)
         max_threads_no_project = datamodel.project_options.get_int('max_threads')
         
         log_input_expected_result("Provider with no project", 'Dummy Claude', datamodel.project_options.provider)

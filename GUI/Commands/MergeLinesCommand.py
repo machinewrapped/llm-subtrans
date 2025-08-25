@@ -2,7 +2,7 @@ from GUI.Command import Command, CommandError, UndoError
 from GUI.ProjectDataModel import ProjectDataModel
 from GUI.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtitle.SubtitleBatch import SubtitleBatch
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.Helpers.Localization import _
 
@@ -21,7 +21,7 @@ class MergeLinesCommand(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
-        subtitles : SubtitleFile = self.datamodel.project.subtitles
+        subtitles : Subtitles = self.datamodel.project.subtitles
 
         if not subtitles:
             raise CommandError(_("No subtitles"), command=self)
@@ -78,7 +78,7 @@ class MergeLinesCommand(Command):
         if not self.undo_data:
             raise UndoError(_("No undo data available"), command=self)
 
-        subtitles : SubtitleFile = self.datamodel.project.subtitles
+        subtitles : Subtitles = self.datamodel.project.subtitles
 
         updates = {}
         for scene_number, batch_number, original_lines, translated_lines in self.undo_data:

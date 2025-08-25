@@ -1,6 +1,6 @@
 import os
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.Helpers.Tests import RunTestOnAllSrtFiles, separator
 
 def analyze_scenes(scenes):
@@ -25,7 +25,7 @@ def analyze_scenes(scenes):
 
     return num_scenes, num_batches_list, largest_batch_list, smallest_batch_list, average_batch_size_list
 
-def batcher_test(subtitles: SubtitleFile, logger, options):
+def batcher_test(subtitles: Subtitles, logger, options):
     if not subtitles.originals:
         raise Exception("No original subtitles to batch")
 

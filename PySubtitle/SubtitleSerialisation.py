@@ -5,7 +5,7 @@ from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleError import TranslationError
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleScene import SubtitleScene
 from PySubtitle.Translation import Translation
 from PySubtitle.TranslationPrompt import TranslationPrompt
@@ -39,7 +39,7 @@ class SubtitleEncoder(json.JSONEncoder):
         if obj is None:
             return None
 
-        if isinstance(obj, SubtitleFile):
+        if isinstance(obj, Subtitles):
             return {
                 "sourcepath": obj.sourcepath,
                 "outputpath": obj.outputpath,
@@ -112,10 +112,10 @@ def _object_hook(dct):
     # Reconstruct our custom types from JSON
     if '_class' in dct:
         class_name = dct.pop('_class')
-        if class_name == classname(SubtitleFile):
+        if class_name in {classname(Subtitles), "SubtitleFile"}:      # Backward compatibility
             sourcepath = dct.get('sourcepath')
             outpath = dct.get('outputpath') or dct.get('filename')
-            obj = SubtitleFile(sourcepath, outpath)
+            obj = Subtitles(sourcepath, outpath)
             obj.settings = dct.get('settings', {}) or dct.get('context', {})
             obj.scenes = dct.get('scenes', [])
             obj.UpdateProjectSettings(SettingsType()) # Force update for legacy files

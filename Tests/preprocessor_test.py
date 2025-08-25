@@ -1,10 +1,10 @@
 import os
 from PySubtitle.SettingsType import SettingsType
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleProcessor import SubtitleProcessor
 from PySubtitle.Helpers.Tests import RunTestOnAllSrtFiles, separator
 
-def preprocess_test(subtitles: SubtitleFile, logger, options : SettingsType):
+def preprocess_test(subtitles: Subtitles, logger, options : SettingsType):
     if not subtitles.originals:
         raise Exception("No original subtitles to preprocess")
 

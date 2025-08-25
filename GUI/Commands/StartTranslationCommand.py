@@ -6,7 +6,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 from GUI.Commands.TranslateSceneCommand import TranslateSceneCommand
 from PySubtitle.Helpers.Localization import _
 
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleProject import SubtitleProject
 
 class StartTranslationCommand(Command):
@@ -23,7 +23,7 @@ class StartTranslationCommand(Command):
             raise CommandError(_("Nothing to translate"), command=self)
 
         project : SubtitleProject = self.datamodel.project
-        subtitles : SubtitleFile = project.subtitles
+        subtitles : Subtitles = project.subtitles
 
         if self.resume and subtitles.scenes and all(scene.all_translated for scene in subtitles.scenes):
             logging.info(_("All scenes are fully translated"))

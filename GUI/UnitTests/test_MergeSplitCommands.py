@@ -11,7 +11,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 from GUI.UnitTests.DataModelHelpers import CreateTestDataModelBatched
 from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
 class MergeSplitCommandsTests(SubtitleTestCase):
@@ -129,7 +129,7 @@ class MergeSplitCommandsTests(SubtitleTestCase):
             assert datamodel.project is not None  # Type narrowing for PyLance
             self.assertIsNotNone(datamodel.project.subtitles)
             
-            subtitles: SubtitleFile = datamodel.project.subtitles
+            subtitles: Subtitles = datamodel.project.subtitles
 
             for command_data in test_case['tests']:
                 test: str = command_data['test']
@@ -151,7 +151,7 @@ class MergeSplitCommandsTests(SubtitleTestCase):
                     else:
                         self.fail(f"Unknown test type: {test}")
 
-    def MergeSceneCommandTest(self, file: SubtitleFile, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
+    def MergeSceneCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         merge_scene_numbers = test_data['scene_numbers']
 
         undo_expected_scene_count = len(file.scenes)
@@ -192,7 +192,7 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         self.assertSequenceEqual([scene.linecount for scene in file.scenes], undo_expected_scene_linecounts)
         self.assertSequenceEqual([[batch.number for batch in scene.batches] for scene in file.scenes], undo_expected_scene_batches)
 
-    def MergeBatchesCommandTest(self, file: SubtitleFile, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
+    def MergeBatchesCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         scene_number = test_data['scene_number']
         batch_numbers = test_data['batch_numbers']
 
@@ -223,7 +223,7 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         self.assertSequenceEqual([batch.number for batch in merge_scene.batches], undo_expected_batch_numbers)
         self.assertSequenceEqual([batch.size for batch in merge_scene.batches], undo_expected_batch_sizes)
 
-    def MergeScenesMergeBatchesCommandTest(self, file: SubtitleFile, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
+    def MergeScenesMergeBatchesCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         # Merge scenes, then merge batches in the merged scenes, then undo both
         merge_scene_numbers = test_data['scene_numbers']
         merge_batch_numbers = test_data['batch_numbers']
@@ -277,7 +277,7 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         self.assertSequenceEqual([[batch.number for batch in scene.batches] for scene in file.scenes], undo_expected_scene_batches)
         self.assertSequenceEqual([[batch.size for batch in scene.batches] for scene in file.scenes], undo_expected_scene_batch_sizes)
 
-    def MergeSplitScenesCommandTest(self, file: SubtitleFile, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
+    def MergeSplitScenesCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         # Merge scenes, then split the merged scene, then undo both
         merge_scene_numbers = test_data['scene_numbers']
         split_scene_batch_number = test_data['split_scene_batch_number']
@@ -360,7 +360,7 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         self.assertSequenceEqual([scene.linecount for scene in file.scenes], undo_merge_expected_scene_linecount)
         self.assertSequenceEqual([[batch.number for batch in scene.batches] for scene in file.scenes], undo_merge_expected_scene_batches)
 
-    def SplitBatchCommandTest(self, file: SubtitleFile, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
+    def SplitBatchCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         scene_number, batch_number = test_data['batch_number']
         split_line_number = test_data['split_line_number']
 
@@ -413,7 +413,7 @@ class MergeSplitCommandsTests(SubtitleTestCase):
             self.assertEqual(batch.originals[0].text, expected_original)
             self.assertEqual(batch.translated[0].text, expected_translated)
 
-    def AutoSplitBatchCommandTest(self, file: SubtitleFile, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
+    def AutoSplitBatchCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         scene_number, batch_number = test_data['batch_number']
         min_batch_size = test_data.get('min_batch_size', 1)
 

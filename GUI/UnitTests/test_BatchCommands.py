@@ -4,7 +4,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 from GUI.UnitTests.DataModelHelpers import CreateTestDataModel
 from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
 class BatchCommandTests(SubtitleTestCase):
@@ -28,13 +28,13 @@ class BatchCommandTests(SubtitleTestCase):
                 self.fail("Failed to create datamodel for test case")
                 continue
 
-            file : SubtitleFile = datamodel.project.subtitles
+            file : Subtitles = datamodel.project.subtitles
 
             with self.subTest("BatchSubtitlesCommand"):
                 self.BatchSubtitlesCommandTest(file, datamodel, test_case)
 
 
-    def BatchSubtitlesCommandTest(self, file : SubtitleFile, datamodel : ProjectDataModel, test_data : dict):
+    def BatchSubtitlesCommandTest(self, file : Subtitles, datamodel : ProjectDataModel, test_data : dict):
         if not datamodel.project or not datamodel.project.subtitles:
             self.fail("Failed to create datamodel for test case")
             return

@@ -12,7 +12,7 @@ from GUI.ViewModel.ViewModelError import ViewModelError
 
 from PySubtitle.Helpers.Time import TimedeltaToText
 from PySubtitle.Instructions import DEFAULT_TASK_TYPE
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleScene import SubtitleScene
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleLine import SubtitleLine
@@ -80,8 +80,8 @@ class ProjectViewModel(QStandardItemModel):
             self.blockSignals(False)
             self.endResetModel()
 
-    def CreateModel(self, data : SubtitleFile):
-        if not isinstance(data, SubtitleFile):
+    def CreateModel(self, data : Subtitles):
+        if not isinstance(data, Subtitles):
             raise ValueError(_("Can only model subtitle files"))
 
         self.model = {}

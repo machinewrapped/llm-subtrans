@@ -21,7 +21,7 @@ from PySubtitle.SubtitleBatch import SubtitleBatch
 
 from PySubtitle.SubtitleError import NoProviderError, NoTranslationError, ProviderError, SubtitleError, TranslationAbortedError, TranslationError, TranslationImpossibleError
 from PySubtitle.Helpers import FormatErrorMessages
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleScene import SubtitleScene, UnbatchScenes
 from PySubtitle.TranslationEvents import TranslationEvents
 from PySubtitle.TranslationPrompt import TranslationPrompt
@@ -94,7 +94,7 @@ class SubtitleTranslator:
         self.aborted = True
         self.client.AbortTranslation()
 
-    def TranslateSubtitles(self, subtitles : SubtitleFile):
+    def TranslateSubtitles(self, subtitles : Subtitles):
         """
         Translate a SubtitleFile
         """
@@ -156,7 +156,7 @@ class SubtitleTranslator:
         subtitles.originals = originals
         subtitles.translated = translations
 
-    def TranslateScene(self, subtitles : SubtitleFile, scene : SubtitleScene, batch_numbers = None, line_numbers = None):
+    def TranslateScene(self, subtitles : Subtitles, scene : SubtitleScene, batch_numbers = None, line_numbers = None):
         """
         Send a scene for translation
         """

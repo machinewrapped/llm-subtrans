@@ -5,7 +5,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 from GUI.UnitTests.DataModelHelpers import CreateTestDataModelBatched
 from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
 class DeleteLinesCommandTest(SubtitleTestCase):
@@ -53,7 +53,7 @@ class DeleteLinesCommandTest(SubtitleTestCase):
             self.fail("Failed to create test datamodel with subtitles")
             return
 
-        subtitles: SubtitleFile = datamodel.project.subtitles
+        subtitles: Subtitles = datamodel.project.subtitles
 
         for test_case in self.delete_lines_test_cases:
             scene_number, batch_number = test_case['batch_number']

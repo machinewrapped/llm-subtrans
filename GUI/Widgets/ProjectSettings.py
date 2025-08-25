@@ -23,7 +23,7 @@ from PySubtitle.Options import Options
 from PySubtitle.Helpers.Parse import ParseNames
 from PySubtitle.SettingsType import SettingType, SettingsType
 from PySubtitle.Substitutions import Substitutions
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.TranslationProvider import TranslationProvider
 from PySubtitle.Helpers.Localization import _
@@ -333,7 +333,7 @@ class ProjectSettings(QGroupBox):
             try:
                 project_options = Options({"project": 'read'})
                 source : SubtitleProject = SubtitleProject(project_options)
-                subtitles : SubtitleFile|None = source.ReadProjectFile(file_name)
+                subtitles : Subtitles|None = source.ReadProjectFile(file_name)
                 if not subtitles:
                     raise ValueError("Invalid project file")
 

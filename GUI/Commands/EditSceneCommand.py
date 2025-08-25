@@ -4,7 +4,7 @@ from GUI.Command import Command, CommandError
 from GUI.ProjectDataModel import ProjectDataModel
 from GUI.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtitle.Helpers.Localization import _
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleScene import SubtitleScene
 
 class EditSceneCommand(Command):
@@ -20,7 +20,7 @@ class EditSceneCommand(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
-        subtitles : SubtitleFile = self.datamodel.project.subtitles
+        subtitles : Subtitles = self.datamodel.project.subtitles
         if not subtitles:
             raise CommandError("Unable to edit scene because datamodel is invalid", command=self)
 
@@ -51,7 +51,7 @@ class EditSceneCommand(Command):
         if not self.undo_data:
             raise CommandError(_("No undo data available"), command=self)
 
-        subtitles : SubtitleFile = self.datamodel.project.subtitles
+        subtitles : Subtitles = self.datamodel.project.subtitles
 
         with subtitles.lock:
             scene = subtitles.GetScene(self.scene_number)

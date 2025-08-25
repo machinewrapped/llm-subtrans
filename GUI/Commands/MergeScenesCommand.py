@@ -3,7 +3,7 @@ import logging
 from GUI.Command import Command, CommandError, UndoError
 from GUI.ProjectDataModel import ProjectDataModel
 from GUI.ViewModel.ViewModelUpdate import ModelUpdate
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.Helpers.Localization import _
 
 class MergeScenesCommand(Command):
@@ -22,7 +22,7 @@ class MergeScenesCommand(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
-        subtitles : SubtitleFile = self.datamodel.project.subtitles
+        subtitles : Subtitles = self.datamodel.project.subtitles
 
         if len(self.scene_numbers) < 2:
             raise CommandError(_("Cannot merge less than two scenes"), command=self)
@@ -54,7 +54,7 @@ class MergeScenesCommand(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
-        subtitles : SubtitleFile = self.datamodel.project.subtitles
+        subtitles : Subtitles = self.datamodel.project.subtitles
 
         model_update : ModelUpdate =  self.AddModelUpdate()
 

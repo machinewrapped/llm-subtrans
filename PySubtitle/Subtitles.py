@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from copy import deepcopy
-import json
 import os
 import logging
 import threading
@@ -27,9 +26,9 @@ from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 default_encoding = os.getenv('DEFAULT_ENCODING', 'utf-8')
 fallback_encoding = os.getenv('DEFAULT_ENCODING', 'iso-8859-1')
 
-class SubtitleFile:
+class Subtitles:
     """
-    High level class for manipulating subtitle files
+    High level class for manipulating subtitles
     """
     DEFAULT_PROJECT_SETTINGS : SettingsType = SettingsType({
         'provider': None,
@@ -286,21 +285,6 @@ class SubtitleFile:
 
         except SubtitleParseError as e:
             logging.error(_("Failed to parse SRT string: {}").format(str(e)))
-
-    def SaveProjectFile(self, projectfile: str, encoder_class: type|None = None) -> None:
-        """
-        Save the project settings to a JSON file
-        """
-        if encoder_class is None:
-            raise ValueError("No encoder provided")
-
-        projectfile = os.path.normpath(projectfile)
-        logging.info(_("Writing project data to {}").format(str(projectfile)))
-
-        with self.lock:
-            with open(projectfile, 'w', encoding=default_encoding) as f:
-                project_json = json.dumps(self, cls=encoder_class, ensure_ascii=False, indent=4) # type: ignore
-                f.write(project_json)
 
     def SaveOriginal(self, path: str|None = None) -> None:
         """
@@ -646,7 +630,9 @@ class SubtitleFile:
         return value if isinstance(value, str) else default
 
     def _update_compatibility(self, settings: SettingsType) -> None:
-        """ Update settings for compatibility with older versions """
+        """
+        Update settings for compatibility with older versions
+        """
         if not settings.get('description') and settings.get('synopsis'):
             settings['description'] = settings.get('synopsis')
 

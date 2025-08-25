@@ -59,7 +59,7 @@ try:
 
     if project.write_project:
         logging.info(f"Writing project data to {str(project.projectfile)}")
-        project.WriteProjectFile()
+        project.SaveProjectFile()
 
 except Exception as e:
     print("Error:", e)

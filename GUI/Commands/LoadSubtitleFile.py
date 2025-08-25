@@ -34,7 +34,7 @@ class LoadSubtitleFile(Command):
             # Write a backup if an existing project was loaded
             if self.write_backup and project.read_project:
                 logging.info(_("Saving backup copy of the project"))
-                project.WriteBackupFile()
+                project.SaveBackupFile()
 
             self.project = project
             self.datamodel = ProjectDataModel(project, self.options)

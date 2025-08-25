@@ -8,7 +8,7 @@ from PySubtitle.Helpers.Localization import _
 from PySubtitle.Options import Options, SettingsType
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleError import SubtitleError, TranslationAbortedError
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleScene import SubtitleScene
@@ -29,7 +29,7 @@ class SubtitleProject:
         
         :param options: Only used to set the project mode
         """
-        self.subtitles : SubtitleFile = SubtitleFile()
+        self.subtitles : Subtitles = Subtitles()
         self.events = TranslationEvents()
         self.projectfile : str|None = None
         self.read_project : bool = False
@@ -82,7 +82,7 @@ class SubtitleProject:
 
         if self.read_project:
             # Try to load the project file
-            subtitles : SubtitleFile|None = self.ReadProjectFile(self.projectfile)
+            subtitles : Subtitles|None = self.ReadProjectFile(self.projectfile)
             project_settings = self.GetProjectSettings()
 
             if subtitles:
@@ -153,17 +153,17 @@ class SubtitleProject:
         projectfile = self.GetProjectFilepath(filepath)
         return f"{projectfile}-backup"
 
-    def LoadSubtitleFile(self, filepath : str) -> SubtitleFile:
+    def LoadSubtitleFile(self, filepath : str) -> Subtitles:
         """
         Load subtitles from an SRT file
         """
         with self.lock:
-            self.subtitles = SubtitleFile(filepath)
+            self.subtitles = Subtitles(filepath)
             self.subtitles.LoadSubtitles()
 
         return self.subtitles
 
-    def WriteProjectFile(self, projectfile : str|None = None) -> None:
+    def SaveProjectFile(self, projectfile : str|None = None) -> None:
         """
         Write a set of subtitles to a project file
         """
@@ -171,7 +171,7 @@ class SubtitleProject:
             if not self.subtitles:
                 raise Exception("Can't write project file, no subtitles")
 
-            if not isinstance(self.subtitles, SubtitleFile):
+            if not isinstance(self.subtitles, Subtitles):
                 raise Exception("Can't write project file, wrong content type")
 
             if not self.subtitles.scenes:
@@ -190,20 +190,20 @@ class SubtitleProject:
                 raise Exception("No file path provided")
 
             self.subtitles.outputpath = GetOutputPath(projectfile, self.subtitles.target_language)
-            self.subtitles.SaveProjectFile(projectfile, encoder_class=SubtitleEncoder)
+            self.WriteProjectToFile(projectfile, encoder_class=SubtitleEncoder)
 
             self.needs_writing = False
 
-    def WriteBackupFile(self) -> None:
+    def SaveBackupFile(self) -> None:
         """
         Save a backup copy of the project
         """
         with self.lock:
             if self.subtitles and self.projectfile:
                 backupfile = self.GetBackupFilepath(self.projectfile)
-                self.subtitles.SaveProjectFile(backupfile, encoder_class=SubtitleEncoder)
+                self.WriteProjectToFile(backupfile, encoder_class=SubtitleEncoder)
 
-    def ReadProjectFile(self, filepath : str|None = None) -> SubtitleFile|None:
+    def ReadProjectFile(self, filepath : str|None = None) -> Subtitles|None:
         """
         Load scenes, subtitles and context from a project file
         """
@@ -216,7 +216,7 @@ class SubtitleProject:
                 logging.info(_("Reading project data from {}").format(str(filepath)))
 
                 with open(filepath, 'r', encoding=default_encoding, newline='') as f:
-                    subtitles: SubtitleFile = json.load(f, cls=SubtitleDecoder)
+                    subtitles: Subtitles = json.load(f, cls=SubtitleDecoder)
 
                 subtitles.Sanitise()
                 self.subtitles = subtitles
@@ -236,7 +236,7 @@ class SubtitleProject:
         """
         with self.lock:
             if self.needs_writing and self.subtitles and self.subtitles.scenes:
-                self.WriteProjectFile()
+                self.SaveProjectFile()
 
     def GetProjectSettings(self) -> SettingsType:
         """
@@ -267,6 +267,21 @@ class SubtitleProject:
         if self.subtitles.scenes:
             self.subtitles.UpdateOutputPath()
             self.needs_writing = True
+
+    def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:
+        """
+        Save the project settings to a JSON file
+        """
+        if encoder_class is None:
+            raise ValueError("No encoder provided")
+
+        projectfile = os.path.normpath(projectfile)
+        logging.info(_("Writing project data to {}").format(str(projectfile)))
+
+        with self.lock:
+            with open(projectfile, 'w', encoding=default_encoding) as f:
+                project_json = json.dumps(self.subtitles, cls=encoder_class, ensure_ascii=False, indent=4) # type: ignore
+                f.write(project_json)
 
     def TranslateSubtitles(self, translator : SubtitleTranslator) -> None:
         """
@@ -309,8 +324,8 @@ class SubtitleProject:
         if not self.subtitles:
             raise Exception("No subtitles to translate")
 
-        translator.events.preprocessed += self._on_preprocessed # type: ignore
-        translator.events.batch_translated += self._on_batch_translated # type: ignore
+        translator.events.preprocessed += self._on_preprocessed             # type: ignore
+        translator.events.batch_translated += self._on_batch_translated     # type: ignore
 
         try:
             scene : SubtitleScene = self.subtitles.GetScene(scene_number)

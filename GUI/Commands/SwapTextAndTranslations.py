@@ -2,7 +2,7 @@ from GUI.Command import Command, CommandError
 from GUI.ProjectDataModel import ProjectDataModel
 from GUI.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtitle.Helpers.Localization import _
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleProject import SubtitleProject
 
 import logging
@@ -32,7 +32,7 @@ class SwapTextAndTranslations(Command):
             raise CommandError(_("No project data"), command=self)
 
         project : SubtitleProject = self.datamodel.project
-        subtitles : SubtitleFile = project.subtitles
+        subtitles : Subtitles = project.subtitles
         batch = subtitles.GetBatch(self.scene_number, self.batch_number)
 
         # Swap original and translated text (only in the viewmodel)

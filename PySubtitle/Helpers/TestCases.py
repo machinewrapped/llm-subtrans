@@ -10,7 +10,7 @@ from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
 from PySubtitle.SubtitleError import TranslationError
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleScene import SubtitleScene
@@ -48,7 +48,7 @@ class SubtitleTestCase(unittest.TestCase):
 
         self.assertIn("Dummy Provider", self.options.provider_settings, "Dummy Provider settings should exist")
 
-    def _assert_same_as_reference(self, subtitles : SubtitleFile, reference_subtitles: SubtitleFile):
+    def _assert_same_as_reference(self, subtitles : Subtitles, reference_subtitles: Subtitles):
         """
         Assert that the current state of the subtitles is identical to the reference datamodel
         """
@@ -91,16 +91,16 @@ class SubtitleTestCase(unittest.TestCase):
         self.assertSequenceEqual([ line.end for line in batch.originals ], [ line.end for line in reference_batch.originals ])
 
 
-def PrepareSubtitles(subtitle_data : dict, key : str = 'original') -> SubtitleFile:
+def PrepareSubtitles(subtitle_data : dict, key : str = 'original') -> Subtitles:
     """
     Prepares a SubtitleFile object from subtitle data.
     """
-    subtitles : SubtitleFile = SubtitleFile()
+    subtitles : Subtitles = Subtitles()
     subtitles.LoadSubtitlesFromString(subtitle_data[key])
     subtitles.UpdateProjectSettings(SettingsType(subtitle_data))
     return subtitles
 
-def AddTranslations(subtitles : SubtitleFile, subtitle_data : dict, key : str = 'translated'):
+def AddTranslations(subtitles : Subtitles, subtitle_data : dict, key : str = 'translated'):
     """
     Adds translations to the subtitles.
     """
@@ -120,7 +120,7 @@ def AddTranslations(subtitles : SubtitleFile, subtitle_data : dict, key : str = 
                 translated = line.translated
                 line.translation = translated.text if translated else None
 
-def AddResponsesFromMap(subtitles : SubtitleFile, test_data : dict):
+def AddResponsesFromMap(subtitles : Subtitles, test_data : dict):
     """
     Add translator responses to the subtitles if test_data has a response map.
     """

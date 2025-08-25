@@ -5,7 +5,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 from GUI.UnitTests.DataModelHelpers import CreateTestDataModelBatched
 from PySubtitle.Helpers.TestCases import SubtitleTestCase, AddResponsesFromMap
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
 class ReparseTranslationsCommandTest(SubtitleTestCase):
@@ -60,7 +60,7 @@ class ReparseTranslationsCommandTest(SubtitleTestCase):
             if not test_project or not test_project.subtitles:
                 return
 
-            test_subtitles: SubtitleFile = test_project.subtitles
+            test_subtitles: Subtitles = test_project.subtitles
 
             # Add the translator responses to the test data model
             AddResponsesFromMap(test_subtitles, test_data)

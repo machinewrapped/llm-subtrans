@@ -5,7 +5,7 @@ from PySubtitle.Helpers.TestCases import DummyProvider, PrepareSubtitles, Subtit
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleScene import SubtitleScene
 from PySubtitle.SubtitleTranslator import SubtitleTranslator
 
@@ -27,8 +27,8 @@ class SubtitleTranslatorTests(SubtitleTestCase):
 
             provider = DummyProvider(data=data)
 
-            originals : SubtitleFile = PrepareSubtitles(data, 'original')
-            reference : SubtitleFile = PrepareSubtitles(data, 'translated')
+            originals : Subtitles = PrepareSubtitles(data, 'original')
+            reference : Subtitles = PrepareSubtitles(data, 'translated')
 
             self.assertEqual(originals.linecount, reference.linecount)
 
@@ -48,7 +48,7 @@ class SubtitleTranslatorTests(SubtitleTestCase):
 
             translator.TranslateSubtitles(originals)
 
-    def validate_batch(self, batch : SubtitleBatch, original : SubtitleFile, reference : SubtitleFile):
+    def validate_batch(self, batch : SubtitleBatch, original : Subtitles, reference : Subtitles):
         log_info(f"Validating scene {batch.scene} batch {batch.number}")
         log_info(f"Summary: {batch.summary}")
         self.assertIsNotNone(batch.summary)
@@ -77,7 +77,7 @@ class SubtitleTranslatorTests(SubtitleTestCase):
             self.assertEqual(original_batch.originals[i], batch.originals[i])
             self.assertEqual(reference_batch.originals[i], batch.translated[i])
 
-    def validate_scene(self, scene : SubtitleScene, original : SubtitleFile, reference : SubtitleFile):
+    def validate_scene(self, scene : SubtitleScene, original : Subtitles, reference : Subtitles):
         log_info(f"Validating scene {scene.number}")
         log_info(f"Summary: {scene.summary}")
         self.assertIsNotNone(scene.summary)
@@ -100,8 +100,8 @@ class SubtitleTranslatorTests(SubtitleTestCase):
 
             provider = DummyProvider(data=data)
 
-            originals : SubtitleFile = PrepareSubtitles(data, 'original')
-            reference : SubtitleFile = PrepareSubtitles(data, 'translated')
+            originals : Subtitles = PrepareSubtitles(data, 'original')
+            reference : Subtitles = PrepareSubtitles(data, 'translated')
 
             self.assertEqual(originals.linecount, reference.linecount)
 

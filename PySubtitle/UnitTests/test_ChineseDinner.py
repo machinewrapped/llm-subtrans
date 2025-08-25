@@ -4,7 +4,7 @@ from PySubtitle.Helpers.TestCases import PrepareSubtitles, SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
-from PySubtitle.SubtitleFile import SubtitleFile
+from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleScene import SubtitleScene
@@ -19,7 +19,7 @@ class ChineseDinnerTests(SubtitleTestCase):
     def test_ChineseDinner(self):
         log_test_name("Chinese Dinner Tests")
 
-        subtitles : SubtitleFile = SubtitleFile()
+        subtitles : Subtitles = Subtitles()
 
         with self.subTest("Load subtitles from string"):
             log_test_name("Load subtitles from string")
@@ -93,7 +93,7 @@ class ChineseDinnerTests(SubtitleTestCase):
         ]
         batch_containing_line = [(1, 1, 1), (10, 1,1), (32, 2, 1), (55, 2, 1), (63, 4, 1)]
 
-        subtitles : SubtitleFile = PrepareSubtitles(chinese_dinner_data)
+        subtitles : Subtitles = PrepareSubtitles(chinese_dinner_data)
 
         batcher = SubtitleBatcher(self.options)
         subtitles.AutoBatch(batcher)

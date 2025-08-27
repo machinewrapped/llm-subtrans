@@ -400,7 +400,10 @@ class SettingsDialog(QDialog):
             selected_model = self.translation_provider.available_models[0]
             provider_settings['model'] = selected_model
             self.translation_provider.UpdateSettings(provider_settings)
-            self.provider_settings.get_dict(self.translation_provider.name)['model'] = self.translation_provider.selected_model 
+            self.provider_settings.get_dict(self.translation_provider.name)['model'] = self.translation_provider.selected_model
+            logging.info(_("Auto-selected model {model} for {provider} to ensure valid configuration").format(
+                provider=self.translation_provider.name,
+                model=selected_model))
 
         section_name = self.PROVIDER_SECTION
         section_widget = self._sections.get(section_name)

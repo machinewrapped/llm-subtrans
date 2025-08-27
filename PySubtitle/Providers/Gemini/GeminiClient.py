@@ -221,7 +221,7 @@ class GeminiClient(TranslationClient):
         
         # If it's just PROHIBITED_CONTENT with no additional details, add explanation
         if not has_additional_info and len(info_parts) == 1 and "PROHIBITED_CONTENT" in info_parts[0]:
-            info_parts.append("likely content policy violation (copyright etc), not safety filters")
+            info_parts.append("Google content policy violation (copyright or censorship). Try another provider.")
         
         return "; ".join(info_parts) if info_parts else "Unknown blocking reason"
 

@@ -95,6 +95,7 @@ class GeminiClient(TranslationClient):
                     candidate_count=1,
                     temperature=temperature,
                     system_instruction=system_instruction,
+                    safety_settings=self.safety_settings,
                     automatic_function_calling=self.automatic_function_calling,
                     max_output_tokens=None,
                     response_modalities=[]
@@ -112,9 +113,10 @@ class GeminiClient(TranslationClient):
                     raise TranslationImpossibleError(_("No response from Gemini"))
 
                 if gcr.prompt_feedback and gcr.prompt_feedback.block_reason:
-                    raise TranslationResponseError(_("Request was blocked by Gemini: {block_reason}").format(
-                        block_reason=str(gcr.prompt_feedback.block_reason)
-                    ), response=gcr)
+                    block_info = self._extract_block_info(gcr)
+                    raise TranslationImpossibleError(_("Request was blocked by Gemini: {block_info}").format(
+                        block_info=block_info
+                    ))
 
                 # Try to find a validate candidate
                 candidates = [candidate for candidate in gcr.candidates if candidate.content] if gcr.candidates else []
@@ -166,6 +168,9 @@ class GeminiClient(TranslationClient):
                     response['reasoning'] = thoughts
 
                 return response
+            
+            except TranslationImpossibleError:
+                raise
 
             except Exception as e:
                 if retry == self.max_retries:
@@ -179,4 +184,44 @@ class GeminiClient(TranslationClient):
                         error=str(e), sleep_time=sleep_time
                     ))
                     time.sleep(sleep_time)
+
+    def _extract_block_info(self, gcr: GenerateContentResponse) -> str:
+        """
+        Extract detailed blocking information from Gemini response
+        """
+        info_parts = []
+        has_additional_info = False
+        
+        if gcr.prompt_feedback and gcr.prompt_feedback.block_reason:
+            block_reason = gcr.prompt_feedback.block_reason
+            reason_name = getattr(block_reason, 'name', str(block_reason))
+            info_parts.append(f"Reason: {reason_name}")
+            
+            # Add block reason message if available
+            if gcr.prompt_feedback.block_reason_message:
+                info_parts.append(f"Message: {gcr.prompt_feedback.block_reason_message}")
+                has_additional_info = True
+        
+        # Add safety ratings if available
+        if gcr.prompt_feedback and gcr.prompt_feedback.safety_ratings:
+            safety_info = []
+            for rating in gcr.prompt_feedback.safety_ratings:
+                category = getattr(rating, 'category', 'Unknown')
+                probability = getattr(rating, 'probability', 'Unknown')
+                blocked = getattr(rating, 'blocked', False)
+                
+                rating_str = f"{category}={probability}"
+                if blocked:
+                    rating_str += " (BLOCKED)"
+                safety_info.append(rating_str)
+            
+            if safety_info:
+                info_parts.append(f"Safety: {', '.join(safety_info)}")
+                has_additional_info = True
+        
+        # If it's just PROHIBITED_CONTENT with no additional details, add explanation
+        if not has_additional_info and len(info_parts) == 1 and "PROHIBITED_CONTENT" in info_parts[0]:
+            info_parts.append("likely content policy violation (copyright etc), not safety filters")
+        
+        return "; ".join(info_parts) if info_parts else "Unknown blocking reason"
 

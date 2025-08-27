@@ -210,7 +210,7 @@ class GeminiClient(TranslationClient):
                 probability = getattr(rating, 'probability', 'Unknown')
                 blocked = getattr(rating, 'blocked', False)
                 
-                rating_str = f"{category}={probability}"
+                rating_str = f"{getattr(category, 'name', str(category))}={getattr(probability, 'name', str(probability))}"
                 if blocked:
                     rating_str += " (BLOCKED)"
                 safety_info.append(rating_str)

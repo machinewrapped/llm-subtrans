@@ -397,7 +397,7 @@ class SettingsDialog(QDialog):
         selected_model = provider_settings.get_str('model')
         if not self.translation_provider.available_models:
             logging.warning(_("No models available for {provider}").format(provider = self.translation_provider.name))
-        elif selected_model not in self.translation_provider.available_models:
+        elif not selected_model or selected_model not in self.translation_provider.available_models:
             # Auto-select an available model
             selected_model = self.translation_provider.available_models[0]
             provider_settings['model'] = selected_model

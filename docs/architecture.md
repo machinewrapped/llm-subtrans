@@ -27,7 +27,7 @@ Contains all subtitle processing, translation logic, and project management. Thi
 
 **Key Classes:**
 - `SubtitleProject` – main orchestrator managing translation sessions
-- `Subtitles/SubtitleScene/SubtitleBatch` – hierarchical organization splitting files into manageable translation units
+- `Subtitles`, `SubtitleScene`, `SubtitleBatch` – hierarchical organization splitting files into manageable translation units
 - `SubtitleLine` – represents individual subtitles with timing, text, and translation data
 - `SubtitleTranslator` – executes translation jobs, handles retries and errors
 - `TranslationProvider` – base class for pluggable backends (OpenAI, Anthropic, etc.)

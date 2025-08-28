@@ -9,34 +9,64 @@ graph TD
     GUI --> PySubtitle
 ```
 
+## 1. Entry Points
+
+| Script | Purpose | Location |
+|--------|---------|----------|
+| `gui-subtrans.py` | Launches the graphical interface, loads persistent settings, and initializes translation providers. | `scripts/gui-subtrans.py` |
+| `llm-subtrans.py` | Command-line translator: loads a subtitle file, performs translation using specified provider/model, and saves results. | `scripts/llm-subtrans.py` |
+
+## 1. Module Structure
+
 **Module Overview**
 
 *   **`PySubtitle`**: Core subtitle processing, translation, and project management.
 *   **`GUI`**: PySide6-based user interface built on top of the `PySubtitle` engine.
 *   **`scripts`**: Entry-point scripts for launching the GUI or command-line tools.
 
-The system has two main entry points:
+### PySubtitle (Core Logic)
+* Houses all subtitle-processing, translation, and project-management code.
+* Key subpackages/classes include:
+  * `SubtitleProject` – orchestrates loading, saving, and translating a project.
+  * `SubtitleLine` – in-memory representation of an individual subtitle line with timing and translation fields.
+  * `SubtitleScene`, `SubtitleBatch`, `Subtitles` – break subtitle files into nested scenes and batches for translation.
+  * `SubtitleTranslator` – drives the translation pipeline.
+  * `TranslationProvider` – base class for pluggable translation backends.
+  * `Options` – global settings manager loaded from environment variables, config files, and command line arguments.
 
-*   `scripts/gui-subtrans.py`: The entry point for the GUI application.
-*   `scripts/llm-subtrans.py`: The entry point for the default command-line interface.
+### GUI (User Interface)
+* Contains PySide6-based GUI code.
+* Organised around a custom MVVM pattern:
+  * `ProjectViewModel` – a `QStandardItemModel` subclass mapping `SubtitleProject` data to GUI views.
+    * `SceneItem`, `BatchItem`, `LineItem` subclasses represent subtitle scenes, batches, and lines.
+  * `ProjectDataModel` – “glue” layer keeping `SubtitleProject`, `Options`, `TranslationProvider`, and `ProjectViewModel` in sync.
+* Custom widgets and views are located under `GUI/Widgets`, `GUI/ScenesBatchesModel`, `GUI/SubtitleListModel`, etc.
 
 ## Subtitle Management
 
 The core of the subtitle management is the `PySubtitle.SubtitleProject` class. This class represents a single translation project and is responsible for:
 
-*   Loading subtitles from a source file (currently only `.srt` is supported).
-*   Saving and loading the project state to a `.subtrans` file, which is a JSON file containing all the subtitles, their translations, and other project-related information.
+*   Loading subtitles from a source file.
+*   Saving and loading the project state to a `.subtrans` file, which is a JSON file containing all the subtitles, translations, and other information.
 *   Orchestrating the translation process.
 
-The subtitles themselves are represented by a hierarchy of objects:
+### Data Flow
 
-*   `PySubtitle.Subtitles`: A container for all the subtitles in a project. It holds a list of `SubtitleScene` objects.
+1. **SubtitleProject**
+   * Central manager for a translation session.
+   * Reads/writes `.subtrans` project files.
+   * Loads SRT files via `SubtitleFileHandler`, produces `Subtitles` object.
+   * Handles saving originals and translated subtitles, plus project metadata.
 
-*   `PySubtitle.SubtitleScene`: Represents a continuous scene in the video. It contains a list of `SubtitleBatch` objects.
+3. **Subtitles / SubtitleScene / SubtitleBatch**
+   * `Subtitles` holds global collections and metadata (target language, scenes, etc.).
+   * `SubtitleScene` groups adjacent lines; `SubtitleBatch` groups lines within scenes for translation.
+   * `SubtitleBatcher` and `SubtitleProcessor` handle scene/batch creation and optional post-processing.
 
-*   `PySubtitle.SubtitleBatch`: A small group of subtitle lines that are sent to the translation provider together.
-
-*   `PySubtitle.SubtitleLine`: Represents a single subtitle line, with its start and end times, text content, and translation.
+3. **SubtitleLine**
+   * Represents one subtitle entry (`index`, `start`, `end`, `text`, `translation`, metadata).
+   * Provides parsing from SRT text and serialization back to SRT.
+   * Exposes convenient computed properties (`duration`, `txt_start`, `translated`, etc.).
 
 ### File Formats
 
@@ -52,17 +82,48 @@ The translation process is managed by the `PySubtitle.SubtitleTranslator` class.
 
 The `SubtitleTranslator` delegates the actual translation to a `PySubtitle.TranslationProvider` instance. The `TranslationProvider` is a plug-and-play component that allows the application to support different translation services. New providers can be added by creating a new module in the `PySubtitle.Providers` directory and implementing the `TranslationProvider` interface.
 
+1. **SubtitleTranslator**
+   * Accepts `Subtitles` and a `TranslationProvider`.
+   * Iterates over scenes and batches, building prompts and context.
+   * Calls provider’s client (`TranslationClient`) for each batch.
+   * Applies `Substitutions`, optional `SubtitleProcessor`, and merges translations back into `SubtitleScene` data.
+   * Emits events via `TranslationEvents` for GUI progress updates or logging.
+
+2. **TranslationProvider & Clients**
+   * `TranslationProvider` is a pluggable base class.
+   * Providers located in `PySubtitle/Providers/` register themselves automatically.
+   * Each provider exposes available models, validation, and a `GetTranslationClient` method to construct a client capable of calling external APIs.
+   * This design allows adding new providers (e.g., different model servers) without altering core logic.
+   
 ## GUI Architecture
 
+1. **ProjectDataModel**
+   * Holds the active `SubtitleProject`, `Options`, current `TranslationProvider`, and the shared `ProjectViewModel`.
+   * Exposes helper methods for updating settings, creating translation providers, and manipulating the view model.
+
+2. **ProjectViewModel (MVVM)**
+   * Extends `QStandardItemModel` and maintains a tree:  
+     `SceneItem` → `BatchItem` → `LineItem`.
+   * Updates are queued via `AddUpdate()` and processed on the main thread (`ProcessUpdates`).
+
+3. **Views**
+   * `ScenesBatchesModel` & `SubtitleListModel` present scenes/batches and line details.
+   * Delegates like `ScenesBatchesDelegate` and `SubtitleItemDelegate` handle custom painting/editing.
+
 The GUI is built using PySide6 and follows a Model-View-ViewModel (MVVM) like pattern.
+
+*   **`GUI.ProjectDataModel`**: This class acts as a bridge between the core `SubtitleProject` and the `ProjectViewModel`. It holds the current project, the project options, and the current translation provider. It's responsible for creating the `ProjectViewModel` and for applying updates to it.
 
 *   **`GUI.ViewModel.ProjectViewModel`**: This is a custom `QStandardItemModel` that serves as the data model for the various views in the GUI. It holds a tree of `SceneItem`, `BatchItem`, and `LineItem` objects, which mirror the structure of the `Subtitles` data. It has an update queue to handle asynchronous updates from the translation process, ensuring that the GUI is updated in a thread-safe manner.
 
 *   **Views**: The GUI is composed of several views, such as the `ScenesView`, `SubtitleView`, and `LogWindow`, which are all subclasses of `QWidget`. These views are responsible for displaying the data from the `ProjectViewModel` and for handling user input.
 
-*   **`GUI.ProjectDataModel`**: This class acts as a bridge between the core `SubtitleProject` and the `ProjectViewModel`. It holds the current project, the project options, and the current translation provider. It's responsible for creating the `ProjectViewModel` and for applying updates to it.
-
 ### Command Queue
+
+* GUI actions follow a **Command** pattern.
+* `CommandQueue` executes commands on a background `QThreadPool` with undo/redo support.
+* Commands live under `GUI/Commands/`; each command encapsulates an operation (e.g., translating a batch, saving files).
+* `CommandQueue` manages concurrency, progress signals, and queue state (`undo_stack`, `redo_stack`).
 
 All operations that modify the project data are encapsulated in `Command` objects and executed by a `GUI.CommandQueue`. The `CommandQueue` runs commands on a background thread, which is essential for keeping the GUI responsive during long-running operations like file I/O or translation. It also manages undo/redo stacks, allowing the user to easily revert and re-apply actions.
 
@@ -76,6 +137,18 @@ Application settings are managed by the `PySubtitle.Options` class. This class i
 *   Managing provider-specific settings.
 
 The `Options` class is used throughout the application to configure the behavior of different components.
+
+ The `Options` class (subclass of `SettingsType`):
+  * Loads defaults (environment variables via `.env`, `settings.json`, command-line arguments).
+  * Supports project-specific settings and provider-specific settings via `ProviderSettingsView`.
+  * Offers typed getters (`get_str`, `get_int`, `get_bool`) and convenience properties (`provider`, `target_language`, etc.).
+  * Functions as the configuration backbone shared by core logic, translation providers, CLI scripts, and GUI components.
+
+* Settings flow:
+  1. CLI / GUI scripts build an `Options` instance.
+  2. `SubtitleProject` reads translation/project parameters from it.
+  3. `ProjectDataModel` copies and extends settings, keeping `SubtitleProject` and `TranslationProvider` synchronized.
+  4. GUI forms (`ProviderSettingsView`, dialogs) modify `Options` or provider-specific settings, triggering updates across components.
 
 ## GUI View and Widget Architecture
 

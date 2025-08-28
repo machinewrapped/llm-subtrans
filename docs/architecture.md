@@ -1,13 +1,19 @@
 # LLM-Subtrans Architecture
 
-This document provides a high-level overview of the `llm-subtrans` project architecture. It is intended to help new developers understand how the different parts of the application fit together.
-
 ```mermaid
 graph TD
     Scripts[scripts] --> GUI[GUI]
     Scripts --> PySubtitle[PySubtitle]
     GUI --> PySubtitle
 ```
+
+**Modules at a Glance**
+
+- **PySubtitle** – core subtitle processing, translation, and project management.
+- **GUI** – PySide6-based user interface built on top of the `PySubtitle` engine.
+- **scripts** – entry-point scripts for launching the GUI or command-line tools.
+
+This document provides a high-level overview of the `llm-subtrans` project architecture. It is intended to help new developers understand how the different parts of the application fit together.
 
 ## 1. Entry Points
 
@@ -17,12 +23,6 @@ graph TD
 | `llm-subtrans.py` | Command-line translator: loads a subtitle file, performs translation using specified provider/model, and saves results. | `scripts/llm-subtrans.py` |
 
 ## 1. Module Structure
-
-**Module Overview**
-
-*   **`PySubtitle`**: Core subtitle processing, translation, and project management.
-*   **`GUI`**: PySide6-based user interface built on top of the `PySubtitle` engine.
-*   **`scripts`**: Entry-point scripts for launching the GUI or command-line tools.
 
 ### PySubtitle (Core Logic)
 * Houses all subtitle-processing, translation, and project-management code.

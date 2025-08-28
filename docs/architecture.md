@@ -176,7 +176,7 @@ The application supports multiple translation services through a provider system
 ### TranslationProvider (Configuration Layer)
 Each `TranslationProvider` subclass serves as the registry entry for a translation service and offers:
 
-- **available_Models**: property containing available models that can be selected
+- **`available_models`**: property containing available models that can be selected
 - **GetTranslationClient**: creates an appropriate client for API communication
 - **GetOptions**: Defines provider-specific options (API key, endpoints, etc.)
 

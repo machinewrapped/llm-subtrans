@@ -126,3 +126,41 @@ This allows each translation provider to define its own set of options, which ar
 #### Conditional Visibility
 
 The `SettingsDialog` also uses a data-driven approach to manage the visibility of certain settings. The `VISIBILITY_DEPENDENCIES` dictionary defines the conditions under which a setting should be visible. For example, the `max_single_line_length` option is only visible if `postprocess_translation` and `break_long_lines` are both enabled. This is achieved by checking the values of the settings and showing or hiding the corresponding widgets accordingly. This makes the UI cleaner and more intuitive for the user.
+
+### Command Queue and Execution
+
+The application uses a command queue to manage all operations that modify the project data. This ensures that long-running operations are executed on a background thread, keeping the GUI responsive. The command queue system is also responsible for managing the undo/redo functionality.
+
+#### The `GuiInterface`
+
+The `GUI.GuiInterface` class is the central hub for the command queue system. It is responsible for:
+
+*   **Creating and managing the `CommandQueue`**: The `GuiInterface` creates a single instance of the `CommandQueue` and connects to its signals (`commandStarted`, `commandExecuted`, `commandAdded`, `commandUndone`). This allows the `GuiInterface` to monitor the state of the command queue and to react to command events.
+
+*   **Providing access to the `CommandQueue`**: The `GuiInterface` provides a `QueueCommand` method that allows other parts of the GUI to add commands to the queue. This is the primary way that the GUI interacts with the command queue.
+
+*   **Wiring up signals and callbacks**: The `GuiInterface` connects signals from the `ProjectActions` handler to the appropriate slots for creating and queueing commands.
+
+#### The `CommandQueue`
+
+The `GUI.CommandQueue` is the heart of the command execution system. It is responsible for:
+
+*   **Managing a queue of commands**: The `CommandQueue` maintains a queue of `Command` objects and executes them sequentially on a background thread pool (`QThreadPool`).
+
+*   **Handling command execution**: The `CommandQueue` ensures that only one command is executed at a time (or more, if multithreading is enabled for specific commands). It also handles blocking commands, which prevent other commands from running in parallel.
+
+*   **Managing undo and redo stacks**: The `CommandQueue` maintains two stacks of commands: an undo stack and a redo stack. When a command is executed, it is pushed onto the undo stack. If the user chooses to undo the command, it is moved from the undo stack to the redo stack.
+
+#### The `Command` Class
+
+The `GUI.Command.Command` class is the base class for all commands in the application. Each command encapsulates a single unit of work, such as loading a file, translating a batch of subtitles, or merging lines.
+
+Key features of the `Command` class include:
+
+*   **`execute()` method**: Each command must implement an `execute` method, which contains the logic for the command. This method is called by the `CommandQueue` when the command is executed.
+
+*   **`undo()` method**: Commands can also implement an `undo` method, which contains the logic for reversing the command's effects. This method is called by the `CommandQueue` when the user chooses to undo the command.
+
+*   **Model Updates**: Commands can generate `ModelUpdate` objects, which are used to update the `ProjectViewModel` in a thread-safe manner. This ensures that the GUI is always in sync with the project data.
+
+*   **Callbacks**: Commands can have callbacks that are executed when the command is completed or undone. This allows for a flexible and decoupled way of handling the results of a command.

@@ -52,6 +52,17 @@ The translation process is managed by the `PySubtitle.SubtitleTranslator` class.
 
 The `SubtitleTranslator` delegates the actual translation to a `PySubtitle.TranslationProvider` instance. The `TranslationProvider` is a plug-and-play component that allows the application to support different translation services. New providers can be added by creating a new module in the `PySubtitle.Providers` directory and implementing the `TranslationProvider` interface.
 
+## Command-Line Architecture
+
+The command-line interface provides a lightweight path for batch translation by combining small scripts with shared helpers in `scripts/subtrans_common.py`.
+
+1. **Argument parsing** – `CreateArgParser` defines common CLI flags such as input and output paths, batching thresholds, and optional preprocessing steps. `scripts/llm-subtrans.py` extends this parser with provider-specific flags before calling `parse_args`.
+2. **Options creation** – Parsed arguments and provider metadata are merged by `CreateOptions` to produce an `Options` instance that configures the translation provider and processing behaviour.
+3. **Project initialization** – `CreateProject` loads the source subtitle file, applies settings, and prepares any project or backup files.
+4. **Translation invocation** – `CreateTranslator` constructs a `SubtitleTranslator`, and `project.TranslateSubtitles` runs the translation. When complete, the project file can be saved for later reuse.
+
+This flow executes to completion on the command line, while the GUI path initializes a `QApplication`, builds a `ProjectDataModel`, and schedules work on a background `CommandQueue` so that translation can run interactively. Both paths share reusable components such as `Options`, `SubtitleProject`, `SubtitleTranslator`, and the `InitLogger` utility, ensuring consistent behaviour across interfaces.
+
 ## GUI Architecture
 
 The GUI is built using PySide6 and follows a Model-View-ViewModel (MVVM) like pattern.

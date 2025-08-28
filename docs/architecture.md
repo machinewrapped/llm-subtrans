@@ -25,8 +25,11 @@ The core of the subtitle management is the `PySubtitle.SubtitleProject` class. T
 The subtitles themselves are represented by a hierarchy of objects:
 
 *   `PySubtitle.Subtitles`: A container for all the subtitles in a project. It holds a list of `SubtitleScene` objects.
+
 *   `PySubtitle.SubtitleScene`: Represents a continuous scene in the video. It contains a list of `SubtitleBatch` objects.
+
 *   `PySubtitle.SubtitleBatch`: A small group of subtitle lines that are sent to the translation provider together.
+
 *   `PySubtitle.SubtitleLine`: Represents a single subtitle line, with its start and end times, text content, and translation.
 
 ### File Formats
@@ -228,3 +231,28 @@ The `PySubtitle.TranslationClient` class is an abstract base class that defines 
 *   **Parsing the response**: The `GetParser` method returns a `TranslationParser` that can parse the response from the translation service and extract the translated text.
 
 Each translation provider must implement a subclass of `TranslationClient` that handles the specifics of its API, such as the request format, authentication, and error handling. This separation of concerns between the `TranslationProvider` and the `TranslationClient` makes the code more modular and easier to maintain.
+
+### Translation Prompt and Parsing
+
+The interaction with the Large Language Models (LLMs) for translation is managed by two key components: `TranslationPrompt` for preparing the input and `TranslationParser` for interpreting the output.
+
+#### The `TranslationPrompt`
+
+The `PySubtitle.TranslationPrompt` class is responsible for dynamically constructing the input prompt that is sent to the translation service. Its primary role is to format the various pieces of information required for translation into a coherent and effective message for the LLM. This includes:
+
+*   **User-defined instructions**: Specific instructions provided by the user for the translation task.
+*   **Subtitle lines**: The actual subtitle lines to be translated.
+*   **Contextual information**: Summaries of previous scenes or batches, character names, and other relevant details that help the LLM understand the broader narrative.
+*   **Prompt templates**: Configurable templates that define the overall structure and formatting of the prompt, allowing for adaptation to different LLM requirements (e.g., conversational message formats for chat models vs. single-string completion prompts).
+
+The `TranslationPrompt` can also generate specialized "retry prompts" when a translation fails validation. These prompts include information about the errors encountered, guiding the LLM to correct its previous output.
+
+#### The `TranslationParser`
+
+Once a response is received from the translation service, the `PySubtitle.TranslationParser` class takes over to interpret and extract the translated content. Its main functions include:
+
+*   **Extracting translations**: It uses a set of predefined and fallback regular expressions to identify and extract the translated subtitle lines from the raw text response provided by the LLM. This robust parsing mechanism helps to account for variations in the LLM's output format.
+*   **Matching translations**: It attempts to match the extracted translated lines back to their original source subtitle lines, ensuring that the correct translation is associated with each original line.
+*   **Validation**: After extraction, the `TranslationParser` performs validation checks on the translated content to assess its quality and adherence to specified rules (e.g., line length, number of newlines). Any errors found during validation can trigger re-translation attempts.
+
+Together, `TranslationPrompt` and `TranslationParser` form a crucial bridge between the application's internal subtitle representation and the external LLM services, ensuring that inputs are well-formed and outputs are correctly interpreted and integrated back into the project.

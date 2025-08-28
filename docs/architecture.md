@@ -346,3 +346,11 @@ Once a response is received from the translation service, the `PySubtitle.Transl
 *   **Validation**: After extraction, the `TranslationParser` performs validation checks on the translated content to assess its quality and adherence to specified rules (e.g., line length, number of newlines). Any errors found during validation can trigger re-translation attempts.
 
 Together, `TranslationPrompt` and `TranslationParser` form a crucial bridge between the application's internal subtitle representation and the external LLM services, ensuring that inputs are well-formed and outputs are correctly interpreted and integrated back into the project.
+
+## Extending the System
+
+- **Core features** live in `PySubtitle`. Add new file formats, translation logic or providers here.
+- **GUI features** belong in `GUI` alongside new views or widgets.
+- **Translation providers** are added by subclassing `TranslationProvider` in `PySubtitle/Providers` and wiring them through `Options`.
+- **Settings** adjustments usually require changes to `Options` and possibly provider configuration.
+- **Command behaviours** should implement the command pattern and be dispatched through `CommandQueue` to remain thread‑safe and undoable.

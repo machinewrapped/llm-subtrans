@@ -61,7 +61,7 @@ The command-line interface provides a lightweight path for batch translation by 
 3. **Project initialization** – `CreateProject` loads the source subtitle file, applies settings, and prepares any project or backup files.
 4. **Translation invocation** – `CreateTranslator` constructs a `SubtitleTranslator`, and `project.TranslateSubtitles` runs the translation. When complete, the project file can be saved for later reuse.
 
-This flow executes to completion on the command line, while the GUI path initializes a `QApplication`, builds a `ProjectDataModel`, and schedules work on a background command queue so that translation can run interactively. Both paths share reusable components such as `Options`, `SubtitleProject`, `SubtitleTranslator`, and the `InitLogger` utility, ensuring consistent behaviour across interfaces.
+This flow executes to completion on the command line, while the GUI path initializes a `QApplication`, builds a `ProjectDataModel`, and schedules work on a background `CommandQueue` so that translation can run interactively. Both paths share reusable components such as `Options`, `SubtitleProject`, `SubtitleTranslator`, and the `InitLogger` utility, ensuring consistent behaviour across interfaces.
 
 ## GUI Architecture
 

@@ -97,3 +97,32 @@ The central widget for displaying project data is the `GUI.Widgets.ModelView`. I
 *   **`GUI.Widgets.OptionsWidgets`**: This module provides a set of reusable widgets for editing different types of options (e.g., `TextOptionWidget`, `CheckboxOptionWidget`, `DropdownOptionWidget`). These are used to construct the forms in `ProjectSettings` and the main `SettingsDialog`.
 
 *   **`GUI.Widgets.Widgets`**: This module contains a collection of custom widgets used to build the user interface, such as `TreeViewItemWidget` for rendering items in the `ScenesView`, and `LineItemView` for rendering items in the `SubtitleView`. These widgets help to create a consistent and visually appealing user interface.
+
+### The `SettingsDialog`
+
+The `GUI.SettingsDialog` is a powerful example of a data-driven user interface in the application. It is responsible for allowing users to edit the application's settings. The dialog is built dynamically based on a dictionary-based configuration, which makes it easy to add new settings and options without having to write a lot of boilerplate UI code.
+
+#### Data-Driven UI Generation
+
+The structure of the `SettingsDialog` is defined by the `SECTIONS` dictionary. This dictionary maps tab names (e.g., "General", "Processing") to a nested dictionary of setting keys and their types. For example:
+
+```python
+'General': {
+    'ui_language': (str, _("The language of the application interface")),
+    'theme': [],
+    'target_language': (str, _("The default language to translate the subtitles to")),
+    # ...
+},
+```
+
+The dialog iterates over this dictionary and uses the `GUI.Widgets.OptionsWidgets.CreateOptionWidget` factory function to create the appropriate widget for each setting based on its type (`str`, `int`, `float`, `bool`, or a list for a dropdown). This approach makes the dialog highly extensible and easy to maintain.
+
+#### Dynamic Provider Settings
+
+A key feature of the `SettingsDialog` is its ability to display settings for the currently selected `TranslationProvider`. The "Provider Settings" tab is populated dynamically by calling the `GetOptions` method on the active `TranslationProvider` instance. This method returns a dictionary of settings that are specific to that provider.
+
+This allows each translation provider to define its own set of options, which are then automatically displayed in the settings dialog when that provider is selected. This is a great example of the "plug-and-play" architecture of the translation providers.
+
+#### Conditional Visibility
+
+The `SettingsDialog` also uses a data-driven approach to manage the visibility of certain settings. The `VISIBILITY_DEPENDENCIES` dictionary defines the conditions under which a setting should be visible. For example, the `max_single_line_length` option is only visible if `postprocess_translation` and `break_long_lines` are both enabled. This is achieved by checking the values of the settings and showing or hiding the corresponding widgets accordingly. This makes the UI cleaner and more intuitive for the user.

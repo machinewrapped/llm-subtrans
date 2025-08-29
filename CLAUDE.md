@@ -6,7 +6,7 @@ Never import or use outdated typing members like List and Union.
 Secrets are stored in a .env file - you must never read the contents of the file.
 
 ## Commands
-- Run all tests: `python scripts/run_tests.py`
+- Run all tests: `python scripts/unit_tests.py` or `python scripts/run_tests.py` 
 - Run single test: `python -m unittest PySubtitle.UnitTests.test_MODULE` or `python -m unittest GUI.UnitTests.test_MODULE`
 - Build distribution: `./scripts/makedistro.sh` (Linux/Mac) or `scripts\makedistro.bat` (Windows)
 - Install dependencies: `./install.sh` (Linux/Mac) or `install.bat` (Windows)

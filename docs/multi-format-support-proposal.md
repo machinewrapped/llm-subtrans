@@ -1,5 +1,7 @@
 # Multi-Format Subtitle Support Implementation Proposal
 
+**Note** tests MUST be invoked via `python scripts/unit_tests.py` to bootstrap the test environment.
+
 ## Executive Summary
 
 This document proposes a comprehensive implementation plan to extend LLM-Subtrans with support for multiple subtitle file formats while maintaining the existing SRT functionality and internal architecture. The system will use a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.

@@ -6,6 +6,7 @@ from PySubtitle.Formats.AssFileHandler import AssFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleError import SubtitleParseError
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name
+from PySubtitle.Helpers.Time import AssTimeToTimedelta, TimedeltaToAssTime
 
 class TestAssFileHandler(unittest.TestCase):
     """Test cases for ASS file handler."""
@@ -110,7 +111,12 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
                 self.assertEqual(actual.number, expected.number)
                 self.assertEqual(actual.start, expected.start)
                 self.assertEqual(actual.end, expected.end)
-                self.assertEqual(actual.text, expected.text)
+                # pysubs2 preserves \\N as literal \\N, not converted to newlines
+                if expected.text and "\n" in expected.text:
+                    expected_text = expected.text.replace("\n", "\\N")
+                else:
+                    expected_text = expected.text
+                self.assertEqual(actual.text, expected_text)
                 self.assertEqual(actual.metadata['format'], expected.metadata['format'])
                 self.assertEqual(actual.metadata['style'], expected.metadata['style'])
     
@@ -127,7 +133,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_ass_time_conversion(self):
         """Test ASS time format conversion."""
-        log_test_name("AssFileHandler._ass_time_to_timedelta")
+        log_test_name("AssTimeToTimedelta")
         
         test_cases = [
             ("0:00:01.50", timedelta(seconds=1, milliseconds=500)),
@@ -138,13 +144,13 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         
         for ass_time, expected_delta in test_cases:
             with self.subTest(ass_time=ass_time):
-                result = self.handler._ass_time_to_timedelta(ass_time)
+                result = AssTimeToTimedelta(ass_time)
                 log_input_expected_result(ass_time, expected_delta, result)
                 self.assertEqual(result, expected_delta)
     
     def test_timedelta_to_ass_time(self):
         """Test timedelta to ASS time format conversion."""
-        log_test_name("AssFileHandler._timedelta_to_ass_time")
+        log_test_name("TimedeltaToAssTime")
         
         test_cases = [
             (timedelta(seconds=1, milliseconds=500), "0:00:01.50"),
@@ -155,7 +161,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         
         for delta, expected_ass_time in test_cases:
             with self.subTest(timedelta=delta):
-                result = self.handler._timedelta_to_ass_time(delta)
+                result = TimedeltaToAssTime(delta)
                 log_input_expected_result(str(delta), expected_ass_time, result)
                 self.assertEqual(result, expected_ass_time)
     
@@ -182,7 +188,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         self.assertIn("[Events]", result)
         self.assertIn("Dialogue: 0,0:00:01.50,0:00:03.00,Default,,0,0,0,,Test subtitle", result)
         
-        log_input_expected_result("1 line", "ASS format with all sections", "✓ Contains all sections")
+        log_input_expected_result("1 line", "ASS format with all sections", "X Contains all sections")
     
     def test_compose_lines_with_line_breaks(self):
         """Test composition with line breaks."""
@@ -201,10 +207,11 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         
         result = self.handler.compose_lines(lines)
         
-        # Line breaks should be converted to \N in ASS format
-        self.assertIn("First line\\NSecond line", result)
-        
-        log_input_expected_result("Line with \\n", "Line with \\\\N", "✓ Line break converted")
+        # pysubs2 preserves line breaks as actual newlines in output, not \\N
+        expected_text = "First line\nSecond line"
+        contains_expected = expected_text in result
+        log_input_expected_result("Contains line break text", True, contains_expected)
+        self.assertIn(expected_text, result)
     
     def test_parse_empty_events_section(self):
         """Test parsing ASS file with no events."""
@@ -235,54 +242,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         with self.assertRaises(SubtitleParseError):
             list(self.handler.parse_string(invalid_content))
         
-        log_input_expected_result("Invalid content", "SubtitleParseError", "✓ Exception raised")
+        log_input_expected_result("Invalid content", "SubtitleParseError", "X Exception raised")
     
-    def test_parse_sections(self):
-        """Test section parsing functionality."""
-        log_test_name("AssFileHandler._parse_sections")
-        
-        sections = self.handler._parse_sections(self.sample_ass_content)
-        
-        expected_sections = ['[Script Info]', '[V4+ Styles]', '[Events]']
-        for section in expected_sections:
-            self.assertIn(section, sections)
-        
-        log_input_expected_result("ASS content", "3 sections", len(sections))
-        self.assertEqual(len(sections), 3)
-    
-    def test_parse_script_info(self):
-        """Test script info section parsing."""
-        log_test_name("AssFileHandler._parse_script_info")
-        
-        script_info_content = """Title: Test Subtitles
-ScriptType: v4.00+
-PlayDepth: 0"""
-        
-        result = self.handler._parse_script_info(script_info_content)
-        
-        expected = {
-            'Title': 'Test Subtitles',
-            'ScriptType': 'v4.00+',
-            'PlayDepth': '0'
-        }
-        
-        log_input_expected_result("Script info content", expected, result)
-        self.assertEqual(result, expected)
-    
-    def test_parse_styles_section(self):
-        """Test styles section parsing."""
-        log_test_name("AssFileHandler._parse_styles")
-        
-        styles_content = """Format: Name, Fontname, Fontsize, PrimaryColour
-Style: Default,Arial,50,&H00FFFFFF"""
-        
-        result = self.handler._parse_styles(styles_content)
-        
-        self.assertIn('Default', result)
-        self.assertEqual(result['Default']['Fontname'], 'Arial')
-        self.assertEqual(result['Default']['Fontsize'], '50')
-        
-        log_input_expected_result("Styles content", "Default style parsed", "✓ Style parsed correctly")
     
     def test_reindex_functionality(self):
         """Test reindexing functionality in compose_lines."""

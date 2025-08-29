@@ -37,19 +37,6 @@ class SubtitleFormatRegistry:
         return handler_cls()
 
     @classmethod
-    def get_handler_by_name(cls, name: str) -> type[SubtitleFileHandler]:
-        cls._ensure_discovered()
-        for handler_cls in set(cls._handlers.values()):
-            if handler_cls.__name__ == name:
-                return handler_cls
-        raise ValueError(f"Unknown subtitle handler class: {name}")
-
-    @classmethod
-    def create_handler_by_name(cls, name: str) -> SubtitleFileHandler:
-        handler_cls = cls.get_handler_by_name(name)
-        return handler_cls()
-
-    @classmethod
     def enumerate_formats(cls) -> list[str]:
         cls._ensure_discovered()
         return sorted(cls._handlers.keys())

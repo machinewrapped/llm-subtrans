@@ -238,15 +238,12 @@ class SubtitleProject:
                 with open(filepath, 'r', encoding=default_encoding, newline='') as f:
                     subtitles: Subtitles = json.load(f, cls=SubtitleDecoder)
 
-                handler_name = getattr(subtitles, 'file_handler_class', None)
-                try:
-                    if handler_name:
-                        subtitles.file_handler = SubtitleFormatRegistry.create_handler_by_name(handler_name)
-                    elif subtitles.outputpath:
-                        ext = os.path.splitext(subtitles.outputpath)[1]
+                if subtitles.outputpath:
+                    ext = os.path.splitext(subtitles.outputpath)[1]
+                    try:
                         subtitles.file_handler = SubtitleFormatRegistry.create_handler(ext)
-                except ValueError:
-                    subtitles.file_handler = VoidFileHandler()
+                    except ValueError:
+                        logging.warning(_("Unknown file type {extension}").format(extension = ext))
 
                 subtitles.Sanitise()
                 self.subtitles = subtitles

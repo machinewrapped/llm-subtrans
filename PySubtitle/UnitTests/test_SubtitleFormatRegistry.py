@@ -55,12 +55,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         log_input_expected_result('.srt', SrtFileHandler, type(handler))
         self.assertIsInstance(handler, SrtFileHandler)
 
-    def test_CreateHandlerByName(self):
-        log_test_name("CreateHandlerByName")
-        handler = SubtitleFormatRegistry.create_handler_by_name('SrtFileHandler')
-        log_input_expected_result('SrtFileHandler', SrtFileHandler, type(handler))
-        self.assertIsInstance(handler, SrtFileHandler)
-
     def test_DuplicateRegistrationPriority(self):
         log_test_name("DuplicateRegistrationPriority")
         SubtitleFormatRegistry.register_handler(DummySrtHandler, priority=1)

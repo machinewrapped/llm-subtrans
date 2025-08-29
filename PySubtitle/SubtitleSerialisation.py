@@ -120,7 +120,6 @@ def _object_hook(dct):
             obj = Subtitles(VoidFileHandler(), sourcepath, outpath)
             obj.settings = dct.get('settings', {}) or dct.get('context', {})
             obj.scenes = dct.get('scenes', [])
-            obj.file_handler_class = dct.get('file_handler')
             obj.UpdateProjectSettings(SettingsType()) # Force update for legacy files
             return obj
         elif class_name == classname(SubtitleScene):

@@ -17,6 +17,7 @@ from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleError import SubtitleError, SubtitleParseError
 from PySubtitle.Helpers import GetInputPath, GetOutputPath
 from PySubtitle.Helpers.Parse import ParseNames
+from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleProcessor import SubtitleProcessor
 from PySubtitle.SubtitleScene import SubtitleScene, UnbatchScenes
 from PySubtitle.SubtitleLine import SubtitleLine
@@ -57,6 +58,9 @@ class Subtitles:
 
         self.sourcepath : str|None = GetInputPath(filepath)
         self.outputpath : str|None = outputpath or None
+
+        # TODO: file format should be configurable/extensible with a router system
+        self.file_handler : SubtitleFileHandler = SrtFileHandler()
 
         self.settings : SettingsType = deepcopy(self.DEFAULT_PROJECT_SETTINGS)
 
@@ -244,7 +248,7 @@ class Subtitles:
 
     def LoadSubtitles(self, filepath: str|None = None) -> None:
         """
-        Load subtitles from an SRT file
+        Load subtitles from a file
         """
         if filepath:
             self.sourcepath = GetInputPath(filepath)
@@ -252,21 +256,21 @@ class Subtitles:
 
         if not self.sourcepath:
             raise ValueError("No source path set for subtitles")
-        
-        # Use file handler for format-agnostic loading
-        handler = SrtFileHandler()  # For now, we only support SRT
+
+        if not self.file_handler or not isinstance(self.file_handler, SubtitleFileHandler):
+            raise SubtitleError(_("File type handler is unknown for {filepath}").format(filepath=self.sourcepath))
         
         try:
             with open(self.sourcepath, 'r', encoding=default_encoding, newline='') as f:
-                lines = list(handler.parse_file(f))
+                lines = list(self.file_handler.parse_file(f))
 
         except SubtitleParseError as e:
-            logging.warning(_("Error parsing SRT file... trying with fallback encoding: {}").format(str(e)))
+            logging.warning(_("Error parsing file... trying with fallback encoding: {}").format(str(e)))
             try:
                 with open(self.sourcepath, 'r', encoding=fallback_encoding) as f:
-                    lines = list(handler.parse_file(f))
+                    lines = list(self.file_handler.parse_file(f))
             except SubtitleParseError as e2:
-                logging.error(_("Failed to parse SRT file with fallback encoding: {}").format(str(e2)))
+                logging.error(_("Failed to parse file with fallback encoding: {}").format(str(e2)))
                 raise e2
 
         with self.lock:
@@ -275,43 +279,37 @@ class Subtitles:
 
     def LoadSubtitlesFromString(self, srt_string: str) -> None:
         """
-        Load subtitles from an SRT string
+        Load subtitles from a string
         """
-        # Use file handler for format-agnostic parsing
-        handler = SrtFileHandler()  # For now, we only support SRT
-        
         try:
             with self.lock:
-                lines = list(handler.parse_string(srt_string))
+                lines = list(self.file_handler.parse_string(srt_string))
                 self._renumber_if_needed(lines)
                 self.originals = lines
 
         except SubtitleParseError as e:
-            logging.error(_("Failed to parse SRT string: {}").format(str(e)))
+            logging.error(_("Failed to parse subtitles string: {}").format(str(e)))
 
     def SaveOriginal(self, path: str|None = None) -> None:
         """
-        Write original subtitles to an SRT file
+        Write original subtitles to a file
         """
         path = path or self.sourcepath
         if not path:
             raise ValueError("No file path set")
 
-        # Use file handler for format-agnostic saving
-        handler = SrtFileHandler()  # For now, we only support SRT
-
         with self.lock:
             originals = self.originals
             if originals:
-                srtfile = handler.compose_lines(originals, reindex=False)
+                subtitle_file = self.file_handler.compose_lines(originals, reindex=False)
                 with open(path, 'w', encoding=default_encoding) as f:
-                    f.write(srtfile)
+                    f.write(subtitle_file)
             else:
                 logging.warning(_("No original subtitles to save to {}").format(str(path)))
 
     def SaveTranslation(self, outputpath: str|None = None) -> None:
         """
-        Write translated subtitles to an SRT file
+        Write translated subtitles to a file
         """
         outputpath = outputpath or self.outputpath
         if not outputpath:
@@ -337,6 +335,7 @@ class Subtitles:
                 translated = self._merge_original_and_translated(originals, translated)
 
             # Renumber the lines to ensure compliance with SRT format
+            # TODO: this should be handled by the file_handler
             output_lines : list[SubtitleLine] = []
             for line_number, line in enumerate(translated, start=self.start_line_number or 1):
                 if line.text:
@@ -345,16 +344,16 @@ class Subtitles:
             logging.info(_("Saving translation to {}").format(str(outputpath)))
 
             # Add Right-To-Left markers to lines that contain primarily RTL script, if requested
+            # TODO: this should probably be a function of the file_handler, in case different formats handle it differently
             if self.settings.get('add_right_to_left_markers'):
                 for line in output_lines:
                     if line.text and IsRightToLeftText(line.text) and not line.text.startswith("\u202b"):
                         line.text = f"\u202b{line.text}\u202c"
 
             # Use file handler for format-agnostic saving
-            handler = SrtFileHandler()  # For now, we only support SRT
-            srtfile = handler.compose_lines(output_lines, reindex=False)
+            subtitle_file = self.file_handler.compose_lines(output_lines, reindex=False)
             with open(outputpath, 'w', encoding=default_encoding) as f:
-                f.write(srtfile)
+                f.write(subtitle_file)
 
             # Log a warning if any lines had no text or start time
             num_invalid = len([line for line in translated if line.start is None])

@@ -71,11 +71,11 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - Create unit tests for registry functionality
 
 **Acceptance Tests**:
-- [ ] Registry discovers existing `SrtFileHandler` automatically
-- [ ] Registry maps `.srt` extension to `SrtFileHandler`
-- [ ] Registry raises appropriate errors for unknown extensions
-- [ ] Registry can enumerate all available formats
-- [ ] Registry handles duplicate extension registration with priority
+- [x] Registry discovers existing `SrtFileHandler` automatically
+- [x] Registry maps `.srt` extension to `SrtFileHandler`
+- [x] Registry raises appropriate errors for unknown extensions
+- [x] Registry can enumerate all available formats
+- [x] Registry handles duplicate extension registration with priority
 
 **Files to Modify**:
 - Create: `PySubtitle/SubtitleFormatRegistry.py`

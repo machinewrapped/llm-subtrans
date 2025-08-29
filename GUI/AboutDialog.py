@@ -47,7 +47,7 @@ class AboutDialog(QDialog):
         title_label.setFont(font)
 
         # Description
-        description_label = QLabel(_("GUI-Subtrans uses LLMs to translate SRT subtitles into other languages, or to improve the quality of an existing translation."))
+        description_label = QLabel(_("GUI-Subtrans uses LLMs to translate subtitles into other languages, or to improve the quality of an existing translation."))
         description_label.setWordWrap(True)
 
         # Author Information and GitHub link

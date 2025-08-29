@@ -176,7 +176,7 @@ Note that steps 3 and 4 are optional but recommended, as they help prevent confl
 ## Usage
 The program works by dividing the subtitles up into small batches and sending each one to the translation service in turn. It is likely to take time to complete, and can potentially make many API calls for each subtitle file.
 
-By default The translated subtitles will be written to a new SRT file in the same directory with the target langugage appended to the original filename.
+By default The translated subtitles will be written to a new file in the same directory with the target langugage appended to the original filename.
 
 Subtitle Edit's (https://www.nikse.dk/subtitleedit) "Fix Common Errors" can help to clean up the translated subtitles, though some of its functionality is now covered by the post-process option (`--postprocess`) in LLM-Subtrans.
 
@@ -231,7 +231,7 @@ you should be able to see what they do.
 
 There are a number of command-line arguments that offer more control over the translation process.
 
-To use any of these arguments, add them to the command-line after the path to the SRT file. For example:
+To use any of these arguments, add them to the command-line after the path to the source file. For example:
 
 ```sh
 llm-subtrans path/to/my/subtitles.srt --moviename "My Awesome Movie" --ratelimit 10 --substitution cat::dog

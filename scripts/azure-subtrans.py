@@ -19,7 +19,7 @@ deployment_name = os.getenv('AZURE_DEPLOYMENT_NAME')
 api_base = os.getenv('AZURE_API_BASE')
 api_version = os.getenv('AZURE_API_VERSION', "2024-02-01")
 
-parser = CreateArgParser(f"Translates an SRT file using a model on an OpenAI Azure deployment")
+parser = CreateArgParser(f"Translates subtitles using a model on an OpenAI Azure deployment")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"API key for your deployment")
 parser.add_argument('-b', '--apibase', type=str, default=None, help="API backend base address.")
 parser.add_argument('-a', '--apiversion', type=str, default=None, help="Azure API version")

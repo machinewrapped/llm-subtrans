@@ -15,7 +15,7 @@ from PySubtitle.SubtitleTranslator import SubtitleTranslator
 provider = "Mistral"
 default_model = os.getenv('MISTRAL_MODEL') or "open-mistral-nemo"
 
-parser = CreateArgParser(f"Translates an SRT file using an Mistral model")
+parser = CreateArgParser(f"Translates subtitles using an Mistral model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Mistral API Key (https://console.mistral.ai/api-keys/)")
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
 parser.add_argument('--server_url', type=str, default=None, help="Server URL (leave blank for default).")

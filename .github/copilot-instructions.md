@@ -7,7 +7,7 @@ These instructions help AI coding agents work effectively in this repository. Fo
   - GUI/ contains views, dialogs, toolbars, and controllers that emit/handle Qt signals.
   - GUI/Commands/ contains background tasks implemented as QRunnable-based `Command` objects. They run via `GUI/CommandQueue.py` (QThreadPool) and update the UI by queueing `ModelUpdate`s.
   - GUI/ViewModel/ contains Qt model items (`SceneItem`, `BatchItem`, `LineItem`) and `ProjectViewModel` that maps subtitle data into a hierarchical model for views.
-  - PySubtitle/ contains domain logic: parsing SRT/project files, batching scenes, validation, translation provider abstraction, etc.
+  - PySubtitle/ contains domain logic: parsing subtitle/project files, batching scenes, validation, translation provider abstraction, etc.
   - scripts/gui-subtrans.py is the GUI entrypoint. Initialize localization before creating the main window.
 - Data flow:
   - User actions -> `GUI/ProjectActions.py` -> queue `GUI/Commands/*` via `GUI/GuiInterface.py` -> commands modify domain objects -> produce `GUI/ViewModel/ViewModelUpdate` patches -> `ProjectDataModel.UpdateViewModel` applies patches -> Qt model/view updates.

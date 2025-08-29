@@ -15,7 +15,7 @@ from PySubtitle.SubtitleTranslator import SubtitleTranslator
 provider = "DeepSeek"
 default_model = os.getenv('DEEPSEEK_MODEL') or "deepseek-chat"
 
-parser = CreateArgParser(f"Translates an SRT file using an DeepSeek model")
+parser = CreateArgParser(f"Translates subtitles using an DeepSeek model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your DeepSeek API Key (https://platform.deepseek.com/api_keys)")
 parser.add_argument('-b', '--apibase', type=str, default="https://api.deepseek.com", help="API backend base address.")
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")

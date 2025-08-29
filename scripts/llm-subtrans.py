@@ -13,7 +13,7 @@ from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleTranslator import SubtitleTranslator
 
 # Parse command line arguments
-parser = CreateArgParser("Translates an SRT file using OpenRouter or a custom AI model server")
+parser = CreateArgParser("Translates subtitles using OpenRouter or a custom AI model server")
 parser.add_argument('-s', '--server', type=str, default=None, help="Address of the server including port (e.g. http://localhost:1234). If not specified, uses OpenRouter")
 parser.add_argument('-e', '--endpoint', type=str, default=None, help="Endpoint to call on the server (e.g. /v1/completions)")
 parser.add_argument('-k', '--apikey', type=str, default=None, help="API Key (if required)")

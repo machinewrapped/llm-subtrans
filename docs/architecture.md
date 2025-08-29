@@ -36,7 +36,7 @@ Contains all subtitle processing, translation logic, and project management. Thi
 ### GUI (User Interface)
 PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, and user interactions.
 
-**Key Classes:**
+### Key Classes
 - `ProjectDataModel` – State management and synchronization layer
 - `ProjectViewModel` – Qt model mapping project data to UI views (scenes → batches → lines)
 - `CommandQueue` – executes operations asynchronously with undo/redo support
@@ -44,9 +44,9 @@ PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, 
 
 ## Data Organization
 
-**SubtitleProject** manages translation sessions, loading SRT files and saving/loading `.subtrans` project files (JSON format containing subtitles, translations, and metadata).
+**SubtitleProject** manages translation sessions, loading subtitle files and saving/loading `.subtrans` project files (JSON format containing subtitles, translations, and metadata).
 
-**Data Hierarchy:**
+### Data Hierarchy
 - `Subtitles` – top-level container with subtitle content and metadata
 - `SubtitleScene` – a time-sliced section of subtitles, grouped into batches
 - `SubtitleBatch` – groups of lines within a scene, split into chunks for translation
@@ -62,7 +62,7 @@ PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, 
 - Handles retries, error management, and post-processing
 - Emits `TranslationEvents` with progress updates
 
-**TranslationProvider System:**
+### TranslationProvider System
 - Pluggable base class with providers in `PySubtitle/Providers/` that auto-register
 - Each provider exposes available models and creates an appropriate `TranslationClient`
 - `TranslationClient` handles API communication specifics (authentication, request format, parsing)

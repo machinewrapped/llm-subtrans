@@ -18,7 +18,7 @@ access_key = os.getenv('AWS_ACCESS_KEY_ID')
 secret_access_key = os.getenv('AWS_SECRET_ACCESS_KEY')
 aws_region = os.getenv('AWS_REGION', 'us-east-1')  # Default to a common Bedrock region
 
-parser = CreateArgParser(f"Translates an SRT file using a model on Amazon Bedrock")
+parser = CreateArgParser(f"Translates subtitles using a model on Amazon Bedrock")
 parser.add_argument('-k', '--accesskey', type=str, default=None, help="AWS Access Key ID")
 parser.add_argument('-s', '--secretkey', type=str, default=None, help="AWS Secret Access Key")
 parser.add_argument('-r', '--region', type=str, default=None, help="AWS Region (default: us-east-1)")

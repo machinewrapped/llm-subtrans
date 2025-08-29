@@ -155,7 +155,7 @@ class SubtitleProject:
 
     def LoadSubtitleFile(self, filepath : str) -> Subtitles:
         """
-        Load subtitles from an SRT file
+        Load subtitles from a file
         """
         with self.lock:
             self.subtitles = Subtitles(filepath)

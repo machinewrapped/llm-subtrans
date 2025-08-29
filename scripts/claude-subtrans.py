@@ -15,7 +15,7 @@ from PySubtitle.SubtitleTranslator import SubtitleTranslator
 provider = "Claude"
 default_model = os.getenv('CLAUDE_MODEL') or "claude-3-haiku-20240307"
 
-parser = CreateArgParser(f"Translates an SRT file using Anthropic's Claude AI")
+parser = CreateArgParser(f"Translates subtitles using Anthropic's Claude AI")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Anthropic API Key (https://console.anthropic.com/settings/keys)")
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
 parser.add_argument('--proxy', type=str, default=None, help="SOCKS proxy URL (e.g., socks://127.0.0.1:1089)")

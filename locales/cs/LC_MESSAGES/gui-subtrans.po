@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2025-08-28 12:27+0000\n"
+"POT-Creation-Date: 2025-08-29 08:29+0000\n"
 "PO-Revision-Date: 2025-08-09 21:00+0000\n"
 "Last-Translator: AI Assistant\n"
 "Language-Team: Czech\n"
@@ -451,9 +451,9 @@ msgstr "Chyba při načítání nastavení z {}"
 msgid "Error migrating settings from {} to {}. You can copy the files manually and restart the application."
 msgstr "Chyba při migraci nastavení z {} do {}. Můžete soubory zkopírovat ručně a restartovat aplikaci."
 
-#: PySubtitle/Subtitles.py:264
-msgid "Error parsing SRT file... trying with fallback encoding: {}"
-msgstr "Chyba při parsování souboru SRT... zkouším s náhradním kódováním: {}"
+#: PySubtitle/Subtitles.py:268
+msgid "Error parsing file... trying with fallback encoding: {}"
+msgstr "Chyba při parsování souboru… zkouším záložní kódování: {}"
 
 #: GUI/ProjectActions.py:120
 msgid "Error redoing the last command: {error}"
@@ -556,17 +556,17 @@ msgstr "Nepodařilo se načíst soubor s titulky {}: {}"
 msgid "Failed to merge lines"
 msgstr "Sloučení řádků se nezdařilo"
 
-#: PySubtitle/Subtitles.py:269
-msgid "Failed to parse SRT file with fallback encoding: {}"
-msgstr "Nepodařilo se analyzovat soubor SRT s náhradním kódováním: {}"
-
-#: PySubtitle/Subtitles.py:290
-msgid "Failed to parse SRT string: {}"
-msgstr "Nepodařilo se analyzovat řetězec SRT: {}"
-
 #: PySubtitle/Formats/SrtFileHandler.py:84
 msgid "Failed to parse SRT: {}"
 msgstr "Nepodařilo se analyzovat SRT: {}"
+
+#: PySubtitle/Subtitles.py:273
+msgid "Failed to parse file with fallback encoding: {}"
+msgstr "Nepodařilo se parsovat soubor se záložním kódováním: {}"
+
+#: PySubtitle/Subtitles.py:291
+msgid "Failed to parse subtitles string: {}"
+msgstr "Nepodařilo se parsovat řetězec titulků: {}"
 
 #: GUI/GuiInterface.py:194
 msgid "Failed to switch language - restart the application: {error}"
@@ -587,6 +587,10 @@ msgstr "Nepodařilo se přeložit {count} řádků:"
 #: GUI/NewProjectSettings.py:33
 msgid "Fewest lines to send in separate batch"
 msgstr "Nejméně řádků k odeslání v samostatné dávce"
+
+#: PySubtitle/Subtitles.py:261
+msgid "File type handler is unknown for {filepath}"
+msgstr "Pro soubor {filepath} není známý obslužný program typu souboru"
 
 #: GUI/FirstRunOptions.py:27
 msgid "First Run Options"
@@ -612,8 +616,8 @@ msgstr ""
 "Tímto se bezplatně uděluje povolení jakékoli osobě, která získá kopii tohoto softwaru a souvisejících dokumentačních souborů, nakládat se softwarem bez omezení, včetně, bez omezení, práv na používání, kopírování, úpravu, slučování, publikování, distribuci, sublicencování a/nebo prodej kopií softwaru."
 
 #: GUI/AboutDialog.py:50
-msgid "GUI-Subtrans uses LLMs to translate SRT subtitles into other languages, or to improve the quality of an existing translation."
-msgstr "GUI-Subtrans používá LLM k překladu titulků SRT do jiných jazyků nebo ke zlepšení kvality stávajícího překladu."
+msgid "GUI-Subtrans uses LLMs to translate subtitles into other languages, or to improve the quality of an existing translation."
+msgstr "GUI-Subtrans využívá LLM k překladu titulků do jiných jazyků nebo ke zlepšení kvality stávajícího překladu."
 
 #: GUI/AboutDialog.py:80
 msgid "GUI-Subtrans would not work without these libraries:\n"
@@ -747,10 +751,6 @@ msgstr "Jazyk, do kterého se mají titulky přeložit"
 #: PySubtitle/Providers/Provider_Gemini.py:168
 msgid "Latest Google AI SDK (google-genai) is not installed. Gemini provider will not be available. Run installer or `pip install google-genai` to fix."
 msgstr "Nejnovější Google AI SDK (google-genai) není nainstalováno. Poskytovatel Gemini nebude k dispozici. Spusťte instalátor nebo použijte `pip install google-genai` k opravě."
-
-#: PySubtitle/Helpers/Subtitles.py:162
-msgid "Legalised content: {content}"
-msgstr "Legalizovaný obsah: {content}"
 
 #: GUI/Widgets/Widgets.py:117
 msgid "Length: {duration}"
@@ -1010,7 +1010,7 @@ msgstr "Žádné dostupné modely"
 msgid "No models available for {provider}"
 msgstr "Žádné modely nejsou k dispozici pro {provider}"
 
-#: PySubtitle/Subtitles.py:310
+#: PySubtitle/Subtitles.py:308
 msgid "No original subtitles to save to {}"
 msgstr "Žádné původní titulky k uložení do {}"
 
@@ -1073,7 +1073,7 @@ msgstr "Žádné titulky k překladu"
 msgid "No subtitles to translate in {}"
 msgstr "V {} nejsou žádné titulky k překladu"
 
-#: PySubtitle/Subtitles.py:333
+#: PySubtitle/Subtitles.py:331
 msgid "No subtitles translated"
 msgstr "Nebyly přeloženy žádné titulky"
 
@@ -1351,11 +1351,11 @@ msgstr "Opětovné načítání titulků ze zdrojového souboru"
 msgid "Remove filler_words and filler words from subtitles"
 msgstr "Odstranit výplňková slova z titulků"
 
-#: PySubtitle/Subtitles.py:578
+#: PySubtitle/Subtitles.py:577
 msgid "Removing {} translations lines in batch ({},{}) that don't match an original line"
 msgstr "Odstraňování {} přeložených řádků v dávce ({},{}) které neodpovídají původnímu řádku"
 
-#: PySubtitle/Subtitles.py:599
+#: PySubtitle/Subtitles.py:598
 msgid "Renumbering subtitle lines due to missing indices"
 msgstr "Přečíslování řádků titulků z důvodu chybějících indexů"
 
@@ -1436,7 +1436,7 @@ msgstr "Uložit projekt (Podržte Shift pro uložení jako...)"
 msgid "Saving backup copy of the project"
 msgstr "Ukládání záložní kopie projektu"
 
-#: PySubtitle/Subtitles.py:345
+#: PySubtitle/Subtitles.py:344
 msgid "Saving translation to {}"
 msgstr "Ukládání překladu do {}"
 
@@ -2387,13 +2387,28 @@ msgstr "{num} příkazů ve frontě."
 msgid "{starting} {threaded} translation"
 msgstr "{starting} {threaded} překlad"
 
-#: PySubtitle/Subtitles.py:366
+#: PySubtitle/Subtitles.py:365
 msgid "{} lines were empty and were not written to the output file"
 msgstr "{} řádků bylo prázdných a nebylo zapsáno do výstupního souboru"
 
-#: PySubtitle/Subtitles.py:362
+#: PySubtitle/Subtitles.py:361
 msgid "{} lines were invalid and were not written to the output file"
 msgstr "{} řádků bylo neplatných a nebylo zapsáno do výstupního souboru"
+
+#~ msgid "Error parsing SRT file... trying with fallback encoding: {}"
+#~ msgstr "Chyba při parsování souboru SRT... zkouším s náhradním kódováním: {}"
+
+#~ msgid "Failed to parse SRT file with fallback encoding: {}"
+#~ msgstr "Nepodařilo se analyzovat soubor SRT s náhradním kódováním: {}"
+
+#~ msgid "Failed to parse SRT string: {}"
+#~ msgstr "Nepodařilo se analyzovat řetězec SRT: {}"
+
+#~ msgid "GUI-Subtrans uses LLMs to translate SRT subtitles into other languages, or to improve the quality of an existing translation."
+#~ msgstr "GUI-Subtrans používá LLM k překladu titulků SRT do jiných jazyků nebo ke zlepšení kvality stávajícího překladu."
+
+#~ msgid "Legalised content: {content}"
+#~ msgstr "Legalizovaný obsah: {content}"
 
 #~ msgid "Request was blocked by Gemini: {block_reason}"
 #~ msgstr "Požadavek byl zablokován Gemini: {block_reason}"

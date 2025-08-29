@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2025-08-28 12:27+0000\n"
+"POT-Creation-Date: 2025-08-29 08:29+0000\n"
 "PO-Revision-Date: 2025-01-01 00:00+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Spanish <EMAIL@ADDRESS>\n"
@@ -451,9 +451,9 @@ msgstr "Error al cargar la configuración desde {}"
 msgid "Error migrating settings from {} to {}. You can copy the files manually and restart the application."
 msgstr "Error al migrar la configuración de {} a {}. Puede copiar los archivos manualmente y reiniciar la aplicación."
 
-#: PySubtitle/Subtitles.py:264
-msgid "Error parsing SRT file... trying with fallback encoding: {}"
-msgstr "Error al analizar el archivo SRT... intentando con codificación de respaldo: {}"
+#: PySubtitle/Subtitles.py:268
+msgid "Error parsing file... trying with fallback encoding: {}"
+msgstr "Error al analizar el archivo... intentando con codificación alternativa: {}"
 
 #: GUI/ProjectActions.py:120
 msgid "Error redoing the last command: {error}"
@@ -556,17 +556,17 @@ msgstr "No se pudo cargar el archivo de subtítulos {}: {}"
 msgid "Failed to merge lines"
 msgstr "Fallo al fusionar líneas"
 
-#: PySubtitle/Subtitles.py:269
-msgid "Failed to parse SRT file with fallback encoding: {}"
-msgstr "Error al analizar el archivo SRT con codificación de respaldo: {}"
-
-#: PySubtitle/Subtitles.py:290
-msgid "Failed to parse SRT string: {}"
-msgstr "No se pudo analizar la cadena SRT: {}"
-
 #: PySubtitle/Formats/SrtFileHandler.py:84
 msgid "Failed to parse SRT: {}"
 msgstr "Error al analizar SRT: {}"
+
+#: PySubtitle/Subtitles.py:273
+msgid "Failed to parse file with fallback encoding: {}"
+msgstr "No se pudo analizar el archivo con la codificación alternativa: {}"
+
+#: PySubtitle/Subtitles.py:291
+msgid "Failed to parse subtitles string: {}"
+msgstr "No se pudo analizar la cadena de subtítulos: {}"
 
 #: GUI/GuiInterface.py:194
 msgid "Failed to switch language - restart the application: {error}"
@@ -587,6 +587,10 @@ msgstr "No se pudieron traducir {count} líneas:"
 #: GUI/NewProjectSettings.py:33
 msgid "Fewest lines to send in separate batch"
 msgstr "Menor número de líneas para enviar en lote separado"
+
+#: PySubtitle/Subtitles.py:261
+msgid "File type handler is unknown for {filepath}"
+msgstr "No se reconoce el manejador para el tipo de archivo en {filepath}"
 
 #: GUI/FirstRunOptions.py:27
 msgid "First Run Options"
@@ -609,8 +613,8 @@ msgid "GUI-Subtrans is released under the MIT License.\n\nPermission is hereby g
 msgstr "GUI-Subtrans se publica bajo la Licencia MIT.\\n\\nPor la presente se concede permiso, libre de cargos, a cualquier persona que obtenga una copia de este software y de los archivos de documentación asociados, para tratar el software sin restricción, incluidos, sin limitación, los derechos de usar, copiar, modificar, fusionar, publicar, distribuir, sublicenciar y/o vender copias del software."
 
 #: GUI/AboutDialog.py:50
-msgid "GUI-Subtrans uses LLMs to translate SRT subtitles into other languages, or to improve the quality of an existing translation."
-msgstr "GUI-Subtrans utiliza LLMs para traducir subtítulos SRT a otros idiomas o para mejorar la calidad de una traducción existente."
+msgid "GUI-Subtrans uses LLMs to translate subtitles into other languages, or to improve the quality of an existing translation."
+msgstr "GUI-Subtrans utiliza modelos de lenguaje grande (LLM) para traducir subtítulos a otros idiomas o mejorar la calidad de una traducción existente."
 
 #: GUI/AboutDialog.py:80
 msgid "GUI-Subtrans would not work without these libraries:\n"
@@ -744,10 +748,6 @@ msgstr "Idioma al que traducir los subtítulos"
 #: PySubtitle/Providers/Provider_Gemini.py:168
 msgid "Latest Google AI SDK (google-genai) is not installed. Gemini provider will not be available. Run installer or `pip install google-genai` to fix."
 msgstr "El SDK más reciente de Google AI (google-genai) no está instalado. El proveedor Gemini no estará disponible. Ejecuta el instalador o `pip install google-genai` para solucionarlo."
-
-#: PySubtitle/Helpers/Subtitles.py:162
-msgid "Legalised content: {content}"
-msgstr "Contenido legalizado: {content}"
 
 #: GUI/Widgets/Widgets.py:117
 msgid "Length: {duration}"
@@ -1007,7 +1007,7 @@ msgstr "No hay modelos disponibles"
 msgid "No models available for {provider}"
 msgstr "No hay modelos disponibles para {provider}"
 
-#: PySubtitle/Subtitles.py:310
+#: PySubtitle/Subtitles.py:308
 msgid "No original subtitles to save to {}"
 msgstr "No hay subtítulos originales para guardar en {}"
 
@@ -1070,7 +1070,7 @@ msgstr "No hay subtítulos para traducir"
 msgid "No subtitles to translate in {}"
 msgstr "No hay subtítulos que traducir en {}"
 
-#: PySubtitle/Subtitles.py:333
+#: PySubtitle/Subtitles.py:331
 msgid "No subtitles translated"
 msgstr "No se tradujeron subtítulos"
 
@@ -1348,11 +1348,11 @@ msgstr "Recargando subtítulos desde el archivo original"
 msgid "Remove filler_words and filler words from subtitles"
 msgstr "Eliminar filler_words y muletillas de los subtítulos"
 
-#: PySubtitle/Subtitles.py:578
+#: PySubtitle/Subtitles.py:577
 msgid "Removing {} translations lines in batch ({},{}) that don't match an original line"
 msgstr "Eliminando {} líneas de traducción en el lote ({},{}) que no coinciden con una línea original"
 
-#: PySubtitle/Subtitles.py:599
+#: PySubtitle/Subtitles.py:598
 msgid "Renumbering subtitle lines due to missing indices"
 msgstr "Renumbrando las líneas de subtítulos debido a índices faltantes"
 
@@ -1433,7 +1433,7 @@ msgstr "Guardar proyecto (mantén pulsado shift para guardar como...)"
 msgid "Saving backup copy of the project"
 msgstr "Guardando copia de seguridad del proyecto"
 
-#: PySubtitle/Subtitles.py:345
+#: PySubtitle/Subtitles.py:344
 msgid "Saving translation to {}"
 msgstr "Guardando traducción en {}"
 
@@ -2382,13 +2382,28 @@ msgstr "{num} comandos en cola."
 msgid "{starting} {threaded} translation"
 msgstr "{starting} traducción {threaded}"
 
-#: PySubtitle/Subtitles.py:366
+#: PySubtitle/Subtitles.py:365
 msgid "{} lines were empty and were not written to the output file"
 msgstr "{} líneas estaban vacías y no se escribieron en el archivo de salida"
 
-#: PySubtitle/Subtitles.py:362
+#: PySubtitle/Subtitles.py:361
 msgid "{} lines were invalid and were not written to the output file"
 msgstr "{} líneas no eran válidas y no se escribieron en el archivo de salida"
+
+#~ msgid "Error parsing SRT file... trying with fallback encoding: {}"
+#~ msgstr "Error al analizar el archivo SRT... intentando con codificación de respaldo: {}"
+
+#~ msgid "Failed to parse SRT file with fallback encoding: {}"
+#~ msgstr "Error al analizar el archivo SRT con codificación de respaldo: {}"
+
+#~ msgid "Failed to parse SRT string: {}"
+#~ msgstr "No se pudo analizar la cadena SRT: {}"
+
+#~ msgid "GUI-Subtrans uses LLMs to translate SRT subtitles into other languages, or to improve the quality of an existing translation."
+#~ msgstr "GUI-Subtrans utiliza LLMs para traducir subtítulos SRT a otros idiomas o para mejorar la calidad de una traducción existente."
+
+#~ msgid "Legalised content: {content}"
+#~ msgstr "Contenido legalizado: {content}"
 
 #~ msgid "Request was blocked by Gemini: {block_reason}"
 #~ msgstr "La solicitud fue bloqueada por Gemini: {block_reason}"

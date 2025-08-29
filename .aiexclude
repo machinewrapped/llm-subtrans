@@ -1,2 +1,9 @@
 .vscode/launch.json
 .vscode/*
+.env
+test_subtitles/*
+test_results/*
+build/*
+dist/*
+Projects/*
+

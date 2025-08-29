@@ -9,6 +9,7 @@ from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleScene import SubtitleScene
 from PySubtitle.Translation import Translation
 from PySubtitle.TranslationPrompt import TranslationPrompt
+from PySubtitle.Formats.VoidFileHandler import VoidFileHandler
 
 # Serialisation helpers
 def classname(obj):
@@ -44,6 +45,7 @@ class SubtitleEncoder(json.JSONEncoder):
                 "sourcepath": obj.sourcepath,
                 "outputpath": obj.outputpath,
                 "scenecount": len(obj.scenes),
+                "file_handler": classname(obj.file_handler),
                 "settings": getattr(obj, 'settings') or getattr(obj, 'context'),
                 "scenes": obj.scenes,
             }
@@ -115,9 +117,10 @@ def _object_hook(dct):
         if class_name in {classname(Subtitles), "SubtitleFile"}:      # Backward compatibility
             sourcepath = dct.get('sourcepath')
             outpath = dct.get('outputpath') or dct.get('filename')
-            obj = Subtitles(sourcepath, outpath)
+            obj = Subtitles(VoidFileHandler(), sourcepath, outpath)
             obj.settings = dct.get('settings', {}) or dct.get('context', {})
             obj.scenes = dct.get('scenes', [])
+            obj.file_handler_class = dct.get('file_handler')
             obj.UpdateProjectSettings(SettingsType()) # Force update for legacy files
             return obj
         elif class_name == classname(SubtitleScene):

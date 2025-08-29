@@ -24,7 +24,6 @@ This document proposes a comprehensive implementation plan to extend LLM-Subtran
 ### Responsibility Separation
 **SubtitleProject** becomes responsible for:
 - Format detection and handler selection via `SubtitleFormatRegistry`
-- Managing format preferences (input format vs output format)
 - Orchestrating format conversions by creating new `Subtitles` instances
 - Coordinating file I/O operations with appropriate handlers
 
@@ -87,15 +86,14 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - Update `SubtitleProject` to handle format detection and handler selection
 - Implement format conversion logic in `SubtitleProject`
 - Maintain backward compatibility through `SubtitleProject`
-- Add support for explicitly specifying input/output formats
 
 **Acceptance Tests**:
-- [ ] Existing SRT files continue to load without changes via `SubtitleProject`
-- [ ] `SubtitleProject` detects format automatically by file extension
-- [ ] Format can be explicitly specified via `SubtitleProject` parameters
-- [ ] Format conversion creates new `Subtitles` instance with different handler
-- [ ] `Subtitles` constructor requires `file_handler` parameter
-- [ ] All existing unit tests continue to pass
+ - [x] Existing SRT files continue to load without changes via `SubtitleProject`
+ - [x] `SubtitleProject` detects format automatically by file extension
+ - [x] Format conversion creates new `Subtitles` instance with different handler
+ - [x] `Subtitles` constructor requires `file_handler` parameter
+ - [x] All existing unit tests continue to pass
+ - [x] Project files record handler class and resolve it when loading
 
 **Files to Modify**:
 - `PySubtitle/Subtitles.py`: Require `file_handler` parameter, remove hardcoded SRT handler

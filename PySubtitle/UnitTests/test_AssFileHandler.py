@@ -111,12 +111,8 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
                 self.assertEqual(actual.number, expected.number)
                 self.assertEqual(actual.start, expected.start)
                 self.assertEqual(actual.end, expected.end)
-                # pysubs2 preserves \\N as literal \\N, not converted to newlines
-                if expected.text and "\n" in expected.text:
-                    expected_text = expected.text.replace("\n", "\\N")
-                else:
-                    expected_text = expected.text
-                self.assertEqual(actual.text, expected_text)
+                # pysubs2 plaintext property converts \\N to \n for GUI compatibility
+                self.assertEqual(actual.text, expected.text)
                 self.assertEqual(actual.metadata['format'], expected.metadata['format'])
                 self.assertEqual(actual.metadata['style'], expected.metadata['style'])
     
@@ -207,10 +203,10 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         
         result = self.handler.compose_lines(lines)
         
-        # pysubs2 preserves line breaks as actual newlines in output, not \\N
-        expected_text = "First line\nSecond line"
+        # pysubs2 converts newlines back to \\N in ASS format output
+        expected_text = "First line\\NSecond line"
         contains_expected = expected_text in result
-        log_input_expected_result("Contains line break text", True, contains_expected)
+        log_input_expected_result("Contains ASS line break", True, contains_expected)
         self.assertIn(expected_text, result)
     
     def test_parse_empty_events_section(self):

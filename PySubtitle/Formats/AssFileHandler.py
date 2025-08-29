@@ -81,8 +81,8 @@ class AssFileHandler(SubtitleFileHandler):
         start = timedelta(milliseconds=pysubs2_line.start)
         end = timedelta(milliseconds=pysubs2_line.end)
         
-        # Extract text content
-        text = pysubs2_line.text
+        # Extract text content using plaintext for GUI compatibility (converts \\N to \n)
+        text = pysubs2_line.plaintext
         
         # Create comprehensive metadata from pysubs2 properties
         # This is "pass-through" - we preserve everything for format fidelity
@@ -127,8 +127,8 @@ class AssFileHandler(SubtitleFileHandler):
         event.start = int(line.start.total_seconds() * 1000) if line.start else 0
         event.end = int(line.end.total_seconds() * 1000) if line.end else 0
         
-        # Set text
-        event.text = line.text or ""
+        # Set text using plaintext property (automatically converts \n to \\N)
+        event.plaintext = line.text or ""
         
         # Restore metadata if available, otherwise use sensible defaults
         metadata = line.metadata or {}

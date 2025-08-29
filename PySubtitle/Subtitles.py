@@ -48,10 +48,6 @@ class Subtitles:
         'instruction_file': None
     })
 
-    def __init__(
-        self,
-        file_handler: SubtitleFileHandler,
-        filepath: str | None = None,
         outputpath: str | None = None,
     ) -> None:
         self.originals: list[SubtitleLine] | None = None

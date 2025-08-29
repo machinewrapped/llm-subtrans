@@ -148,16 +148,3 @@ def GetProportionalDuration(line : SubtitleLine, num_characters : int, min_durat
 
     return timedelta(seconds=length_seconds)
 
-def LegaliseContent(content: str|None) -> str:
-    """
-    Ensure the content is a valid string, replacing None with an empty string (via SRT)
-    """
-    if not content:
-        return ""
-
-    if content and content[0] != "\n" and "\n\n" not in content:
-        return content
-
-    legal_content = _whitespace_collapse.sub("\n", content.strip("\n"))
-    logging.info(_("Legalised content: {content}").format(content=content))
-    return legal_content

@@ -8,7 +8,9 @@ from PySubtitle.Options import Options, SettingsType
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleError import TranslationError
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Subtitles import Subtitles
+from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleScene import SubtitleScene
 from PySubtitle.Translation import Translation
@@ -92,7 +94,9 @@ def PrepareSubtitles(subtitle_data : dict, key : str = 'original') -> Subtitles:
     """
     Prepares a SubtitleFile object from subtitle data.
     """
-    subtitles : Subtitles = Subtitles()
+    format = subtitle_data['format']
+    handler = SubtitleFormatRegistry.create_handler(format)
+    subtitles: Subtitles = Subtitles(handler)
     subtitles.LoadSubtitlesFromString(subtitle_data[key])
     subtitles.UpdateProjectSettings(SettingsType(subtitle_data))
     return subtitles

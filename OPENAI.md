@@ -17,8 +17,8 @@ Secrets are stored in a .env file - you must never read the contents of the file
 - **Types**: Use type hints for parameters, return values, and class variables
 - **Type Hints**:
   - **CRITICAL**: Do NOT put spaces around the `|` in type unions. Use `str|None`, never `str | None`
-  - DO put spaces around the colon introducing a type hint: `def func(param : str) -> bool:`
-  - Examples: `def get_value(self) -> str|None:` ✅ `def get_value(self) -> str | None:` ❌
+  - DO put spaces around the colon introducing a type hint:
+  - Examples: `def func(self, param : str) -> str|None:` ✅ `def func(self, param: str) -> str | None:` ❌
 - **Docstrings**: Triple-quoted concise descriptions for classes and methods
 - **Error handling**: Custom exceptions, specific except blocks, input validation
 - **Class structure**: Docstring → constants → init → properties → public methods → private methods

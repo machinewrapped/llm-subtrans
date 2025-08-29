@@ -24,7 +24,6 @@ This document proposes a comprehensive implementation plan to extend LLM-Subtran
 ### Responsibility Separation
 **SubtitleProject** becomes responsible for:
 - Format detection and handler selection via `SubtitleFormatRegistry`
-- Managing format preferences (input format vs output format)
 - Orchestrating format conversions by creating new `Subtitles` instances
 - Coordinating file I/O operations with appropriate handlers
 
@@ -87,15 +86,13 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - Update `SubtitleProject` to handle format detection and handler selection
 - Implement format conversion logic in `SubtitleProject`
 - Maintain backward compatibility through `SubtitleProject`
-- Add support for explicitly specifying input/output formats
 
 **Acceptance Tests**:
-- [ ] Existing SRT files continue to load without changes via `SubtitleProject`
-- [ ] `SubtitleProject` detects format automatically by file extension
-- [ ] Format can be explicitly specified via `SubtitleProject` parameters
-- [ ] Format conversion creates new `Subtitles` instance with different handler
-- [ ] `Subtitles` constructor requires `file_handler` parameter
-- [ ] All existing unit tests continue to pass
+ - [x] Existing SRT files continue to load without changes via `SubtitleProject`
+ - [x] `SubtitleProject` detects format automatically by file extension
+ - [x] `Subtitles` constructor requires `file_handler` parameter
+ - [x] All existing unit tests continue to pass
+ - [x] Project files instantiate appropriate file handler when loading project
 
 **Files to Modify**:
 - `PySubtitle/Subtitles.py`: Require `file_handler` parameter, remove hardcoded SRT handler
@@ -133,10 +130,12 @@ The implementation prioritizes **subtitle translation** over format conversion:
 
 ### Phase 4: Format conversion
 **Requirements**
-- Format conversion is handled by SubtitleProject delegating to `SrtFileHandler` or `AssFileHandler`
-- Source and destination formats auto-detected based on file extensions
-
+- Destination format auto-detected based on file extensions
+- Format conversion is handled by SubtitleProject by delegating to a `SubtitleFileHandler`
+- Metadata is preserved or converted into an appropriate form for the new format
+ 
 **Acceptance Tests**
+- [ ] Format conversion creates new `Subtitles` instance with different handler
 - [ ] Load .ass subtitle file and save as .srt without errors
 - [ ] Load .srt subtitle file and save as .ass without errors
 - [ ] Load converted files as new SubtitleProject without errors

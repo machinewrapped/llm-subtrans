@@ -9,6 +9,9 @@ from PySubtitle.Options import Options, SettingsType
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleError import SubtitleError, TranslationAbortedError
 from PySubtitle.Subtitles import Subtitles
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
+from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.Formats.VoidFileHandler import VoidFileHandler
 
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleScene import SubtitleScene
@@ -29,7 +32,7 @@ class SubtitleProject:
         
         :param options: Only used to set the project mode
         """
-        self.subtitles : Subtitles = Subtitles()
+        self.subtitles: Subtitles = Subtitles(VoidFileHandler())
         self.events = TranslationEvents()
         self.projectfile : str|None = None
         self.read_project : bool = False
@@ -56,13 +59,19 @@ class SubtitleProject:
         with self.lock:
             return True if self.subtitles and self.subtitles.translated else False
 
-    def InitialiseProject(self, filepath : str, outputpath : str|None = None, reload_subtitles : bool = False):
+    def InitialiseProject(
+        self,
+        filepath: str,
+        outputpath: str | None = None,
+        reload_subtitles: bool = False,
+    ):
         """
         Initialize the project by either loading an existing project file or creating a new one.
         Load the subtitles to be translated, either from the project file or the source file.
 
-        :param filepath: the path to the project or a source subtitle file (in .srt format) to be translated
-        :param outputpath: the path to write the translated subtitles too (a default path is used if None specified)
+        :param filepath: the path to the project or a source subtitle file
+        :param outputpath: the path to write the translated subtitles to
+        :param reload_subtitles: force reloading subtitles from source file
         """
         filepath = os.path.normpath(filepath)
         sourcepath : str = filepath
@@ -126,6 +135,7 @@ class SubtitleProject:
         """
         try:
             with self.lock:
+                #TODO: detect the format from the output path and instantiate an appopriate file handler
                 self.subtitles.SaveOriginal(outputpath)
 
         except Exception as e:
@@ -137,6 +147,7 @@ class SubtitleProject:
         """
         try:
             with self.lock:
+                #TODO: detect the format from the output path and instantiate an appopriate file handler
                 self.subtitles.SaveTranslation(outputpath)
 
         except Exception as e:
@@ -153,12 +164,12 @@ class SubtitleProject:
         projectfile = self.GetProjectFilepath(filepath)
         return f"{projectfile}-backup"
 
-    def LoadSubtitleFile(self, filepath : str) -> Subtitles:
-        """
-        Load subtitles from a file
-        """
+    def LoadSubtitleFile(self, filepath: str) -> Subtitles:
+        """Load subtitles from a file, auto-detecting the format by extension"""
+        extension = os.path.splitext(filepath)[1]
+        handler: SubtitleFileHandler = SubtitleFormatRegistry.create_handler(extension)
         with self.lock:
-            self.subtitles = Subtitles(filepath)
+            self.subtitles = Subtitles(handler, filepath)
             self.subtitles.LoadSubtitles()
 
         return self.subtitles
@@ -217,6 +228,13 @@ class SubtitleProject:
 
                 with open(filepath, 'r', encoding=default_encoding, newline='') as f:
                     subtitles: Subtitles = json.load(f, cls=SubtitleDecoder)
+
+                if subtitles.outputpath:
+                    ext = os.path.splitext(subtitles.outputpath)[1]
+                    try:
+                        subtitles.file_handler = SubtitleFormatRegistry.create_handler(ext)
+                    except ValueError:
+                        logging.warning(_("Unknown file type {extension}").format(extension = ext))
 
                 subtitles.Sanitise()
                 self.subtitles = subtitles
@@ -369,7 +387,7 @@ class SubtitleProject:
         """
         Update the project mode based on the settings... yes, this is a dumb system
         """
-        project_mode = options.get_str('project', '')
+        project_mode = options.get_str('project')
         if project_mode:
             project_mode = project_mode.lower()
 

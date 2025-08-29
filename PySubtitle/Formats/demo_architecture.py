@@ -115,7 +115,7 @@ def demo_format_agnostic_architecture():
     
     # 5. Show backward compatibility
     print("5. Backward Compatibility:")
-    sf = Subtitles()
+    sf = Subtitles(SrtFileHandler())
     sf.LoadSubtitlesFromString(sample_srt)
     if sf.originals:
         print(f"   Loaded {len(sf.originals)} subtitles into SubtitleFile")

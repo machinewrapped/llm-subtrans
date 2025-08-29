@@ -31,6 +31,12 @@ class SubtitleFormatRegistry:
         return cls._handlers[ext]
 
     @classmethod
+    def create_handler(cls, extension: str) -> SubtitleFileHandler:
+        """Instantiate a subtitle file handler for the given extension."""
+        handler_cls = cls.get_handler_by_extension(extension)
+        return handler_cls()
+
+    @classmethod
     def enumerate_formats(cls) -> list[str]:
         cls._ensure_discovered()
         return sorted(cls._handlers.keys())

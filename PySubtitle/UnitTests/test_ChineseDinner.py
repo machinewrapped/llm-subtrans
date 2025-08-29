@@ -5,6 +5,7 @@ from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_te
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
 from PySubtitle.Subtitles import Subtitles
+from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleScene import SubtitleScene
@@ -19,7 +20,7 @@ class ChineseDinnerTests(SubtitleTestCase):
     def test_ChineseDinner(self):
         log_test_name("Chinese Dinner Tests")
 
-        subtitles : Subtitles = Subtitles()
+        subtitles : Subtitles = Subtitles(SrtFileHandler())
 
         with self.subTest("Load subtitles from string"):
             log_test_name("Load subtitles from string")

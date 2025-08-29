@@ -90,10 +90,9 @@ The implementation prioritizes **subtitle translation** over format conversion:
 **Acceptance Tests**:
  - [x] Existing SRT files continue to load without changes via `SubtitleProject`
  - [x] `SubtitleProject` detects format automatically by file extension
- - [x] Format conversion creates new `Subtitles` instance with different handler
  - [x] `Subtitles` constructor requires `file_handler` parameter
  - [x] All existing unit tests continue to pass
- - [x] Project files record handler class and resolve it when loading
+ - [x] Project files instantiate appropriate file handler when loading project
 
 **Files to Modify**:
 - `PySubtitle/Subtitles.py`: Require `file_handler` parameter, remove hardcoded SRT handler
@@ -131,10 +130,12 @@ The implementation prioritizes **subtitle translation** over format conversion:
 
 ### Phase 4: Format conversion
 **Requirements**
-- Format conversion is handled by SubtitleProject delegating to `SrtFileHandler` or `AssFileHandler`
-- Source and destination formats auto-detected based on file extensions
-
+- Destination format auto-detected based on file extensions
+- Format conversion is handled by SubtitleProject by delegating to a `SubtitleFileHandler`
+- Metadata is preserved or converted into an appropriate form for the new format
+ 
 **Acceptance Tests**
+- [ ] Format conversion creates new `Subtitles` instance with different handler
 - [ ] Load .ass subtitle file and save as .srt without errors
 - [ ] Load .srt subtitle file and save as .ass without errors
 - [ ] Load converted files as new SubtitleProject without errors

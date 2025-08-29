@@ -45,15 +45,6 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         project.InitialiseProject(path)
         self.assertIsInstance(project.subtitles.file_handler, SrtFileHandler)
 
-    def test_format_conversion(self):
-        path = self._create_temp_srt()
-        project = SubtitleProject(Options())
-        project.InitialiseProject(path)
-        original = project.subtitles
-        project.ConvertFormat(".dummy")
-        self.assertIsNot(project.subtitles, original)
-        self.assertIsInstance(project.subtitles.file_handler, DummyHandler)
-
     def test_project_file_roundtrip_preserves_handler(self):
         path = self._create_temp_srt()
         project = SubtitleProject(Options())

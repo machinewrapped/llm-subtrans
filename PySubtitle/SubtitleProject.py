@@ -135,6 +135,7 @@ class SubtitleProject:
         """
         try:
             with self.lock:
+                #TODO: detect the format from the output path and instantiate an appopriate file handler
                 self.subtitles.SaveOriginal(outputpath)
 
         except Exception as e:
@@ -146,6 +147,7 @@ class SubtitleProject:
         """
         try:
             with self.lock:
+                #TODO: detect the format from the output path and instantiate an appopriate file handler
                 self.subtitles.SaveTranslation(outputpath)
 
         except Exception as e:
@@ -171,17 +173,6 @@ class SubtitleProject:
             self.subtitles.LoadSubtitles()
 
         return self.subtitles
-
-    def ConvertFormat(self, target_format: str) -> None:
-        """Convert current subtitles to a different format"""
-        new_handler: SubtitleFileHandler = SubtitleFormatRegistry.create_handler(target_format)
-        new_subs = Subtitles(new_handler, self.subtitles.sourcepath, self.subtitles.outputpath)
-        new_subs.originals = self.subtitles.originals
-        new_subs.translated = self.subtitles.translated
-        new_subs.start_line_number = self.subtitles.start_line_number
-        new_subs.scenes = self.subtitles.scenes
-        new_subs.settings = self.subtitles.settings
-        self.subtitles = new_subs
 
     def SaveProjectFile(self, projectfile : str|None = None) -> None:
         """

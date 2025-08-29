@@ -127,9 +127,9 @@ class AssFileHandler(SubtitleFileHandler):
         output.append("[Events]")
         output.append(self.events_format)
         
-        for i, line in enumerate(lines):
+        for i, line in enumerate(lines): #type: ignore[unused]
             if line.text and line.start is not None and line.end is not None:
-                index = i + 1 if reindex else line.number
+                # No index for ASS index = i + 1 if reindex else line.number
                 
                 # Extract ASS-specific metadata or use defaults
                 metadata = line.metadata or {}

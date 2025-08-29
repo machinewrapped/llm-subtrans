@@ -39,13 +39,9 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
 
     def test_UnknownExtension(self):
         log_test_name("UnknownExtension")
-        try:
+        with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.get_handler_by_extension('.unknown')
-        except Exception as e:
-            log_input_expected_error('.unknown', ValueError, e)
-            self.assertIsInstance(e, ValueError)
-        else:
-            self.fail('Expected ValueError')
+        log_input_expected_error('.unknown', ValueError, e.exception)
 
     def test_EnumerateFormats(self):
         log_test_name("EnumerateFormats")
@@ -59,6 +55,7 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         handler = SubtitleFormatRegistry.get_handler_by_extension('.srt')
         log_input_expected_result('priority', DummySrtHandler, handler)
         self.assertIs(handler, DummySrtHandler)
+
         SubtitleFormatRegistry.register_handler(SrtFileHandler, priority=0)
         handler_after = SubtitleFormatRegistry.get_handler_by_extension('.srt')
         log_input_expected_result('priority', DummySrtHandler, handler_after)

@@ -48,7 +48,7 @@ class Subtitles:
         'instruction_file': None
     })
 
-        outputpath: str | None = None,
+    def __init__(self, file_handler: SubtitleFileHandler, filepath: str | None = None, outputpath: str | None = None,
     ) -> None:
         self.originals: list[SubtitleLine] | None = None
         self.translated: list[SubtitleLine] | None = None
@@ -251,7 +251,8 @@ class Subtitles:
         """
         if filepath:
             self.sourcepath = GetInputPath(filepath)
-            self.outputpath = GetOutputPath(filepath)
+            # Set default output path using same format as input
+            self.outputpath = GetOutputPath(self.sourcepath, self.target_language)
 
         if not self.sourcepath:
             raise ValueError("No source path set for subtitles")
@@ -333,12 +334,12 @@ class Subtitles:
             if self.settings.get('include_original'):
                 translated = self._merge_original_and_translated(originals, translated)
 
-            # Renumber the lines to ensure compliance with SRT format
-            # TODO: this should be handled by the file_handler
+            # Renumber the lines to ensure compliance with format requirements
+            # Preserve metadata for format-specific information (e.g., ASS styling)
             output_lines : list[SubtitleLine] = []
             for line_number, line in enumerate(translated, start=self.start_line_number or 1):
                 if line.text:
-                    output_lines.append(SubtitleLine.Construct(line_number, line.start, line.end, line.text))
+                    output_lines.append(SubtitleLine.Construct(line_number, line.start, line.end, line.text, line.metadata))
 
             logging.info(_("Saving translation to {}").format(str(outputpath)))
 

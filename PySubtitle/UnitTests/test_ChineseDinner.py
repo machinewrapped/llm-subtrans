@@ -20,7 +20,7 @@ class ChineseDinnerTests(SubtitleTestCase):
     def test_ChineseDinner(self):
         log_test_name("Chinese Dinner Tests")
 
-        subtitles: Subtitles = Subtitles(SrtFileHandler())
+        subtitles : Subtitles = Subtitles(SrtFileHandler())
 
         with self.subTest("Load subtitles from string"):
             log_test_name("Load subtitles from string")

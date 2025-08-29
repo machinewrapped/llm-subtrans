@@ -168,10 +168,13 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - `PySubtitle/Formats/VttFileHandler.py`
 - `PySubtitle/Formats/SccFileHandler.py`  
 - `PySubtitle/Formats/TtmlFileHandler.py`
-- `PySubtitle/UnitTests/test_CaptionFormats.py`
+- `PySubtitle/UnitTests/test_VttFileHandler.py`
+- `PySubtitle/UnitTests/test_SccFileHandler.py`
+- `PySubtitle/UnitTests/test_TtmlFileHandler.py`
 
 ### Phase 6: Enhanced Format Detection
 **Requirements**:
+- Request sample files from the user for testing format detection
 - Add content-based format detection for ambiguous cases
 - Delegate detection to registered `SubtitleFileHandler` classes for plug-and-play extensibility
 - Support format detection when file extension is missing/incorrect
@@ -187,7 +190,6 @@ The implementation prioritizes **subtitle translation** over format conversion:
 **Files to Modify**:
 - `PySubtitle/SubtitleFormatRegistry.py`: Add content detection hooks
 - `PySubtitle/SubtitleFileHandler.py`: Add detection method to be implemented in subclasses
-- Request sample files from the user for testing format detection
 
 ### Phase 7: Serialization Support
 **Requirements**:
@@ -258,7 +260,10 @@ class SubtitleFormatRegistry:
     def get_handler_by_format(format_name: str) -> SubtitleFileHandler
     
     @staticmethod
-    def detect_format(filepath: str, content: str|None = None) -> str
+    def detect_format_from_extension(filepath: str) -> str
+    
+    @staticmethod
+    def detect_format_from_content(content: str) -> str
     
     @staticmethod
     def list_supported_formats() -> dict[str, list[str]]
@@ -381,7 +386,7 @@ All selected libraries must be:
 ## Success Metrics
 
 - [ ] All existing functionality preserved
-- [ ] At least 3 additional formats supported (ASS, WebVTT, SBV)
+- [ ] At least 3 additional formats supported (ASS, WebVTT, SCC)
 - [ ] Zero breaking changes to public API
 - [ ] 100% test coverage for new components
 - [ ] User acceptance

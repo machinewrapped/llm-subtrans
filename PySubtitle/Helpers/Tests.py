@@ -112,6 +112,9 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
 
     logger = _configure_base_logger(results_path, test_name)
 
+    print(separator)
+    print(f"Running {test_name}")
+
     logger.info(separator)
     logger.info(f"Running {test_name}")
     logger.info(separator)
@@ -140,6 +143,7 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
 
         except Exception as e:
             logger.error(f"Error processing {filepath}: {str(e)}")
+            print(f"!!! ERROR RUNNING {test_name} ON {file} !!!")
 
         finally:
             logger.removeHandler(file_handler)

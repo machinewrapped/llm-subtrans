@@ -186,7 +186,7 @@ The implementation prioritizes **subtitle translation** over format conversion:
 
 **Files to Modify**:
 - `PySubtitle/SubtitleFormatRegistry.py`: Add content detection hooks
-- `PySubtitle/SubtitleFileHander.py`: Add detection method to be implemented in subclasses
+- `PySubtitle/SubtitleFileHandler.py`: Add detection method to be implemented in subclasses
 - Request sample files from the user for testing format detection
 
 ### Phase 7: Serialization Support

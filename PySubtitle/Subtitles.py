@@ -277,13 +277,13 @@ class Subtitles:
             self._renumber_if_needed(lines)
             self.originals = lines
 
-    def LoadSubtitlesFromString(self, srt_string: str) -> None:
+    def LoadSubtitlesFromString(self, subtitles_string: str) -> None:
         """
         Load subtitles from a string
         """
         try:
             with self.lock:
-                lines = list(self.file_handler.parse_string(srt_string))
+                lines = list(self.file_handler.parse_string(subtitles_string))
                 self._renumber_if_needed(lines)
                 self.originals = lines
 

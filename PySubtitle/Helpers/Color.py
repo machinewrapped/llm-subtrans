@@ -43,4 +43,4 @@ class Color:
     @classmethod
     def from_dict(cls, d : dict) -> 'Color':
         """Create from dict"""
-        return cls(d['r'], d['g'], d['b'], d.get('a', 255))
+        return cls(d['r'], d['g'], d['b'], d.get('a', 0))

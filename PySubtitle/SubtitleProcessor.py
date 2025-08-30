@@ -201,7 +201,7 @@ class SubtitleProcessor:
             return line
 
         logging.debug(f"Postprocessed line {line.number}:\n{line.text}\n-->\n{text}")
-        processed_line = SubtitleLine.Construct(line.number, line.start, line.end, text, line.metadata)
+        processed_line = SubtitleLine.Construct(line.number, line.start, line.end, text)
         return processed_line
 
     def _break_long_lines(self, text : str) -> str:
@@ -254,8 +254,8 @@ class SubtitleProcessor:
             split_start : timedelta = current_line.end - split_duration
             split_end : timedelta = current_line.end
 
-            new_line = SubtitleLine.Construct(current_line.number, current_line.start, split_start - self.min_gap, current_line.text[:split_point], current_line.metadata)
-            split_line = SubtitleLine.Construct(current_line.number, split_start, split_end, split_text, current_line.metadata)
+            new_line = SubtitleLine.Construct(current_line.number, current_line.start, split_start - self.min_gap, current_line.text[:split_point])
+            split_line = SubtitleLine.Construct(current_line.number, split_start, split_end, split_text)
 
             stack.extend([split_line, new_line])
 

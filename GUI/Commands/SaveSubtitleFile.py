@@ -9,5 +9,5 @@ class SaveSubtitleFile(Command):
         self.project = project
 
     def execute(self) -> bool:
-        self.project.SaveOriginal(self.filepath)
+        self.project.subtitles.SaveOriginal(self.filepath)
         return True

@@ -113,8 +113,7 @@ class ProjectViewModel(QStandardItemModel):
                 'end': line.srt_end,
                 'duration': line.txt_duration,
                 'gap': TimedeltaToText(line.start - gap_start) if gap_start else "",
-                'text': line.text,
-                'style': line.metadata.get('style')
+                'text': line.text
             })
 
             gap_start = line.end
@@ -427,8 +426,7 @@ class ProjectViewModel(QStandardItemModel):
                 'end': line.srt_end,
                 'duration': line.txt_duration,
                 'gap': None,
-                'text': line.text,
-                'style': line.metadata.get('style')
+                'text': line.text
             })
 
         if line.translation:

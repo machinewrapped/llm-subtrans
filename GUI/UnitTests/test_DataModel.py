@@ -4,7 +4,6 @@ from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
 from PySubtitle.Options import Options, SettingsType
 from PySubtitle.Subtitles import Subtitles
-from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.SubtitleProject import SubtitleProject
 from GUI.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
@@ -26,7 +25,7 @@ class DataModelTests(SubtitleTestCase):
         project = SubtitleProject(global_options)
         
         # Simulate loading a subtitle file with project settings
-        project_file = Subtitles(SrtFileHandler())
+        project_file = Subtitles()
         original_subtitles = chinese_dinner_data.get_str('original')
         if original_subtitles is None:
             self.fail("Couldn't load subtitles")
@@ -141,7 +140,7 @@ class DataModelTests(SubtitleTestCase):
         
         # Create first project
         project1 = SubtitleProject(global_options)
-        project1_file = Subtitles(SrtFileHandler())
+        project1_file = Subtitles()
         original_subtitles1 = chinese_dinner_data.get_str('original')
         if original_subtitles1 is None:
             self.fail("Couldn't load subtitles")
@@ -156,7 +155,7 @@ class DataModelTests(SubtitleTestCase):
         
         # Create second project
         project2 = SubtitleProject(global_options)
-        project2_file = Subtitles(SrtFileHandler())
+        project2_file = Subtitles()
         original_subtitles2 = chinese_dinner_data.get_str('original')
         if original_subtitles2 is None:
             self.fail("Couldn't load subtitles")
@@ -236,7 +235,7 @@ class DataModelTests(SubtitleTestCase):
         
         # Create project with different provider settings
         project = SubtitleProject(global_options)
-        project_file = Subtitles(SrtFileHandler())
+        project_file = Subtitles()
         original_subtitles3 = chinese_dinner_data.get_str('original')
         if original_subtitles3 is None:
             self.fail("Couldn't load subtitles")

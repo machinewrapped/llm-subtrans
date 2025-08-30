@@ -1,12 +1,10 @@
 import logging
 import os
-import sys
 from datetime import datetime
 from typing import Any
 
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.Subtitles import Subtitles
-from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 
 separator = "".center(60, "-")
 wide_separator = "".center(120, "-")
@@ -54,16 +52,6 @@ def log_input_expected_error(input : Any, expected_error : type[Exception], resu
         log_error("*** UNEXPECTED ERROR! ***", prefix="!!!".ljust(10))
     log_info(str(result), prefix="-->".ljust(10))
     logging.info(separator)
-
-def skip_if_debugger_attached(test_name : str) -> bool:
-    """
-    Returns True if running under a debugger and logs that the test is being skipped.
-    Use this to skip tests that raise expected exceptions when debugging.
-    """
-    if sys.gettrace() is not None:
-        print(f"\nSkipping {test_name} when debugger is attached")
-        return True
-    return False
 
 def create_logfile(results_dir : str, log_name : str, log_level = logging.DEBUG) -> logging.FileHandler:
     """
@@ -123,9 +111,6 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
 
     logger = _configure_base_logger(results_path, test_name)
 
-    print(separator)
-    print(f"Running {test_name}")
-
     logger.info(separator)
     logger.info(f"Running {test_name}")
     logger.info(separator)
@@ -145,7 +130,7 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
         logger.info(separator)
 
         try:
-            subtitles = Subtitles(SrtFileHandler(), filepath)
+            subtitles = Subtitles(filepath)
             subtitles.LoadSubtitles()
 
             for options in test_options:
@@ -154,7 +139,6 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
 
         except Exception as e:
             logger.error(f"Error processing {filepath}: {str(e)}")
-            print(f"!!! ERROR RUNNING {test_name} ON {file} !!!")
 
         finally:
             logger.removeHandler(file_handler)

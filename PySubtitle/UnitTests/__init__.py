@@ -7,6 +7,3 @@ from PySubtitle.UnitTests.test_ChineseDinner import ChineseDinnerTests
 from PySubtitle.UnitTests.test_Translator import SubtitleTranslatorTests
 from PySubtitle.UnitTests.test_Options import TestOptions
 from PySubtitle.UnitTests.test_localization import TestLocalization
-from PySubtitle.UnitTests.test_SubtitleFormatRegistry import TestSubtitleFormatRegistry
-from PySubtitle.UnitTests.test_SubtitleProjectFormats import TestSubtitleProjectFormats
-from PySubtitle.UnitTests.test_AssFileHandler import TestAssFileHandler

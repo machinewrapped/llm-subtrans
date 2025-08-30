@@ -1,7 +1,7 @@
 import sys
 import unittest
 
-from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name, skip_if_debugger_attached
+from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
 from PySubtitle.Helpers.Localization import (
     initialize_localization,
     set_language,
@@ -46,7 +46,9 @@ class TestLocalization(unittest.TestCase):
         self.assertEqual(en_result, "Cancel")
 
     def test_missing_language_fallback(self):
-        if skip_if_debugger_attached("test_missing_language_fallback"):
+        # Skip this test if running under a debugger to avoid breaking on expected exceptions
+        if sys.gettrace() is not None:
+            print("Skipping test_missing_language_fallback when debugger is attached")
             return
             
         log_test_name("Localization: missing_language_fallback")

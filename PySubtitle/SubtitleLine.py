@@ -150,7 +150,7 @@ class SubtitleLine:
     def translated(self) -> SubtitleLine|None:
         if self.translation is None:
             return None
-        return SubtitleLine.Construct(self.number, self.start, self.end, self.translation, self.metadata)
+        return SubtitleLine.Construct(self.number, self.start, self.end, self.translation)
 
     @number.setter
     def number(self, value : int|str|None):
@@ -240,3 +240,21 @@ class SubtitleLine:
         line.text = legal_text
         line.metadata = metadata or {}
         return line
+
+    @classmethod
+    def FromMatch(cls, match : tuple[str, str, str, str]) -> SubtitleLine:
+        """
+        Construct a SubtitleLine from a regex match.
+
+        Really should use named groups, but findall doesn't seem to preserve the names.
+        """
+        if len(match) > 3:
+            number, start, end, body = match
+        else:
+            start, end, body = match
+            number = None
+        
+        if number is None or not isinstance(start, str) or not isinstance(end, str) or not isinstance(body, str):
+            raise SubtitleError(_("Invalid subtitle line format: {}").format(match))
+
+        return SubtitleLine.Construct(int(number), start.strip(), end.strip(), body.strip())

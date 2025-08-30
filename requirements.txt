@@ -1,6 +1,5 @@
 python-dotenv
 srt
-pysubs2
 regex
 babel
 appdirs

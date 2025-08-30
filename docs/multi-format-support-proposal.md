@@ -145,48 +145,35 @@ After implementation comparison, `pysubs2` was identified as the superior approa
 - **Specialized formats**: Evaluate on case-by-case basis
 
 ### Phase 4: Format conversion
-**Implementation Options**
 
 ### Conversion process
-*Option 1 – `SubtitleProject.convert_format()`*
-- Introduce a `convert_format(target_extension)` method on `SubtitleProject`
-- Creates a new `Subtitles` object with a handler resolved from `SubtitleFormatRegistry`
-- Calculates a new outputpath for the subtitles
-- Transfers caption text and metadata into the new object, mapping fields when necessary
-- Updates project metadata (e.g., file extension, handler class) to reflect the conversion
-- Allows conversion without immediately writing to disk
-
-*Option 2 – Implicit handler selection on save/load*
-- Continue selecting handlers only when loading from or saving to a path
-- `Subtitles.file_handler` remains the original handler; tests that construct subtitles from strings may set it explicitly
-- Conversion occurs during `SaveTranslation` based on output filename extension, using a temporary file handler.
-- Intermediate `Subtitles` objects are not created; data is passed directly to the new handler’s `compose()` method
+- Introduce a `ConvertFormat(target_extension)` method on `SubtitleProject`
+- Creates a new `Subtitles` object with a `SubtitleFileHandler` resolved from `SubtitleFormatRegistry`
+- Calculates a new outputpath for the subtitles (extend `Subtitles.UpdateOutputPath` to allow extension specification)
+- Transfers caption text and metadata to the new Subtitles object
+- Call a Convert method on the `SubtitleFileHandler` that can remap fields and metadata if necessary (e.g. add a Default style for ASS)
+- Updates metadata to reflect the conversion
+- Validates the conversion before making persistent changes to the `SubtitleProject`, preserving the previous subtitles unmodified if conversion fails.
+- The previous Subtitles object is temporarily kepy in memory as .previous_subtitles to permit undo/rollback (as a TODO).
 
 ### CLI Support
-The user is already able to specify an output path with `-o` or `--output`, so automatic determination of the file handler to use when `SaveTranslation` is called is straightforward. This marginally favours Option 2 for simplicity.
+The user is already able to specify an output path with `-o` or `--output`, so automatic determination of the file handler to use based on the output path is straightforward. If no output path is specified no conversion is required.
 
 ### GUI Support
-GUI support is more complicated - currently the user has no ability to choose the output path for the translation. It is always saved in the same directory as the `.subtrans` project file, with a filename that is auto-generated from the project filename, the target language and the extension of the source subtitles (since the format is the same). We need to give the user a way to select a different output format.
+GUI support is more complicated - currently the user has no ability to choose the output path for the translated subtitles, they are always saved in the same directory as the `.subtrans` project file, with a filename that is auto-generated from the project filename, the target language and the extension of the **source** subtitles (since the format is the same). We need to give the user a way to select a different output format.
 
-**Option A**
-We add a "format" field to the project settings (ref: ProjectSettingsDialog, Subtitles.UpdateProjectSettings). This would initially be deduced from the sourcepath when subtitles are loaded but could be changed by the user at any time.
-
-**Option B**
-We extend the Shift key path in ProjectActions.SaveProject to allow the user to select an output format. This would be the minimal implementation, but the fact that format conversion is possible would be rather hidden and unintuitive. Since it is not a core function of the application this may be acceptable.
-
-**Recommendation**
-
-**Option 1-A**. Since the translated subtitles can be written to disk many times during the translation process (as each scene is completed, or after edits and revisions) it makes sense to perform the format conversion once and update the file handler. It is significantly more work, but the return on investment will be higher - particularly for GUI users.
+We will need to add a "format" field to the project settings (ref: ProjectSettingsDialog, Subtitles.UpdateProjectSettings). This would initially be deduced from the sourcepath when subtitles are loaded but could be changed by the user at any time. It should be a drop-down, whose values are auto-populated from the extensions registered with `SubtitleFormatRegistry`.
 
 **Requirements**
 - Destination format auto-detected from output file extensions
-- `SubtitleProject.SaveTranslation` delegates to appropriate handlers when format changes
-- Handlers preserve or translate metadata as needed for the target format
+- Explicit format conversion operation supported (can be unit-tested without GUI support)
+- `SubtitleProject.SaveTranslation` calls appropriate handlers for the output format
+- Handlers preserve or translate metadata as needed for the target format, passing through any fields they do not use.
 
 **Acceptance Tests**
 - [ ] Load .ass subtitle file and save as .srt without errors
 - [ ] Load .srt subtitle file and save as .ass without errors
-- [ ] Load converted files as new `SubtitleProject` instances without errors
+- [ ] Load `SubtitleProject` with converted formats without errors
 
 ### Phase 5: Additional Format Support
 **Requirements**:

@@ -17,6 +17,7 @@ from PySubtitle.SubtitleProcessor import SubtitleProcessor
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleScene import SubtitleScene
 from PySubtitle.Helpers.Localization import _
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 
 if os.environ.get("DEBUG_MODE") == "1":
     try:
@@ -34,7 +35,8 @@ class NewProjectSettings(QDialog):
         'max_batch_size': (int, _("Most lines to send in each batch")),
         'preprocess_subtitles': (bool, _("Preprocess subtitles before batching")),
         'instruction_file': (str, _("Detailed instructions for the translator")),
-        'prompt': (str, _("High-level instructions for the translator"))
+        'prompt': (str, _("High-level instructions for the translator")),
+        'format': (str, _("Output subtitle format"))
     }
 
     def __init__(self, datamodel : ProjectDataModel, parent=None):
@@ -55,6 +57,10 @@ class NewProjectSettings(QDialog):
         available_models = datamodel.available_models
         self.OPTIONS['model'] = (available_models, self.OPTIONS['model'][1])
         self.settings['model'] = datamodel.selected_model
+
+        formats = SubtitleFormatRegistry.enumerate_formats()
+        self.OPTIONS['format'] = (formats, _("Output subtitle format"))
+        self.settings['format'] = self.settings.get('format', formats[0] if formats else None)
 
         instruction_files = GetInstructionsFiles()
         if instruction_files:

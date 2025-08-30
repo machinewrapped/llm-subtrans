@@ -33,6 +33,7 @@ class SubtitleProject:
         :param options: Only used to set the project mode
         """
         self.subtitles: Subtitles = Subtitles(VoidFileHandler())
+        self.previous_subtitles: Subtitles | None = None
         self.events = TranslationEvents()
         self.projectfile : str|None = None
         self.read_project : bool = False
@@ -135,7 +136,10 @@ class SubtitleProject:
         """
         try:
             with self.lock:
-                #TODO: detect the format from the output path and instantiate an appopriate file handler
+                if outputpath:
+                    ext = os.path.splitext(outputpath)[1]
+                    if ext not in self.subtitles.file_handler.get_file_extensions():
+                        self.ConvertFormat(ext)
                 self.subtitles.SaveOriginal(outputpath)
 
         except Exception as e:
@@ -147,7 +151,10 @@ class SubtitleProject:
         """
         try:
             with self.lock:
-                #TODO: detect the format from the output path and instantiate an appopriate file handler
+                if outputpath:
+                    ext = os.path.splitext(outputpath)[1]
+                    if ext not in self.subtitles.file_handler.get_file_extensions():
+                        self.ConvertFormat(ext)
                 self.subtitles.SaveTranslation(outputpath)
 
         except Exception as e:
@@ -171,8 +178,53 @@ class SubtitleProject:
         with self.lock:
             self.subtitles = Subtitles(handler, filepath)
             self.subtitles.LoadSubtitles()
+            self.subtitles.UpdateProjectSettings(SettingsType({'format': extension}))
 
         return self.subtitles
+
+    def ConvertFormat(self, target_extension: str) -> None:
+        """Convert the project's subtitles to a different format."""
+        target_extension = target_extension if target_extension.startswith('.') else f'.{target_extension}'
+        with self.lock:
+            current_exts = self.subtitles.file_handler.get_file_extensions()
+            if target_extension in current_exts:
+                return
+
+            handler = SubtitleFormatRegistry.create_handler(target_extension)
+            from copy import deepcopy
+            from PySubtitle.SubtitleData import SubtitleData
+
+            self.previous_subtitles = self.subtitles
+            try:
+                # Create a new Subtitles instance with the target handler
+                new_subtitles = Subtitles(handler)
+                new_subtitles.originals = deepcopy(self.subtitles.originals) if self.subtitles.originals else None
+                new_subtitles.scenes = deepcopy(self.subtitles.scenes) if self.subtitles.scenes else []
+                new_subtitles.start_line_number = self.subtitles.start_line_number
+                new_subtitles.sourcepath = self.subtitles.sourcepath
+                new_subtitles.outputpath = self.subtitles.outputpath
+                new_subtitles.settings = deepcopy(self.subtitles.settings)
+
+                # Prepare subtitle data for translation conversion
+                data = SubtitleData(
+                    lines=deepcopy(self.subtitles.translated) if self.subtitles.translated else [],
+                    metadata=deepcopy(self.subtitles.metadata),
+                    start_line_number=self.subtitles.start_line_number,
+                )
+                converted = handler.convert_from(data)
+                # Validate by attempting to compose the converted data
+                handler.compose(converted)
+                new_subtitles.translated = converted.lines if converted.lines else None
+                new_subtitles.metadata = converted.metadata
+
+                new_subtitles.UpdateOutputPath(extension=target_extension)
+                new_subtitles.UpdateProjectSettings(SettingsType({'format': target_extension}))
+                self.subtitles = new_subtitles
+            except Exception:
+                self.subtitles = self.previous_subtitles or self.subtitles
+                self.previous_subtitles = None
+                raise
+            self.previous_subtitles = None
 
     def SaveProjectFile(self, projectfile : str|None = None) -> None:
         """
@@ -238,6 +290,9 @@ class SubtitleProject:
                         logging.warning(_("Unknown file type {extension}").format(extension = ext))
 
                 subtitles.Sanitise()
+                if not subtitles.settings.get('format'):
+                    ext = os.path.splitext(subtitles.outputpath)[1] if subtitles.outputpath else subtitles.file_handler.get_file_extensions()[0]
+                    subtitles.UpdateProjectSettings(SettingsType({'format': ext}))
                 self.subtitles = subtitles
                 return subtitles
 
@@ -277,6 +332,12 @@ class SubtitleProject:
             if not self.subtitles:
                 return
 
+            if 'format' in settings:
+                desired_format = settings.get('format')
+                current_exts = self.subtitles.file_handler.get_file_extensions()
+                if desired_format and desired_format not in current_exts:
+                    self.ConvertFormat(str(desired_format))
+
             common_keys = settings.keys() & self.subtitles.settings.keys()
             if all(settings.get(key) == self.subtitles.settings.get(key) for key in common_keys):
                 return
@@ -284,7 +345,7 @@ class SubtitleProject:
             self.subtitles.UpdateProjectSettings(settings)
 
         if self.subtitles.scenes:
-            self.subtitles.UpdateOutputPath()
+            self.subtitles.UpdateOutputPath(extension=self.subtitles.settings.get('format'))
             self.needs_writing = True
 
     def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:

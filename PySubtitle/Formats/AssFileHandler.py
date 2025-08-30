@@ -214,4 +214,16 @@ class AssFileHandler(SubtitleFileHandler):
         # Restore aegisub project data if present
         if 'aegisub_project' in metadata and hasattr(subs, 'aegisub_project'):
             subs.aegisub_project.update(metadata['aegisub_project'])
+
+    def convert_from(self, data: SubtitleData) -> SubtitleData:
+        """Convert subtitle data from another format to ASS."""
+        new_data = super().convert_from(data)
+        metadata = new_data.metadata or {}
+        metadata['format'] = 'ass'
+        styles = metadata.get('styles', {})
+        if 'Default' not in styles:
+            styles['Default'] = {}
+        metadata['styles'] = styles
+        new_data.metadata = metadata
+        return new_data
     

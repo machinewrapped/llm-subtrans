@@ -58,6 +58,21 @@ class SubtitleFileHandler(ABC):
             str: Formatted subtitle content
         """
         pass
+
+    def convert_from(self, data: SubtitleData) -> SubtitleData:
+        """Create a new :class:`SubtitleData` instance using this handler.
+
+        The default implementation performs a deep copy of subtitle lines and
+        metadata. Handlers may override to perform format-specific
+        adjustments.
+        """
+        from copy import deepcopy
+
+        return SubtitleData(
+            lines=deepcopy(data.lines),
+            metadata=deepcopy(data.metadata),
+            start_line_number=data.start_line_number,
+        )
     
     def get_file_extensions(self) -> list[str]:
         """

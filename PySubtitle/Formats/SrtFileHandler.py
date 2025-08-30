@@ -77,6 +77,18 @@ class SrtFileHandler(SubtitleFileHandler):
             srt_items.append(srt_item)
         
         return srt.compose(srt_items, reindex=False)  # We handle reindexing above
+
+    def convert_from(self, data: SubtitleData) -> SubtitleData:
+        """Convert subtitle data from another format to SRT."""
+        new_data = super().convert_from(data)
+        metadata = {'format': 'srt'}
+        # Preserve basic metadata like Title/Language if present
+        if 'Title' in new_data.metadata:
+            metadata['Title'] = new_data.metadata['Title']
+        if 'Language' in new_data.metadata:
+            metadata['Language'] = new_data.metadata['Language']
+        new_data.metadata = metadata
+        return new_data
     
 
     def _parse_srt_items(self, source) -> Iterator[SubtitleLine]:

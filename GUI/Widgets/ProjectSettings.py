@@ -19,6 +19,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 
 from GUI.Widgets.Widgets import OptionsGrid, TextBoxEditor
 from PySubtitle.Helpers import GetValueName
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Options import Options
 from PySubtitle.Helpers.Parse import ParseNames
 from PySubtitle.SettingsType import SettingType, SettingsType
@@ -42,6 +43,7 @@ class ProjectSettings(QGroupBox):
         self.action_handler : ProjectActions|None = action_handler
         self.provider_list = sorted(TranslationProvider.get_providers())
         self.model_list : list[str] = []
+        self.format_list : list[str] = SubtitleFormatRegistry.enumerate_formats()
         self.widgets : dict[str, QLineEdit|QCheckBox|QComboBox] = {}
         self.settings : SettingsType = SettingsType()
         self.current_provider : str|None = None
@@ -68,6 +70,7 @@ class ProjectSettings(QGroupBox):
             'substitution_mode': self._gettextvalue('substitution_mode'),
             'model': self._gettextvalue('model') if 'model' in self.widgets else self.settings.get('model'),
             'provider': self._gettextvalue('provider') if 'provider' in self.widgets else self.settings.get('provider'),
+            'format': self._gettextvalue('format')
         })
 
         return settings
@@ -133,6 +136,7 @@ class ProjectSettings(QGroupBox):
             self.AddMultiLineOption(_("Names"), settings, 'names')
             self.AddMultiLineOption(_("Substitutions"), settings, 'substitutions')
             self.AddDropdownOption(_("Substitution Mode"), settings, 'substitution_mode', Substitutions.Mode)
+            self.AddDropdownOption(_("Format"), settings, 'format', self.format_list)
             self.AddButton("", _("Edit Instructions"), self._edit_instructions)
             self.AddButton("", _("Copy From Another Project"), self._copy_from_another_project)
             if len(self.provider_list) > 1:

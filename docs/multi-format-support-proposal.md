@@ -38,8 +38,14 @@ This document captures the architecture and decisions behind LLM-Subtrans's mult
 ```python
 try:
   new_handler = SubtitleFormatRegistry.create_handler(target_extension)
-  converted_subtitles = new_handler.convert_from(self.subtitles)
-  self.subtitles = converted_subtitles
+  data = SubtitleData(
+      lines=self.subtitles.translated,
+      metadata=self.subtitles.metadata,
+      start_line_number=self.subtitles.start_line_number,
+  )
+  converted_data = new_handler.convert_from(data)
+  self.subtitles.translated = converted_data.lines
+  self.subtitles.metadata = converted_data.metadata
 except Exception as e:
   logging.error(...)
 ```

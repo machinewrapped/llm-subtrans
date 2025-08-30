@@ -46,7 +46,8 @@ class Subtitles:
         'substitution_mode': None,
         'include_original': None,
         'add_right_to_left_markers': None,
-        'instruction_file': None
+        'instruction_file': None,
+        'format': None
     })
 
     def __init__(self, file_handler: SubtitleFileHandler, filepath: str | None = None, outputpath: str | None = None,
@@ -388,12 +389,12 @@ class Subtitles:
 
             self._update_compatibility(self.settings)
 
-    def UpdateOutputPath(self, outputpath: str|None = None) -> None:
+    def UpdateOutputPath(self, outputpath: str|None = None, extension: str|None = None) -> None:
         """
         Set or generate the output path for the translated subtitles
         """
         if not outputpath:
-            outputpath = GetOutputPath(self.sourcepath, self.target_language)
+            outputpath = GetOutputPath(self.sourcepath, self.target_language, extension)
         self.outputpath = outputpath
 
     def PreProcess(self, preprocessor: SubtitleProcessor) -> None:

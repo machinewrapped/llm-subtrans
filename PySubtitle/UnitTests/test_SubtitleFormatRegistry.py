@@ -1,5 +1,6 @@
+from collections.abc import Iterator
+from typing import TextIO
 import unittest
-from typing import Iterator, TextIO
 
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry

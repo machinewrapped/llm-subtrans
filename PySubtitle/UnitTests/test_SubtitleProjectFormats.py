@@ -111,7 +111,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         self.assertEqual(subtitles.metadata.get('format'), 'ass')
         self.assertIn('styles', subtitles.metadata)
         
-        # Check that colors are properly converted to SimpleColor format
+        # Check that colors are properly converted to Color format
         default_style = subtitles.metadata['styles'].get('Default', {})
         primarycolor = default_style.get('primarycolor')
         self.assertIsInstance(primarycolor, dict)

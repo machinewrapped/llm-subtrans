@@ -1,10 +1,7 @@
-import pysubs2
-
-
-class SimpleColor:
+class Color:
     """
     Simple color representation for JSON serialization.
-    Supports conversion to/from pysubs2.Color and #RRGGBBAA format.
+    Supports conversion to/from #RRGGBBAA format.
     """
 
     def __init__(self, r : int, g : int, b : int, a : int = 255):
@@ -14,13 +11,8 @@ class SimpleColor:
         self.a = max(0, min(255, a))
 
     @classmethod
-    def from_pysubs2(cls, color : pysubs2.Color) -> 'SimpleColor':
-        """Create SimpleColor from pysubs2.Color"""
-        return cls(color.r, color.g, color.b, color.a)
-
-    @classmethod
-    def from_hex(cls, hex_str : str) -> 'SimpleColor':
-        """Create SimpleColor from #RRGGBB or #RRGGBBAA format"""
+    def from_hex(cls, hex_str : str) -> 'Color':
+        """Create Color from #RRGGBB or #RRGGBBAA format"""
         hex_str = hex_str.lstrip('#')
         if len(hex_str) == 6:
             hex_str += 'FF'  # Add full alpha if not specified
@@ -34,10 +26,6 @@ class SimpleColor:
             int(hex_str[6:8], 16)
         )
 
-    def to_pysubs2(self) -> pysubs2.Color:
-        """Convert to pysubs2.Color"""
-        return pysubs2.Color(self.r, self.g, self.b, self.a)
-
     def to_hex(self) -> str:
         """Convert to #RRGGBBAA format"""
         return f"#{self.r:02X}{self.g:02X}{self.b:02X}{self.a:02X}"
@@ -47,6 +35,6 @@ class SimpleColor:
         return {'r': self.r, 'g': self.g, 'b': self.b, 'a': self.a}
 
     @classmethod
-    def from_dict(cls, d : dict) -> 'SimpleColor':
+    def from_dict(cls, d : dict) -> 'Color':
         """Create from dict"""
         return cls(d['r'], d['g'], d['b'], d.get('a', 255))

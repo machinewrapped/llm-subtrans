@@ -1,5 +1,6 @@
 import json
 
+from PySubtitle.Helpers.Color import Color
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleBatch import SubtitleBatch
@@ -101,6 +102,8 @@ class SubtitleEncoder(json.JSONEncoder):
                 "supports_system_prompt": obj.supports_system_prompt,
                 "conversation": obj.conversation,
             }
+        elif isinstance(obj, Color):
+            return { "hex": obj.to_hex() }
         elif hasattr(obj, "name"):
             return obj.name
 
@@ -163,6 +166,8 @@ def _object_hook(dct):
             obj.batch_prompt = dct.get('batch_prompt')
             obj.messages = dct.get('messages')
             return obj
+        elif class_name == classname(Color):
+            return Color.from_hex(dct.get('hex', '#000000FF'))
         elif class_name == classname(TranslationError):
             return TranslationError(dct.get('message'))
 

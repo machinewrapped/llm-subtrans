@@ -3,7 +3,7 @@ import pysubs2.time
 from datetime import timedelta
 from typing import TextIO
 
-from PySubtitle.Helpers.SimpleColor import SimpleColor
+from PySubtitle.Helpers.Color import Color
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleData import SubtitleData
@@ -108,18 +108,7 @@ class AssFileHandler(SubtitleFileHandler):
             'margin_r': pysubs2_line.marginr,
             'margin_v': pysubs2_line.marginv,
             'effect': pysubs2_line.effect,
-            'type': pysubs2_line.type,
-            # Store original pysubs2 properties for perfect round-trip
-            '_pysubs2_original': {
-                'style': pysubs2_line.style,
-                'layer': pysubs2_line.layer,
-                'name': pysubs2_line.name,
-                'marginl': pysubs2_line.marginl,
-                'marginr': pysubs2_line.marginr,
-                'marginv': pysubs2_line.marginv,
-                'effect': pysubs2_line.effect,
-                'type': pysubs2_line.type
-            }
+            'type': pysubs2_line.type
         }
         
         return SubtitleLine.Construct(
@@ -152,28 +141,14 @@ class AssFileHandler(SubtitleFileHandler):
         
         # Restore metadata if available, otherwise use sensible defaults
         metadata = line.metadata or {}
-        
-        # Check for preserved pysubs2 original data first (perfect round-trip)
-        if '_pysubs2_original' in metadata:
-            original = metadata['_pysubs2_original']
-            event.style = original.get('style', 'Default')
-            event.layer = original.get('layer', 0)
-            event.name = original.get('name', '')
-            event.marginl = original.get('marginl', 0)
-            event.marginr = original.get('marginr', 0)
-            event.marginv = original.get('marginv', 0)
-            event.effect = original.get('effect', '')
-            event.type = original.get('type', 'Dialogue')
-        else:
-            # Fall back to our standard metadata fields
-            event.style = metadata.get('style', 'Default')
-            event.layer = metadata.get('layer', 0)
-            event.name = metadata.get('name', '')
-            event.marginl = metadata.get('margin_l', 0)
-            event.marginr = metadata.get('margin_r', 0)
-            event.marginv = metadata.get('margin_v', 0)
-            event.effect = metadata.get('effect', '')
-            event.type = 'Dialogue'  # Default for most subtitle lines
+        event.style = metadata.get('style', 'Default')
+        event.layer = metadata.get('layer', 0)
+        event.name = metadata.get('name', '')
+        event.marginl = metadata.get('margin_l', 0)
+        event.marginr = metadata.get('margin_r', 0)
+        event.marginv = metadata.get('margin_v', 0)
+        event.effect = metadata.get('effect', '')
+        event.type = metadata.get('type', 'Dialogue')
         
         return event
 
@@ -194,11 +169,10 @@ class AssFileHandler(SubtitleFileHandler):
         for name, style in subs.styles.items():
             style_dict = style.as_dict()
             
-            # Convert pysubs2.Color objects to SimpleColor dicts
-            color_fields = ['primarycolor', 'secondarycolor', 'tertiarycolor', 'outlinecolor', 'backcolor']
-            for field in color_fields:
-                if field in style_dict and isinstance(style_dict[field], pysubs2.Color):
-                    style_dict[field] = SimpleColor.from_pysubs2(style_dict[field]).to_dict()
+            # Convert any pysubs2.Color objects to hex strings
+            for field, value in style_dict.items():
+                if isinstance(value, pysubs2.Color):
+                    style_dict[field] = Color(value.r, value.g, value.b, value.a)
             
             styles[name] = style_dict
         
@@ -208,7 +182,7 @@ class AssFileHandler(SubtitleFileHandler):
     def _build_metadata(self, subs : pysubs2.SSAFile, metadata : dict) -> None:
         """
         Restore pysubs2 metadata from JSON-serialized format.
-        Converts SimpleColor dicts back to pysubs2.Color objects.
+        Converts Color dicts back to pysubs2.Color objects.
         """
         # Restore script info from metadata
         if 'info' in metadata:
@@ -220,15 +194,11 @@ class AssFileHandler(SubtitleFileHandler):
             subs.styles.clear()
             
             for style_name, style_fields in metadata['styles'].items():
-                # Convert SimpleColor dicts back to pysubs2.Color objects
                 style_data = style_fields.copy()
-                color_fields = ['primarycolor', 'secondarycolor', 'tertiarycolor', 'outlinecolor', 'backcolor']
                 
-                for field in color_fields:
-                    if field in style_data and isinstance(style_data[field], dict):
-                        # Check if it's a SimpleColor dict representation
-                        if all(key in style_data[field] for key in ['r', 'g', 'b']):
-                            style_data[field] = SimpleColor.from_dict(style_data[field]).to_pysubs2()
+                for field, value in style_data.items():
+                    if isinstance(value, Color):
+                        style_data[field] = pysubs2.Color(value.r, value.g, value.b, value.a)
                 
                 style = pysubs2.SSAStyle(**style_data)
                 subs.styles[style_name] = style

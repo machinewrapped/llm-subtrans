@@ -108,6 +108,12 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - [X] Support both reading and writing ASS format
 - [X] Maintain index uniqueness for dialogue events
 
+**Priority System Implementation**:
+- [x] Implemented data-driven `SUPPORTED_EXTENSIONS` class variable architecture
+- [x] Priority convention established: 10 (specialist) > 5 (secondary) > 0 (fallback)
+- [x] Base class methods `get_file_extensions()` and `get_extension_priorities()` auto-implement from class data
+- [x] Registry supports `disable_autodiscovery()` for precise test control
+
 **Acceptance Tests**:
 - [X] Parse basic ASS files with dialogue events
 - [X] Preserve style information in metadata
@@ -116,6 +122,8 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - [X] Assign unique indices to all dialogue events
 - [X] Handle ASS timing format conversion
 - [X] Support V4+ Styles and V4 Styles sections
+- [x] `AssFileHandler` (priority 10) overrides `FallbackAssFileHandler` (priority 0) for .ass/.ssa files
+- [x] `SrtFileHandler` (priority 10) maintains highest priority for .srt files
 
 **Files Created**:
 - [X] `PySubtitle/Formats/FallbackAssFileHandler.py` (Custom implementation - to be deprecated)
@@ -272,24 +280,56 @@ Follow the proven pattern from `AssFileHandler` (formerly `Pysubs2AssFileHandler
 ### SubtitleFormatRegistry API
 ```python
 class SubtitleFormatRegistry:
-    @staticmethod
-    def get_handler(filepath: str, format_hint: str|None = None) -> SubtitleFileHandler
+    @classmethod
+    def get_handler_by_extension(cls, extension: str) -> type[SubtitleFileHandler]
     
-    @staticmethod
-    def get_handler_by_format(format_name: str) -> SubtitleFileHandler
+    @classmethod
+    def create_handler(cls, extension: str) -> SubtitleFileHandler
     
+    @classmethod
+    def enumerate_formats(cls) -> list[str]
+    
+    @classmethod
+    def register_handler(cls, handler_class: type[SubtitleFileHandler]) -> None
+    
+    @classmethod
+    def discover(cls) -> None
+    
+    @classmethod
+    def disable_autodiscovery(cls) -> None
+    
+    @classmethod
+    def clear(cls) -> None
+    
+    # Future API extensions:
     @staticmethod
     def detect_format_from_extension(filepath: str) -> str
     
     @staticmethod
     def detect_format_from_content(content: str) -> str
-    
-    @staticmethod
-    def list_supported_formats() -> dict[str, list[str]]
-    
-    @staticmethod
-    def register_handler(handler_class: type[SubtitleFileHandler]) -> None
 ```
+
+### Data-Driven Handler Architecture
+
+**SUPPORTED_EXTENSIONS Class Variable**:
+SubtitleFileHandler uses a declarative approach for defining supported formats and their priorities:
+
+```python
+class ExampleFileHandler(SubtitleFileHandler):
+    SUPPORTED_EXTENSIONS = {
+        '.example': 10,  # High priority (specialist handler)
+        '.alt': 5        # Medium priority (secondary support)
+    }
+    
+    # Base class automatically implements:
+    # - get_file_extensions() -> list[str] 
+    # - get_extension_priorities() -> dict[str, int]
+```
+
+**Priority Convention**:
+- **10+**: Primary/specialist handlers (e.g., `SrtFileHandler` for `.srt` = 10)
+- **1-9**: Generic/multi-format handlers with lower precedence  
+- **0**: Fallback handlers (e.g., `FallbackAssFileHandler` = 0)
 
 ### Extended SubtitleLine Metadata Schema
 ```python

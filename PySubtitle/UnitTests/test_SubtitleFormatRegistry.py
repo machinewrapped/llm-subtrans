@@ -10,6 +10,7 @@ from PySubtitle.Helpers.Tests import (
     log_input_expected_error,
     log_input_expected_result,
     log_test_name,
+    skip_if_debugger_attached,
 )
 
 
@@ -39,6 +40,9 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         self.assertIs(handler, SrtFileHandler)
 
     def test_UnknownExtension(self):
+        if skip_if_debugger_attached("UnknownExtension"):
+            return
+
         log_test_name("UnknownExtension")
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.get_handler_by_extension('.unknown')

@@ -5,7 +5,7 @@ from datetime import timedelta
 from PySubtitle.Formats.AssFileHandler import AssFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleError import SubtitleParseError
-from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name
+from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name, skip_if_debugger_attached
 from PySubtitle.Helpers.Time import AssTimeToTimedelta, TimedeltaToAssTime
 
 class TestAssFileHandler(unittest.TestCase):
@@ -178,13 +178,16 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         
         result = self.handler.compose_lines(lines)
         
+        # Log before assertions
+        expected_sections = ["[Script Info]", "[V4+ Styles]", "[Events]", "Dialogue: 0,0:00:01.50,0:00:03.00,Default,,0,0,0,,Test subtitle"]
+        has_all_sections = all(section in result for section in expected_sections)
+        log_input_expected_result("1 line", True, has_all_sections)
+        
         # Check that the result contains key ASS sections
         self.assertIn("[Script Info]", result)
         self.assertIn("[V4+ Styles]", result)
         self.assertIn("[Events]", result)
         self.assertIn("Dialogue: 0,0:00:01.50,0:00:03.00,Default,,0,0,0,,Test subtitle", result)
-        
-        log_input_expected_result("1 line", "ASS format with all sections", "X Contains all sections")
     
     def test_compose_lines_with_line_breaks(self):
         """Test composition with line breaks."""
@@ -231,14 +234,19 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     
     def test_parse_invalid_ass_content(self):
         """Test error handling for invalid ASS content."""
+        if skip_if_debugger_attached("test_parse_invalid_ass_content"):
+            return
+            
         log_test_name("AssFileHandler.parse_string - invalid content")
         
         invalid_content = """This is not ASS format content"""
         
+        assert_raised : bool = True
         with self.assertRaises(SubtitleParseError):
             list(self.handler.parse_string(invalid_content))
+            assert_raised = False
         
-        log_input_expected_result("Invalid content", "SubtitleParseError", "X Exception raised")
+        log_input_expected_result("Invalid content", True, assert_raised)
     
     
     def test_reindex_functionality(self):
@@ -264,12 +272,16 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         # Note: ASS doesn't have explicit line numbers in dialogue lines like SRT,
         # so we just verify the output is generated without errors
         
+        both_are_strings = isinstance(result_reindex, str) and isinstance(result_no_reindex, str)
+        both_contain_dialogue = "Dialogue:" in result_reindex and "Dialogue:" in result_no_reindex
+        both_valid = both_are_strings and both_contain_dialogue
+        
+        log_input_expected_result("Reindex test", True, both_valid)
+        
         self.assertIsInstance(result_reindex, str)
         self.assertIsInstance(result_no_reindex, str)
         self.assertIn("Dialogue:", result_reindex)
         self.assertIn("Dialogue:", result_no_reindex)
-        
-        log_input_expected_result("Reindex test", "Both formats generated", "✓ Both options work")
     
     def test_round_trip_conversion(self):
         """Test that parsing and composing results in similar content."""

@@ -1,4 +1,5 @@
 import pysubs2
+import pysubs2.time
 from datetime import timedelta
 from typing import Iterator, TextIO
 
@@ -118,8 +119,25 @@ class AssFileHandler(SubtitleFileHandler):
         event = pysubs2.SSAEvent()
         
         # Set timing (convert from timedelta to milliseconds)
-        event.start = int(line.start.total_seconds() * 1000) if line.start else 0
-        event.end = int(line.end.total_seconds() * 1000) if line.end else 0
+        if line.start:
+            total_seconds = int(line.start.total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            milliseconds = line.start.microseconds // 1000
+            event.start = pysubs2.time.make_time(h=hours, m=minutes, s=seconds, ms=milliseconds)
+        else:
+            event.start = 0
+            
+        if line.end:
+            total_seconds = int(line.end.total_seconds())
+            hours = total_seconds // 3600
+            minutes = (total_seconds % 3600) // 60
+            seconds = total_seconds % 60
+            milliseconds = line.end.microseconds // 1000
+            event.end = pysubs2.time.make_time(h=hours, m=minutes, s=seconds, ms=milliseconds)
+        else:
+            event.end = 0
         
         # Set text using plaintext property (automatically converts \n to \\N)
         event.plaintext = line.text or ""

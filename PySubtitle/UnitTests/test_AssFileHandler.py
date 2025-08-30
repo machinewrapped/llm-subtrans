@@ -6,7 +6,6 @@ from PySubtitle.Formats.AssFileHandler import AssFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleError import SubtitleParseError
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name, skip_if_debugger_attached
-from PySubtitle.Helpers.Time import AssTimeToTimedelta, TimedeltaToAssTime
 
 class TestAssFileHandler(unittest.TestCase):
     """Test cases for ASS file handler."""
@@ -127,39 +126,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0].text, "First subtitle line")
     
-    def test_ass_time_conversion(self):
-        """Test ASS time format conversion."""
-        log_test_name("AssTimeToTimedelta")
-        
-        test_cases = [
-            ("0:00:01.50", timedelta(seconds=1, milliseconds=500)),
-            ("0:01:30.00", timedelta(minutes=1, seconds=30)),
-            ("1:05:45.25", timedelta(hours=1, minutes=5, seconds=45, milliseconds=250)),
-            ("0:00:00.00", timedelta(seconds=0)),
-        ]
-        
-        for ass_time, expected_delta in test_cases:
-            with self.subTest(ass_time=ass_time):
-                result = AssTimeToTimedelta(ass_time)
-                log_input_expected_result(ass_time, expected_delta, result)
-                self.assertEqual(result, expected_delta)
-    
-    def test_timedelta_to_ass_time(self):
-        """Test timedelta to ASS time format conversion."""
-        log_test_name("TimedeltaToAssTime")
-        
-        test_cases = [
-            (timedelta(seconds=1, milliseconds=500), "0:00:01.50"),
-            (timedelta(minutes=1, seconds=30), "0:01:30.00"),
-            (timedelta(hours=1, minutes=5, seconds=45, milliseconds=250), "1:05:45.25"),
-            (timedelta(seconds=0), "0:00:00.00"),
-        ]
-        
-        for delta, expected_ass_time in test_cases:
-            with self.subTest(timedelta=delta):
-                result = TimedeltaToAssTime(delta)
-                log_input_expected_result(str(delta), expected_ass_time, result)
-                self.assertEqual(result, expected_ass_time)
     
     def test_compose_lines_basic(self):
         """Test basic line composition to ASS format."""

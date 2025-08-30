@@ -1,4 +1,5 @@
 import re
+import regex
 from datetime import timedelta
 from typing import Iterator, TextIO
 
@@ -6,7 +7,6 @@ from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleError import SubtitleParseError
 from PySubtitle.Helpers.Localization import _
-from PySubtitle.Helpers.Time import AssTimeToTimedelta, TimedeltaToAssTime
 
 class FallbackAssFileHandler(SubtitleFileHandler):
     """
@@ -145,8 +145,8 @@ class FallbackAssFileHandler(SubtitleFileHandler):
                 effect = metadata.get('effect', '')
                 
                 # Format time as ASS format (H:MM:SS.CC)
-                start_time = TimedeltaToAssTime(line.start)
-                end_time = TimedeltaToAssTime(line.end)
+                start_time = self._timedelta_to_ass_time(line.start)
+                end_time = self._timedelta_to_ass_time(line.end)
                 
                 # Clean and format text
                 text = line.text.replace('\n', '\\N')
@@ -262,8 +262,8 @@ class FallbackAssFileHandler(SubtitleFileHandler):
                             event_data[field] = dialogue_values[i]
                     
                     # Extract required fields
-                    start_time = AssTimeToTimedelta(event_data.get('Start', '0:00:00.00'))
-                    end_time = AssTimeToTimedelta(event_data.get('End', '0:00:00.00'))
+                    start_time = self._ass_time_to_timedelta(event_data.get('Start', '0:00:00.00'))
+                    end_time = self._ass_time_to_timedelta(event_data.get('End', '0:00:00.00'))
                     text = event_data.get('Text', '').replace('\\N', '\n').replace('\\n', '\n')
                     
                     # Create metadata for ASS-specific fields
@@ -289,4 +289,52 @@ class FallbackAssFileHandler(SubtitleFileHandler):
                     
                     yield subtitle_line
                     event_index += 1
+
+    def _ass_time_to_timedelta(self, ass_time: str) -> timedelta:
+        """
+        Convert ASS time format (H:MM:SS.CC) to timedelta.
+        
+        Args:
+            ass_time: Time string in ASS format (e.g., "1:23:45.67")
+            
+        Returns:
+            timedelta: Converted time
+        """
+        try:
+            # ASS time format: H:MM:SS.CC where CC is centiseconds
+            time_match = regex.match(r'(\d+):(\d{2}):(\d{2})\.(\d{2})', ass_time)
+            if not time_match:
+                return timedelta(seconds=0)
+            
+            hours = int(time_match.group(1))
+            minutes = int(time_match.group(2))
+            seconds = int(time_match.group(3))
+            centiseconds = int(time_match.group(4))
+            
+            return timedelta(
+                hours=hours,
+                minutes=minutes,
+                seconds=seconds,
+                milliseconds=centiseconds * 10  # Convert centiseconds to milliseconds
+            )
+        except (ValueError, AttributeError):
+            return timedelta(seconds=0)
+
+    def _timedelta_to_ass_time(self, td: timedelta) -> str:
+        """
+        Convert timedelta to ASS time format (H:MM:SS.CC).
+        
+        Args:
+            td: Time delta to convert
+            
+        Returns:
+            str: Time in ASS format (e.g., "1:23:45.67")
+        """
+        total_seconds = int(td.total_seconds())
+        hours = total_seconds // 3600
+        minutes = (total_seconds % 3600) // 60
+        seconds = total_seconds % 60
+        centiseconds = int((td.microseconds / 1000) / 10)  # Convert microseconds to centiseconds
+        
+        return f"{hours}:{minutes:02d}:{seconds:02d}.{centiseconds:02d}"
     

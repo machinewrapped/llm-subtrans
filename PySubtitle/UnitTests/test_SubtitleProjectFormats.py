@@ -132,11 +132,12 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         # Verify colors survived serialization
         restored_default_style = subtitles_restored.metadata['styles'].get('Default', {})
         restored_primarycolor = restored_default_style.get('primarycolor')
-        self.assertIsInstance(restored_primarycolor, dict)
-        self.assertEqual(restored_primarycolor.get('r'), 255)
-        self.assertEqual(restored_primarycolor.get('g'), 255)
-        self.assertEqual(restored_primarycolor.get('b'), 255)
-        self.assertEqual(restored_primarycolor.get('a'), 0)
+        from PySubtitle.Helpers.Color import Color
+        self.assertIsInstance(restored_primarycolor, Color)
+        self.assertEqual(restored_primarycolor.r, 255)
+        self.assertEqual(restored_primarycolor.g, 255)
+        self.assertEqual(restored_primarycolor.b, 255)
+        self.assertEqual(restored_primarycolor.a, 0)
 
 
 if __name__ == "__main__":

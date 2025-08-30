@@ -200,7 +200,8 @@ class SubtitleProject:
             if not projectfile:
                 raise Exception("No file path provided")
 
-            self.subtitles.outputpath = GetOutputPath(projectfile, self.subtitles.target_language)
+            # output translations in the same directory as the project
+            self._update_output_path(projectfile)
             self.WriteProjectToFile(projectfile, encoder_class=SubtitleEncoder)
 
             self.needs_writing = False
@@ -415,3 +416,13 @@ class SubtitleProject:
         logging.debug("Scene translated")
         self.needs_writing = self.write_project
         self.events.scene_translated(scene)
+
+    def _update_output_path(self, projectfile):
+        extension : str = ".srt"  # Default fallback
+        if self.subtitles.outputpath:
+            extension = os.path.splitext(self.subtitles.outputpath)[1]
+            if not extension and self.subtitles.sourcepath:
+                extension = os.path.splitext(self.subtitles.sourcepath)[1]
+                
+        self.subtitles.outputpath = GetOutputPath(projectfile, self.subtitles.target_language, extension)
+

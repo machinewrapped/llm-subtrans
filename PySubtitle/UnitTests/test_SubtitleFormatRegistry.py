@@ -1,29 +1,29 @@
+from typing import TextIO
 import unittest
-from typing import Iterator, TextIO
 
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
-from PySubtitle.SubtitleLine import SubtitleLine
+from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.Helpers.Tests import (
     log_input_expected_error,
     log_input_expected_result,
     log_test_name,
+    skip_if_debugger_attached,
 )
 
 
 class DummySrtHandler(SubtitleFileHandler):
-    def parse_file(self, file_obj : TextIO) -> Iterator[SubtitleLine]:
-        return iter([])
+    SUPPORTED_EXTENSIONS = {'.srt': 5}
+    
+    def parse_file(self, file_obj : TextIO) -> SubtitleData:
+        return SubtitleData(lines=[], metadata={})
 
-    def parse_string(self, content : str) -> Iterator[SubtitleLine]:
-        return iter([])
+    def parse_string(self, content : str) -> SubtitleData:
+        return SubtitleData(lines=[], metadata={})
 
-    def compose_lines(self, lines : list[SubtitleLine], reindex : bool = True) -> str:
+    def compose(self, data : SubtitleData) -> str:
         return ""
-
-    def get_file_extensions(self) -> list[str]:
-        return ['.srt']
 
 
 class TestSubtitleFormatRegistry(unittest.TestCase):
@@ -38,6 +38,9 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         self.assertIs(handler, SrtFileHandler)
 
     def test_UnknownExtension(self):
+        if skip_if_debugger_attached("UnknownExtension"):
+            return
+
         log_test_name("UnknownExtension")
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.get_handler_by_extension('.unknown')
@@ -57,15 +60,20 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
 
     def test_DuplicateRegistrationPriority(self):
         log_test_name("DuplicateRegistrationPriority")
-        SubtitleFormatRegistry.register_handler(DummySrtHandler, priority=1)
+
+        SubtitleFormatRegistry.disable_autodiscovery()
+
+        SubtitleFormatRegistry.register_handler(DummySrtHandler)
         handler = SubtitleFormatRegistry.get_handler_by_extension('.srt')
         log_input_expected_result('priority', DummySrtHandler, handler)
         self.assertIs(handler, DummySrtHandler)
 
-        SubtitleFormatRegistry.register_handler(SrtFileHandler, priority=0)
+        SubtitleFormatRegistry.register_handler(SrtFileHandler)
         handler_after = SubtitleFormatRegistry.get_handler_by_extension('.srt')
-        log_input_expected_result('priority', DummySrtHandler, handler_after)
-        self.assertIs(handler_after, DummySrtHandler)
+        log_input_expected_result('priority', SrtFileHandler, handler_after)
+        self.assertIs(handler_after, SrtFileHandler)
+
+        SubtitleFormatRegistry.clear()
 
 
 if __name__ == '__main__':

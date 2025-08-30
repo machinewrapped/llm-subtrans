@@ -38,3 +38,4 @@ mistral-subtrans.sh
 autotranslated_msgids_*.txt
 untranslated_msgids_*.txt
 /.claude
+/test_projects

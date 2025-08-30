@@ -1,8 +1,10 @@
 import srt # type: ignore
-from typing import Iterator, TextIO
+from collections.abc import Iterator
+from typing import TextIO
 
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
+from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
 from PySubtitle.Helpers.Localization import _
 
@@ -12,54 +14,70 @@ class SrtFileHandler(SubtitleFileHandler):
     Encapsulates all SRT library usage for file I/O operations.
     """
     
-    def parse_file(self, file_obj: TextIO) -> Iterator[SubtitleLine]:
-        """
-        Parse SRT file content and yield SubtitleLine objects.
-        """
-        yield from self._parse_srt_items(file_obj)
+    SUPPORTED_EXTENSIONS = {'.srt': 10}
     
-    def parse_string(self, content: str) -> Iterator[SubtitleLine]:
+    def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """
-        Parse SRT string content and yield SubtitleLine objects.
+        Parse SRT file content and return SubtitleData with lines and metadata.
         """
-        yield from self._parse_srt_items(content)
+        lines = list(self._parse_srt_items(file_obj))
+        metadata = {'format': 'srt'}  # SRT has minimal file-level metadata
+        return SubtitleData(lines=lines, metadata=metadata)
+    
+    def parse_string(self, content: str) -> SubtitleData:
+        """
+        Parse SRT string content and return SubtitleData with lines and metadata.
+        """
+        lines = list(self._parse_srt_items(content))
+        metadata = {'format': 'srt'}  # SRT has minimal file-level metadata
+        return SubtitleData(lines=lines, metadata=metadata)
 
-    def compose_lines(self, lines: list[SubtitleLine], reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData) -> str:
         """
-        Compose subtitle lines into SRT format string.
+        Compose subtitle lines into SRT format string using metadata.
         
         Args:
-            lines: List of SubtitleLine objects to compose
-            reindex: Whether to renumber lines sequentially
+            data: SubtitleData containing lines and file metadata
             
         Returns:
             str: SRT formatted subtitle content
         """
+        from PySubtitle.Helpers.Text import IsRightToLeftText
+        
+        # Filter out invalid lines and renumber for SRT compliance
+        output_lines = []
+        start_number = data.start_line_number or 1
+        line_number = start_number
+        
+        for line in data.lines:
+            if line.text and line.start is not None and line.end is not None:
+                output_lines.append(SubtitleLine.Construct(
+                    line_number, line.start, line.end, line.text, line.metadata
+                ))
+                line_number += 1
+        
+        # Handle RTL markers if requested (marginal case)
+        if data.metadata.get('add_rtl_markers'):
+            for line in output_lines:
+                if line.text and IsRightToLeftText(line.text) and not line.text.startswith("\u202b"):
+                    line.text = f"\u202b{line.text}\u202c"
+        
         # Convert SubtitleLine objects to srt.Subtitle objects for composition
         srt_items = []
-        for i, line in enumerate(lines):
-            if line.text and line.start is not None and line.end is not None:
-                # Create srt.Subtitle object
-                index = i + 1 if reindex else line.number
-                srt_item = srt.Subtitle(
-                    index=index,
-                    start=line.start,
-                    end=line.end,
-                    content=line.text,
-                    proprietary=""
-                )
-                srt_items.append(srt_item)
+        for line in output_lines:
+            proprietary = line.metadata.get('proprietary', '')
+            
+            srt_item = srt.Subtitle(
+                index=line.number,
+                start=line.start,
+                end=line.end,
+                content=line.text,
+                proprietary=proprietary
+            )
+            srt_items.append(srt_item)
         
         return srt.compose(srt_items, reindex=False)  # We handle reindexing above
     
-    def get_file_extensions(self) -> list[str]:
-        """
-        Get file extensions supported by this handler.
-        
-        Returns:
-            list[str]: List of file extensions
-        """
-        return ['.srt']
 
     def _parse_srt_items(self, source) -> Iterator[SubtitleLine]:
         """

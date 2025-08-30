@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 from datetime import datetime
 from typing import Any
 
@@ -53,6 +54,16 @@ def log_input_expected_error(input : Any, expected_error : type[Exception], resu
         log_error("*** UNEXPECTED ERROR! ***", prefix="!!!".ljust(10))
     log_info(str(result), prefix="-->".ljust(10))
     logging.info(separator)
+
+def skip_if_debugger_attached(test_name : str) -> bool:
+    """
+    Returns True if running under a debugger and logs that the test is being skipped.
+    Use this to skip tests that raise expected exceptions when debugging.
+    """
+    if sys.gettrace() is not None:
+        print(f"\nSkipping {test_name} when debugger is attached")
+        return True
+    return False
 
 def create_logfile(results_dir : str, log_name : str, log_level = logging.DEBUG) -> logging.FileHandler:
     """

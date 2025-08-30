@@ -94,6 +94,7 @@ if __name__ == "__main__":
     tests_directory = os.path.join(root_directory, 'Tests')
     subtitles_directory = os.path.join(root_directory, 'test_subtitles')
     results_directory =  os.path.join(root_directory, 'test_results')
+    test_name = args.test
 
     if not os.path.exists(results_directory):
         os.makedirs(results_directory)
@@ -102,4 +103,4 @@ if __name__ == "__main__":
 
     run_unit_tests(results_directory)
 
-    run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=args.test)
+    run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=test_name)

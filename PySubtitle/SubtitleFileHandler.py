@@ -1,6 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Iterator, TextIO
+from collections.abc import Iterator
+from typing import Any, TextIO
+
 from PySubtitle.SubtitleLine import SubtitleLine
+from PySubtitle.SubtitleData import SubtitleData
 
 class SubtitleFileHandler(ABC):
     """
@@ -9,16 +12,18 @@ class SubtitleFileHandler(ABC):
     remains format-agnostic.
     """
     
+    SUPPORTED_EXTENSIONS : dict[str, int] = {}
+    
     @abstractmethod
-    def parse_file(self, file_obj: TextIO) -> Iterator[SubtitleLine]:
+    def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """
-        Parse subtitle file content and yield SubtitleLine objects.
+        Parse subtitle file content and return lines with file-level metadata.
         
         Args:
             file_obj: Open file object to read from
             
-        Yields:
-            SubtitleLine: Parsed subtitle lines
+        Returns:
+            SubtitleData: Container with parsed lines and file metadata
             
         Raises:
             SubtitleParseError: If file cannot be parsed
@@ -26,15 +31,15 @@ class SubtitleFileHandler(ABC):
         pass
     
     @abstractmethod
-    def parse_string(self, content: str) -> Iterator[SubtitleLine]:
+    def parse_string(self, content: str) -> SubtitleData:
         """
-        Parse subtitle string content and yield SubtitleLine objects.
+        Parse subtitle string content and return lines with file-level metadata.
         
         Args:
             content: String content to parse
             
-        Yields:
-            SubtitleLine: Parsed subtitle lines
+        Returns:
+            SubtitleData: Container with parsed lines and file metadata
             
         Raises:
             SubtitleParseError: If content cannot be parsed
@@ -42,20 +47,18 @@ class SubtitleFileHandler(ABC):
         pass
     
     @abstractmethod
-    def compose_lines(self, lines: list[SubtitleLine], reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData) -> str:
         """
-        Compose subtitle lines into file format string.
+        Compose subtitle lines into file format string using file-level metadata.
         
         Args:
-            lines: List of SubtitleLine objects to compose
-            reindex: Whether to renumber lines sequentially
+            data: Container with subtitle lines and file metadata
             
         Returns:
             str: Formatted subtitle content
         """
         pass
     
-    @abstractmethod
     def get_file_extensions(self) -> list[str]:
         """
         Get file extensions supported by this handler.
@@ -63,4 +66,14 @@ class SubtitleFileHandler(ABC):
         Returns:
             list[str]: List of file extensions (e.g., ['.srt'])
         """
-        pass
+        return list(self.__class__.SUPPORTED_EXTENSIONS.keys())
+    
+    def get_extension_priorities(self) -> dict[str, int]:
+        """
+        Get priority for each supported extension.
+        Higher priority handlers override lower priority ones.
+        
+        Returns:
+            dict[str, int]: Mapping of extensions to priorities
+        """
+        return self.__class__.SUPPORTED_EXTENSIONS.copy()

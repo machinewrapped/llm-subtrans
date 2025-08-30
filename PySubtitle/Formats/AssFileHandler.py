@@ -3,11 +3,13 @@ import pysubs2.time
 from datetime import timedelta
 from typing import TextIO
 
+from PySubtitle.Helpers.SimpleColor import SimpleColor
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
 from PySubtitle.Helpers.Localization import _
+
 
 class AssFileHandler(SubtitleFileHandler):
     """
@@ -30,13 +32,8 @@ class AssFileHandler(SubtitleFileHandler):
             for index, line in enumerate(subs, 1):
                 lines.append(self._pysubs2_to_subtitle_line(line, index))
             
-            # Extract serializable metadata from the pysubs2 file
-            metadata = {
-                'format': 'ass',
-                'info': dict(subs.info),  # Script info section
-                'styles': {name: style.as_dict() for name, style in subs.styles.items()},  # Styles section
-                'aegisub_project': dict(subs.aegisub_project) if hasattr(subs, 'aegisub_project') else {}
-            }
+            # Extract serializable metadata using helper
+            metadata = self._parse_metadata(subs)
             
             return SubtitleData(lines=lines, metadata=metadata)
                 
@@ -55,13 +52,8 @@ class AssFileHandler(SubtitleFileHandler):
             for index, line in enumerate(subs, 1):
                 lines.append(self._pysubs2_to_subtitle_line(line, index))
             
-            # Extract serializable metadata from the pysubs2 file
-            metadata = {
-                'format': 'ass',
-                'info': dict(subs.info),  # Script info section
-                'styles': {name: style.as_dict() for name, style in subs.styles.items()},  # Styles section
-                'aegisub_project': dict(subs.aegisub_project) if hasattr(subs, 'aegisub_project') else {}
-            }
+            # Extract serializable metadata using helper
+            metadata = self._parse_metadata(subs)
             
             return SubtitleData(lines=lines, metadata=metadata)
                 
@@ -81,19 +73,9 @@ class AssFileHandler(SubtitleFileHandler):
         # Create pysubs2 SSAFile
         subs = pysubs2.SSAFile()
         
-        # Restore script info from metadata
-        if 'info' in data.metadata:
-            subs.info.update(data.metadata['info'])
-        
-        # Restore styles from metadata
-        if 'styles' in data.metadata:
-            for style_name, style_fields in data.metadata['styles'].items():
-                style = pysubs2.SSAStyle(**style_fields)
-                subs.styles[style_name] = style
-        
-        # Restore aegisub project data if present
-        if 'aegisub_project' in data.metadata and hasattr(subs, 'aegisub_project'):
-            subs.aegisub_project.update(data.metadata['aegisub_project'])
+        # Restore metadata using helper
+        if data.metadata:
+            self._build_metadata(subs, data.metadata)
         
         # Convert SubtitleLines to pysubs2 format
         for line in data.lines:
@@ -194,3 +176,64 @@ class AssFileHandler(SubtitleFileHandler):
             event.type = 'Dialogue'  # Default for most subtitle lines
         
         return event
+
+    def _parse_metadata(self, subs : pysubs2.SSAFile) -> dict:
+        """
+        Convert pysubs2 metadata to JSON-serializable format.
+        Handles Color objects and other pysubs2-specific types.
+        """
+        # Extract serializable metadata from the pysubs2 file
+        metadata = {
+            'format': 'ass',
+            'info': dict(subs.info),  # Script info section
+            'aegisub_project': dict(subs.aegisub_project) if hasattr(subs, 'aegisub_project') else {}
+        }
+        
+        # Convert styles, handling Color objects
+        styles = {}
+        for name, style in subs.styles.items():
+            style_dict = style.as_dict()
+            
+            # Convert pysubs2.Color objects to SimpleColor dicts
+            color_fields = ['primarycolor', 'secondarycolor', 'tertiarycolor', 'outlinecolor', 'backcolor']
+            for field in color_fields:
+                if field in style_dict and isinstance(style_dict[field], pysubs2.Color):
+                    style_dict[field] = SimpleColor.from_pysubs2(style_dict[field]).to_dict()
+            
+            styles[name] = style_dict
+        
+        metadata['styles'] = styles
+        return metadata
+    
+    def _build_metadata(self, subs : pysubs2.SSAFile, metadata : dict) -> None:
+        """
+        Restore pysubs2 metadata from JSON-serialized format.
+        Converts SimpleColor dicts back to pysubs2.Color objects.
+        """
+        # Restore script info from metadata
+        if 'info' in metadata:
+            subs.info.update(metadata['info'])
+        
+        # Restore styles from metadata
+        if 'styles' in metadata:
+            # Clear default styles that pysubs2 creates automatically to avoid conflicts
+            subs.styles.clear()
+            
+            for style_name, style_fields in metadata['styles'].items():
+                # Convert SimpleColor dicts back to pysubs2.Color objects
+                style_data = style_fields.copy()
+                color_fields = ['primarycolor', 'secondarycolor', 'tertiarycolor', 'outlinecolor', 'backcolor']
+                
+                for field in color_fields:
+                    if field in style_data and isinstance(style_data[field], dict):
+                        # Check if it's a SimpleColor dict representation
+                        if all(key in style_data[field] for key in ['r', 'g', 'b']):
+                            style_data[field] = SimpleColor.from_dict(style_data[field]).to_pysubs2()
+                
+                style = pysubs2.SSAStyle(**style_data)
+                subs.styles[style_name] = style
+        
+        # Restore aegisub project data if present
+        if 'aegisub_project' in metadata and hasattr(subs, 'aegisub_project'):
+            subs.aegisub_project.update(metadata['aegisub_project'])
+    

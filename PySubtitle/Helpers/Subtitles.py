@@ -48,10 +48,11 @@ def MergeSubtitles(merged_lines : list[SubtitleLine]) -> SubtitleLine:
     
     # Create merged SubtitleLine directly
     merged_line = SubtitleLine.Construct(
-        number=merged_number,
-        start=merged_start,
-        end=merged_end,
-        text=merged_content,
+        number = merged_number,
+        start = merged_start,
+        end = merged_end,
+        text = merged_content,
+        metadata = first_line.metadata
     )
     merged_line.translation = merged_translation.strip()
     merged_line.original = merged_original.strip()

@@ -1,5 +1,4 @@
 import json
-from datetime import timedelta
 
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleLine import SubtitleLine

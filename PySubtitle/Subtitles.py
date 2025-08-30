@@ -453,7 +453,7 @@ class Subtitles:
                 translated_line.text = translated_text
                 return
 
-            translated_line = SubtitleLine.Construct(line_number, original_line.start, original_line.end, translated_text)
+            translated_line = SubtitleLine.Construct(line_number, original_line.start, original_line.end, translated_text, original_line.metadata)
 
             if not self.translated:
                 self.translated = []

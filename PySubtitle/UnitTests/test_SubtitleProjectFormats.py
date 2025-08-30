@@ -111,14 +111,15 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         self.assertEqual(subtitles.metadata.get('format'), 'ass')
         self.assertIn('styles', subtitles.metadata)
         
-        # Check that colors are properly converted to Color format
+        # Check that colors are properly converted to Color object
         default_style = subtitles.metadata['styles'].get('Default', {})
         primarycolor = default_style.get('primarycolor')
-        self.assertIsInstance(primarycolor, dict)
-        self.assertIn('r', primarycolor)
-        self.assertIn('g', primarycolor)
-        self.assertIn('b', primarycolor)
-        self.assertIn('a', primarycolor)
+        from PySubtitle.Helpers.Color import Color
+        self.assertIsInstance(primarycolor, Color)
+        self.assertEqual(primarycolor.r, 255)
+        self.assertEqual(primarycolor.g, 255)
+        self.assertEqual(primarycolor.b, 255)
+        self.assertEqual(primarycolor.a, 0)
         
         # Test JSON serialization roundtrip
         json_str = json.dumps(subtitles, cls=SubtitleEncoder)

@@ -6,6 +6,8 @@ GUI framework is PySide6, be sure to use the correct syntax (e.g. scoped enum va
 
 Secrets are stored in a .env file - NEVER read the contents of the file.
 
+Always run the unit_tests at the end of a task to validate the change.
+
 ## Commands
 - Run all unit tests: `python tests/unit_tests.py` 
 - Run single test: `python -m unittest PySubtitle.UnitTests.test_MODULE` or `python -m unittest GUI.UnitTests.test_MODULE`

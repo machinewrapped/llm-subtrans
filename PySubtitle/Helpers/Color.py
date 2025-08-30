@@ -21,7 +21,7 @@ class Color:
         """Create Color from #RRGGBB or #RRGGBBAA format"""
         hex_str = hex_str.lstrip('#')
         if len(hex_str) == 6:
-            hex_str += 'FF'  # Add full alpha if not specified
+            hex_str += '00'  # Add full alpha if not specified, making it opaque
         elif len(hex_str) != 8:
             raise ValueError(f"Invalid hex color format: #{hex_str}")
 

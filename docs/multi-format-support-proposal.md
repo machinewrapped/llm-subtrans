@@ -4,24 +4,24 @@
 
 ## Executive Summary
 
-This document proposes a comprehensive implementation plan to extend LLM-Subtrans with support for multiple subtitle file formats while maintaining the existing SRT functionality and internal architecture. The system will use a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
+This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 3 and outlines the remaining work for Phase 4. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
 
-## Current State Analysis
+## Current State After Phase 3
 
 ### Existing Architecture
 - **Core Internal Representation**: `SubtitleLine` objects with timing, text, and metadata
-- **File Format Handling**: Currently hardcoded to SRT via `SrtFileHandler`
-- **Integration Points**: `Subtitles.py:63` hardcodes `SrtFileHandler()` instantiation
+- **File Format Handling**: `SubtitleFormatRegistry` discovers handlers such as `SrtFileHandler` and `AssFileHandler`
+- **Integration Points**: `SubtitleProject` loads files by extension and passes a handler into `Subtitles`
 - **Serialization**: `SubtitleSerialisation.py` handles project file persistence
-- **Interface**: Abstract `SubtitleFileHandler` already exists with proper methods
+- **Interface**: Abstract `SubtitleFileHandler` defines parsing and composing operations
 
 ### Current Limitations
-- Only SRT format supported
-- File format hardcoded in `Subtitles` class
-- No format detection mechanism
-- No extensibility for new formats
+- Only SRT and ASS/SSA formats implemented
+- Saving always uses the source file's handler; output format detection is pending
+- Content-based format detection not yet supported
+- Format conversion logic is still unimplemented
 
-## Proposed Architecture
+## Architecture Overview
 
 ### Responsibility Separation
 **SubtitleProject** becomes responsible for:
@@ -37,7 +37,7 @@ This document proposes a comprehensive implementation plan to extend LLM-Subtran
 **Format Conversion Flow**:
 ```python
 try:
-  new_handler = SubtitleFormatRegistry.get_handler_by_format(target_format)
+  new_handler = SubtitleFormatRegistry.create_handler(target_extension)
   converted_subtitles = new_handler.convert_from(self.subtitles)
   self.subtitles = converted_subtitles
 except Exception as e:
@@ -45,17 +45,17 @@ except Exception as e:
 ```
 
 ### Format Detection & Routing System
-A new `SubtitleFormatRegistry` will:
-- Auto-discover handlers in `PySubtitle/Formats/` directory
-- Map file extensions to appropriate handlers
-- Provide fallback mechanisms for unknown formats
-- Support format detection by file content when extension is ambiguous
+The `SubtitleFormatRegistry`:
+- Auto-discovers handlers in `PySubtitle/Formats/` directory
+- Maps file extensions to appropriate handlers using priority values
+- Supports disabling auto-discovery for controlled test environments
+- Can be extended with content-based detection in the future
 
 ### Handler Auto-Discovery
-- All handler classes in `PySubtitle/Formats/*.py` that inherit from `SubtitleFileHandler` will be automatically registered
-- Registration based on `get_file_extensions()` return values
-- Handlers can override each other based on priority system
-- Runtime registration for dynamic handler loading
+- Handler classes in `PySubtitle/Formats/*.py` that inherit from `SubtitleFileHandler` are automatically registered
+- Registration is driven by each handler's `SUPPORTED_EXTENSIONS` class variable
+- Higher priority handlers override lower priority ones
+- Runtime registration allows dynamic handler loading
 
 ### Core Use Case Focus
 The implementation prioritizes **subtitle translation** over format conversion:
@@ -122,18 +122,14 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - [X] Assign unique indices to all dialogue events
 - [X] Handle ASS timing format conversion
 - [X] Support V4+ Styles and V4 Styles sections
-- [x] `AssFileHandler` (priority 10) overrides `FallbackAssFileHandler` (priority 0) for .ass/.ssa files
 - [x] `SrtFileHandler` (priority 10) maintains highest priority for .srt files
 
 **Files Created**:
-- [X] `PySubtitle/Formats/FallbackAssFileHandler.py` (Custom implementation - to be deprecated)
 - [X] `PySubtitle/Formats/AssFileHandler.py` (pysubs2-based implementation)
 - [X] `PySubtitle/UnitTests/test_AssFileHandler.py`
 
 **Implementation Outcome**:
-Two implementations were developed and compared:
-1. **FallbackAssFileHandler**: Functional custom implementation (to be deprecated)
-2. **AssFileHandler**: Superior pysubs2-based implementation with perfect round-trip fidelity
+The project standardised on a pysubs2-based `AssFileHandler`, which provides full metadata preservation and round-trip fidelity. Early custom efforts were discarded in favour of the library-backed approach.
 
 **pysubs2 Library Evaluation**:
 After implementation comparison, `pysubs2` was identified as the superior approach for most formats:
@@ -149,16 +145,34 @@ After implementation comparison, `pysubs2` was identified as the superior approa
 - **Specialized formats**: Evaluate on case-by-case basis
 
 ### Phase 4: Format conversion
+**Implementation Options**
+
+*Option A – `SubtitleProject.convert_format()`*
+- Introduce a `convert_format(target_extension)` method on `SubtitleProject`
+- Creates a new `Subtitles` object with a handler resolved from `SubtitleFormatRegistry`
+- Transfers caption text and metadata into the new object, mapping fields when necessary
+- Updates project metadata (e.g., file extension, handler class) to reflect the conversion
+- Allows conversion without immediately writing to disk
+
+*Option B – Implicit handler selection on save/load*
+- Continue selecting handlers only when loading from or saving to a path
+- `Subtitles.file_handler` remains the original handler; tests that construct subtitles from strings may set it explicitly
+- Conversion occurs during `SaveOriginal/SaveTranslation` based on output filename extension
+- Intermediate `Subtitles` objects are not created; data is passed directly to the new handler’s `compose()` method
+
+**Recommendation**
+
+Adopt **Option B** for Phase 4. It keeps the public API minimal, leverages existing handler selection logic, and avoids duplicating subtitle data in memory. Option A can be revisited if future workflows require in-memory converted objects.
+
 **Requirements**
-- Destination format auto-detected based on file extensions
-- Format conversion is handled by SubtitleProject by delegating to a `SubtitleFileHandler`
-- Metadata is preserved or converted into an appropriate form for the new format
- 
+- Destination format auto-detected from output file extensions
+- `SubtitleProject.SaveOriginal/SaveTranslation` delegate to new handlers when paths change extension
+- Handlers preserve or translate metadata as needed for the target format
+
 **Acceptance Tests**
-- [ ] Format conversion creates new `Subtitles` instance with different handler
 - [ ] Load .ass subtitle file and save as .srt without errors
 - [ ] Load .srt subtitle file and save as .ass without errors
-- [ ] Load converted files as new SubtitleProject without errors
+- [ ] Load converted files as new `SubtitleProject` instances without errors
 
 ### Phase 5: Additional Format Support
 **Requirements**:
@@ -193,7 +207,7 @@ After implementation comparison, `pysubs2` was identified as the superior approa
 - `PySubtitle/UnitTests/test_TtmlFileHandler.py`
 
 **Implementation Strategy**:
-Follow the proven pattern from `AssFileHandler` (formerly `Pysubs2AssFileHandler`):
+Follow the proven pattern from `AssFileHandler`:
 - Consistent metadata pass-through approach
 - `_pysubs2_original` preservation for perfect round-trips
 - Format-specific optimizations within each handler
@@ -367,8 +381,8 @@ class ExampleFileHandler(SubtitleFileHandler):
 
 **Priority Convention**:
 - **10+**: Primary/specialist handlers (e.g., `SrtFileHandler` for `.srt` = 10)
-- **1-9**: Generic/multi-format handlers with lower precedence  
-- **0**: Fallback handlers (e.g., `FallbackAssFileHandler` = 0)
+- **1-9**: Generic/multi-format handlers with lower precedence
+- **0**: Fallback handlers used when no specialist implementation exists
 
 ### Extended SubtitleLine Metadata Schema
 ```python

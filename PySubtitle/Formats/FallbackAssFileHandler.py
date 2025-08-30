@@ -14,6 +14,8 @@ class FallbackAssFileHandler(SubtitleFileHandler):
     Handles parsing and composition of ASS files including styles and dialogue events.
     """
     
+    SUPPORTED_EXTENSIONS = {'.ass': 0, '.ssa': 0}
+    
     def __init__(self):
         """Initialize ASS file handler with default formatting templates."""
         self.script_info = {}
@@ -154,14 +156,6 @@ class FallbackAssFileHandler(SubtitleFileHandler):
         
         return '\n'.join(output)
     
-    def get_file_extensions(self) -> list[str]:
-        """
-        Get file extensions supported by this handler.
-        
-        Returns:
-            list[str]: List of file extensions
-        """
-        return ['.ass', '.ssa']
     
     def _parse_sections(self, content: str) -> dict[str, str]:
         """Parse ASS file content into sections."""

@@ -12,6 +12,8 @@ class SrtFileHandler(SubtitleFileHandler):
     Encapsulates all SRT library usage for file I/O operations.
     """
     
+    SUPPORTED_EXTENSIONS = {'.srt': 10}
+    
     def parse_file(self, file_obj: TextIO) -> Iterator[SubtitleLine]:
         """
         Parse SRT file content and yield SubtitleLine objects.
@@ -52,14 +54,6 @@ class SrtFileHandler(SubtitleFileHandler):
         
         return srt.compose(srt_items, reindex=False)  # We handle reindexing above
     
-    def get_file_extensions(self) -> list[str]:
-        """
-        Get file extensions supported by this handler.
-        
-        Returns:
-            list[str]: List of file extensions
-        """
-        return ['.srt']
 
     def _parse_srt_items(self, source) -> Iterator[SubtitleLine]:
         """

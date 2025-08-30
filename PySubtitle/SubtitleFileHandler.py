@@ -9,6 +9,8 @@ class SubtitleFileHandler(ABC):
     remains format-agnostic.
     """
     
+    SUPPORTED_EXTENSIONS : dict[str, int] = {}
+    
     @abstractmethod
     def parse_file(self, file_obj: TextIO) -> Iterator[SubtitleLine]:
         """
@@ -55,7 +57,6 @@ class SubtitleFileHandler(ABC):
         """
         pass
     
-    @abstractmethod
     def get_file_extensions(self) -> list[str]:
         """
         Get file extensions supported by this handler.
@@ -63,4 +64,14 @@ class SubtitleFileHandler(ABC):
         Returns:
             list[str]: List of file extensions (e.g., ['.srt'])
         """
-        pass
+        return list(self.__class__.SUPPORTED_EXTENSIONS.keys())
+    
+    def get_extension_priorities(self) -> dict[str, int]:
+        """
+        Get priority for each supported extension.
+        Higher priority handlers override lower priority ones.
+        
+        Returns:
+            dict[str, int]: Mapping of extensions to priorities
+        """
+        return self.__class__.SUPPORTED_EXTENSIONS.copy()

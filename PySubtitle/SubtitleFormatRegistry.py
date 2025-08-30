@@ -14,9 +14,10 @@ class SubtitleFormatRegistry:
     _discovered : bool = False
 
     @classmethod
-    def register_handler(cls, handler_class : type[SubtitleFileHandler], priority : int = 0) -> None:
+    def register_handler(cls, handler_class : type[SubtitleFileHandler]) -> None:
         instance = handler_class()
-        for ext in instance.get_file_extensions():
+        priorities = instance.get_extension_priorities()
+        for ext, priority in priorities.items():
             ext = ext.lower()
             if ext not in cls._handlers or priority >= cls._priorities[ext]:
                 cls._handlers[ext] = handler_class
@@ -46,6 +47,11 @@ class SubtitleFormatRegistry:
         cls._handlers.clear()
         cls._priorities.clear()
         cls._discovered = False
+
+    @classmethod
+    def disable_autodiscovery(cls) -> None:
+        cls.clear()
+        cls._discovered = True
 
     @classmethod
     def discover(cls) -> None:

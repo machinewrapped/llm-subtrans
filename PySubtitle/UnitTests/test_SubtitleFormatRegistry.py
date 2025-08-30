@@ -15,6 +15,8 @@ from PySubtitle.Helpers.Tests import (
 
 
 class DummySrtHandler(SubtitleFileHandler):
+    SUPPORTED_EXTENSIONS = {'.srt': 5}
+    
     def parse_file(self, file_obj : TextIO) -> Iterator[SubtitleLine]:
         return iter([])
 
@@ -23,9 +25,6 @@ class DummySrtHandler(SubtitleFileHandler):
 
     def compose_lines(self, lines : list[SubtitleLine], reindex : bool = True) -> str:
         return ""
-
-    def get_file_extensions(self) -> list[str]:
-        return ['.srt']
 
 
 class TestSubtitleFormatRegistry(unittest.TestCase):
@@ -62,15 +61,20 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
 
     def test_DuplicateRegistrationPriority(self):
         log_test_name("DuplicateRegistrationPriority")
-        SubtitleFormatRegistry.register_handler(DummySrtHandler, priority=1)
+
+        SubtitleFormatRegistry.disable_autodiscovery()
+
+        SubtitleFormatRegistry.register_handler(DummySrtHandler)
         handler = SubtitleFormatRegistry.get_handler_by_extension('.srt')
         log_input_expected_result('priority', DummySrtHandler, handler)
         self.assertIs(handler, DummySrtHandler)
 
-        SubtitleFormatRegistry.register_handler(SrtFileHandler, priority=0)
+        SubtitleFormatRegistry.register_handler(SrtFileHandler)
         handler_after = SubtitleFormatRegistry.get_handler_by_extension('.srt')
-        log_input_expected_result('priority', DummySrtHandler, handler_after)
-        self.assertIs(handler_after, DummySrtHandler)
+        log_input_expected_result('priority', SrtFileHandler, handler_after)
+        self.assertIs(handler_after, SrtFileHandler)
+
+        SubtitleFormatRegistry.clear()
 
 
 if __name__ == '__main__':

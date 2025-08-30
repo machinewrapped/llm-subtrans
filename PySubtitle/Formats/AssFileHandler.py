@@ -13,6 +13,8 @@ class AssFileHandler(SubtitleFileHandler):
     Provides professional-grade ASS handling with full metadata preservation.
     """
     
+    SUPPORTED_EXTENSIONS = {'.ass': 10, '.ssa': 10}
+    
     def parse_file(self, file_obj: TextIO) -> Iterator[SubtitleLine]:
         """
         Parse ASS file content and yield SubtitleLine objects using pysubs2.
@@ -65,14 +67,6 @@ class AssFileHandler(SubtitleFileHandler):
         # Return as string
         return subs.to_string("ass")
     
-    def get_file_extensions(self) -> list[str]:
-        """
-        Get file extensions supported by this handler.
-        
-        Returns:
-            list[str]: List of file extensions
-        """
-        return ['.ass', '.ssa']
     
     def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int) -> SubtitleLine:
         """Convert pysubs2 SSAEvent to SubtitleLine with metadata preservation."""

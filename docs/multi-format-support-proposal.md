@@ -1,6 +1,6 @@
 # Multi-Format Subtitle Support Implementation Proposal
 
-**Note** tests MUST be invoked via `python scripts/unit_tests.py` to bootstrap the test environment.
+**Note** tests MUST be invoked via `python tests/unit_tests.py` to bootstrap the test environment.
 
 ## Executive Summary
 

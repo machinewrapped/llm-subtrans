@@ -167,7 +167,7 @@ def _object_hook(dct):
             obj.messages = dct.get('messages')
             return obj
         elif class_name == classname(Color):
-            return Color.from_hex(dct.get('hex', '#000000FF'))
+            return Color.from_hex(dct.get('hex', '#00000000'))
         elif class_name == classname(TranslationError):
             return TranslationError(dct.get('message'))
 

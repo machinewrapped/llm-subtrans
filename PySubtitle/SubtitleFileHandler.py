@@ -47,13 +47,12 @@ class SubtitleFileHandler(ABC):
         pass
     
     @abstractmethod
-    def compose(self, data: SubtitleData, reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData) -> str:
         """
         Compose subtitle lines into file format string using file-level metadata.
         
         Args:
             data: Container with subtitle lines and file metadata
-            reindex: Whether to renumber lines sequentially
             
         Returns:
             str: Formatted subtitle content

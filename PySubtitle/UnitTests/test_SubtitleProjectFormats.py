@@ -19,7 +19,7 @@ class DummyHandler(SubtitleFileHandler):
     def parse_string(self, content: str) -> SubtitleData:
         return SubtitleData(lines=[], metadata={})
 
-    def compose(self, data: SubtitleData, reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData) -> str:
         return ""
 
     def get_file_extensions(self) -> list[str]:

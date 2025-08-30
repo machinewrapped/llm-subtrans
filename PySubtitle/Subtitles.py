@@ -306,7 +306,7 @@ class Subtitles:
             originals = self.originals
             if originals:
                 data = SubtitleData(lines=originals, metadata=self.metadata)
-                subtitle_file = self.file_handler.compose(data, reindex=False)
+                subtitle_file = self.file_handler.compose(data)
                 with open(path, 'w', encoding=default_encoding) as f:
                     f.write(subtitle_file)
             else:
@@ -339,25 +339,21 @@ class Subtitles:
             if self.settings.get('include_original'):
                 translated = self._merge_original_and_translated(originals, translated)
 
-            # Renumber the lines to ensure compliance with format requirements
-            # Preserve metadata for format-specific information (e.g., ASS styling)
-            output_lines : list[SubtitleLine] = []
-            for line_number, line in enumerate(translated, start=self.start_line_number or 1):
-                if line.text:
-                    output_lines.append(SubtitleLine.Construct(line_number, line.start, line.end, line.text, line.metadata))
-
             logging.info(_("Saving translation to {}").format(str(outputpath)))
 
-            # Add Right-To-Left markers to lines that contain primarily RTL script, if requested
-            # TODO: this should probably be a function of the file_handler, in case different formats handle it differently
-            if self.settings.get('add_right_to_left_markers'):
-                for line in output_lines:
-                    if line.text and IsRightToLeftText(line.text) and not line.text.startswith("\u202b"):
-                        line.text = f"\u202b{line.text}\u202c"
-
             # Use file handler for format-agnostic saving with metadata preservation
-            data = SubtitleData(lines=output_lines, metadata=self.metadata)
-            subtitle_file = self.file_handler.compose(data, reindex=False)
+            # Pass format-specific settings and let handler decide how to process
+            data = SubtitleData(
+                lines=translated, 
+                metadata=self.metadata, 
+                start_line_number=self.start_line_number
+            )
+            
+            # Apply RTL markers if requested (handler will decide format-specific implementation)
+            if self.settings.get('add_right_to_left_markers'):
+                data.metadata['add_rtl_markers'] = True
+            
+            subtitle_file = self.file_handler.compose(data)
             with open(outputpath, 'w', encoding=default_encoding) as f:
                 f.write(subtitle_file)
 

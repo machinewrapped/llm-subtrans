@@ -68,13 +68,12 @@ class AssFileHandler(SubtitleFileHandler):
         except Exception as e:
             raise SubtitleParseError(_("Failed to parse ASS content: {}").format(str(e)), e)
     
-    def compose(self, data: SubtitleData, reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData) -> str:
         """
         Compose subtitle lines into ASS format string using metadata.
         
         Args:
             data: SubtitleData containing lines and file metadata
-            reindex: Whether to renumber lines sequentially (ignored for ASS)
             
         Returns:
             str: ASS formatted subtitle content

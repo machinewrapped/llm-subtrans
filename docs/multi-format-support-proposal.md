@@ -288,31 +288,8 @@ During Phase 3 implementation, a critical flaw was discovered in the current arc
 
 **Root Cause**: The `SubtitleFileHandler` interface is too low-level and doesn't account for formats that have rich file-level metadata (ASS styles, WebVTT headers, TTML namespaces, etc.).
 
-### Enhanced Architecture Requirements
-
 #### File-Level Metadata Storage
-File handlers must capture and preserve complete file context:
-
-```python
-class SubtitleFileHandler(ABC):
-    def __init__(self):
-        self.file_metadata: dict[str, Any] = {}
-    
-    @abstractmethod
-    def parse_file_with_metadata(self, file_obj: TextIO) -> tuple[Iterator[SubtitleLine], dict[str, Any]]:
-        """Parse file and return both lines and file-level metadata"""
-        pass
-    
-    @abstractmethod  
-    def compose(self, lines: list[SubtitleLine], reindex: bool = True) -> str:
-        """Compose complete file using both lines and stored file metadata"""
-        pass
-    
-    # Backward compatibility
-    def compose_lines(self, lines: list[SubtitleLine], reindex: bool = True) -> str:
-        """Legacy method - delegates to compose()"""
-        return self.compose(lines, reindex)
-```
+Solution: File handlers must capture and preserve complete file context
 
 #### Format-Specific Metadata Examples
 ```python
@@ -333,15 +310,9 @@ class SubtitleFileHandler(ABC):
 ```
 
 #### Integration Points
-- `Subtitles.LoadSubtitles()`: Use `parse_file_with_metadata()` to capture context
+- `Subtitles.LoadSubtitles()`: Should return `SubtitleData` with metadata.
 - `Subtitles.SaveTranslation()`: Use `compose()` instead of `compose_lines()` 
 - File handlers: Store original file structure for perfect round-trip fidelity
-
-#### Migration Strategy
-1. **Phase 3.5**: Implement enhanced `SubtitleFileHandler` interface
-2. **Phase 3.6**: Update `AssFileHandler` to preserve original pysubs2 SSAFile
-3. **Phase 3.7**: Modify `Subtitles` class to use new metadata-aware methods
-4. **Phase 3.8**: Maintain backward compatibility with legacy `compose_lines()`
 
 ## Technical Specifications
 
@@ -539,23 +510,44 @@ All pysubs2-based handlers follow this proven pattern from `AssFileHandler`:
 
 ```python
 class [Format]FileHandler(SubtitleFileHandler):
-    def parse_string(self, content: str) -> Iterator[SubtitleLine]:
+    def parse_string(self, content: str) -> SubtitleData:
         subs = pysubs2.SSAFile.from_string(content)
+        
+        lines = []
         for index, line in enumerate(subs, 1):
-            yield self._pysubs2_to_subtitle_line(line, index)
+            lines.append(self._pysubs2_to_subtitle_line(line, index))
+        
+        # Extract serializable metadata
+        metadata = {
+            'format': '[format]',
+            'info': dict(subs.info),
+            'styles': {name: style.as_dict() for name, style in subs.styles.items()}
+        }
+        
+        return SubtitleData(lines=lines, metadata=metadata)
     
-    def compose_lines(self, lines: list[SubtitleLine], reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData) -> str:
         subs = pysubs2.SSAFile()
-        for line in lines:
+        
+        # Restore file-level metadata
+        if 'info' in data.metadata:
+            subs.info.update(data.metadata['info'])
+        if 'styles' in data.metadata:
+            for style_name, style_fields in data.metadata['styles'].items():
+                subs.styles[style_name] = pysubs2.SSAStyle(**style_fields)
+        
+        # Convert lines
+        for line in data.lines:
             pysubs2_line = self._subtitle_line_to_pysubs2(line)
             subs.append(pysubs2_line)
+        
         return subs.to_string("[format]")
     
     def _pysubs2_to_subtitle_line(self, pysubs2_line, index):
-        # Convert with metadata preservation + _pysubs2_original
+        # Convert with metadata preservation
     
     def _subtitle_line_to_pysubs2(self, line):
-        # Restore from _pysubs2_original or fallback to standard metadata
+        # Restore from preserved metadata or use defaults
 ```
 
 ### Metadata Strategy

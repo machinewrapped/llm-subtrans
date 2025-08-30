@@ -13,7 +13,7 @@ class VoidFileHandler(SubtitleFileHandler):
     def parse_string(self, content: str) -> SubtitleData:
         raise NotImplementedError("VoidFileHandler cannot parse strings")
 
-    def compose(self, data: SubtitleData, reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData) -> str:
         raise NotImplementedError("VoidFileHandler cannot compose data")
 
     def get_file_extensions(self) -> list[str]:

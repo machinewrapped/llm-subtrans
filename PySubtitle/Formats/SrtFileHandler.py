@@ -32,33 +32,49 @@ class SrtFileHandler(SubtitleFileHandler):
         metadata = {'format': 'srt'}  # SRT has minimal file-level metadata
         return SubtitleData(lines=lines, metadata=metadata)
 
-    def compose(self, data: SubtitleData, reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData) -> str:
         """
         Compose subtitle lines into SRT format string using metadata.
         
         Args:
             data: SubtitleData containing lines and file metadata
-            reindex: Whether to renumber lines sequentially
             
         Returns:
             str: SRT formatted subtitle content
         """
+        from PySubtitle.Helpers.Text import IsRightToLeftText
+        
+        # Filter out invalid lines and renumber for SRT compliance
+        output_lines = []
+        start_number = data.start_line_number or 1
+        line_number = start_number
+        
+        for line in data.lines:
+            if line.text and line.start is not None and line.end is not None:
+                output_lines.append(SubtitleLine.Construct(
+                    line_number, line.start, line.end, line.text, line.metadata
+                ))
+                line_number += 1
+        
+        # Handle RTL markers if requested (marginal case)
+        if data.metadata.get('add_rtl_markers'):
+            for line in output_lines:
+                if line.text and IsRightToLeftText(line.text) and not line.text.startswith("\u202b"):
+                    line.text = f"\u202b{line.text}\u202c"
+        
         # Convert SubtitleLine objects to srt.Subtitle objects for composition
         srt_items = []
-        for i, line in enumerate(data.lines):
-            if line.text and line.start is not None and line.end is not None:
-                # Create srt.Subtitle object
-                index = i + 1 if reindex else line.number
-                proprietary = line.metadata.get('proprietary', '')
-                
-                srt_item = srt.Subtitle(
-                    index=index,
-                    start=line.start,
-                    end=line.end,
-                    content=line.text,
-                    proprietary=proprietary
-                )
-                srt_items.append(srt_item)
+        for line in output_lines:
+            proprietary = line.metadata.get('proprietary', '')
+            
+            srt_item = srt.Subtitle(
+                index=line.number,
+                start=line.start,
+                end=line.end,
+                content=line.text,
+                proprietary=proprietary
+            )
+            srt_items.append(srt_item)
         
         return srt.compose(srt_items, reindex=False)  # We handle reindexing above
     

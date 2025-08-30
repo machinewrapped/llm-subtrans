@@ -221,41 +221,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         log_input_expected_result("Invalid content", True, assert_raised)
     
     
-    def test_reindex_functionality(self):
-        """Test reindexing functionality in compose_lines."""
-        log_test_name("AssFileHandler.compose_lines - reindex")
-        
-        lines = [
-            SubtitleLine.Construct(
-                number=10,  # Original index
-                start=timedelta(seconds=1),
-                end=timedelta(seconds=2),
-                text="Test",
-                metadata={'format': 'ass', 'style': 'Default', 'layer': 0, 'name': '', 
-                         'margin_l': 0, 'margin_r': 0, 'margin_v': 0, 'effect': ''}
-            )
-        ]
-        
-        data = SubtitleData(lines=lines, metadata={'format': 'ass'})
-        result_reindex = self.handler.compose(data, reindex=True)
-        result_no_reindex = self.handler.compose(data, reindex=False)
-        
-        # When reindexing, should start from 1
-        # When not reindexing, should preserve original number
-        # Note: ASS doesn't have explicit line numbers in dialogue lines like SRT,
-        # so we just verify the output is generated without errors
-        
-        both_are_strings = isinstance(result_reindex, str) and isinstance(result_no_reindex, str)
-        both_contain_dialogue = "Dialogue:" in result_reindex and "Dialogue:" in result_no_reindex
-        both_valid = both_are_strings and both_contain_dialogue
-        
-        log_input_expected_result("Reindex test", True, both_valid)
-        
-        self.assertIsInstance(result_reindex, str)
-        self.assertIsInstance(result_no_reindex, str)
-        self.assertIn("Dialogue:", result_reindex)
-        self.assertIn("Dialogue:", result_no_reindex)
-    
     def test_round_trip_conversion(self):
         """Test that parsing and composing results in similar content."""
         log_test_name("AssFileHandler round-trip conversion")

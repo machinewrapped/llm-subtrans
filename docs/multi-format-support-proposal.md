@@ -162,7 +162,7 @@ After implementation comparison, `pysubs2` was identified as the superior approa
 
 **Recommendation**
 
-Adopt **Option B** for Phase 4. It keeps the public API minimal, leverages existing handler selection logic, and avoids duplicating subtitle data in memory. Option A can be revisited if future workflows require in-memory converted objects.
+Adopt **Option B** for Phase 4. It keeps the public API minimal, leverages existing handler selection logic, and avoids duplicating subtitle data in memory. Option A can be revisited if future workflows require in-memory converted objects.
 
 **Requirements**
 - Destination format auto-detected from output file extensions

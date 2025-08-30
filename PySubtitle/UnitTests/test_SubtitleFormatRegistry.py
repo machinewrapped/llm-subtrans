@@ -1,11 +1,10 @@
-from collections.abc import Iterator
 from typing import TextIO
 import unittest
 
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
-from PySubtitle.SubtitleLine import SubtitleLine
+from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.Helpers.Tests import (
     log_input_expected_error,
     log_input_expected_result,
@@ -17,13 +16,13 @@ from PySubtitle.Helpers.Tests import (
 class DummySrtHandler(SubtitleFileHandler):
     SUPPORTED_EXTENSIONS = {'.srt': 5}
     
-    def parse_file(self, file_obj : TextIO) -> Iterator[SubtitleLine]:
-        return iter([])
+    def parse_file(self, file_obj : TextIO) -> SubtitleData:
+        return SubtitleData(lines=[], metadata={})
 
-    def parse_string(self, content : str) -> Iterator[SubtitleLine]:
-        return iter([])
+    def parse_string(self, content : str) -> SubtitleData:
+        return SubtitleData(lines=[], metadata={})
 
-    def compose_lines(self, lines : list[SubtitleLine], reindex : bool = True) -> str:
+    def compose(self, data : SubtitleData, reindex : bool = True) -> str:
         return ""
 
 

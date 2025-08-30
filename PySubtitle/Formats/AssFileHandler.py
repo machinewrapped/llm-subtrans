@@ -1,10 +1,11 @@
 import pysubs2
 import pysubs2.time
 from datetime import timedelta
-from typing import Iterator, TextIO
+from typing import TextIO
 
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
+from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
 from PySubtitle.Helpers.Localization import _
 
@@ -16,41 +17,63 @@ class AssFileHandler(SubtitleFileHandler):
     
     SUPPORTED_EXTENSIONS = {'.ass': 10, '.ssa': 10}
     
-    def parse_file(self, file_obj: TextIO) -> Iterator[SubtitleLine]:
+    def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """
-        Parse ASS file content and yield SubtitleLine objects using pysubs2.
+        Parse ASS file content and return SubtitleData with lines and metadata.
         """
         try:
             # pysubs2 expects file path or string content, so read the file
             content = file_obj.read()
             subs = pysubs2.SSAFile.from_string(content)
             
+            lines = []
             for index, line in enumerate(subs, 1):
-                yield self._pysubs2_to_subtitle_line(line, index)
+                lines.append(self._pysubs2_to_subtitle_line(line, index))
+            
+            # Extract serializable metadata from the pysubs2 file
+            metadata = {
+                'format': 'ass',
+                'info': dict(subs.info),  # Script info section
+                'styles': {name: style.as_dict() for name, style in subs.styles.items()},  # Styles section
+                'aegisub_project': dict(subs.aegisub_project) if hasattr(subs, 'aegisub_project') else {}
+            }
+            
+            return SubtitleData(lines=lines, metadata=metadata)
                 
         except Exception as e:
             raise SubtitleParseError(_("Failed to parse ASS file: {}").format(str(e)), e)
     
-    def parse_string(self, content: str) -> Iterator[SubtitleLine]:
+    def parse_string(self, content: str) -> SubtitleData:
         """
-        Parse ASS string content and yield SubtitleLine objects using pysubs2.
+        Parse ASS string content and return SubtitleData with lines and metadata.
         """
         try:
             # pysubs2 can load from string
             subs = pysubs2.SSAFile.from_string(content)
             
+            lines = []
             for index, line in enumerate(subs, 1):
-                yield self._pysubs2_to_subtitle_line(line, index)
+                lines.append(self._pysubs2_to_subtitle_line(line, index))
+            
+            # Extract serializable metadata from the pysubs2 file
+            metadata = {
+                'format': 'ass',
+                'info': dict(subs.info),  # Script info section
+                'styles': {name: style.as_dict() for name, style in subs.styles.items()},  # Styles section
+                'aegisub_project': dict(subs.aegisub_project) if hasattr(subs, 'aegisub_project') else {}
+            }
+            
+            return SubtitleData(lines=lines, metadata=metadata)
                 
         except Exception as e:
             raise SubtitleParseError(_("Failed to parse ASS content: {}").format(str(e)), e)
     
-    def compose_lines(self, lines: list[SubtitleLine], reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData, reindex: bool = True) -> str:
         """
-        Compose subtitle lines into ASS format string using pysubs2.
+        Compose subtitle lines into ASS format string using metadata.
         
         Args:
-            lines: List of SubtitleLine objects to compose
+            data: SubtitleData containing lines and file metadata
             reindex: Whether to renumber lines sequentially (ignored for ASS)
             
         Returns:
@@ -59,8 +82,22 @@ class AssFileHandler(SubtitleFileHandler):
         # Create pysubs2 SSAFile
         subs = pysubs2.SSAFile()
         
+        # Restore script info from metadata
+        if 'info' in data.metadata:
+            subs.info.update(data.metadata['info'])
+        
+        # Restore styles from metadata
+        if 'styles' in data.metadata:
+            for style_name, style_fields in data.metadata['styles'].items():
+                style = pysubs2.SSAStyle(**style_fields)
+                subs.styles[style_name] = style
+        
+        # Restore aegisub project data if present
+        if 'aegisub_project' in data.metadata and hasattr(subs, 'aegisub_project'):
+            subs.aegisub_project.update(data.metadata['aegisub_project'])
+        
         # Convert SubtitleLines to pysubs2 format
-        for line in lines:
+        for line in data.lines:
             if line.text and line.start is not None and line.end is not None:
                 pysubs2_line = self._subtitle_line_to_pysubs2(line)
                 subs.append(pysubs2_line)

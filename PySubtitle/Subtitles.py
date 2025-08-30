@@ -21,6 +21,7 @@ from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleProcessor import SubtitleProcessor
 from PySubtitle.SubtitleScene import SubtitleScene, UnbatchScenes
 from PySubtitle.SubtitleLine import SubtitleLine
+from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
 
 default_encoding = os.getenv('DEFAULT_ENCODING', 'utf-8')
@@ -60,6 +61,7 @@ class Subtitles:
         self.outputpath: str | None = outputpath or None
 
         self.file_handler: SubtitleFileHandler = file_handler
+        self.metadata: dict[str, Any] = {}
 
         self.settings: SettingsType = deepcopy(self.DEFAULT_PROJECT_SETTINGS)
 
@@ -262,20 +264,21 @@ class Subtitles:
         
         try:
             with open(self.sourcepath, 'r', encoding=default_encoding, newline='') as f:
-                lines = list(self.file_handler.parse_file(f))
+                data = self.file_handler.parse_file(f)
 
         except SubtitleParseError as e:
             logging.warning(_("Error parsing file... trying with fallback encoding: {}").format(str(e)))
             try:
                 with open(self.sourcepath, 'r', encoding=fallback_encoding) as f:
-                    lines = list(self.file_handler.parse_file(f))
+                    data = self.file_handler.parse_file(f)
             except SubtitleParseError as e2:
                 logging.error(_("Failed to parse file with fallback encoding: {}").format(str(e2)))
                 raise e2
 
         with self.lock:
-            self._renumber_if_needed(lines)
-            self.originals = lines
+            self._renumber_if_needed(data.lines)
+            self.originals = data.lines
+            self.metadata = data.metadata
 
     def LoadSubtitlesFromString(self, subtitles_string: str) -> None:
         """
@@ -283,9 +286,10 @@ class Subtitles:
         """
         try:
             with self.lock:
-                lines = list(self.file_handler.parse_string(subtitles_string))
-                self._renumber_if_needed(lines)
-                self.originals = lines
+                data = self.file_handler.parse_string(subtitles_string)
+                self._renumber_if_needed(data.lines)
+                self.originals = data.lines
+                self.metadata = data.metadata
 
         except SubtitleParseError as e:
             logging.error(_("Failed to parse subtitles string: {}").format(str(e)))
@@ -301,7 +305,8 @@ class Subtitles:
         with self.lock:
             originals = self.originals
             if originals:
-                subtitle_file = self.file_handler.compose_lines(originals, reindex=False)
+                data = SubtitleData(lines=originals, metadata=self.metadata)
+                subtitle_file = self.file_handler.compose(data, reindex=False)
                 with open(path, 'w', encoding=default_encoding) as f:
                     f.write(subtitle_file)
             else:
@@ -350,8 +355,9 @@ class Subtitles:
                     if line.text and IsRightToLeftText(line.text) and not line.text.startswith("\u202b"):
                         line.text = f"\u202b{line.text}\u202c"
 
-            # Use file handler for format-agnostic saving
-            subtitle_file = self.file_handler.compose_lines(output_lines, reindex=False)
+            # Use file handler for format-agnostic saving with metadata preservation
+            data = SubtitleData(lines=output_lines, metadata=self.metadata)
+            subtitle_file = self.file_handler.compose(data, reindex=False)
             with open(outputpath, 'w', encoding=default_encoding) as f:
                 f.write(subtitle_file)
 

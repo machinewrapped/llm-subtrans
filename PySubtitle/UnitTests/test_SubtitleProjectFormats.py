@@ -5,21 +5,21 @@ from PySubtitle.Options import Options
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
-from PySubtitle.SubtitleLine import SubtitleLine
+from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.Formats.VoidFileHandler import VoidFileHandler
 from PySubtitle.SubtitleSerialisation import SubtitleEncoder
-from typing import Iterator, TextIO
+from typing import TextIO
 
 
 class DummyHandler(SubtitleFileHandler):
-    def parse_file(self, file_obj: TextIO) -> Iterator[SubtitleLine]:
-        return iter([])
+    def parse_file(self, file_obj: TextIO) -> SubtitleData:
+        return SubtitleData(lines=[], metadata={})
 
-    def parse_string(self, content: str) -> Iterator[SubtitleLine]:
-        return iter([])
+    def parse_string(self, content: str) -> SubtitleData:
+        return SubtitleData(lines=[], metadata={})
 
-    def compose_lines(self, lines: list[SubtitleLine], reindex: bool = True) -> str:
+    def compose(self, data: SubtitleData, reindex: bool = True) -> str:
         return ""
 
     def get_file_extensions(self) -> list[str]:

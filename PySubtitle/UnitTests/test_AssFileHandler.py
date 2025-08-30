@@ -4,6 +4,7 @@ from datetime import timedelta
 
 from PySubtitle.Formats.AssFileHandler import AssFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
+from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name, skip_if_debugger_attached
 
@@ -99,7 +100,8 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         """Test parsing of basic ASS content."""
         log_test_name("AssFileHandler.parse_string - basic parsing")
         
-        lines = list(self.handler.parse_string(self.sample_ass_content))
+        data = self.handler.parse_string(self.sample_ass_content)
+        lines = data.lines
         
         log_input_expected_result(self.sample_ass_content[:100] + "...", len(self.expected_lines), len(lines))
         
@@ -120,7 +122,8 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         log_test_name("AssFileHandler.parse_file")
         
         file_obj = StringIO(self.sample_ass_content)
-        lines = list(self.handler.parse_file(file_obj))
+        data = self.handler.parse_file(file_obj)
+        lines = data.lines
         
         log_input_expected_result("File content", 3, len(lines))
         self.assertEqual(len(lines), 3)
@@ -142,7 +145,8 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
             )
         ]
         
-        result = self.handler.compose_lines(lines)
+        data = SubtitleData(lines=lines, metadata={'format': 'ass'})
+        result = self.handler.compose(data)
         
         # Log before assertions
         expected_sections = ["[Script Info]", "[V4+ Styles]", "[Events]", "Dialogue: 0,0:00:01.50,0:00:03.00,Default,,0,0,0,,Test subtitle"]
@@ -170,7 +174,8 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
             )
         ]
         
-        result = self.handler.compose_lines(lines)
+        data = SubtitleData(lines=lines, metadata={'format': 'ass'})
+        result = self.handler.compose(data)
         
         # pysubs2 converts newlines back to \\N in ASS format output
         expected_text = "First line\\NSecond line"
@@ -193,7 +198,8 @@ Style: Default,Arial,50
 Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 """
         
-        lines = list(self.handler.parse_string(content_no_events))
+        data = self.handler.parse_string(content_no_events)
+        lines = data.lines
         
         log_input_expected_result("ASS with no dialogue lines", 0, len(lines))
         self.assertEqual(len(lines), 0)
@@ -209,7 +215,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         
         assert_raised : bool = True
         with self.assertRaises(SubtitleParseError):
-            list(self.handler.parse_string(invalid_content))
+            self.handler.parse_string(invalid_content)
             assert_raised = False
         
         log_input_expected_result("Invalid content", True, assert_raised)
@@ -230,8 +236,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             )
         ]
         
-        result_reindex = self.handler.compose_lines(lines, reindex=True)
-        result_no_reindex = self.handler.compose_lines(lines, reindex=False)
+        data = SubtitleData(lines=lines, metadata={'format': 'ass'})
+        result_reindex = self.handler.compose(data, reindex=True)
+        result_no_reindex = self.handler.compose(data, reindex=False)
         
         # When reindexing, should start from 1
         # When not reindexing, should preserve original number
@@ -254,18 +261,27 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         log_test_name("AssFileHandler round-trip conversion")
         
         # Parse the sample content
-        original_lines = list(self.handler.parse_string(self.sample_ass_content))
+        original_data = self.handler.parse_string(self.sample_ass_content)
+        original_lines = original_data.lines
         
-        # Compose back to ASS format
-        composed = self.handler.compose_lines(original_lines)
+        # Compose back to ASS format using original metadata
+        composed = self.handler.compose(original_data)
         
         # Parse the composed content again
-        round_trip_lines = list(self.handler.parse_string(composed))
+        round_trip_data = self.handler.parse_string(composed)
+        round_trip_lines = round_trip_data.lines
         
         log_input_expected_result("Original lines", len(original_lines), len(round_trip_lines))
         self.assertEqual(len(original_lines), len(round_trip_lines))
         
-        # Compare key properties
+        # Validate metadata preservation
+        self.assertEqual(original_data.metadata['format'], round_trip_data.metadata['format'])
+        self.assertIn('styles', original_data.metadata)
+        self.assertIn('styles', round_trip_data.metadata)
+        self.assertEqual(original_data.metadata['styles'], round_trip_data.metadata['styles'])
+        log_input_expected_result("Metadata preserved", True, True)
+        
+        # Compare line properties
         for original, round_trip in zip(original_lines, round_trip_lines):
             self.assertEqual(original.start, round_trip.start)
             self.assertEqual(original.end, round_trip.end)

@@ -47,6 +47,7 @@ class SubtitleEncoder(json.JSONEncoder):
                 "scenecount": len(obj.scenes),
                 "file_handler": classname(obj.file_handler),
                 "settings": getattr(obj, 'settings') or getattr(obj, 'context'),
+                "metadata": getattr(obj, 'metadata', {}),
                 "scenes": obj.scenes,
             }
         elif isinstance(obj, SubtitleScene):
@@ -119,6 +120,7 @@ def _object_hook(dct):
             outpath = dct.get('outputpath') or dct.get('filename')
             obj = Subtitles(VoidFileHandler(), sourcepath, outpath)
             obj.settings = dct.get('settings', {}) or dct.get('context', {})
+            obj.metadata = dct.get('metadata', {})
             obj.scenes = dct.get('scenes', [])
             obj.UpdateProjectSettings(SettingsType()) # Force update for legacy files
             return obj

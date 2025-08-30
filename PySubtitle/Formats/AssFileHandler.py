@@ -71,8 +71,10 @@ class AssFileHandler(SubtitleFileHandler):
             str: ASS formatted subtitle content
         """
         # Create pysubs2 SSAFile
-        subs = pysubs2.SSAFile()
-        
+        subs : pysubs2.SSAFile = pysubs2.SSAFile()
+
+        subs.info["TranslatedBy"] = "LLM-Subtrans"
+
         # Restore metadata using helper
         if data.metadata:
             self._build_metadata(subs, data.metadata)
@@ -187,7 +189,13 @@ class AssFileHandler(SubtitleFileHandler):
         # Restore script info from metadata
         if 'info' in metadata:
             subs.info.update(metadata['info'])
+
+        if 'Title' in metadata:
+            subs.info['Title'] = metadata['Title']
         
+        if 'Language' in metadata:
+            subs.info['Language'] = metadata['Language']
+
         # Restore styles from metadata
         if 'styles' in metadata:
             # Clear default styles that pysubs2 creates automatically to avoid conflicts

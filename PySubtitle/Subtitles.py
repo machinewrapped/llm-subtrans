@@ -305,7 +305,7 @@ class Subtitles:
         with self.lock:
             originals = self.originals
             if originals:
-                data = SubtitleData(lines=originals, metadata=self.metadata)
+                data = SubtitleData(lines=originals, metadata=self.metadata, start_line_number=self.start_line_number)
                 subtitle_file = self.file_handler.compose(data)
                 with open(path, 'w', encoding=default_encoding) as f:
                     f.write(subtitle_file)
@@ -342,16 +342,17 @@ class Subtitles:
             logging.info(_("Saving translation to {}").format(str(outputpath)))
 
             # Use file handler for format-agnostic saving with metadata preservation
-            # Pass format-specific settings and let handler decide how to process
             data = SubtitleData(
                 lines=translated, 
                 metadata=self.metadata, 
                 start_line_number=self.start_line_number
             )
+
+            data.metadata['Title'] = self.movie_name
+            data.metadata['Language'] = self.target_language
             
             # Apply RTL markers if requested (handler will decide format-specific implementation)
-            if self.settings.get('add_right_to_left_markers'):
-                data.metadata['add_rtl_markers'] = True
+            data.metadata['add_rtl_markers'] = self.settings.get('add_right_to_left_markers', False)
             
             subtitle_file = self.file_handler.compose(data)
             with open(outputpath, 'w', encoding=default_encoding) as f:

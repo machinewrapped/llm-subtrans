@@ -270,6 +270,38 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             self.assertEqual(original.start, round_trip.start)
             self.assertEqual(original.end, round_trip.end)
             self.assertEqual(original.text, round_trip.text)
+    
+    def test_subtitle_line_to_pysubs2_time_conversion(self):
+        """Test that _subtitle_line_to_pysubs2 correctly converts timedelta to pysubs2 milliseconds."""
+        log_test_name("AssFileHandler._subtitle_line_to_pysubs2 - time conversion")
+        
+        # Test various time formats with precise timedelta values
+        test_cases = [
+            # (timedelta, expected_milliseconds)
+            (timedelta(seconds=1, milliseconds=500), 1500),
+            (timedelta(seconds=30), 30000),
+            (timedelta(minutes=1, seconds=30, milliseconds=250), 90250),
+            (timedelta(hours=1, minutes=23, seconds=45, milliseconds=678), 5025678),
+            (timedelta(microseconds=500000), 500),  # 0.5 seconds
+        ]
+        
+        for i, (test_timedelta, expected_ms) in enumerate(test_cases):
+            with self.subTest(case=i):
+                # Create a test SubtitleLine
+                test_line = SubtitleLine.Construct(
+                    number=1,
+                    start=test_timedelta,
+                    end=test_timedelta + timedelta(seconds=2),
+                    text="Test",
+                    metadata={'format': 'ass', 'style': 'Default', 'layer': 0, 'name': '', 
+                             'margin_l': 0, 'margin_r': 0, 'margin_v': 0, 'effect': ''}
+                )
+                
+                # Convert to pysubs2 event
+                pysubs2_event = self.handler._subtitle_line_to_pysubs2(test_line)
+                
+                log_input_expected_result(f"Timedelta {test_timedelta}", expected_ms, pysubs2_event.start)
+                self.assertEqual(pysubs2_event.start, expected_ms)
 
 if __name__ == '__main__':
     unittest.main()

@@ -120,22 +120,12 @@ class AssFileHandler(SubtitleFileHandler):
         
         # Set timing (convert from timedelta to milliseconds)
         if line.start:
-            total_seconds = int(line.start.total_seconds())
-            hours = total_seconds // 3600
-            minutes = (total_seconds % 3600) // 60
-            seconds = total_seconds % 60
-            milliseconds = line.start.microseconds // 1000
-            event.start = pysubs2.time.make_time(h=hours, m=minutes, s=seconds, ms=milliseconds)
+            event.start = pysubs2.time.make_time(s=line.start.total_seconds())
         else:
             event.start = 0
             
         if line.end:
-            total_seconds = int(line.end.total_seconds())
-            hours = total_seconds // 3600
-            minutes = (total_seconds % 3600) // 60
-            seconds = total_seconds % 60
-            milliseconds = line.end.microseconds // 1000
-            event.end = pysubs2.time.make_time(h=hours, m=minutes, s=seconds, ms=milliseconds)
+            event.end = pysubs2.time.make_time(s=line.end.total_seconds())
         else:
             event.end = 0
         

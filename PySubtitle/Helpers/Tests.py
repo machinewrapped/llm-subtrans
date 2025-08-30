@@ -61,7 +61,7 @@ def skip_if_debugger_attached(test_name : str) -> bool:
     Use this to skip tests that raise expected exceptions when debugging.
     """
     if sys.gettrace() is not None:
-        print(f"Skipping {test_name} when debugger is attached")
+        print(f"\nSkipping {test_name} when debugger is attached")
         return True
     return False
 

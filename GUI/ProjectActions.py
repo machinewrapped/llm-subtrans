@@ -127,6 +127,7 @@ class ProjectActions(QObject):
         initial_path = self.last_used_path or os.getcwd()
         shift_pressed = self._is_shift_pressed()
 
+        # TODO: supported extensions should be queried from the SubtitleFormatRegistry. *.subtrans (project file) is always an option.
         filters = f"{_('Subtitle files')} (*.srt *.ass *.subtrans);;{_('All Files')} (*)"
         filepath, dummy = QFileDialog.getOpenFileName(parent=self._mainwindow, caption=_("Open File"), dir=initial_path, filter=filters) # type: ignore[unused-ignore]
 
@@ -145,6 +146,8 @@ class ProjectActions(QObject):
 
         filepath = project.projectfile
         show_dialog = self._is_shift_pressed()
+
+        # TODO: if the shift key is pressed, should we give the user the option to change the output format for the translation?
 
         if show_dialog or not filepath or not os.path.exists(filepath):
             base_path = self.last_used_path or os.getcwd()

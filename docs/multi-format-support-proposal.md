@@ -147,26 +147,40 @@ After implementation comparison, `pysubs2` was identified as the superior approa
 ### Phase 4: Format conversion
 **Implementation Options**
 
-*Option A – `SubtitleProject.convert_format()`*
+### Conversion process
+*Option 1 – `SubtitleProject.convert_format()`*
 - Introduce a `convert_format(target_extension)` method on `SubtitleProject`
 - Creates a new `Subtitles` object with a handler resolved from `SubtitleFormatRegistry`
+- Calculates a new outputpath for the subtitles
 - Transfers caption text and metadata into the new object, mapping fields when necessary
 - Updates project metadata (e.g., file extension, handler class) to reflect the conversion
 - Allows conversion without immediately writing to disk
 
-*Option B – Implicit handler selection on save/load*
+*Option 2 – Implicit handler selection on save/load*
 - Continue selecting handlers only when loading from or saving to a path
 - `Subtitles.file_handler` remains the original handler; tests that construct subtitles from strings may set it explicitly
-- Conversion occurs during `SaveOriginal/SaveTranslation` based on output filename extension
+- Conversion occurs during `SaveTranslation` based on output filename extension, using a temporary file handler.
 - Intermediate `Subtitles` objects are not created; data is passed directly to the new handler’s `compose()` method
+
+### CLI Support
+The user is already able to specify an output path with `-o` or `--output`, so automatic determination of the file handler to use when `SaveTranslation` is called is straightforward. This marginally favours Option 2 for simplicity.
+
+### GUI Support
+GUI support is more complicated - currently the user has no ability to choose the output path for the translation. It is always saved in the same directory as the `.subtrans` project file, with a filename that is auto-generated from the project filename, the target language and the extension of the source subtitles (since the format is the same). We need to give the user a way to select a different output format.
+
+**Option A**
+We add a "format" field to the project settings (ref: ProjectSettingsDialog, Subtitles.UpdateProjectSettings). This would initially be deduced from the sourcepath when subtitles are loaded but could be changed by the user at any time.
+
+**Option B**
+We extend the Shift key path in ProjectActions.SaveProject to allow the user to select an output format. This would be the minimal implementation, but the fact that format conversion is possible would be rather hidden and unintuitive. Since it is not a core function of the application this may be acceptable.
 
 **Recommendation**
 
-Adopt **Option B** for Phase 4. It keeps the public API minimal, leverages existing handler selection logic, and avoids duplicating subtitle data in memory. Option A can be revisited if future workflows require in-memory converted objects.
+**Option 1-A**. Since the translated subtitles can be written to disk many times during the translation process (as each scene is completed, or after edits and revisions) it makes sense to perform the format conversion once and update the file handler. It is significantly more work, but the return on investment will be higher - particularly for GUI users.
 
 **Requirements**
 - Destination format auto-detected from output file extensions
-- `SubtitleProject.SaveOriginal/SaveTranslation` delegate to new handlers when paths change extension
+- `SubtitleProject.SaveTranslation` delegates to appropriate handlers when format changes
 - Handlers preserve or translate metadata as needed for the target format
 
 **Acceptance Tests**
@@ -214,54 +228,34 @@ Follow the proven pattern from `AssFileHandler`:
 - Comprehensive error handling with SubtitleParseError translation
 
 ### Phase 6: Enhanced Format Detection
+
+**IMPORTANT NOTE:** `pysubs2` supports format detection from content. We should aim to leverage that rather than implement our own detection logic.
+
 **Requirements**:
 - Request sample files from the user for testing format detection
-- Add content-based format detection for ambiguous cases
-- Delegate detection to registered `SubtitleFileHandler` classes for plug-and-play extensibility
 - Support format detection when file extension is missing/incorrect
-- Improve error reporting for format detection failures
+- Error reporting for format detection failures
 
 **Acceptance Tests**:
-- [ ] Detect SRT format by content structure when extension missing
-- [ ] Detect ASS format by `[Script Info]` section
-- [ ] Detect WebVTT format by `WEBVTT` header
+- [ ] Detect SRT format with .txt extension
+- [ ] Detect ASS format with .txt extension
 - [ ] Provide clear error messages for undetectable formats
 - [ ] Handle edge cases with malformed files gracefully
 
 **Files to Modify**:
-- `PySubtitle/SubtitleFormatRegistry.py`: Add content detection hooks
-- `PySubtitle/SubtitleFileHandler.py`: Add detection method to be implemented in subclasses
+- `PySubtitle/SubtitleFormatRegistry.py`: Add content detection hooks if necessary
+- `PySubtitle/SubtitleFileHandler.py`: Add detection methods if necessary
 
-### Phase 7: Serialization Support
-**Requirements**:
-- Extend `SubtitleSerialisation.py` to preserve format information in project files (if necessary)
-- Store original file format in project metadata
-- Support format conversion during project operations
-
-**Acceptance Tests**:
-- [ ] Project files store original subtitle format
-- [ ] Reloading project maintains correct format handler
-- [ ] Format can be changed for output independently of input
-- [ ] Serialization preserves format-specific metadata
-- [ ] Legacy project files continue to work (assume SRT)
-
-**Files to Modify**:
-- `PySubtitle/SubtitleSerialisation.py`: Add format preservation (if required)
-- `PySubtitle/Subtitles.py`: Store format information
-- `PySubtitle/SubtitleProject.py`: Handle format in project operations
-
-### Phase 8: GUI Integration
+### Phase 7: GUI Integration
 **Requirements**:
 - Update file filters to show all supported formats
 - Display format information in project settings
 - Add format-specific options to `SettingsDialog`, extensible by registered handlers
 
 **Acceptance Tests**:
-- [ ] File open dialog shows all supported formats
-- [ ] File save dialog shows all supported formats
+- [ ] File open dialogs show all supported formats
 - [ ] Project settings display current format
-- [ ] Format-specific options appear in settings
-- [ ] Format conversion preserves data integrity
+- [ ] Format-specific options exposed in settings
 - [ ] Error handling for unsupported format operations
 
 **Files to Modify**:
@@ -269,16 +263,14 @@ Follow the proven pattern from `AssFileHandler`:
 - Settings dialog for format-specific options
 - Project view to show format information
 
-### Phase 9: Documentation and CLI Updates
+### Phase 8: Documentation and CLI Updates
 **Requirements**:
-- Update CLI to support format specification
 - Add format listing command
 - Update documentation with supported formats
 - Create format-specific usage examples
 - Update help text and error messages
 
 **Acceptance Tests**:
-- [ ] CLI accepts format parameter (e.g., `--format ass`)
 - [ ] CLI can list supported formats (e.g., `--list-formats`)
 - [ ] Help documentation includes format information
 - [ ] Error messages specify available formats
@@ -288,45 +280,6 @@ Follow the proven pattern from `AssFileHandler`:
 - CLI argument parsing
 - Help text and documentation
 - Example files for each format
-
-## Critical Architecture Gap: File-Level Metadata Preservation
-
-### Problem Identified
-During Phase 3 implementation, a critical flaw was discovered in the current architecture:
-
-**Issue**: ASS files lose their original styling information when translated because:
-1. `parse_file()`/`parse_string()` only extract individual dialogue lines
-2. File-level metadata (styles, script info, format sections) is discarded during parsing
-3. `compose_lines()` operates in isolation without access to original file context
-4. Generated output uses default pysubs2 styles instead of preserving originals
-
-**Root Cause**: The `SubtitleFileHandler` interface is too low-level and doesn't account for formats that have rich file-level metadata (ASS styles, WebVTT headers, TTML namespaces, etc.).
-
-#### File-Level Metadata Storage
-Solution: File handlers must capture and preserve complete file context
-
-#### Format-Specific Metadata Examples
-```python
-# ASS File Metadata
-{
-    "format": "ass",
-    "script_info": {"Title": "Movie", "ScriptType": "v4.00+", ...},
-    "styles": {"Default": {...}, "Italics": {...}},
-    "original_pysubs2_file": SSAFile  # For perfect round-trip
-}
-
-# WebVTT File Metadata  
-{
-    "format": "vtt", 
-    "header": "WEBVTT\nNOTE Generated by...",
-    "global_styles": "::cue { color: white; }"
-}
-```
-
-#### Integration Points
-- `Subtitles.LoadSubtitles()`: Should return `SubtitleData` with metadata.
-- `Subtitles.SaveTranslation()`: Use `compose()` instead of `compose_lines()` 
-- File handlers: Store original file structure for perfect round-trip fidelity
 
 ## Technical Specifications
 
@@ -407,6 +360,26 @@ class ExampleFileHandler(SubtitleFileHandler):
 }
 ```
 
+#### File-Level Metadata Storage
+File handlers must capture and preserve format-specific file context, e.g.
+
+```python
+# ASS File Metadata
+{
+    "format": "ass",
+    "script_info": {"Title": "Movie", "ScriptType": "v4.00+", ...},
+    "styles": {"Default": {...}, "Italics": {...}},
+    "original_pysubs2_file": SSAFile  # For perfect round-trip
+}
+
+# WebVTT File Metadata  
+{
+    "format": "vtt", 
+    "header": "WEBVTT\nNOTE Generated by...",
+    "global_styles": "::cue { color: white; }"
+}
+```
+
 ### File Handler Requirements
 All format handlers must:
 1. Inherit from `SubtitleFileHandler`
@@ -475,10 +448,10 @@ For formats that don't have native indices (like ASS):
   - Provides professional-grade parsing for ASS, SRT, WebVTT, TTML, and more
   - Battle-tested by video editing community
   - Comprehensive metadata preservation with round-trip accuracy
-- **Format Detection**: Use existing Python libraries for content analysis when needed
+  - Provides support for format detection from content
 
 ### License Compatibility
-All selected libraries must be:
+Any libraries used must be:
 - MIT, BSD, or similarly permissive licenses
 - Compatible with existing project license
 - Actively maintained
@@ -505,18 +478,18 @@ All selected libraries must be:
 - [X] **Multi-format path handling** fixed for project files and output generation
 - [X] **Zero breaking changes** to public API
 - [X] **Comprehensive test coverage** for new components (AssFileHandler, FormatRegistry)
+- [X] Keep existing SRT handling with specialized `srt` module
 - [ ] At least 3 additional formats supported (ASS [X], WebVTT, TTML pending)
-- [ ] Keep existing SRT handling with specialized `srt` module
 - [ ] User acceptance validation
 
-**Current Status**: Phase 1-3 completed successfully. pysubs2 integration strategy validated and ready for Phase 5 implementation.
+**Current Status**: Phase 1-3 completed successfully. pysubs2 integration strategy validated and ready for Phase 4 implementation.
 
 ## pysubs2 Integration Architecture
 
 ### Design Philosophy
 - **Format-Specific Handlers**: Maintain separate handler classes for each format to enable future format-specific optimizations
 - **pysubs2 Foundation**: Leverage pysubs2's robust parsing and composition engines
-- **Metadata Pass-Through**: Preserve all format-specific metadata for perfect round-trip fidelity
+- **Metadata Pass-Through**: Preserve all format-specific metadata for round-trip fidelity
 - **Translation Focus**: Optimize for subtitle translation workflow while maintaining format integrity
 
 ### Handler Template Pattern
@@ -577,7 +550,7 @@ class [Format]FileHandler(SubtitleFileHandler):
 - **Future-Proof**: Automatic support for new formats as pysubs2 evolves
 - **Maintainability**: Less custom parsing code to maintain
 
-## Future Extensions: Transcription + Translation Workflow
+## Future Development considerations: Transcription + Translation Workflow
 
 ### Audio Transcription Integration
 **Vision**: Extend LLM-Subtrans to support audio-to-subtitle-to-translation workflows, leveraging the format-agnostic architecture to handle diverse transcription outputs.
@@ -616,7 +589,6 @@ The multi-format architecture naturally supports transcription service outputs:
     "language_detected": "en",
 }
 ```
-
 ### Integration Benefits
 - **Single Tool Workflow**: Audio → Transcription → Translation → Formatted Output
 - **Format Flexibility**: Choose optimal format for target platform (broadcast, web, mobile)
@@ -637,4 +609,4 @@ The multi-format architecture naturally supports transcription service outputs:
 
 This proposal provides a comprehensive roadmap for implementing multi-format subtitle support in LLM-Subtrans. The phased approach minimizes risk while ensuring backward compatibility and extensibility. The format-agnostic architecture will enable easy addition of new formats in the future while maintaining the clean separation between business logic and file I/O operations.
 
-The implementation leverages the existing `SubtitleFileHandler` interface and builds upon the solid foundation already established in the codebase. By following this plan, LLM-Subtrans will become a more versatile and powerful subtitle translation tool capable of handling the diverse subtitle formats used across different platforms and applications.
+The implementation leverages the existing `SubtitleFileHandler` interface and builds upon the solid foundation already established in the codebase. By following this plan, LLM-Subtrans will become a more versatile subtitle translation tool that can serve many more users.

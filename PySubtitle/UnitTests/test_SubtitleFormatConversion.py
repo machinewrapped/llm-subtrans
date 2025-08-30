@@ -27,6 +27,7 @@ SRT_SAMPLE = """1\n00:00:01,000 --> 00:00:02,000\nHello SRT!\n"""
 class TestSubtitleFormatConversion(unittest.TestCase):
     def _write_temp(self, suffix: str, content: str) -> str:
         f = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+        self.addCleanup(os.remove, f.name)
         f.write(content.encode("utf-8"))
         f.flush()
         f.close()

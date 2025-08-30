@@ -10,6 +10,12 @@ class Color:
         self.b = max(0, min(255, b))
         self.a = max(0, min(255, a))
 
+    def __eq__(self, value: object) -> bool:
+        if not isinstance(value, Color):
+            return False
+
+        return (self.r, self.g, self.b, self.a) == (value.r, value.g, value.b, value.a)
+
     @classmethod
     def from_hex(cls, hex_str : str) -> 'Color':
         """Create Color from #RRGGBB or #RRGGBBAA format"""

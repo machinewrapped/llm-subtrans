@@ -4,7 +4,7 @@ class Color:
     Supports conversion to/from #RRGGBBAA format.
     """
 
-    def __init__(self, r : int, g : int, b : int, a : int = 255):
+    def __init__(self, r : int, g : int, b : int, a : int = 0):
         self.r = max(0, min(255, r))
         self.g = max(0, min(255, g))
         self.b = max(0, min(255, b))

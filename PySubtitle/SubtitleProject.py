@@ -127,7 +127,7 @@ class SubtitleProject:
 
         subtitles.outputpath = outputpath
 
-        self.subtitles = subtitles if subtitles else Subtitles()
+        self.subtitles = subtitles
 
         self.needs_writing = self.write_project
 

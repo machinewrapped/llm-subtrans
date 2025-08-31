@@ -18,7 +18,10 @@ class SaveProjectFile(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
+        # Update the project path and set the subtitle output path to the same location
         self.project.projectfile = self.project.GetProjectFilepath(self.filepath)
+        outputpath = GetOutputPath(self.project.projectfile, self.project.target_language, self.project.subtitles.format)
+        self.project.subtitles.UpdateOutputPath(outputpath)
         self.project.SaveProjectFile()
 
         if self.project.subtitles.translated:

@@ -163,6 +163,7 @@ We will need to add a "format" field to new project settings to allow the user t
 - [X] Load .ass subtitle file and save as .srt without errors
 - [X] Load .srt subtitle file and save as .ass without errors
 - [X] Load `SubtitleProject` with converted formats without errors
+- [X] Load legacy `SubtitleProject` without errors
 - [X] Format auto-detection from specified output path via CLI
 
 ### Phase 5: GUI Integration

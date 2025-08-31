@@ -10,20 +10,23 @@ function install_provider() {
     local set_as_default=$5
 
     read -p "Enter your $provider API Key (optional): " api_key
-    if [ -f ".env" ]; then
-        # Remove any existing API key
-        sed -i.bak "/^${api_key_var_name}_API_KEY=/d" .env
-        if [ "$set_as_default" = "set_default" ]; then
-            # Also remove provider setting if setting as default
-            sed -i.bak "/^PROVIDER=/d" .env
-        fi
-        rm -f .env.bak
-    fi
-    if [ "$set_as_default" = "set_default" ]; then
-        echo "PROVIDER=$provider" >> .env
-    fi
+    
+    # Only update .env if user entered a new API key
     if [ -n "$api_key" ]; then
+        if [ -f ".env" ]; then
+            sed -i.bak "/^${api_key_var_name}_API_KEY=/d" .env
+            rm -f .env.bak
+        fi
         echo "${api_key_var_name}_API_KEY=$api_key" >> .env
+    fi
+    
+    # Set as default provider if requested
+    if [ "$set_as_default" = "set_default" ]; then
+        if [ -f ".env" ]; then
+            sed -i.bak "/^PROVIDER=/d" .env
+            rm -f .env.bak
+        fi
+        echo "PROVIDER=$provider" >> .env
     fi
     if [ -n "$pip_package" ]; then
         echo "Installing $provider module..."

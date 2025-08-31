@@ -148,23 +148,23 @@ set script_name=%~4
 set set_as_default=%~5
 
 set /p api_key="Enter your %provider_name% API Key (optional): "
-if exist .env (
-    REM Remove existing API key
-    findstr /v "%api_key_var_name%_API_KEY=" .env > .env.tmp
-    if "%set_as_default%"=="set_default" (
-        REM Also remove provider setting if setting as default
-        findstr /v "PROVIDER=" .env.tmp > .env.tmp2
-        move .env.tmp2 .env >nul 2>&1
-        del .env.tmp >nul 2>&1
-    ) else (
+
+REM Only update .env if user entered a new API key
+if not "%api_key%"=="" (
+    if exist .env (
+        findstr /v "%api_key_var_name%_API_KEY=" .env > .env.tmp
         move .env.tmp .env >nul 2>&1
     )
-)
-if "%set_as_default%"=="set_default" (
-    echo PROVIDER=%provider_name%>> .env
-)
-if not "%api_key%"=="" (
     echo %api_key_var_name%_API_KEY=%api_key%>> .env
+)
+
+REM Set as default provider if requested
+if "%set_as_default%"=="set_default" (
+    if exist .env (
+        findstr /v "PROVIDER=" .env > .env.tmp
+        move .env.tmp .env >nul 2>&1
+    )
+    echo PROVIDER=%provider_name%>> .env
 )
 if not "%pip_package%"=="" (
     echo Installing %provider_name% module...

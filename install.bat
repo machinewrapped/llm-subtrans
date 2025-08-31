@@ -82,7 +82,7 @@ set /p openrouter_key="Enter your OpenRouter API Key (optional): "
 if not "!openrouter_key!"=="" (
     if exist .env (
         REM Remove existing OpenRouter API key
-        findstr /v "OPENROUTER_API_KEY=" .env > .env.tmp
+        (findstr /v "OPENROUTER_API_KEY=" .env) > .env.tmp
         move .env.tmp .env >nul 2>&1
     )
     echo OPENROUTER_API_KEY=!openrouter_key!>> .env
@@ -160,7 +160,7 @@ set /p api_key="Enter your %provider_name% API Key (optional): "
 REM Only update .env if user entered a new API key
 if not "%api_key%"=="" (
     if exist .env (
-        findstr /v "%api_key_var_name%_API_KEY=" .env > .env.tmp
+        (findstr /v "%api_key_var_name%_API_KEY=" .env) > .env.tmp
         move .env.tmp .env >nul 2>&1
     )
     echo %api_key_var_name%_API_KEY=%api_key%>> .env
@@ -169,7 +169,7 @@ if not "%api_key%"=="" (
 REM Set as default provider if requested
 if "%set_as_default%"=="set_default" (
     if exist .env (
-        findstr /v "PROVIDER=" .env > .env.tmp
+        (findstr /v "PROVIDER=" .env) > .env.tmp
         move .env.tmp .env >nul 2>&1
     )
     echo PROVIDER=%provider_name%>> .env
@@ -200,10 +200,10 @@ set /p region="Enter your AWS Region (e.g., us-east-1): "
 
 if exist .env (
     REM Remove existing provider settings
-    findstr /v "AWS_ACCESS_KEY_ID=" .env > .env.tmp
-    findstr /v "AWS_SECRET_ACCESS_KEY=" .env.tmp > .env.tmp2
-    findstr /v "AWS_REGION=" .env.tmp2 > .env.tmp3
-    findstr /v "PROVIDER=" .env.tmp3 > .env.tmp4
+    (findstr /v "AWS_ACCESS_KEY_ID=" .env) > .env.tmp
+    (findstr /v "AWS_SECRET_ACCESS_KEY=" .env.tmp) > .env.tmp2
+    (findstr /v "AWS_REGION=" .env.tmp2) > .env.tmp3
+    (findstr /v "PROVIDER=" .env.tmp3) > .env.tmp4
     move .env.tmp4 .env >nul 2>&1
     del .env.tmp .env.tmp2 .env.tmp3 >nul 2>&1
 )

@@ -40,6 +40,7 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         f.write(content.encode("utf-8"))
         f.flush()
         f.close()
+        self.addCleanup(os.remove, f.name)
         return f.name
 
     def test_auto_detect_srt(self):

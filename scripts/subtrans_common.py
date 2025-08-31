@@ -4,6 +4,7 @@ import logging
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 
+from PySubtitle.Helpers import GetOutputPath
 from PySubtitle.Helpers.Parse import ParseNames
 from PySubtitle.Options import Options, config_dir
 from PySubtitle.Substitutions import Substitutions
@@ -152,6 +153,12 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
         project.SaveBackupFile()
 
     project.UpdateProjectSettings(options)
+
+    if not args.output:
+        output_path = GetOutputPath(project.subtitles.sourcepath, project.subtitles.target_language, project.subtitles.format)
+        if output_path:
+            logging.info(f"Output path will be: {output_path}")
+            project.subtitles.outputpath = output_path
 
     logging.info(f"Translating {project.subtitles.linecount} subtitles from {args.input}")
 

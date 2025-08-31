@@ -262,19 +262,10 @@ class SubtitleProject:
             if not self.subtitles:
                 return
 
-            previous_output_path : str|None = self.subtitles.outputpath
-
             common_keys = settings.keys() & self.subtitles.settings.keys()
             if all(settings.get(key) == self.subtitles.settings.get(key) for key in common_keys) == False:
                 self.subtitles.UpdateProjectSettings(settings)
                 self.needs_writing = bool(self.subtitles.scenes)
-
-            # Update the output path with optional format change
-            self.subtitles.UpdateOutputPath(path=self.projectfile, extension=settings.get_str('format'))
-
-            if self.subtitles.outputpath != previous_output_path:
-                logging.info(_("Setting output path to {}").format(self.subtitles.outputpath))
-
 
     def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:
         """

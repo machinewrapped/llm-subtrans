@@ -121,6 +121,7 @@ class SubtitleProject:
         if not subtitles or not subtitles.has_subtitles:
             raise ValueError(_("No subtitles to translate in {}").format(filepath))
 
+        subtitles.outputpath = outputpath or subtitles.outputpath
         self.subtitles = subtitles
         self.needs_writing = self.write_project
 

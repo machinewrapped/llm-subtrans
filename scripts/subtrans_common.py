@@ -157,9 +157,9 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     if not args.output:
         output_path = GetOutputPath(project.subtitles.sourcepath, project.subtitles.target_language, project.subtitles.format)
         if output_path:
-            logging.info(f"Output path will be: {output_path}")
             project.subtitles.outputpath = output_path
 
-    logging.info(f"Translating {project.subtitles.linecount} subtitles from {args.input}")
+    logging.info(f"Translating {project.subtitles.linecount} subtitles from {project.subtitles.sourcepath}")
+    logging.info(f"Output path will be: {project.subtitles.outputpath}")
 
     return project

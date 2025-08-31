@@ -395,12 +395,13 @@ class Subtitles:
 
             self._update_compatibility(self.settings)
 
-    def UpdateOutputPath(self, outputpath: str|None = None, extension: str|None = None) -> None:
+    def UpdateOutputPath(self, sourcepath: str|None = None, extension: str|None = None) -> None:
         """
         Set or generate the output path for the translated subtitles
         """
-        if not outputpath:
-            outputpath = GetOutputPath(self.sourcepath, self.target_language, extension)
+        sourcepath = sourcepath or self.sourcepath
+        extension = extension or self.format
+        outputpath = GetOutputPath(sourcepath, self.target_language, extension)
         self.outputpath = outputpath
 
     def PreProcess(self, preprocessor: SubtitleProcessor) -> None:

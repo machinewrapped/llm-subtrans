@@ -39,3 +39,4 @@ autotranslated_msgids_*.txt
 untranslated_msgids_*.txt
 /.claude
 /test_projects
+git-cleanup-gone.ps1

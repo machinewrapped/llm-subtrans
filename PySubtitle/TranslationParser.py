@@ -5,7 +5,7 @@ import regex
 
 from PySubtitle.Instructions import DEFAULT_TASK_TYPE
 from PySubtitle.Options import Options
-from PySubtitle.Helpers.Subtitles import MergeTranslations
+from PySubtitle.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtitle.Helpers.Text import IsTextContentEqual
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleError import NoTranslationError, TranslationError, UntranslatedLinesError

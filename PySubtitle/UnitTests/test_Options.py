@@ -9,7 +9,7 @@ from collections.abc import MutableMapping
 from PySubtitle.Options import Options, default_settings, standard_filler_words
 from PySubtitle.Instructions import Instructions
 from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
-from PySubtitle.Helpers.Settings import (
+from PySubtitle.Helpers.SettingsHelpers import (
     GetBoolSetting, GetIntSetting, GetFloatSetting, GetStrSetting,
     GetListSetting, GetStringListSetting, GetTimeDeltaSetting,
     get_optional_setting, validate_setting_type, SettingsError

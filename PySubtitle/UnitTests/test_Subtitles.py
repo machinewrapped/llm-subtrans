@@ -5,7 +5,7 @@ from datetime import timedelta
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.Helpers.Text import split_sequences, standard_filler_words
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name
-from PySubtitle.Helpers.Subtitles import MergeSubtitles, MergeTranslations, FindSplitPoint, GetProportionalDuration
+from PySubtitle.Helpers.SubtitleHelpers import MergeSubtitles, MergeTranslations, FindSplitPoint, GetProportionalDuration
 from PySubtitle.SubtitleProcessor import SubtitleProcessor
 
 class TestSubtitles(unittest.TestCase):

@@ -3,7 +3,7 @@ from typing import Any
 import regex
 from datetime import timedelta
 
-from PySubtitle.Helpers.Subtitles import FindSplitPoint, GetProportionalDuration
+from PySubtitle.Helpers.SubtitleHelpers import FindSplitPoint, GetProportionalDuration
 from PySubtitle.Helpers.Text import (
     dialog_marker,
     split_sequences,

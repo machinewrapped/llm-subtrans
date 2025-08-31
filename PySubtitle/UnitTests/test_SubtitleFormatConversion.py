@@ -69,6 +69,7 @@ class TestSubtitleFormatConversion(unittest.TestCase):
         project2 = SubtitleProject(Options())
         project2.ReadProjectFile(tmp_project.name)
         self.assertEqual(project2.subtitles.format, '.ass')
+        self.addCleanup(os.remove, tmp_project.name)
 
 if __name__ == '__main__':
     unittest.main()

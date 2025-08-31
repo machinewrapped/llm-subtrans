@@ -120,7 +120,7 @@ def _object_hook(dct):
             sourcepath = dct.get('sourcepath')
             outpath = dct.get('outputpath') or dct.get('filename')
             obj = Subtitles(sourcepath, outpath)
-            obj.settings = dct.get('settings', {}) or dct.get('context', {})
+            obj.settings = SettingsType(dct.get('settings', {}) or dct.get('context', {}))
             obj.metadata = dct.get('metadata', {})
             obj.scenes = dct.get('scenes', [])
             obj.UpdateProjectSettings(SettingsType()) # Force update for legacy files

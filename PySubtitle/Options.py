@@ -94,7 +94,7 @@ default_settings = {
     'write_backup' : env_bool('WRITE_BACKUP_FILE', True),
     'theme' : env_str('THEME', 'default'),
     'ui_language': env_str('UI_LANGUAGE', 'en'),
-    'firstrun' : False
+    'firstrun' : True
 }
 
 def serialize(value : Any) -> Any:
@@ -195,7 +195,7 @@ class Options(SettingsType):
         """
         Load the settings from a JSON file
         """
-        if not os.path.exists(settings_path) or self.get_bool('firstrun'):
+        if not os.path.exists(settings_path):
             return False
 
         try:

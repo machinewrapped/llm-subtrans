@@ -64,18 +64,25 @@ if errorlevel 1 (
 
 call envsubtrans\Scripts\activate.bat
 
+echo Installing required modules...
+pip install --upgrade -r requirements.txt
+if errorlevel 1 (
+    echo Failed to install required modules.
+    pause
+    exit /b 1
+)
+
 call scripts\generate-cmd.bat gui-subtrans
 call scripts\generate-cmd.bat llm-subtrans
 
 REM Optional: configure OpenRouter API key
 echo.
-echo Optional: Configure OpenRouter API key (for OpenRouter.ai)
-set /p or_choice="Would you like to set OPENROUTER_API_KEY now? (Y/N): "
-if /i "!or_choice!"=="Y" (
-    set /p openrouter_key="Enter your OpenRouter API Key: "
+echo Optional: Configure OpenRouter API key (default provider)
+set /p openrouter_key="Enter your OpenRouter API Key (optional): "
+if not "!openrouter_key!"=="" (
     if exist .env (
         REM Remove existing OpenRouter API key
-        findstr /v "OPENROUTER_API_KEY=" .env > .env.tmp
+        (findstr /v "OPENROUTER_API_KEY=" .env) > .env.tmp
         move .env.tmp .env >nul 2>&1
     )
     echo OPENROUTER_API_KEY=!openrouter_key!>> .env
@@ -94,47 +101,47 @@ echo a = All except Bedrock
 set /p provider_choice="Enter your choice (0/1/2/3/4/5/6/a): "
 
 if "!provider_choice!"=="0" (
-    echo No additional provider selected. Moving forward without any installations.
-    goto install_requirements
+    echo No additional provider selected.
+    goto setup_complete
 )
 
 if "!provider_choice!"=="1" (
-    call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans"
-    goto install_requirements
+    call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" "set_default"
+    goto setup_complete
 )
 
 if "!provider_choice!"=="2" (
-    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans"
-    goto install_requirements
+    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" "set_default"
+    goto setup_complete
 )
 
 if "!provider_choice!"=="3" (
-    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans"
-    goto install_requirements
+    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" "set_default"
+    goto setup_complete
 )
 
 if "!provider_choice!"=="4" (
-    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans"
-    goto install_requirements
+    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" "set_default"
+    goto setup_complete
 )
 
 if "!provider_choice!"=="5" (
-    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans"
-    goto install_requirements
+    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" "set_default"
+    goto setup_complete
 )
 
 if "!provider_choice!"=="6" (
     call :install_bedrock
-    goto install_requirements
+    goto setup_complete
 )
 
 if /i "!provider_choice!"=="a" (
-    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans"
-    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans"
-    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans"
-    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans"
-    call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans"
-    goto install_requirements
+    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
+    call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
+    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
+    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
+    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
+    goto setup_complete
 )
 
 echo Invalid choice. Exiting installation.
@@ -146,18 +153,26 @@ set provider_name=%~1
 set api_key_var_name=%~2
 set pip_package=%~3
 set script_name=%~4
+set set_as_default=%~5
 
 set /p api_key="Enter your %provider_name% API Key (optional): "
-if exist .env (
-    REM Remove existing API key and provider settings
-    findstr /v "%api_key_var_name%_API_KEY=" .env > .env.tmp
-    findstr /v "PROVIDER=" .env.tmp > .env.tmp2
-    move .env.tmp2 .env >nul 2>&1
-    del .env.tmp >nul 2>&1
-)
-echo PROVIDER=%provider_name%>> .env
+
+REM Only update .env if user entered a new API key
 if not "%api_key%"=="" (
+    if exist .env (
+        (findstr /v "%api_key_var_name%_API_KEY=" .env) > .env.tmp
+        move .env.tmp .env >nul 2>&1
+    )
     echo %api_key_var_name%_API_KEY=%api_key%>> .env
+)
+
+REM Set as default provider if requested
+if "%set_as_default%"=="set_default" (
+    if exist .env (
+        (findstr /v "PROVIDER=" .env) > .env.tmp
+        move .env.tmp .env >nul 2>&1
+    )
+    echo PROVIDER=%provider_name%>> .env
 )
 if not "%pip_package%"=="" (
     echo Installing %provider_name% module...
@@ -185,10 +200,10 @@ set /p region="Enter your AWS Region (e.g., us-east-1): "
 
 if exist .env (
     REM Remove existing provider settings
-    findstr /v "AWS_ACCESS_KEY_ID=" .env > .env.tmp
-    findstr /v "AWS_SECRET_ACCESS_KEY=" .env.tmp > .env.tmp2
-    findstr /v "AWS_REGION=" .env.tmp2 > .env.tmp3
-    findstr /v "PROVIDER=" .env.tmp3 > .env.tmp4
+    (findstr /v "AWS_ACCESS_KEY_ID=" .env) > .env.tmp
+    (findstr /v "AWS_SECRET_ACCESS_KEY=" .env.tmp) > .env.tmp2
+    (findstr /v "AWS_REGION=" .env.tmp2) > .env.tmp3
+    (findstr /v "PROVIDER=" .env.tmp3) > .env.tmp4
     move .env.tmp4 .env >nul 2>&1
     del .env.tmp .env.tmp2 .env.tmp3 >nul 2>&1
 )
@@ -210,15 +225,7 @@ call scripts\generate-cmd.bat bedrock-subtrans
 echo Bedrock setup complete. Default provider set to Bedrock.
 goto :eof
 
-:install_requirements
-echo Installing required modules...
-pip install --upgrade -r requirements.txt
-if errorlevel 1 (
-    echo Failed to install required modules.
-    pause
-    exit /b 1
-)
-
+:setup_complete
 echo.
 echo Setup completed successfully. To uninstall just delete the directory.
 pause

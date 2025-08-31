@@ -7,16 +7,27 @@ function install_provider() {
     local api_key_var_name=$2
     local pip_package=$3
     local script_name=$4
+    local set_as_default=$5
 
-    read -p "Enter your $provider API Key: " api_key
-    if [ -f ".env" ]; then
-        # Remove any existing API key and provider settings
-        sed -i.bak "/^${api_key_var_name}_API_KEY=/d" .env
-        sed -i.bak "/^PROVIDER=/d" .env
-        rm -f .env.bak
+    read -p "Enter your $provider API Key (optional): " api_key
+    
+    # Only update .env if user entered a new API key
+    if [ -n "$api_key" ]; then
+        if [ -f ".env" ]; then
+            sed -i.bak "/^${api_key_var_name}_API_KEY=/d" .env
+            rm -f .env.bak
+        fi
+        echo "${api_key_var_name}_API_KEY=$api_key" >> .env
     fi
-    echo "PROVIDER=$provider" >> .env
-    echo "${api_key_var_name}_API_KEY=$api_key" >> .env
+    
+    # Set as default provider if requested
+    if [ "$set_as_default" = "set_default" ]; then
+        if [ -f ".env" ]; then
+            sed -i.bak "/^PROVIDER=/d" .env
+            rm -f .env.bak
+        fi
+        echo "PROVIDER=$provider" >> .env
+    fi
     if [ -n "$pip_package" ]; then
         echo "Installing $provider module..."
         pip install $pip_package
@@ -95,14 +106,16 @@ fi
 python3 -m venv envsubtrans
 source envsubtrans/bin/activate
 
+echo "Installing required modules..."
+pip install --upgrade -r requirements.txt
+
 scripts/generate-cmd.sh gui-subtrans
 scripts/generate-cmd.sh llm-subtrans
 
 # Optional: configure OpenRouter API key
-echo "Optional: Configure OpenRouter API key (for OpenRouter.ai)"
-read -p "Would you like to set OPENROUTER_API_KEY now? (Y/N): " or_choice
-if [ "$or_choice" = "Y" ] || [ "$or_choice" = "y" ]; then
-    read -p "Enter your OpenRouter API Key: " openrouter_key
+echo "Optional: Configure OpenRouter API key (default provider)"
+read -p "Enter your OpenRouter API Key (optional): " openrouter_key
+if [ -n "$openrouter_key" ]; then
     if [ -f ".env" ]; then
         # Remove any existing OpenRouter API key
         sed -i.bak "/^OPENROUTER_API_KEY=/d" .env
@@ -124,41 +137,38 @@ read -p "Enter your choice (0/1/2/3/4/5/6/a): " provider_choice
 
 case $provider_choice in
     0)
-        echo "No additional provider selected. Moving forward without any installations."
+        echo "No additional provider selected."
         ;;
     1)
-        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans"
+        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" "set_default"
         ;;
     2)
-        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans"
+        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" "set_default"
         ;;
     3)
-        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans"
+        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" "set_default"
         ;;
     4)
-        install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans"
+        install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" "set_default"
         ;;
     5)
-        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans"
+        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" "set_default"
         ;;
     6)
         install_bedrock
         ;;
     a)
-        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans"
-        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans"
-        install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans"
-        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans"
-        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans"
+        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
+        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
+        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
+        install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
+        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
         ;;
     *)
         echo "Invalid choice. Exiting installation."
         exit 1
         ;;
 esac
-
-echo "Installing required modules..."
-pip install --upgrade -r requirements.txt
 
 echo "Setup completed successfully. To uninstall just delete the directory"
 

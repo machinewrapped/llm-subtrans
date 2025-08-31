@@ -837,11 +837,14 @@ class TestSettingsType(unittest.TestCase):
             current_settings['current_test'] = 'current_value'
             
             # Verify through provider_settings access
-            updated_current = options.provider_settings[options.provider]
-            self.assertIn('current_test', updated_current)
-            log_input_expected_result("current provider update propagated", 'current_value', updated_current['current_test'])
-            self.assertEqual(updated_current['current_test'], 'current_value')
-
+            provider : str|None = options.provider
+            self.assertIsNotNone(provider)
+            self.assertIsNotNone(options.provider_settings)
+            if provider is not None:
+                updated_current : SettingsType = options.provider_settings[provider]
+                self.assertIn('current_test', updated_current)
+                log_input_expected_result("current provider update propagated", 'current_value', updated_current['current_test'])
+                self.assertEqual(updated_current['current_test'], 'current_value')
 
 class TestSettingsHelpers(unittest.TestCase):
     """Unit tests for Settings helper functions"""

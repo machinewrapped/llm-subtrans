@@ -92,7 +92,7 @@ default_settings = {
     'last_used_path': None,
     'stop_on_error' : env_bool('STOP_ON_ERROR'),
     'write_backup' : env_bool('WRITE_BACKUP_FILE', True),
-    'theme' : env_str('THEME', None),
+    'theme' : env_str('THEME', 'default'),
     'ui_language': env_str('UI_LANGUAGE', 'en'),
     'firstrun' : False
 }
@@ -134,9 +134,9 @@ class Options(SettingsType):
         return self.get_str('version') or ''
 
     @property
-    def provider(self) -> str:
+    def provider(self) -> str|None:
         """ the name of the translation provider """
-        return self.get_str('provider') or ''
+        return self.get_str('provider')
 
     @provider.setter
     def provider(self, value: str):

@@ -145,7 +145,7 @@ class SettingsDialog(QDialog):
 
         except Exception as e:
             logging.error(f"Unable to create translation provider '{self.settings.get('provider')}': {e}")
-            self.settings['provider'] = options.available_providers[0]
+            self.settings['provider'] = "OpenRouter" if "OpenRouter" in options.available_providers else options.available_providers[0]
             self._initialise_translation_provider()
 
         # Initalise the tabs
@@ -269,7 +269,7 @@ class SettingsDialog(QDialog):
             key_type, tooltip = key_type if isinstance(key_type, tuple) else (key_type, None)
             if key_type == TranslationProvider:
                 self._add_provider_options(section_name, layout)
-            else:
+            elif key in self.settings:
                 field = CreateOptionWidget(key, self.settings[key], key_type, tooltip=tooltip)
                 field.contentChanged.connect(lambda setting=field: self._on_setting_changed(section_name, setting.key, setting.GetValue()))
                 layout.addRow(field.name, field)
@@ -330,15 +330,18 @@ class SettingsDialog(QDialog):
         Initialise translation provider
         """
         provider : str|None = self.settings.get_str('provider')
-        if provider:
-            if provider not in self.provider_settings:
-                self.provider_settings[provider] = SettingsType()
+        if not provider:
+            raise ValueError("Provider is not set")
 
-            provider_settings = self.provider_settings.get_dict(provider)
-            if provider not in self.provider_cache:
-                self.provider_cache[provider] = TranslationProvider.create_provider(provider, provider_settings)
+        provider_settings = self.provider_settings.get_dict(provider)
+        if provider not in self.provider_cache:
+            self.provider_cache[provider] = TranslationProvider.create_provider(provider, provider_settings)
 
-            self.translation_provider = self.provider_cache[provider]
+        self.translation_provider = self.provider_cache[provider]
+
+        if self.translation_provider is not None:
+            if provider not in self.provider_settings or not self.provider_settings[provider]:
+                self.provider_settings[provider] = self.translation_provider.settings.copy()
 
     def _add_provider_options(self, section_name : str, layout : QFormLayout):
         """

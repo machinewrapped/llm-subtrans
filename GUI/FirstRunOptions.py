@@ -46,7 +46,7 @@ class FirstRunOptions(QDialog):
         self.form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         settings = self.options.GetSettings()
-        settings['provider'] = settings.get('provider') or "OpenAI"
+        settings['provider'] = settings.get('provider') or "OpenRouter" if "OpenRouter" in options.available_providers else options.available_providers[0]
         settings['ui_language'] = settings.get('ui_language') or 'en'
 
         for key, option in self.OPTIONS.items():

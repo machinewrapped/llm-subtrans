@@ -39,7 +39,7 @@ class OpenRouterProvider(TranslationProvider):
             'reuse_client': settings.get_bool('reuse_client', True),
         }))
 
-        self.refresh_when_changed = ['api_key', 'model', 'endpoint', 'only_translation_models', 'model_family', 'use_default_model']
+        self.refresh_when_changed = ['api_key', 'model', 'only_translation_models', 'model_family', 'use_default_model']
         self._all_model_list = []
         self._cached_models : dict[str, dict[str,str]] = {}
         self._model_cache_filtered = False

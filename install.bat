@@ -69,10 +69,9 @@ call scripts\generate-cmd.bat llm-subtrans
 
 REM Optional: configure OpenRouter API key
 echo.
-echo Optional: Configure OpenRouter API key (for OpenRouter.ai)
-set /p or_choice="Would you like to set OPENROUTER_API_KEY now? (Y/N): "
-if /i "!or_choice!"=="Y" (
-    set /p openrouter_key="Enter your OpenRouter API Key: "
+echo Optional: Configure OpenRouter API key (default provider)
+set /p openrouter_key="Enter your OpenRouter API Key (optional): "
+if not "!openrouter_key!"=="" (
     if exist .env (
         REM Remove existing OpenRouter API key
         findstr /v "OPENROUTER_API_KEY=" .env > .env.tmp
@@ -99,27 +98,27 @@ if "!provider_choice!"=="0" (
 )
 
 if "!provider_choice!"=="1" (
-    call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans"
+    call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" "set_default"
     goto install_requirements
 )
 
 if "!provider_choice!"=="2" (
-    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans"
+    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" "set_default"
     goto install_requirements
 )
 
 if "!provider_choice!"=="3" (
-    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans"
+    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" "set_default"
     goto install_requirements
 )
 
 if "!provider_choice!"=="4" (
-    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans"
+    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" "set_default"
     goto install_requirements
 )
 
 if "!provider_choice!"=="5" (
-    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans"
+    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" "set_default"
     goto install_requirements
 )
 
@@ -129,11 +128,11 @@ if "!provider_choice!"=="6" (
 )
 
 if /i "!provider_choice!"=="a" (
-    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans"
-    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans"
-    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans"
-    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans"
-    call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans"
+    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
+    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
+    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
+    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
+    call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
     goto install_requirements
 )
 
@@ -146,16 +145,24 @@ set provider_name=%~1
 set api_key_var_name=%~2
 set pip_package=%~3
 set script_name=%~4
+set set_as_default=%~5
 
 set /p api_key="Enter your %provider_name% API Key (optional): "
 if exist .env (
-    REM Remove existing API key and provider settings
+    REM Remove existing API key
     findstr /v "%api_key_var_name%_API_KEY=" .env > .env.tmp
-    findstr /v "PROVIDER=" .env.tmp > .env.tmp2
-    move .env.tmp2 .env >nul 2>&1
-    del .env.tmp >nul 2>&1
+    if "%set_as_default%"=="set_default" (
+        REM Also remove provider setting if setting as default
+        findstr /v "PROVIDER=" .env.tmp > .env.tmp2
+        move .env.tmp2 .env >nul 2>&1
+        del .env.tmp >nul 2>&1
+    ) else (
+        move .env.tmp .env >nul 2>&1
+    )
 )
-echo PROVIDER=%provider_name%>> .env
+if "%set_as_default%"=="set_default" (
+    echo PROVIDER=%provider_name%>> .env
+)
 if not "%api_key%"=="" (
     echo %api_key_var_name%_API_KEY=%api_key%>> .env
 )

@@ -7,16 +7,24 @@ function install_provider() {
     local api_key_var_name=$2
     local pip_package=$3
     local script_name=$4
+    local set_as_default=$5
 
-    read -p "Enter your $provider API Key: " api_key
+    read -p "Enter your $provider API Key (optional): " api_key
     if [ -f ".env" ]; then
-        # Remove any existing API key and provider settings
+        # Remove any existing API key
         sed -i.bak "/^${api_key_var_name}_API_KEY=/d" .env
-        sed -i.bak "/^PROVIDER=/d" .env
+        if [ "$set_as_default" = "set_default" ]; then
+            # Also remove provider setting if setting as default
+            sed -i.bak "/^PROVIDER=/d" .env
+        fi
         rm -f .env.bak
     fi
-    echo "PROVIDER=$provider" >> .env
-    echo "${api_key_var_name}_API_KEY=$api_key" >> .env
+    if [ "$set_as_default" = "set_default" ]; then
+        echo "PROVIDER=$provider" >> .env
+    fi
+    if [ -n "$api_key" ]; then
+        echo "${api_key_var_name}_API_KEY=$api_key" >> .env
+    fi
     if [ -n "$pip_package" ]; then
         echo "Installing $provider module..."
         pip install $pip_package
@@ -99,10 +107,9 @@ scripts/generate-cmd.sh gui-subtrans
 scripts/generate-cmd.sh llm-subtrans
 
 # Optional: configure OpenRouter API key
-echo "Optional: Configure OpenRouter API key (for OpenRouter.ai)"
-read -p "Would you like to set OPENROUTER_API_KEY now? (Y/N): " or_choice
-if [ "$or_choice" = "Y" ] || [ "$or_choice" = "y" ]; then
-    read -p "Enter your OpenRouter API Key: " openrouter_key
+echo "Optional: Configure OpenRouter API key (default provider)"
+read -p "Enter your OpenRouter API Key (optional): " openrouter_key
+if [ -n "$openrouter_key" ]; then
     if [ -f ".env" ]; then
         # Remove any existing OpenRouter API key
         sed -i.bak "/^OPENROUTER_API_KEY=/d" .env
@@ -127,29 +134,29 @@ case $provider_choice in
         echo "No additional provider selected. Moving forward without any installations."
         ;;
     1)
-        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans"
+        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" "set_default"
         ;;
     2)
-        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans"
+        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" "set_default"
         ;;
     3)
-        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans"
+        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" "set_default"
         ;;
     4)
-        install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans"
+        install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" "set_default"
         ;;
     5)
-        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans"
+        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" "set_default"
         ;;
     6)
         install_bedrock
         ;;
     a)
-        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans"
-        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans"
-        install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans"
-        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans"
-        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans"
+        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
+        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
+        install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
+        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
+        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
         ;;
     *)
         echo "Invalid choice. Exiting installation."

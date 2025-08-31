@@ -163,8 +163,42 @@ We will need to add a "format" field to new project settings to allow the user t
 - [X] Load .ass subtitle file and save as .srt without errors
 - [X] Load .srt subtitle file and save as .ass without errors
 - [X] Load `SubtitleProject` with converted formats without errors
+- [X] Format auto-detection from specified output path via CLI
 
-### Phase 5: Additional Format Support
+### Phase 5: GUI Integration
+**Requirements**:
+- Update open file filters to show all supported formats + `.subtrans` projects
+- Supported formats are determined from the registered handlers in `SubtitleFormatRegistry`
+- Add format-specific options to a new tab `SettingsDialog`, data-driven and extensible by registered handlers
+
+**Acceptance Tests**:
+- [ ] File open dialogs show all supported formats + `.subtrans` projects
+- [ ] Format-specific options exposed in settings
+
+**Files to Modify**:
+- GUI file dialog components (ProjectActions.LoadProject)
+- Settings dialog for format-specific options
+- Project view to show format information
+
+### Phase 6: Documentation and CLI Updates
+**Requirements**:
+- Add format listing command
+- Update documentation with supported formats
+- Create format-specific usage examples
+- Update help text and error messages
+
+**Acceptance Tests**:
+- [ ] CLI can list supported formats (e.g., `--list-formats`)
+- [ ] Help documentation includes format information
+- [ ] Error messages specify available formats
+- [ ] Examples provided for each supported format
+
+**Files to Modify**:
+- CLI argument parsing
+- Help text and documentation
+- Example files for each format
+
+### Phase 7: Additional Format Support
 **Requirements**:
 - Implement `VttFileHandler` for WebVTT (common web format) using pysubs2
 - Implement `TtmlFileHandler` for TTML (advanced XML-based format) using pysubs2
@@ -203,7 +237,7 @@ Follow the proven pattern from `AssFileHandler`:
 - Format-specific optimizations within each handler
 - Comprehensive error handling with SubtitleParseError translation
 
-### Phase 6: Enhanced Format Detection
+### Phase 8: Enhanced Format Detection
 
 **IMPORTANT NOTE:** `pysubs2` supports format detection from content. We should aim to leverage that rather than implement our own detection logic.
 
@@ -219,43 +253,8 @@ Follow the proven pattern from `AssFileHandler`:
 - [ ] Handle edge cases with malformed files gracefully
 
 **Files to Modify**:
-- `PySubtitle/SubtitleFormatRegistry.py`: Add content detection hooks if necessary
-- `PySubtitle/SubtitleFileHandler.py`: Add detection methods if necessary
-
-### Phase 7: GUI Integration
-**Requirements**:
-- Update file filters to show all supported formats
-- Display format information in project settings
-- Add format-specific options to `SettingsDialog`, extensible by registered handlers
-
-**Acceptance Tests**:
-- [ ] File open dialogs show all supported formats
-- [ ] Project settings display current format
-- [ ] Format-specific options exposed in settings
-- [ ] Error handling for unsupported format operations
-
-**Files to Modify**:
-- GUI file dialog components
-- Settings dialog for format-specific options
-- Project view to show format information
-
-### Phase 8: Documentation and CLI Updates
-**Requirements**:
-- Add format listing command
-- Update documentation with supported formats
-- Create format-specific usage examples
-- Update help text and error messages
-
-**Acceptance Tests**:
-- [ ] CLI can list supported formats (e.g., `--list-formats`)
-- [ ] Help documentation includes format information
-- [ ] Error messages specify available formats
-- [ ] Examples provided for each supported format
-
-**Files to Modify**:
-- CLI argument parsing
-- Help text and documentation
-- Example files for each format
+- `PySubtitle/SubtitleFormatRegistry.py`: Add format detection hooks
+- `PySubtitle/SubtitleFileHandler.py` and subclasses: Add detection methods if necessary
 
 ## Technical Specifications
 

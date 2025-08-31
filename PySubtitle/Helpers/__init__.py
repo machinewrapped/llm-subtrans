@@ -78,22 +78,23 @@ def GetOutputPath(filepath : str|None, language : str|None = None, format_extens
     directory = os.path.dirname(filepath)
     basename, current_extension = os.path.splitext(os.path.basename(filepath))
 
-    # Determine target extension
-    if format_extension:
-        # Use provided extension (ensure it starts with '.')
-        target_extension = format_extension if format_extension.startswith('.') else f'.{format_extension}'
-    else:
-        # Infer from current filepath extension
-        target_extension = current_extension or '.srt'  # Default to .srt if no extension
-
     # Add language suffix
     language = language or "translated"
     language_suffix = f".{language}"
     if not basename.endswith(language_suffix):
         basename = basename + language_suffix
 
+    # Determine extension
+    if not format_extension:
+        if current_extension == ".subtrans":
+            raise ValueError("Extension must be provided to deduce output path from project file")
+        format_extension = current_extension
+
+    if not format_extension.startswith('.'):
+        format_extension = f".{format_extension}"
+
     # Construct final path with proper normalization
-    output_path = os.path.join(directory, f"{basename}{target_extension}")
+    output_path = os.path.join(directory, f"{basename}{format_extension}")
     return os.path.normpath(output_path)
 
 def FormatMessages(messages : list[dict[str,Any]]) -> str:

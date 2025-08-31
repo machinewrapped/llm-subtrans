@@ -373,15 +373,15 @@ class SubtitleProject:
         if project_mode:
             project_mode = project_mode.lower()
 
-        self.read_project = project_mode in ["true", "read", "resume", "retranslate", "reparse"]
-        self.write_project = project_mode in ["true", "write", "preview", "resume", "retranslate", "reparse"]
-        self.load_subtitles = project_mode is None or project_mode in ["true", "write", "reload", "preview"]
+        self.read_project = project_mode in ['true', 'read', 'resume', 'retranslate', 'reparse']
+        self.write_project = project_mode in ['true', 'write', 'preview', 'resume', 'retranslate', 'reparse']
+        self.load_subtitles = not project_mode or project_mode in ['true', 'write', "reload", 'preview']
         self.save_subtitles = project_mode not in ['preview', 'test']
 
-        options.add("preview", project_mode in ["preview"])
-        options.add("resume", project_mode in ["resume"])
-        options.add("reparse", project_mode in ["reparse"])
-        options.add("retranslate", project_mode in ["retranslate"])
+        options.add('preview', project_mode in ['preview'])
+        options.add('resume', project_mode in ['resume'])
+        options.add('reparse', project_mode in ['reparse'])
+        options.add('retranslate', project_mode in ['retranslate'])
 
     def _on_preprocessed(self, scenes) -> None:
         logging.debug("Pre-processing finished")

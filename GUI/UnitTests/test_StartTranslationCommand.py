@@ -21,7 +21,7 @@ test_cases = [
             {
                 "command" : "StartTranslationCommand",
                 "options" : {
-                    "resume" : False,
+                    'resume' : False,
                     "multithreaded" : False,
                     "autosave" : False,
                     "scenes" : {
@@ -36,7 +36,7 @@ test_cases = [
             {
                 "command" : "StartTranslationCommand",
                 "options" : {
-                    "resume" : False,
+                    'resume' : False,
                     "autosave" : True,
                     "scenes" : {
                         2 : {}
@@ -50,7 +50,7 @@ test_cases = [
             {
                 "command" : "StartTranslationCommand",
                 "options" : {
-                    "resume" : True,
+                    'resume' : True,
                     "scenes" : {
                         1 : {},
                         2 : {}
@@ -64,7 +64,7 @@ test_cases = [
             {
                 "command" : "StartTranslationCommand",
                 "options" : {
-                    "resume" : True,
+                    'resume' : True,
                     "scenes" : {
                         1 : {},
                         2 : {},
@@ -79,7 +79,7 @@ test_cases = [
             {
                 "command" : "StartTranslationCommand",
                 "options" : {
-                    "resume" : True,
+                    'resume' : True,
                     "autosave" : True,
                 },
                 "expected_commands_to_queue" : [ TranslateSceneCommand, SaveProjectFile ],

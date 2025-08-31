@@ -293,7 +293,7 @@ class ProjectActions(QObject):
         """
         Update the user-updatable properties of a subtitle batch
         """
-        logging.debug(f"Updating line {line_number} with {original_text or "<empty>"} > {translated_text or "<empty>"}")
+        logging.debug(f"Updating line {line_number} with {original_text or '<empty>'} > {translated_text or '<empty>'}")
 
         self._validate_datamodel()
 

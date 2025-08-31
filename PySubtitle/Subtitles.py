@@ -111,7 +111,7 @@ class Subtitles:
         Get a scene by number
         """
         if not self.scenes:
-            raise SubtitleError("Subtitles have not been batched")
+            raise SubtitleError(_("Subtitles have not been batched"))
 
         with self.lock:
             matches = [ scene for scene in self.scenes if scene.number == scene_number ]
@@ -176,7 +176,7 @@ class Subtitles:
         Find the set of unique batches containing the line numbers
         """
         if not line_numbers:
-            raise SubtitleError("No line numbers supplied")
+            raise ValueError("No line numbers supplied")
 
         if not self.scenes:
             raise SubtitleError("Subtitles have not been batched yet")
@@ -303,7 +303,7 @@ class Subtitles:
         """
         path = path or self.sourcepath
         if not path:
-            raise ValueError("No file path set")
+            raise SubtitleError(_("No file path set"))
 
         with self.lock:
             originals = self.originals

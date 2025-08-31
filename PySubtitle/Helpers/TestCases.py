@@ -96,7 +96,7 @@ def PrepareSubtitles(subtitle_data : dict, key : str = 'original', file_handler:
     Prepares a SubtitleFile object from subtitle data.
     """
     filename = subtitle_data['filename']
-    handler = SubtitleFormatRegistry.create_handler(filename=filename) if file_handler is None else file_handler
+    handler = file_handler or SubtitleFormatRegistry.create_handler(filename=filename)
     subtitles: Subtitles = Subtitles()
     subtitles.LoadSubtitlesFromString(subtitle_data[key], file_handler=handler)
     subtitles.UpdateProjectSettings(SettingsType(subtitle_data))

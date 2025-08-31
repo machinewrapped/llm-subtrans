@@ -31,7 +31,6 @@ class SubtitleProject:
         :param options: Only used to set the project mode
         """
         self.subtitles: Subtitles = Subtitles()
-        self.previous_subtitles: Subtitles | None = None
         self.events = TranslationEvents()
         self.projectfile : str|None = None
         self.read_project : bool = False

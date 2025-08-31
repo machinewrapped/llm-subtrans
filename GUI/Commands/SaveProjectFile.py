@@ -1,5 +1,4 @@
 from GUI.Command import Command, CommandError
-from PySubtitle.Helpers import GetOutputPath
 from PySubtitle.Helpers.Localization import _
 from PySubtitle.SubtitleProject import SubtitleProject
 

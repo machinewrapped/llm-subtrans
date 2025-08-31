@@ -122,7 +122,7 @@ class SubtitleProject:
             raise ValueError(_("No subtitles to translate in {}").format(filepath))
 
         if not outputpath:
-            outputpath = GetOutputPath(filepath, self.subtitles.target_language)
+            outputpath = GetOutputPath(filepath, subtitles.target_language)
 
         subtitles.outputpath = outputpath
 

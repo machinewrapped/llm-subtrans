@@ -64,6 +64,14 @@ if errorlevel 1 (
 
 call envsubtrans\Scripts\activate.bat
 
+echo Installing required modules...
+pip install --upgrade -r requirements.txt
+if errorlevel 1 (
+    echo Failed to install required modules.
+    pause
+    exit /b 1
+)
+
 call scripts\generate-cmd.bat gui-subtrans
 call scripts\generate-cmd.bat llm-subtrans
 
@@ -93,47 +101,47 @@ echo a = All except Bedrock
 set /p provider_choice="Enter your choice (0/1/2/3/4/5/6/a): "
 
 if "!provider_choice!"=="0" (
-    echo No additional provider selected. Moving forward without any installations.
-    goto install_requirements
+    echo No additional provider selected.
+    goto setup_complete
 )
 
 if "!provider_choice!"=="1" (
     call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" "set_default"
-    goto install_requirements
+    goto setup_complete
 )
 
 if "!provider_choice!"=="2" (
     call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" "set_default"
-    goto install_requirements
+    goto setup_complete
 )
 
 if "!provider_choice!"=="3" (
     call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" "set_default"
-    goto install_requirements
+    goto setup_complete
 )
 
 if "!provider_choice!"=="4" (
     call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" "set_default"
-    goto install_requirements
+    goto setup_complete
 )
 
 if "!provider_choice!"=="5" (
     call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" "set_default"
-    goto install_requirements
+    goto setup_complete
 )
 
 if "!provider_choice!"=="6" (
     call :install_bedrock
-    goto install_requirements
+    goto setup_complete
 )
 
 if /i "!provider_choice!"=="a" (
-    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
     call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
-    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
-    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
     call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
-    goto install_requirements
+    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
+    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
+    call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
+    goto setup_complete
 )
 
 echo Invalid choice. Exiting installation.
@@ -217,15 +225,7 @@ call scripts\generate-cmd.bat bedrock-subtrans
 echo Bedrock setup complete. Default provider set to Bedrock.
 goto :eof
 
-:install_requirements
-echo Installing required modules...
-pip install --upgrade -r requirements.txt
-if errorlevel 1 (
-    echo Failed to install required modules.
-    pause
-    exit /b 1
-)
-
+:setup_complete
 echo.
 echo Setup completed successfully. To uninstall just delete the directory.
 pause

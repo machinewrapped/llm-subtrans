@@ -106,6 +106,9 @@ fi
 python3 -m venv envsubtrans
 source envsubtrans/bin/activate
 
+echo "Installing required modules..."
+pip install --upgrade -r requirements.txt
+
 scripts/generate-cmd.sh gui-subtrans
 scripts/generate-cmd.sh llm-subtrans
 
@@ -134,7 +137,7 @@ read -p "Enter your choice (0/1/2/3/4/5/6/a): " provider_choice
 
 case $provider_choice in
     0)
-        echo "No additional provider selected. Moving forward without any installations."
+        echo "No additional provider selected."
         ;;
     1)
         install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" "set_default"
@@ -155,20 +158,17 @@ case $provider_choice in
         install_bedrock
         ;;
     a)
-        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
         install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
+        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
+        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
         install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
         install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
-        install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
         ;;
     *)
         echo "Invalid choice. Exiting installation."
         exit 1
         ;;
 esac
-
-echo "Installing required modules..."
-pip install --upgrade -r requirements.txt
 
 echo "Setup completed successfully. To uninstall just delete the directory"
 

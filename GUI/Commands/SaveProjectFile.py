@@ -1,5 +1,4 @@
 from GUI.Command import Command, CommandError
-from PySubtitle.Helpers import GetOutputPath
 from PySubtitle.Helpers.Localization import _
 from PySubtitle.SubtitleProject import SubtitleProject
 
@@ -18,7 +17,9 @@ class SaveProjectFile(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
+        # Update the project path and set the subtitle output path to the same location
         self.project.projectfile = self.project.GetProjectFilepath(self.filepath)
+        self.project.subtitles.UpdateOutputPath(path=self.project.projectfile)
         self.project.SaveProjectFile()
 
         if self.project.subtitles.translated:

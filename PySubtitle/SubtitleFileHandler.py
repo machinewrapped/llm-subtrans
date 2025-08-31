@@ -58,7 +58,7 @@ class SubtitleFileHandler(ABC):
             str: Formatted subtitle content
         """
         pass
-    
+
     def get_file_extensions(self) -> list[str]:
         """
         Get file extensions supported by this handler.

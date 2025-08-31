@@ -214,4 +214,4 @@ class AssFileHandler(SubtitleFileHandler):
         # Restore aegisub project data if present
         if 'aegisub_project' in metadata and hasattr(subs, 'aegisub_project'):
             subs.aegisub_project.update(metadata['aegisub_project'])
-    
+

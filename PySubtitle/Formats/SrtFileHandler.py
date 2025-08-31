@@ -12,6 +12,7 @@ class SrtFileHandler(SubtitleFileHandler):
     """
     File handler for SRT subtitle format.
     Encapsulates all SRT library usage for file I/O operations.
+    SRT is a simple format with minimal metadata.
     """
     
     SUPPORTED_EXTENSIONS = {'.srt': 10}
@@ -21,7 +22,7 @@ class SrtFileHandler(SubtitleFileHandler):
         Parse SRT file content and return SubtitleData with lines and metadata.
         """
         lines = list(self._parse_srt_items(file_obj))
-        metadata = {'format': 'srt'}  # SRT has minimal file-level metadata
+        metadata = {'format': 'srt'}
         return SubtitleData(lines=lines, metadata=metadata)
     
     def parse_string(self, content: str) -> SubtitleData:
@@ -29,12 +30,12 @@ class SrtFileHandler(SubtitleFileHandler):
         Parse SRT string content and return SubtitleData with lines and metadata.
         """
         lines = list(self._parse_srt_items(content))
-        metadata = {'format': 'srt'}  # SRT has minimal file-level metadata
+        metadata = {'format': 'srt'}
         return SubtitleData(lines=lines, metadata=metadata)
 
     def compose(self, data: SubtitleData) -> str:
         """
-        Compose subtitle lines into SRT format string using metadata.
+        Compose subtitle lines into SRT format string.
         
         Args:
             data: SubtitleData containing lines and file metadata
@@ -77,12 +78,10 @@ class SrtFileHandler(SubtitleFileHandler):
             srt_items.append(srt_item)
         
         return srt.compose(srt_items, reindex=False)  # We handle reindexing above
-    
 
     def _parse_srt_items(self, source) -> Iterator[SubtitleLine]:
         """
         Internal helper to parse SRT items from a file object or string and yield SubtitleLine objects.
-        Handles error translation to SubtitleParseError.
         """
         try:
             srt_items = list(srt.parse(source))

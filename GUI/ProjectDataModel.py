@@ -89,12 +89,24 @@ class ProjectDataModel:
         self._update_translation_provider()
 
     def UpdateProjectSettings(self, settings : SettingsType|Mapping[str, SettingType]):
-        """ Update the project settings """
+        """ 
+        Update the project settings, and adjust the output path if needed.
+        """
         if self.project:
             settings = SettingsType(settings)
             self.project_options.update(settings)
             self._update_translation_provider()
+
             self.project.UpdateProjectSettings(settings)
+
+            # Update the output path with optional format change
+            previous_output_path : str|None = self.project.subtitles.outputpath
+
+            self.project.subtitles.UpdateOutputPath(path=self.project.projectfile, extension=settings.get_str('format'))
+
+            if self.project.subtitles.outputpath != previous_output_path:
+                logging.info(_("Setting output path to {}").format(self.project.subtitles.outputpath))
+
 
     def IsProjectValid(self) -> bool:
         """Check whether the project is valid (has any subtitles)"""

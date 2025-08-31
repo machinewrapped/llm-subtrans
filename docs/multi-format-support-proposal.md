@@ -158,9 +158,11 @@ We will need to add a "format" field to new project settings to allow the user t
 - Handlers preserve or translate metadata as needed for the target format, passing through any fields they do not use.
 
 **Acceptance Tests**
-- [ ] Load .ass subtitle file and save as .srt without errors
-- [ ] Load .srt subtitle file and save as .ass without errors
-- [ ] Load `SubtitleProject` with converted formats without errors
+- [X] Load .srt file and save as .srt without errors
+- [X] Load .ass file and save as .ass without errors
+- [X] Load .ass subtitle file and save as .srt without errors
+- [X] Load .srt subtitle file and save as .ass without errors
+- [X] Load `SubtitleProject` with converted formats without errors
 
 ### Phase 5: Additional Format Support
 **Requirements**:

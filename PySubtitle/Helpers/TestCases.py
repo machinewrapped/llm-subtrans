@@ -91,7 +91,7 @@ class SubtitleTestCase(unittest.TestCase):
         self.assertSequenceEqual([ line.end for line in batch.originals ], [ line.end for line in reference_batch.originals ])
 
 
-def PrepareSubtitles(subtitle_data : dict, key : str = 'original', file_handler: SubtitleFileHandler = SrtFileHandler()) -> Subtitles:
+def PrepareSubtitles(subtitle_data : dict, key : str = 'original', file_handler: SubtitleFileHandler|None = None) -> Subtitles:
     """
     Prepares a SubtitleFile object from subtitle data.
     """

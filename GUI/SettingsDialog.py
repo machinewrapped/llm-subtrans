@@ -339,8 +339,9 @@ class SettingsDialog(QDialog):
 
         self.translation_provider = self.provider_cache[provider]
 
-        if provider not in self.provider_settings or not self.provider_settings[provider]:
-            self.provider_settings[provider] = self.translation_provider.settings.copy()
+        if self.translation_provider is not None:
+            if provider not in self.provider_settings or not self.provider_settings[provider]:
+                self.provider_settings[provider] = self.translation_provider.settings.copy()
 
     def _add_provider_options(self, section_name : str, layout : QFormLayout):
         """

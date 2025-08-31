@@ -80,7 +80,7 @@ def GetOutputPath(filepath : str|None, language : str|None = None, format_extens
 
     # Add language suffix
     language = language or "translated"
-    language_suffix = f".{language}"
+    language_suffix = f".{language.lower()}"
     if not basename.endswith(language_suffix):
         basename = basename + language_suffix
 

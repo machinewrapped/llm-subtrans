@@ -95,7 +95,7 @@ class LineItem(QStandardItem):
             return None
 
         style = self.line_model['style']
-        if not isinstance(style, str):
+        if style is not None and not isinstance(style, str):
             raise ViewModelError(f"Model field {'style'} is not a string: {self.line_model}")
 
         return style

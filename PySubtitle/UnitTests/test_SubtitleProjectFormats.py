@@ -65,10 +65,11 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         project.WriteProjectToFile(project_path, encoder_class=SubtitleEncoder)
         self.addCleanup(os.remove, project_path)
 
-        project2 = SubtitleProject(Options())
-        project2.ReadProjectFile(project_path)
-        self.assertIsNotNone(project2.subtitles)
-        self.assertEqual(project2.subtitles.format, ".srt")
+        reopened_project = SubtitleProject(Options())
+        reopened_project.ReadProjectFile(project_path)
+        self.assertIsNotNone(reopened_project.subtitles)
+        self.assertEqual(reopened_project.subtitles.format, ".srt")
+        self.assertEqual(reopened_project.subtitles.metadata.get('format'), 'srt')
 
     def test_srt_metadata_serialization(self):
         """Test SRT metadata survives JSON serialization through Subtitles."""

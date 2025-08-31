@@ -323,7 +323,7 @@ class Subtitles:
         outputpath = outputpath or self.outputpath
         if not outputpath:
             if self.sourcepath and os.path.exists(self.sourcepath):
-                outputpath = GetOutputPath(self.sourcepath, self.target_language)
+                outputpath = GetOutputPath(self.sourcepath, self.target_language, self.format)
             if not outputpath:
                 raise SubtitleError(_("I don't know where to save the translated subtitles"))
 
@@ -395,13 +395,13 @@ class Subtitles:
 
             self._update_compatibility(self.settings)
 
-    def UpdateOutputPath(self, sourcepath: str|None = None, extension: str|None = None) -> None:
+    def UpdateOutputPath(self, path: str|None = None, extension: str|None = None) -> None:
         """
         Set or generate the output path for the translated subtitles
         """
-        sourcepath = sourcepath or self.sourcepath
+        path = path or self.sourcepath
         extension = extension or self.format
-        outputpath = GetOutputPath(sourcepath, self.target_language, extension)
+        outputpath = GetOutputPath(path, self.target_language, extension)
         self.outputpath = outputpath
 
     def PreProcess(self, preprocessor: SubtitleProcessor) -> None:

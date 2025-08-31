@@ -19,7 +19,7 @@ class SaveProjectFile(Command):
 
         # Update the project path and set the subtitle output path to the same location
         self.project.projectfile = self.project.GetProjectFilepath(self.filepath)
-        self.project.subtitles.UpdateOutputPath(self.project.projectfile)
+        self.project.subtitles.UpdateOutputPath(path=self.project.projectfile)
         self.project.SaveProjectFile()
 
         if self.project.subtitles.translated:

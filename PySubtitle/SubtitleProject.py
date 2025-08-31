@@ -121,13 +121,7 @@ class SubtitleProject:
         if not subtitles or not subtitles.has_subtitles:
             raise ValueError(_("No subtitles to translate in {}").format(filepath))
 
-        if not outputpath:
-            outputpath = GetOutputPath(filepath, subtitles.target_language)
-
-        subtitles.outputpath = outputpath
-
         self.subtitles = subtitles
-
         self.needs_writing = self.write_project
 
     def SaveOriginal(self, outputpath : str|None = None):
@@ -268,20 +262,19 @@ class SubtitleProject:
             if not self.subtitles:
                 return
 
-            if 'format' in settings:
-                format = settings.get_str('format')
-                if format and format != self.subtitles.format:
-                    logging.info(_("Setting output format to {}").format(format))
-                    self.subtitles.UpdateOutputPath(extension=settings.get_str('format'))
+            previous_output_path : str|None = self.subtitles.outputpath
 
             common_keys = settings.keys() & self.subtitles.settings.keys()
-            if all(settings.get(key) == self.subtitles.settings.get(key) for key in common_keys):
-                return
+            if all(settings.get(key) == self.subtitles.settings.get(key) for key in common_keys) == False:
+                self.subtitles.UpdateProjectSettings(settings)
+                self.needs_writing = bool(self.subtitles.scenes)
 
-            self.subtitles.UpdateProjectSettings(settings)
+            # Update the output path with optional format change
+            self.subtitles.UpdateOutputPath(path=self.projectfile, extension=settings.get_str('format'))
 
-        if self.subtitles.scenes:
-            self.needs_writing = True
+            if self.subtitles.outputpath != previous_output_path:
+                logging.info(_("Setting output path to {}").format(self.subtitles.outputpath))
+
 
     def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:
         """

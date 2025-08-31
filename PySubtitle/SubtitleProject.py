@@ -2,7 +2,6 @@ import json
 import os
 import logging
 import threading
-from copy import deepcopy
 
 from PySubtitle.Helpers import GetOutputPath
 from PySubtitle.Helpers.Localization import _
@@ -93,7 +92,7 @@ class SubtitleProject:
             project_settings = self.GetProjectSettings()
 
             if subtitles:
-                outputpath = outputpath or GetOutputPath(self.projectfile, subtitles.target_language)
+                outputpath = outputpath or GetOutputPath(self.projectfile, subtitles.target_language, subtitles.format)
                 sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath               
                 logging.info(_("Project file loaded"))
 
@@ -269,6 +268,12 @@ class SubtitleProject:
             if not self.subtitles:
                 return
 
+            if 'format' in settings:
+                format = settings.get_str('format')
+                if format and format != self.subtitles.format:
+                    logging.info(_("Setting output format to {}").format(format))
+                    self.subtitles.UpdateOutputPath(extension=settings.get_str('format'))
+
             common_keys = settings.keys() & self.subtitles.settings.keys()
             if all(settings.get(key) == self.subtitles.settings.get(key) for key in common_keys):
                 return
@@ -276,7 +281,6 @@ class SubtitleProject:
             self.subtitles.UpdateProjectSettings(settings)
 
         if self.subtitles.scenes:
-            self.subtitles.UpdateOutputPath(extension=self.subtitles.format)
             self.needs_writing = True
 
     def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:

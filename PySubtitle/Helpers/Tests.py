@@ -145,7 +145,7 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
         logger.info(separator)
 
         try:
-            subtitles = Subtitles(SrtFileHandler(), filepath)
+            subtitles = Subtitles(filepath)
             subtitles.LoadSubtitles()
 
             for options in test_options:

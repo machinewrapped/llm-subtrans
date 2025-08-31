@@ -4,6 +4,8 @@ import unittest
 from copy import deepcopy
 
 from PySubtitle.Options import Options
+from PySubtitle.SubtitleBatcher import SubtitleBatcher
+from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.Formats.AssFileHandler import AssFileHandler
@@ -35,51 +37,38 @@ class TestSubtitleFormatConversion(unittest.TestCase):
 
     def test_ass_to_srt_conversion(self):
         ass_path = self._write_temp(".ass", ASS_SAMPLE)
-        project = SubtitleProject(Options())
-        project.InitialiseProject(ass_path)
-        self.assertIsInstance(project.subtitles.file_handler, AssFileHandler)
         out_path = ass_path + ".srt"
-        project.ConvertFormat('.srt')
-        self.assertIsInstance(project.subtitles.file_handler, SrtFileHandler)
-        project.SaveOriginal(out_path)
+        options = Options(project=None)
+        project = SubtitleProject(options)
+        project.InitialiseProject(filepath=ass_path, outputpath=out_path)
+        self.assertIsNotNone(project.subtitles)
+        project.subtitles.AutoBatch(SubtitleBatcher(options))
+        project.subtitles._duplicate_originals_as_translations()
+        project.SaveTranslation()
         self.assertTrue(os.path.exists(out_path))
 
-    def test_srt_to_ass_conversion(self):
+        converted_project = SubtitleProject(options)
+        converted_project.LoadSubtitleFile(out_path)
+        self.assertTrue(converted_project.subtitles.format == ".srt")
+
+        self.addCleanup(os.remove, out_path)
+
+    def test_project_format_with_conversion(self):
         srt_path = self._write_temp(".srt", SRT_SAMPLE)
-        project = SubtitleProject(Options())
-        project.InitialiseProject(srt_path)
-        self.assertIsInstance(project.subtitles.file_handler, SrtFileHandler)
         out_path = srt_path + ".ass"
-        project.ConvertFormat('.ass')
-        self.assertIsInstance(project.subtitles.file_handler, AssFileHandler)
-        project.SaveOriginal(out_path)
-        self.assertTrue(os.path.exists(out_path))
-
-    def test_project_roundtrip_after_conversion(self):
-        srt_path = self._write_temp(".srt", SRT_SAMPLE)
-        project = SubtitleProject(Options())
-        project.InitialiseProject(srt_path)
-        project.ConvertFormat('.ass')
+        options = Options(project=None)
+        project = SubtitleProject(options)
+        project.InitialiseProject(filepath=srt_path, outputpath=out_path)
+        self.assertIsNotNone(project.subtitles)
+        project.subtitles.AutoBatch(SubtitleBatcher(options))
+        project.subtitles._duplicate_originals_as_translations()
         tmp_project = tempfile.NamedTemporaryFile(delete=False, suffix=".subtrans")
         tmp_project.close()
         project.WriteProjectToFile(tmp_project.name, encoder_class=SubtitleEncoder)
 
         project2 = SubtitleProject(Options())
         project2.ReadProjectFile(tmp_project.name)
-        self.assertIsInstance(project2.subtitles.file_handler, AssFileHandler)
-        self.assertEqual(project2.subtitles.settings.get('format'), '.ass')
-
-    def test_translation_data_converted(self):
-        srt_path = self._write_temp(".srt", SRT_SAMPLE)
-        project = SubtitleProject(Options())
-        project.InitialiseProject(srt_path)
-        # Set translated lines based on originals
-        translated = deepcopy(project.subtitles.originals)
-        translated[0].text = "Bonjour SRT!"
-        project.subtitles.translated = translated
-        project.ConvertFormat('.ass')
-        self.assertEqual(project.subtitles.translated[0].text, "Bonjour SRT!")
-        self.assertEqual(project.subtitles.metadata.get('format'), 'ass')
+        self.assertEqual(project2.subtitles.format, '.ass')
 
 if __name__ == '__main__':
     unittest.main()

@@ -4,14 +4,14 @@
 
 ## Executive Summary
 
-This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 3 and outlines the remaining work for Phase 4. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
+This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 3 and outlines the remaining work. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
 
 ## Current State After Phase 3
 
 ### Existing Architecture
 - **Core Internal Representation**: `SubtitleLine` objects with timing, text, and metadata
 - **File Format Handling**: `SubtitleFormatRegistry` discovers handlers such as `SrtFileHandler` and `AssFileHandler`
-- **Integration Points**: `SubtitleProject` loads files by extension and passes a handler into `Subtitles`
+- **Integration Points**: `SubtitleProject` reads and writes `Subtitles` files by extension
 - **Serialization**: `SubtitleSerialisation.py` handles project file persistence
 - **Interface**: Abstract `SubtitleFileHandler` defines parsing and composing operations
 
@@ -30,25 +30,9 @@ This document captures the architecture and decisions behind LLM-Subtrans's mult
 - Coordinating file I/O operations with appropriate handlers
 
 **Subtitles** becomes format-agnostic by:
-- Requiring a `file_handler` parameter during construction
+- Determining the appropriate `file_handler` to use based on filename
 - Focusing purely on subtitle data management and business logic
 - No format-specific code or assumptions
-
-**Format Conversion Flow**:
-```python
-try:
-  new_handler = SubtitleFormatRegistry.create_handler(target_extension)
-  data = SubtitleData(
-      lines=self.subtitles.translated,
-      metadata=self.subtitles.metadata,
-      start_line_number=self.subtitles.start_line_number,
-  )
-  converted_data = new_handler.convert_from(data)
-  self.subtitles.translated = converted_data.lines
-  self.subtitles.metadata = converted_data.metadata
-except Exception as e:
-  logging.error(...)
-```
 
 ### Format Detection & Routing System
 The `SubtitleFormatRegistry`:
@@ -152,27 +136,24 @@ After implementation comparison, `pysubs2` was identified as the superior approa
 
 ### Phase 4: Format conversion
 
+We will provide the option to read from one format and write to another as a convenience, but the focus of the application is translation of existing subtitles, format conversion is not a core feature (it is best handled by dedicated tools).
+
 ### Conversion process
-- Introduce a `ConvertFormat(target_extension)` method on `SubtitleProject`
-- Creates a new `Subtitles` object with a `SubtitleFileHandler` resolved from `SubtitleFormatRegistry`
-- Calculates a new outputpath for the subtitles (extend `Subtitles.UpdateOutputPath` to allow extension specification)
-- Transfers caption text and metadata to the new Subtitles object
-- Call a Convert method on the `SubtitleFileHandler` that can remap fields and metadata if necessary (e.g. add a Default style for ASS)
-- Updates metadata to reflect the conversion
-- Validates the conversion before making persistent changes to the `SubtitleProject`, preserving the previous subtitles unmodified if conversion fails.
-- The previous Subtitles object is temporarily kepy in memory as .previous_subtitles to permit undo/rollback (as a TODO).
+- Source format is autodetected based on the input filename
+- Output format is assumed to be the same, by default, but will be autodetected from the output filename if specified
+- Content and metadata are passed through and interpreted by the `SubtitleFileHandler` selected for the output format
+- `SubtitleFileHandler` can extend or update metadata if necessary
 
 ### CLI Support
-The user is already able to specify an output path with `-o` or `--output`, so automatic determination of the file handler to use based on the output path is straightforward. If no output path is specified no conversion is required.
+The user is already able to specify an output path with `-o` or `--output`, so automatic determination of the file handler to use based on the output path is straightforward.
 
 ### GUI Support
-GUI support is more complicated - currently the user has no ability to choose the output path for the translated subtitles, they are always saved in the same directory as the `.subtrans` project file, with a filename that is auto-generated from the project filename, the target language and the extension of the **source** subtitles (since the format is the same). We need to give the user a way to select a different output format.
+Currently the user has no control over the output path for translated subtitles, they are saved in the same directory as the `.subtrans` project file with an auto-generated filename based on the project filename, the target language and the extension of the **source** subtitles. 
 
-We will need to add a "format" field to the project settings (ref: ProjectSettingsDialog, Subtitles.UpdateProjectSettings). This would initially be deduced from the sourcepath when subtitles are loaded but could be changed by the user at any time. It should be a drop-down, whose values are auto-populated from the extensions registered with `SubtitleFormatRegistry`.
+We will need to add a "format" field to new project settings to allow the user to specify a different format. It should be a drop-down, whose values are auto-populated from the extensions registered with `SubtitleFormatRegistry`. The default value is be deduced from the sourcepath when subtitles are loaded.
 
 **Requirements**
 - Destination format auto-detected from output file extensions
-- Explicit format conversion operation supported (can be unit-tested without GUI support)
 - `SubtitleProject.SaveTranslation` calls appropriate handlers for the output format
 - Handlers preserve or translate metadata as needed for the target format, passing through any fields they do not use.
 
@@ -283,7 +264,7 @@ class SubtitleFormatRegistry:
     def get_handler_by_extension(cls, extension: str) -> type[SubtitleFileHandler]
     
     @classmethod
-    def create_handler(cls, extension: str) -> SubtitleFileHandler
+    def create_handler(cls, extension: str|None, filename: str|None) -> SubtitleFileHandler
     
     @classmethod
     def enumerate_formats(cls) -> list[str]

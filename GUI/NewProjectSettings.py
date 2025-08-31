@@ -58,9 +58,10 @@ class NewProjectSettings(QDialog):
         self.OPTIONS['model'] = (available_models, self.OPTIONS['model'][1])
         self.settings['model'] = datamodel.selected_model
 
-        formats = SubtitleFormatRegistry.enumerate_formats()
-        self.OPTIONS['format'] = (formats, _("Output subtitle format"))
-        self.settings['format'] = self.settings.get('format', formats[0] if formats else None)
+        if self.project and self.project.subtitles:
+            formats = SubtitleFormatRegistry.enumerate_formats()
+            self.OPTIONS['format'] = (formats, _("Output subtitle format"))
+            self.settings['format'] = self.project.subtitles.format
 
         instruction_files = GetInstructionsFiles()
         if instruction_files:

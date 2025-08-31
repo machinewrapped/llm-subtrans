@@ -6,7 +6,6 @@ import logging
 import threading
 from typing import Any
 import bisect
-from PySubtitle.Helpers.Text import IsRightToLeftText
 from PySubtitle.Helpers.Localization import _
 from PySubtitle.Instructions import DEFAULT_TASK_TYPE
 from PySubtitle.Options import Options, SettingsType
@@ -18,6 +17,7 @@ from PySubtitle.SubtitleError import SubtitleError, SubtitleParseError
 from PySubtitle.Helpers import GetInputPath, GetOutputPath
 from PySubtitle.Helpers.Parse import ParseNames
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.SubtitleProcessor import SubtitleProcessor
 from PySubtitle.SubtitleScene import SubtitleScene, UnbatchScenes
 from PySubtitle.SubtitleLine import SubtitleLine
@@ -50,7 +50,7 @@ class Subtitles:
         'format': None
     })
 
-    def __init__(self, file_handler: SubtitleFileHandler, filepath: str | None = None, outputpath: str | None = None,
+    def __init__(self, filepath: str | None = None, outputpath: str | None = None,
     ) -> None:
         self.originals: list[SubtitleLine] | None = None
         self.translated: list[SubtitleLine] | None = None
@@ -61,7 +61,6 @@ class Subtitles:
         self.sourcepath: str | None = GetInputPath(filepath)
         self.outputpath: str | None = outputpath or None
 
-        self.file_handler: SubtitleFileHandler = file_handler
         self.metadata: dict[str, Any] = {}
 
         self.settings: SettingsType = deepcopy(self.DEFAULT_PROJECT_SETTINGS)
@@ -73,6 +72,10 @@ class Subtitles:
     @property
     def target_language(self) -> str|None:
         return self._get_setting_str('target_language')
+
+    @property
+    def format(self) -> str:
+        return os.path.splitext(self.outputpath)[1] if self.outputpath else os.path.splitext(self.sourcepath)[1] if self.sourcepath else '.srt'
     
     @property
     def task_type(self) -> str:
@@ -260,18 +263,17 @@ class Subtitles:
         if not self.sourcepath:
             raise ValueError("No source path set for subtitles")
 
-        if not self.file_handler or not isinstance(self.file_handler, SubtitleFileHandler):
-            raise SubtitleError(_("File type handler is unknown for {filepath}").format(filepath=self.sourcepath))
-        
+        file_handler: SubtitleFileHandler = SubtitleFormatRegistry.create_handler(filename=self.sourcepath)
+    
         try:
             with open(self.sourcepath, 'r', encoding=default_encoding, newline='') as f:
-                data = self.file_handler.parse_file(f)
+                data = file_handler.parse_file(f)
 
         except SubtitleParseError as e:
             logging.warning(_("Error parsing file... trying with fallback encoding: {}").format(str(e)))
             try:
                 with open(self.sourcepath, 'r', encoding=fallback_encoding) as f:
-                    data = self.file_handler.parse_file(f)
+                    data = file_handler.parse_file(f)
             except SubtitleParseError as e2:
                 logging.error(_("Failed to parse file with fallback encoding: {}").format(str(e2)))
                 raise e2
@@ -281,13 +283,13 @@ class Subtitles:
             self.originals = data.lines
             self.metadata = data.metadata
 
-    def LoadSubtitlesFromString(self, subtitles_string: str) -> None:
+    def LoadSubtitlesFromString(self, subtitles_string: str, file_handler: SubtitleFileHandler) -> None:
         """
         Load subtitles from a string
         """
         try:
             with self.lock:
-                data = self.file_handler.parse_string(subtitles_string)
+                data = file_handler.parse_string(subtitles_string)
                 self._renumber_if_needed(data.lines)
                 self.originals = data.lines
                 self.metadata = data.metadata
@@ -297,7 +299,7 @@ class Subtitles:
 
     def SaveOriginal(self, path: str|None = None) -> None:
         """
-        Write original subtitles to a file
+        Write original subtitles to a file (not a common operation)
         """
         path = path or self.sourcepath
         if not path:
@@ -306,14 +308,15 @@ class Subtitles:
         with self.lock:
             originals = self.originals
             if originals:
+                file_handler = SubtitleFormatRegistry.create_handler(filename=path)
                 data = SubtitleData(lines=originals, metadata=self.metadata, start_line_number=self.start_line_number)
-                subtitle_file = self.file_handler.compose(data)
+                subtitle_file = file_handler.compose(data)
                 with open(path, 'w', encoding=default_encoding) as f:
                     f.write(subtitle_file)
             else:
                 logging.warning(_("No original subtitles to save to {}").format(str(path)))
 
-    def SaveTranslation(self, outputpath: str|None = None) -> None:
+    def SaveTranslation(self, outputpath: str|None = None, file_handler: SubtitleFileHandler|None = None) -> None:
         """
         Write translated subtitles to a file
         """
@@ -322,13 +325,16 @@ class Subtitles:
             if self.sourcepath and os.path.exists(self.sourcepath):
                 outputpath = GetOutputPath(self.sourcepath, self.target_language)
             if not outputpath:
-                raise Exception("I don't know where to save the translated subtitles")
+                raise SubtitleError(_("I don't know where to save the translated subtitles"))
 
         outputpath = os.path.normpath(outputpath)
 
+        if not file_handler:
+            file_handler = SubtitleFormatRegistry.create_handler(filename=outputpath)
+            
         with self.lock:
             if not self.scenes:
-                raise ValueError("No scenes in subtitles")
+                raise ValueError(_("No scenes in subtitles"))
 
             # Linearise the translation
             originals, translated, untranslated = UnbatchScenes(self.scenes) # type: ignore[unused-ignore]
@@ -354,8 +360,8 @@ class Subtitles:
             
             # Apply RTL markers if requested (handler will decide format-specific implementation)
             data.metadata['add_rtl_markers'] = self.settings.get('add_right_to_left_markers', False)
-            
-            subtitle_file = self.file_handler.compose(data)
+
+            subtitle_file = file_handler.compose(data)
             with open(outputpath, 'w', encoding=default_encoding) as f:
                 f.write(subtitle_file)
 
@@ -636,6 +642,17 @@ class Subtitles:
                 line.text = f"{line.text}\n{item.text}"
 
         return sorted(lines.values(), key=lambda item: item.key)
+
+    def _duplicate_originals_as_translations(self) -> None:
+        """
+        Duplicate original lines as translated lines if no translations exist (for testing)
+        """
+        for scene in self.scenes:
+            for batch in scene.batches:
+                if batch.any_translated:
+                    raise SubtitleError("Translations already exist")
+
+                batch.translated = [ SubtitleLine.Construct(line.number, line.start, line.end, line.text or "", line.metadata) for line in batch.originals ]
 
     def _get_setting_str(self, key: str, default: str|None = None) -> str|None:
         """

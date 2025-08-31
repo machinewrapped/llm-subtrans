@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 import json
@@ -44,26 +45,30 @@ class TestSubtitleProjectFormats(unittest.TestCase):
     def test_auto_detect_srt(self):
         path = self._create_temp_srt()
         project = SubtitleProject(Options())
-        self.assertIsInstance(project.subtitles.file_handler, VoidFileHandler)
         project.InitialiseProject(path)
-        self.assertIsInstance(project.subtitles.file_handler, SrtFileHandler)
+        self.assertIsNotNone(project.subtitles)
+        self.assertEqual(project.subtitles.format, ".srt")
+        self.assertEqual(project.subtitles.metadata.get('format'), 'srt')
 
     def test_project_file_roundtrip_preserves_handler(self):
         path = self._create_temp_srt()
         project = SubtitleProject(Options())
         project.InitialiseProject(path)
-        self.assertIsInstance(project.subtitles.file_handler, SrtFileHandler)
+        self.assertIsNotNone(project.subtitles)
+        self.assertEqual(project.subtitles.format, ".srt")
+        self.assertEqual(project.subtitles.metadata.get('format'), 'srt')
         
         # Set outputpath so file handler can be restored on load
+        project_path = path.replace('.srt', '.subtrans')
         project.subtitles.outputpath = path.replace('.srt', '_translated.srt')
 
-        tmp_project = tempfile.NamedTemporaryFile(delete=False, suffix=".subtrans")
-        tmp_project.close()
-        project.WriteProjectToFile(tmp_project.name, encoder_class=SubtitleEncoder)
+        project.WriteProjectToFile(project_path, encoder_class=SubtitleEncoder)
+        self.addCleanup(os.remove, project_path)
 
         project2 = SubtitleProject(Options())
-        project2.ReadProjectFile(tmp_project.name)
-        self.assertIsInstance(project2.subtitles.file_handler, SrtFileHandler)
+        project2.ReadProjectFile(project_path)
+        self.assertIsNotNone(project2.subtitles)
+        self.assertEqual(project2.subtitles.format, ".srt")
 
     def test_srt_metadata_serialization(self):
         """Test SRT metadata survives JSON serialization through Subtitles."""
@@ -71,8 +76,8 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         
         # Create Subtitles with SRT handler and load content
         handler = SrtFileHandler()
-        subtitles = Subtitles(handler)
-        subtitles.LoadSubtitlesFromString(srt_content)
+        subtitles = Subtitles()
+        subtitles.LoadSubtitlesFromString(srt_content, handler)
         
         # Verify basic loading
         self.assertEqual(subtitles.linecount, 1)
@@ -103,8 +108,8 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         
         # Create Subtitles with ASS handler and load content
         handler = AssFileHandler()
-        subtitles = Subtitles(handler)
-        subtitles.LoadSubtitlesFromString(ass_content)
+        subtitles = Subtitles()
+        subtitles.LoadSubtitlesFromString(ass_content, handler)
         
         # Verify basic loading
         self.assertEqual(subtitles.linecount, 1)

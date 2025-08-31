@@ -20,7 +20,7 @@ class ChineseDinnerTests(SubtitleTestCase):
     def test_ChineseDinner(self):
         log_test_name("Chinese Dinner Tests")
 
-        subtitles : Subtitles = Subtitles(SrtFileHandler())
+        subtitles : Subtitles = Subtitles()
 
         with self.subTest("Load subtitles from string"):
             log_test_name("Load subtitles from string")
@@ -29,7 +29,7 @@ class ChineseDinnerTests(SubtitleTestCase):
                 self.fail("No original subtitles in test data")
                 return
 
-            subtitles.LoadSubtitlesFromString(original_srt)
+            subtitles.LoadSubtitlesFromString(original_srt, SrtFileHandler())
             self.assertIsNotNone(subtitles)
 
             if not subtitles or not subtitles.has_subtitles or not subtitles.originals:

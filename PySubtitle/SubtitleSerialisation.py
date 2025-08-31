@@ -45,7 +45,6 @@ class SubtitleEncoder(json.JSONEncoder):
                 "sourcepath": obj.sourcepath,
                 "outputpath": obj.outputpath,
                 "scenecount": len(obj.scenes),
-                "file_handler": classname(obj.file_handler),
                 "settings": getattr(obj, 'settings') or getattr(obj, 'context'),
                 "metadata": getattr(obj, 'metadata', {}),
                 "scenes": obj.scenes,
@@ -120,7 +119,7 @@ def _object_hook(dct):
         if class_name in {classname(Subtitles), "SubtitleFile"}:      # Backward compatibility
             sourcepath = dct.get('sourcepath')
             outpath = dct.get('outputpath') or dct.get('filename')
-            obj = Subtitles(VoidFileHandler(), sourcepath, outpath)
+            obj = Subtitles(sourcepath, outpath)
             obj.settings = dct.get('settings', {}) or dct.get('context', {})
             obj.metadata = dct.get('metadata', {})
             obj.scenes = dct.get('scenes', [])

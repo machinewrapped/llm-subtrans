@@ -1,8 +1,10 @@
 import importlib
 import inspect
+import os
 import pkgutil
 from pathlib import Path
 
+from PySubtitle.Helpers.Localization import _
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 
 
@@ -32,8 +34,14 @@ class SubtitleFormatRegistry:
         return cls._handlers[ext]
 
     @classmethod
-    def create_handler(cls, extension: str) -> SubtitleFileHandler:
+    def create_handler(cls, extension: str|None = None, filename: str|None = None) -> SubtitleFileHandler:
         """Instantiate a subtitle file handler for the given extension."""
+        if extension is None and filename is not None:
+            extension = os.path.splitext(filename)[1].lower()
+
+        if extension is None or not extension:
+            raise ValueError(_("Format cannot be deduced from filename or extension '{name}'").format(name=filename or extension or "None"))
+
         handler_cls = cls.get_handler_by_extension(extension)
         return handler_cls()
 

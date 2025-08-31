@@ -115,7 +115,7 @@ class SettingsDialog(QDialog):
     }
 
     def __init__(self, options : Options, provider_cache = None, parent=None, focus_provider_settings : bool = False):
-        super(SettingsDialog, self).__init__(parent)
+        super().__init__(parent)
         self.setWindowTitle(_("GUI-Subtrans Settings"))
         self.setMinimumWidth(800)
 
@@ -216,7 +216,7 @@ class SettingsDialog(QDialog):
             logging.error(f"Unable to update settings: {e}")
 
         try:
-            super(SettingsDialog, self).accept()
+            super().accept()
 
         except Exception as e:
             logging.error(f"Error in settings dialog handler: {e}")

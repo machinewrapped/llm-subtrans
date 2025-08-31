@@ -14,7 +14,7 @@ from PySubtitle.Helpers.Localization import _
 
 class TreeViewItemWidget(QFrame):
     def __init__(self, content, parent=None):
-        super(TreeViewItemWidget, self).__init__(parent)
+        super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         properties = content.get('properties', {})
@@ -53,19 +53,19 @@ class TreeViewItemWidget(QFrame):
 
 class WidgetHeader(QLabel):
     def __init__(self, text, parent=None):
-        super(WidgetHeader, self).__init__(parent)
+        super().__init__(parent)
         self.setText(text)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
 class WidgetSubheading(QLabel):
     def __init__(self, text, parent=None):
-        super(WidgetSubheading, self).__init__(parent)
+        super().__init__(parent)
         self.setText(text)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
 class WidgetFooter(QFrame):
     def __init__(self, text, parent=None):
-        super(WidgetFooter, self).__init__(parent)
+        super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -81,7 +81,7 @@ class WidgetFooter(QFrame):
 
 class WidgetBody(QLabel):
     def __init__(self, text, parent=None):
-        super(WidgetBody, self).__init__(parent)
+        super().__init__(parent)
         self.setText(text)
         self.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -89,7 +89,7 @@ class WidgetBody(QLabel):
 
 class LineItemView(QWidget):
     def __init__(self, line, parent=None):
-        super(LineItemView, self).__init__(parent)
+        super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         layout = QVBoxLayout()
@@ -105,7 +105,7 @@ class LineItemView(QWidget):
 
 class LineItemHeader(QFrame):
     def __init__(self, line, parent=None):
-        super(LineItemHeader, self).__init__(parent)
+        super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         layout = QHBoxLayout()
@@ -124,7 +124,7 @@ class LineItemHeader(QFrame):
 
 class LineItemBody(QLabel):
     def __init__(self, text: str, parent=None):
-        super(LineItemBody, self).__init__(parent)
+        super().__init__(parent)
         self.setText(text)
         self.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)

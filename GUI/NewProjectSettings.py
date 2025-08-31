@@ -38,7 +38,7 @@ class NewProjectSettings(QDialog):
     }
 
     def __init__(self, datamodel : ProjectDataModel, parent=None):
-        super(NewProjectSettings, self).__init__(parent)
+        super().__init__(parent)
         self.setWindowTitle(_("Project Settings"))
         self.setMinimumWidth(800)
 
@@ -126,7 +126,7 @@ class NewProjectSettings(QDialog):
         # Wait for any remaining preview threads to complete
         self._wait_for_threads()
 
-        super(NewProjectSettings, self).accept()
+        super().accept()
 
     def _on_setting_changed(self, key, value):
         if key == 'provider':

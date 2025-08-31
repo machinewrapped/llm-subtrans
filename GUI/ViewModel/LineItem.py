@@ -15,7 +15,7 @@ class LineItem(QStandardItem):
     This is used to display lines in the GUI and to update the model when changes are made.
     """
     def __init__(self, line_number : int, model : dict[str, str|int|float]):
-        super(LineItem, self).__init__(f"Line {line_number}")
+        super().__init__(f"Line {line_number}")
         self.number : int = line_number
         self.line_model : dict[str, str|int|float] = model
         self.height = max(GetLineHeight(self.line_text), GetLineHeight(self.translation)) if self.translation else GetLineHeight(self.line_text)

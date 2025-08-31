@@ -29,3 +29,9 @@ gui-subtrans.sh
 llm-subtrans.sh
 .idea/
 *.ass
+/test_projects
+autotranslated_msgids*.txt
+untranslated_msgids*.txt
+.claude/settings.local.json
+*.zip
+*.pdf

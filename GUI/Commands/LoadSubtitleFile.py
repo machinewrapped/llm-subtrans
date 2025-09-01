@@ -25,14 +25,15 @@ class LoadSubtitleFile(Command):
         try:
             self.options.InitialiseInstructions()
 
-            project = SubtitleProject(self.options)
+            # By default the GUI always creates a persistent project
+            project = SubtitleProject(persistent=self.options.get_bool('project', True))
             project.InitialiseProject(self.filepath, reload_subtitles=self.reload_subtitles)
 
             if not project.subtitles:
                 raise CommandError(_("Unable to load subtitles from {file}").format(file=self.filepath), command=self)
 
             # Write a backup if an existing project was loaded
-            if self.write_backup and project.read_project:
+            if self.write_backup and project.existing_project:
                 logging.info(_("Saving backup copy of the project"))
                 project.SaveBackupFile()
 

@@ -331,8 +331,9 @@ class ProjectSettings(QGroupBox):
         file_name, dummy = QFileDialog.getOpenFileName(self, caption, dir=initial_path, filter=filter) # type: ignore[ignore-unused]
         if file_name:
             try:
-                project_options = Options({"project": 'read'})
-                source : SubtitleProject = SubtitleProject(project_options)
+                source : SubtitleProject = SubtitleProject(persistent=False)
+                source.write_translation = False
+
                 subtitles : Subtitles|None = source.ReadProjectFile(file_name)
                 if not subtitles:
                     raise ValueError("Invalid project file")

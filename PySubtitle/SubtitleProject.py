@@ -24,10 +24,12 @@ class SubtitleProject:
     """
     def __init__(self, persistent : bool = False):
         """
-        Initialise an empty project. Can be initialised from a project file or a subtitle file,
+        A subtitle translation project. 
+        
+        Can be initialised from a project file or a subtitle file,
         or manually configured by assigning a SubtitleFile and updating settings if necessary.
         
-        :param persistent: if True, the project will be saved to a file
+        :param persistent: if True, the project will be saved to disk and automatically reloaded next time
         """
         self.subtitles : Subtitles = Subtitles()
         self.events = TranslationEvents()
@@ -75,7 +77,7 @@ class SubtitleProject:
         project_settings : SettingsType = SettingsType()
 
         read_project : bool = self.use_project_file and project_file_exists
-        load_subtitles : bool = reload_subtitles or not project_file_exists
+        load_subtitles : bool = reload_subtitles or not read_project
 
         if project_file_exists and not read_project:
             logging.warning(_("Project file {} exists but will not be used").format(self.projectfile))
@@ -292,6 +294,8 @@ class SubtitleProject:
         # Prime new project files
         self.UpdateProjectFile()
 
+        save_translation : bool = self.write_translation and not translator.preview
+
         try:
             translator.events.preprocessed += self._on_preprocessed # type: ignore
             translator.events.batch_translated += self._on_batch_translated # type: ignore
@@ -303,14 +307,14 @@ class SubtitleProject:
             translator.events.batch_translated -= self._on_batch_translated # type: ignore
             translator.events.scene_translated -= self._on_scene_translated # type: ignore
 
-            if self.write_translation and not translator.aborted:
+            if save_translation and not translator.aborted:
                 self.SaveTranslation()
 
         except TranslationAbortedError:
             logging.info(_("Translation aborted"))
 
         except Exception as e:
-            if self.subtitles and self.write_translation and translator.stop_on_error:
+            if save_translation and self.subtitles and translator.stop_on_error:
                 self.SaveTranslation()
 
             logging.error(_("Failed to translate subtitles: {}").format(str(e)))

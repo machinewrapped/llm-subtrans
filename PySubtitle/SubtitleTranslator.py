@@ -100,17 +100,19 @@ class SubtitleTranslator:
         if not subtitles:
             raise TranslationImpossibleError(_("No subtitles to translate"))
 
-        if subtitles.scenes and not self.retranslate:
+        reprocess_translated = self.retranslate or self.reparse
+
+        if subtitles.scenes and not reprocess_translated:
             logging.info(_("Resuming translation"))
 
-        if self.retranslate and not subtitles.scenes:
+        if not subtitles.scenes:
             logging.warning(_("Previous translations not found, starting fresh..."))
             subtitles.AutoBatch(self.batcher)
 
         if not subtitles.scenes:
             raise TranslationImpossibleError(_("No scenes to translate"))
 
-        if self.retranslate and not any(scene.any_translated for scene in subtitles.scenes):
+        if not any(scene.any_translated for scene in subtitles.scenes):
             logging.warning(_("No previous translations found, starting fresh..."))
 
         logging.info(_("Translating {linecount} lines in {scenecount} scenes").format(linecount=subtitles.linecount, scenecount=subtitles.scenecount))
@@ -125,12 +127,12 @@ class SubtitleTranslator:
             if self.max_lines and self.lines_processed >= self.max_lines:
                 break
 
-            if not self.retranslate and scene.all_translated:
+            if not reprocess_translated and scene.all_translated:
                 logging.info(_("Scene {scene} already translated {linecount} lines...").format(scene=scene.number, linecount=scene.linecount))
                 continue
 
             logging.debug(f"Translating scene {scene.number} of {subtitles.scenecount}")
-            batch_numbers = [ batch.number for batch in scene.batches if not batch.translated ] if not self.retranslate else None
+            batch_numbers = None if reprocess_translated else [ batch.number for batch in scene.batches if not batch.translated ]
 
             self.TranslateScene(subtitles, scene, batch_numbers=batch_numbers)
 

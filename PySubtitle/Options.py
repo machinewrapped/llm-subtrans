@@ -87,7 +87,7 @@ default_settings = {
     'max_retries': env_int('MAX_RETRIES', 1),
     'max_summary_length': env_int('MAX_SUMMARY_LENGTH', 240),
     'backoff_time': env_float('BACKOFF_TIME', 3.0),
-    'project' : env_bool('PROJECT', True),
+    'project_file' : env_bool('PROJECT_FILE', True),
     'preview' : env_bool('PREVIEW', False),
     'reparse' : env_bool('REPARSE', False),
     'retranslate' : env_bool('RETRANSLATE', False),
@@ -175,6 +175,10 @@ class Options(SettingsType):
     @property
     def target_language(self) -> str:
         return self.get_str('target_language') or str(default_settings['target_language'])
+
+    @property
+    def project_file(self) -> bool:
+        return self.get_bool('project_file', True)
 
     def GetProviderSettings(self, provider : str) -> SettingsType:
         """ Get the settings for a specific provider """

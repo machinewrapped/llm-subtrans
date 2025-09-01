@@ -33,7 +33,7 @@ class SubtitleTestCase(unittest.TestCase):
             'max_batch_size': 20,
             'preprocess_subtitles': False,
             'postprocess_translation': False,
-            'project': 'test',
+            'project_file': False,
             'retry_on_error': False,
             'stop_on_error': True
         })

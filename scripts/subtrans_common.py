@@ -108,7 +108,7 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'names': ParseNames(args.names or args.name),
         'postprocess_translation': args.postprocess,
         'preprocess_subtitles': args.preprocess,
-        'project': args.project and args.project.lower(),
+        'project_file': args.project,
         'provider': provider,
         'rate_limit': args.ratelimit,
         'scene_threshold': args.scenethreshold,
@@ -147,7 +147,7 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     """
     Initialise a subtitle project with the provided arguments
     """
-    project = SubtitleProject(persistent=options.get_bool('project', False))
+    project = SubtitleProject(persistent=options.project_file)
 
     project.InitialiseProject(args.input, args.output)
 

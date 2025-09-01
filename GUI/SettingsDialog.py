@@ -35,7 +35,7 @@ class SettingsDialog(QDialog):
             'add_right_to_left_markers': (bool, _("Add RTL markers around translated lines that contain primarily right-to-left script on save")),
             'instruction_file': (str, _("Instructions for the translation provider to follow")),
             'prompt': (str, _("The (brief) instruction for each batch of subtitles. Some [tags] are automatically filled in")),
-            'project': (bool, _("Create a persistent project file to allow resuming translation")),
+            'project_file': (bool, _("Create a project file to allow resuming or revising translation")),
             'autosave': (bool, _("Automatically save the project after each translation batch")),
             'write_backup': (bool, _("Save a backup copy of the project when opening it")),
             # 'autosplit_incomplete': (bool, "If true, incomplete translations will be split into smaller batches and retried"),

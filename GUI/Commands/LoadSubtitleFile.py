@@ -25,8 +25,7 @@ class LoadSubtitleFile(Command):
         try:
             self.options.InitialiseInstructions()
 
-            # By default the GUI always creates a persistent project
-            project = SubtitleProject(persistent=self.options.get_bool('project', True))
+            project = SubtitleProject(persistent=self.options.project_file)
             project.InitialiseProject(self.filepath, reload_subtitles=self.reload_subtitles)
 
             if not project.subtitles:

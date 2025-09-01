@@ -15,6 +15,7 @@ from GUI.CommandQueue import CommandQueue
 from GUI.Commands.BatchSubtitlesCommand import BatchSubtitlesCommand
 from GUI.Commands.LoadSubtitleFile import LoadSubtitleFile
 from GUI.Commands.SaveProjectFile import SaveProjectFile
+from GUI.Commands.SaveTranslationFile import SaveTranslationFile
 from GUI.FirstRunOptions import FirstRunOptions
 from GUI.GUICommands import ExitProgramCommand
 from GUI.GuiHelpers import LoadStylesheet
@@ -253,8 +254,12 @@ class GuiInterface(QObject):
         if not self.datamodel or not self.datamodel.project:
             raise SubtitleError(_("No project data"))
 
-        command = SaveProjectFile(self.datamodel.project, filepath)
-        self.QueueCommand(command, callback=self._on_project_saved)
+        if self.datamodel.use_project_file:
+            command = SaveProjectFile(self.datamodel.project, filepath)
+            self.QueueCommand(command, callback=self._on_project_saved)
+        else:
+            command = SaveTranslationFile(self.datamodel.project, filepath)
+            self.QueueCommand(command, callback=self._on_translation_saved)
 
     def ShowNewProjectSettings(self, datamodel : ProjectDataModel):
         """
@@ -360,7 +365,15 @@ class GuiInterface(QObject):
         """
         if command.datamodel and command.filepath:
             self._update_last_used_path(command.filepath)
-            self.SetDataModel(command.datamodel)
+            # self.SetDataModel(command.datamodel)
+
+    def _on_translation_saved(self, command : SaveTranslationFile):
+        """
+        Update the data model and last used path after saving a translation
+        """
+        if command.datamodel and command.filepath:
+            self._update_last_used_path(command.filepath)
+            # self.SetDataModel(command.datamodel)
 
     def _update_last_used_path(self, filepath : str):
         """

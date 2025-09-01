@@ -2,6 +2,7 @@ import logging
 
 from GUI.Command import Command, CommandError
 from GUI.Commands.SaveProjectFile import SaveProjectFile
+from GUI.Commands.SaveTranslationFile import SaveTranslationFile
 from GUI.ProjectDataModel import ProjectDataModel
 from GUI.Commands.TranslateSceneCommand import TranslateSceneCommand
 from PySubtitle.Helpers.Localization import _
@@ -67,6 +68,9 @@ class StartTranslationCommand(Command):
                 previous_command = command
 
                 if self.datamodel.autosave_enabled:
-                    command.commands_to_queue.append(SaveProjectFile(project=project))
+                    if self.datamodel.use_project_file:
+                        command.commands_to_queue.append(SaveProjectFile(project=project))
+                    else:
+                        command.commands_to_queue.append(SaveTranslationFile(project=project))
 
         return True

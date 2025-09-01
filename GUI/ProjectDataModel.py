@@ -89,7 +89,7 @@ class ProjectDataModel:
 
     @property
     def autosave_enabled(self):
-        return self.project and self.project.use_project_file and self.project_options.get('autosave', False)
+        return self.project and self.project_options.get('autosave', False)
 
     @property
     def needs_save(self) -> bool:
@@ -123,7 +123,10 @@ class ProjectDataModel:
 
     def SaveProject(self):
         if self.project is not None and self.needs_save:
-            self.project.UpdateProjectFile()
+            if self.use_project_file:
+                self.project.UpdateProjectFile()
+            else:
+                self.project.SaveTranslation()
 
     def GetLock(self):
         return QMutexLocker(self.mutex)

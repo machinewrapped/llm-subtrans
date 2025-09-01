@@ -152,8 +152,14 @@ class ProjectActions(QObject):
             base_path = self.last_used_path or os.getcwd()
             base_name = os.path.basename(project.projectfile) if project.projectfile else "untitled.subtrans"
             filepath = os.path.join(base_path, base_name)
-            filters = f"{_('Subtrans projects')} (*.subtrans);;{_('All Files')} (*)"
-            filepath, dummy = QFileDialog.getSaveFileName(self._mainwindow, _("Save Project File"), filepath, filters)  # type: ignore[unused-ignore]
+            if project.use_project_file:
+                filters = f"{_('Subtrans projects')} (*.subtrans);;{_('All Files')} (*)"
+            else:
+                filters = f"{_('Subtitle files')} (*.srt);;{_('All Files')} (*)"
+
+            title = _("Save Project File") if project.use_project_file else _("Save Translation")
+
+            filepath, dummy = QFileDialog.getSaveFileName(self._mainwindow, title, filepath, filters)  # type: ignore[unused-ignore]
 
         if filepath:
             self.saveProject.emit(filepath)

@@ -92,7 +92,6 @@ class SettingsDialog(QDialog):
     _prepostprocessor_setting = [ _preprocessor_setting, _postprocessor_setting ]
 
     VISIBILITY_DEPENDENCIES = {
-        'autosave': { 'project_file': True },
         'write_backup': { 'project_file': True },
         # 'Processing' : [
         #     { 'preprocess_subtitles': True },

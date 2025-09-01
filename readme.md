@@ -355,7 +355,7 @@ Some additional arguments are available for specific providers.
 
 #### Mistral AI
   - `-k`, `--apikey`:
-  Your [DeepSeek API Key](https://console.mistral.ai/api-keys/). (the app will look for MISTRAL_API_KEY in the environment if this is not provided)
+  Your [Mistral API Key](https://console.mistral.ai/api-keys/). (the app will look for MISTRAL_API_KEY in the environment if this is not provided)
 
 - `--server_url`:
   URL if you are using a custom deployment of Mistral. if unset, the official URL will be used.

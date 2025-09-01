@@ -112,16 +112,13 @@ class ProjectDataModel:
 
     def SaveProject(self):
         """ Save the project file or translation file as needed """
-        with self.GetLock():
+        with QMutexLocker(self.mutex):
             if self.project is not None and self.project.needs_writing:
                 if self.use_project_file:
                     self.project.UpdateProjectFile()
                 elif self.project.any_translated:
                     self.project.SaveTranslation()
                 self.project.needs_writing = False
-
-    def GetLock(self):
-        return QMutexLocker(self.mutex)
 
     def CreateTranslationProvider(self) -> TranslationProvider|None:
         """ Create a translation provider for the current settings """

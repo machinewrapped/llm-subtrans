@@ -59,7 +59,7 @@ class SubtitleProject:
     @property
     def any_translated(self) -> bool:
         with self.lock:
-            return True if self.subtitles and self.subtitles.translated else False
+            return bool(self.subtitles and self.subtitles.translated)
 
     def InitialiseProject(self, filepath : str, outputpath : str|None = None, reload_subtitles : bool = False):
         """
@@ -236,7 +236,7 @@ class SubtitleProject:
         Save the project file if it needs updating
         """
         with self.lock:
-            if self.use_project_file and self.needs_writing and self.subtitles and self.subtitles.scenes:
+            if self.needs_writing and self.subtitles and self.subtitles.scenes:
                 self.SaveProjectFile()
 
     def GetProjectSettings(self) -> SettingsType:
@@ -286,7 +286,7 @@ class SubtitleProject:
 
     def TranslateSubtitles(self, translator : SubtitleTranslator) -> None:
         """
-        Use the translation provider to translate a project
+        One-stop shop: Use the translation provider to translate a project, then save the translation.
         """
         if not self.subtitles:
             raise Exception("No subtitles to translate")
@@ -337,9 +337,6 @@ class SubtitleProject:
 
             translator.TranslateScene(self.subtitles, scene, batch_numbers=batch_numbers, line_numbers=line_numbers)
 
-            if self.write_translation and not translator.aborted:
-                self.SaveTranslation()
-
             return scene
 
         except TranslationAbortedError:
@@ -370,7 +367,6 @@ class SubtitleProject:
 
     def _on_preprocessed(self, scenes) -> None:
         logging.debug("Pre-processing finished")
-        self.needs_writing = self.use_project_file
         self.events.preprocessed(scenes)
 
     def _on_batch_translated(self, batch) -> None:

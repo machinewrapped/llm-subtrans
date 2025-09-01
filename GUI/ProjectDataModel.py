@@ -91,17 +91,6 @@ class ProjectDataModel:
     def autosave_enabled(self):
         return self.project and self.project_options.get('autosave', False)
 
-    @property
-    def needs_save(self) -> bool:
-        """Does the project have changes that should be saved"""
-        return self.project is not None and self.is_project_initialised and self.project.use_project_file
-
-    @property
-    def needs_autosave(self) -> bool:
-        """Does the project have changes that should be auto-saved"""
-        return self.needs_save and self.project_options.get_bool('autosave')
-
-
     def UpdateSettings(self, settings : SettingsType):
         """ Update any options that have changed """
         self.project_options.update(settings)
@@ -122,11 +111,14 @@ class ProjectDataModel:
             self.project.UpdateProjectSettings(settings)
 
     def SaveProject(self):
-        if self.project is not None and self.needs_save:
-            if self.use_project_file:
-                self.project.UpdateProjectFile()
-            else:
-                self.project.SaveTranslation()
+        """ Save the project file or translation file as needed """
+        with self.GetLock():
+            if self.project is not None and self.project.needs_writing:
+                if self.use_project_file:
+                    self.project.UpdateProjectFile()
+                elif self.project.any_translated:
+                    self.project.SaveTranslation()
+                self.project.needs_writing = False
 
     def GetLock(self):
         return QMutexLocker(self.mutex)

@@ -109,7 +109,7 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'names': ParseNames(args.names or args.name),
         'postprocess_translation': args.postprocess,
         'preprocess_subtitles': args.preprocess,
-        'project_file': args.project or args.reparse or args.retranslate,
+        'project_file': args.project or args.reparse or args.retranslate or args.reload,
         'preview': args.preview,
         'reparse': args.reparse,
         'retranslate': args.retranslate,
@@ -122,9 +122,6 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'temperature': args.temperature,
         'write_backup': args.writebackup,
     }
-
-    if args.reload and not args.project:
-        logging.warning("The --reload option has no effect without --project")
 
     # Adding optional new keys from kwargs
     for key, value in kwargs.items():

@@ -83,7 +83,6 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--retranslate', action='store_true', help="Retranslate all subtitles, ignoring existing translations in the project file")
     parser.add_argument('--reparse', action='store_true', help="Reparse previous translation responses, reconstructing the translated subtitles")
     parser.add_argument('--reload', action='store_true', help="Reload the subtitles from the original file, ignoring existing subtitles in the project file")
-    parser.add_argument('--apikey', type=str, default=None, help="API key for the translation provider")
     parser.add_argument('--ratelimit', type=int, default=None, help="Maximum number of batches per minute to process")
     parser.add_argument('--scenethreshold', type=float, default=None, help="Number of seconds between lines to consider a new scene")
     parser.add_argument('--substitution', action='append', type=str, default=None, help="A pair of strings separated by ::, to subsitute in source or translation")

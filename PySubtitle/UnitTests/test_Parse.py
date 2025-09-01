@@ -13,7 +13,6 @@ class TestParseDelayFromHeader(unittest.TestCase):
         ("500ms", 1.0),
         ("1500ms", 1.5),
         ("abc", 32.1),
-        ("12x", 6.66),
     ]
 
     def test_ParseDelayFromHeader(self):

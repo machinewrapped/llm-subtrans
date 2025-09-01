@@ -51,7 +51,6 @@ class TestOptions(unittest.TestCase):
         
         # Test boolean defaults
         bool_test_cases = [
-            ('project', True),
             ('include_original', False),
             ('break_long_lines', True),
             ('normalise_dialog_tags', True),
@@ -66,7 +65,7 @@ class TestOptions(unittest.TestCase):
                 self.assertEqual(result, expected)
         
         # Test None values
-        none_test_cases = [ ('last_used_path') ]
+        none_test_cases = [ 'last_used_path', 'project' ]
         
         for key in none_test_cases:
             with self.subTest(key=key):

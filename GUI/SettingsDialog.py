@@ -36,8 +36,8 @@ class SettingsDialog(QDialog):
             'instruction_file': (str, _("Instructions for the translation provider to follow")),
             'prompt': (str, _("The (brief) instruction for each batch of subtitles. Some [tags] are automatically filled in")),
             'project_file': (bool, _("Create a project file to allow resuming or revising translation")),
-            'autosave': (bool, _("Automatically save the project after each translation batch")),
             'write_backup': (bool, _("Save a backup copy of the project when opening it")),
+            'autosave': (bool, _("Automatically save the project/translation after each scene is translated")),
             # 'autosplit_incomplete': (bool, "If true, incomplete translations will be split into smaller batches and retried"),
             'retry_on_error': (bool, _("If true, translations that fail validation will be retried with a note about the error")),
             'stop_on_error': (bool, _("Stop translating if an error is encountered"))

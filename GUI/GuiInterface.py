@@ -256,10 +256,10 @@ class GuiInterface(QObject):
 
         if self.datamodel.use_project_file:
             command = SaveProjectFile(self.datamodel.project, filepath)
-            self.QueueCommand(command, callback=self._on_project_saved)
         else:
             command = SaveTranslationFile(self.datamodel.project, filepath)
-            self.QueueCommand(command, callback=self._on_translation_saved)
+
+        self.QueueCommand(command, callback=self._on_save)
 
     def ShowNewProjectSettings(self, datamodel : ProjectDataModel):
         """
@@ -359,21 +359,14 @@ class GuiInterface(QObject):
         if self.datamodel.is_project_valid and not self.datamodel.is_project_initialised:
             self.ShowNewProjectSettings(self.datamodel)
 
-    def _on_project_saved(self, command : SaveProjectFile):
+    def _on_save(self, command : SaveProjectFile|SaveTranslationFile):
         """
-        Update the data model and last used path after saving a project
-        """
-        if command.datamodel and command.filepath:
-            self._update_last_used_path(command.filepath)
-            # self.SetDataModel(command.datamodel)
-
-    def _on_translation_saved(self, command : SaveTranslationFile):
-        """
-        Update the data model and last used path after saving a translation
+        Update the data model and last used path after saving the project
         """
         if command.datamodel and command.filepath:
             self._update_last_used_path(command.filepath)
-            # self.SetDataModel(command.datamodel)
+            if command.datamodel != self.datamodel:
+                self.SetDataModel(command.datamodel)
 
     def _update_last_used_path(self, filepath : str):
         """

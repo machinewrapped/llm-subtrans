@@ -76,6 +76,10 @@ class SubtitleProject:
         project_file_exists : bool = os.path.exists(self.projectfile)
         project_settings : SettingsType = SettingsType()
 
+        # If initialised with a project file, we are implicitly using a project file
+        if filepath == self.projectfile:
+            self.use_project_file = True
+
         read_project : bool = self.use_project_file and project_file_exists
         load_subtitles : bool = reload_subtitles or not read_project
 

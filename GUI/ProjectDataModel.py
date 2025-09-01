@@ -74,8 +74,33 @@ class ProjectDataModel:
         return self.translation_provider.allow_multithreaded_translation
 
     @property
+    def is_project_valid(self) -> bool:
+        """Check whether the project is valid (has any subtitles)"""
+        return self.project is not None and self.project.subtitles is not None
+
+    @property
+    def is_project_initialised(self) -> bool:
+        """Check whether the project has been initialised (subtitles loaded and batched)"""
+        return self.project is not None and self.project.subtitles is not None and bool(self.project.subtitles.scenes)
+
+    @property
+    def use_project_file(self):
+        return self.project and self.project.use_project_file
+
+    @property
     def autosave_enabled(self):
-        return self.project and self.project_options.get('autosave', False)
+        return self.project and self.project.use_project_file and self.project_options.get('autosave', False)
+
+    @property
+    def needs_save(self) -> bool:
+        """Does the project have changes that should be saved"""
+        return self.project is not None and self.is_project_initialised and self.project.use_project_file
+
+    @property
+    def needs_autosave(self) -> bool:
+        """Does the project have changes that should be auto-saved"""
+        return self.needs_save and self.project_options.get_bool('autosave')
+
 
     def UpdateSettings(self, settings : SettingsType):
         """ Update any options that have changed """
@@ -96,24 +121,8 @@ class ProjectDataModel:
             self._update_translation_provider()
             self.project.UpdateProjectSettings(settings)
 
-    def IsProjectValid(self) -> bool:
-        """Check whether the project is valid (has any subtitles)"""
-        return self.project is not None and self.project.subtitles is not None
-
-    def IsProjectInitialised(self) -> bool:
-        """Check whether the project has been initialised (subtitles loaded and batched)"""
-        return self.project is not None and self.project.subtitles is not None and bool(self.project.subtitles.scenes)
-
-    def NeedsSave(self) -> bool:
-        """Does the project have changes that should be saved"""
-        return self.project is not None and self.IsProjectInitialised() and self.project.write_project
-
-    def NeedsAutosave(self) -> bool:
-        """Does the project have changes that should be auto-saved"""
-        return self.NeedsSave() and self.project_options.get_bool('autosave')
-
     def SaveProject(self):
-        if self.project is not None and self.NeedsSave():
+        if self.project is not None and self.needs_save:
             self.project.UpdateProjectFile()
 
     def GetLock(self):

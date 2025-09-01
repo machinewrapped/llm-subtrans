@@ -336,7 +336,7 @@ class GuiInterface(QObject):
 
         # Auto-save if the commmand queue is empty and the project has changed
         if not self.command_queue.has_commands:
-            if self.datamodel and self.datamodel.NeedsAutosave():
+            if self.datamodel and self.datamodel.needs_autosave:
                 self.datamodel.SaveProject()
 
         self.commandComplete.emit(command)
@@ -351,10 +351,8 @@ class GuiInterface(QObject):
 
         self.SetDataModel(command.datamodel)
         self._update_last_used_path(command.filepath)
-        if self.datamodel.IsProjectValid():
-            is_initialised = self.datamodel.IsProjectInitialised()
-            if not is_initialised:
-                self.ShowNewProjectSettings(self.datamodel)
+        if self.datamodel.is_project_valid and not self.datamodel.is_project_initialised:
+            self.ShowNewProjectSettings(self.datamodel)
 
     def _on_project_saved(self, command : SaveProjectFile):
         """

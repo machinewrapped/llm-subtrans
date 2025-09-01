@@ -50,7 +50,7 @@ try:
     # Translate the subtitles
     project.TranslateSubtitles(translator)
 
-    if project.write_project:
+    if project.use_project_file:
         logging.info(f"Writing project data to {str(project.projectfile)}")
         project.SaveProjectFile()
 

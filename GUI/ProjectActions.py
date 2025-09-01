@@ -143,6 +143,8 @@ class ProjectActions(QObject):
 
         self.saveSettings.emit()
 
+        #TODO: if project.use_project_file is false, open a dialog with subtitle file filters and call SaveTranslation instead        
+
         filepath = project.projectfile
         show_dialog = self._is_shift_pressed()
 

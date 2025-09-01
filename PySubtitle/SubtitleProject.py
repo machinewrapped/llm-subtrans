@@ -37,7 +37,7 @@ class SubtitleProject:
         self.lock = threading.RLock()
 
         # By default the project is not persistent, i.e. it will not be saved to a file and automatically reloaded next time
-        self.write_project : bool = persistent
+        self.use_project_file : bool = persistent
 
         # By default the translated subtitles will be written to file
         self.write_translation = True
@@ -74,14 +74,15 @@ class SubtitleProject:
         project_file_exists : bool = os.path.exists(self.projectfile)
         project_settings : SettingsType = SettingsType()
 
-        read_project : bool = filepath == self.projectfile and project_file_exists
-        load_subtitles : bool = reload_subtitles or not read_project
+        read_project : bool = self.use_project_file and project_file_exists
+        load_subtitles : bool = reload_subtitles or not project_file_exists
 
-
-        if read_project and project_file_exists:
-            logging.info(_("Loading existing project file {}").format(self.projectfile))
+        if project_file_exists and not read_project:
+            logging.warning(_("Project file {} exists but will not be used").format(self.projectfile))
 
         if read_project:
+            logging.info(_("Loading existing project file {}").format(self.projectfile))
+
             # Try to load the project file
             subtitles : Subtitles|None = self.ReadProjectFile(self.projectfile)
             project_settings = self.GetProjectSettings()
@@ -120,7 +121,7 @@ class SubtitleProject:
             if outputpath:
                 subtitles.outputpath = outputpath
 
-        self.needs_writing = self.write_project
+        self.needs_writing = self.use_project_file
 
     def SaveOriginal(self, outputpath : str|None = None):
         """
@@ -179,9 +180,6 @@ class SubtitleProject:
             if not self.subtitles.scenes:
                 raise Exception("Can't write project file, no scenes")
 
-            if projectfile and not self.write_project:
-                self.write_project = True
-
             if not projectfile:
                 projectfile = self.projectfile
             elif projectfile and not self.projectfile:
@@ -236,7 +234,7 @@ class SubtitleProject:
         Save the project file if it needs updating
         """
         with self.lock:
-            if self.needs_writing and self.subtitles and self.subtitles.scenes:
+            if self.use_project_file and self.needs_writing and self.subtitles and self.subtitles.scenes:
                 self.SaveProjectFile()
 
     def GetProjectSettings(self) -> SettingsType:
@@ -267,7 +265,7 @@ class SubtitleProject:
 
         if self.subtitles.scenes:
             self.subtitles.UpdateOutputPath()
-            self.needs_writing = True
+            self.needs_writing = self.use_project_file
 
     def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:
         """
@@ -368,15 +366,15 @@ class SubtitleProject:
 
     def _on_preprocessed(self, scenes) -> None:
         logging.debug("Pre-processing finished")
-        self.needs_writing = self.write_project
+        self.needs_writing = self.use_project_file
         self.events.preprocessed(scenes)
 
     def _on_batch_translated(self, batch) -> None:
         logging.debug("Batch translated")
-        self.needs_writing = self.write_project
+        self.needs_writing = self.use_project_file
         self.events.batch_translated(batch)
 
     def _on_scene_translated(self, scene) -> None:
         logging.debug("Scene translated")
-        self.needs_writing = self.write_project
+        self.needs_writing = self.use_project_file
         self.events.scene_translated(scene)

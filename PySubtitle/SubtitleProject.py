@@ -100,13 +100,13 @@ class SubtitleProject:
 
                 if subtitles.scenes:
                     self.existing_project = True
-                    self.load_subtitles = reload_subtitles
-                    if self.load_subtitles:
+                    load_subtitles = reload_subtitles
+                    if load_subtitles:
                         logging.info(_("Reloading subtitles from the source file"))
 
                 else:
                     logging.error(_("Unable to read project file, starting afresh"))
-                    self.load_subtitles = True
+                    load_subtitles = True
 
         if load_subtitles:
             try:

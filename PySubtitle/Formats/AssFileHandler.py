@@ -310,21 +310,40 @@ class AssFileHandler(SubtitleFileHandler):
         if start_match:
             tags_section = start_match.group(0)
             remaining_text = text[len(tags_section):]
-            
+
             # Extract basic formatting tags from both standalone blocks and composite blocks
             basic_tags = []
             for tag_match in _TAG_BLOCK_PATTERN.finditer(tags_section):
                 tag_content = tag_match.group(0)
-                # Check if this is a standalone basic formatting tag
                 if _STANDALONE_BASIC_TAG_PATTERN.match(tag_content):
                     basic_tags.append(tag_content)
                 else:
-                    # Extract basic formatting tags from within composite blocks
                     for basic_tag in _BASIC_TAG_PATTERN.finditer(tag_content):
                         basic_tags.append('{' + basic_tag.group(0) + '}')
-            
+
             # Rebuild text with only basic formatting tags preserved
             text = ''.join(basic_tags) + remaining_text
+
+        # Extract basic tags from composite blocks anywhere in the line
+        rebuilt = []
+        last_end = 0
+        for tag_match in _TAG_BLOCK_PATTERN.finditer(text):
+            block = tag_match.group(0)
+            rebuilt.append(text[last_end:tag_match.start()])
+
+            if _STANDALONE_BASIC_TAG_PATTERN.match(block):
+                rebuilt.append(block)
+            else:
+                basic_tags = ['{' + m.group(0) + '}' for m in _BASIC_TAG_PATTERN.finditer(block)]
+                cleaned = _BASIC_TAG_PATTERN.sub('', block)
+                if cleaned != '{}':
+                    rebuilt.append(cleaned)
+                rebuilt.extend(basic_tags)
+
+            last_end = tag_match.end()
+
+        rebuilt.append(text[last_end:])
+        text = ''.join(rebuilt)
         
         # Convert line breaks:
         # \N (hard line break) -> \n (newline for GUI)

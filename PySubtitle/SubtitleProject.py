@@ -84,11 +84,11 @@ class SubtitleProject:
         read_project : bool = self.use_project_file and project_file_exists
         load_subtitles : bool = reload_subtitles or not read_project
 
+        if not read_project and not load_subtitles:
+            raise SubtitleError("No project or subtitles to load")
+
         if project_file_exists and not read_project:
             logging.warning(_("Project file {} exists but will not be used").format(self.projectfile))
-
-        if not self.read_project and not self.load_subtitles:
-            raise SubtitleError("No project or subtitles to load")
 
         subtitles : Subtitles|None = None
 

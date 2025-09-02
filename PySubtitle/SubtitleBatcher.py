@@ -9,6 +9,7 @@ class SubtitleBatcher:
         """ Initialize a SubtitleBatcher helper class with settings """
         self.min_batch_size : int = settings.get_int('min_batch_size') or 1
         self.max_batch_size : int = settings.get_int('max_batch_size') or 100
+        self.fix_overlaps : bool = settings.get_bool('prevent_overlapping_times', False)
 
         scene_threshold_seconds : float = settings.get_float('scene_threshold') or 30.0
         self.scene_threshold : timedelta = timedelta(seconds=scene_threshold_seconds)
@@ -25,8 +26,8 @@ class SubtitleBatcher:
             if line.start is None or line.end is None:
                 raise ValueError(f"Line {line.number} has missing start or end time.")
 
-            # Fix overlapping display times
-            if last_endtime and line.start < last_endtime:
+            # Fix overlapping display times (otherwise gaps can be negative)
+            if self.fix_overlaps and last_endtime and line.start < last_endtime:
                 line.start = last_endtime + timedelta(milliseconds=10)
 
             gap = line.start - last_endtime if last_endtime is not None else None

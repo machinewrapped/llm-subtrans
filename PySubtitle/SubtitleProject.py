@@ -175,9 +175,17 @@ class SubtitleProject:
             self.subtitles = Subtitles(filepath)
             self.subtitles.LoadSubtitles()
 
-            # TODO: set file handler based on loaded format or output format
-
         return self.subtitles
+
+    def SaveProject(self):
+        """ Save the project file or translation file as needed """
+        with self.lock:
+            if self.needs_writing:
+                if self.use_project_file:
+                    self.UpdateProjectFile()
+                if self.any_translated and self.write_translation:
+                    self.SaveTranslation()
+                self.needs_writing = False
 
     def SaveProjectFile(self, projectfile : str|None = None) -> None:
         """
@@ -320,7 +328,8 @@ class SubtitleProject:
             logging.info(_("Translation aborted"))
 
         except Exception as e:
-            if save_translation and self.subtitles and translator.stop_on_error:
+            if save_translation and self.subtitles.any_translated:
+                logging.warning(_("Translation failed, saving partial results"))
                 self.SaveTranslation()
 
             logging.error(_("Failed to translate subtitles: {}").format(str(e)))

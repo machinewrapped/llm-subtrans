@@ -121,16 +121,6 @@ class ProjectDataModel:
             if self.project.subtitles.outputpath != previous_output_path:
                 logging.info(_("Setting output path to {}").format(self.project.subtitles.outputpath))
 
-    def SaveProject(self):
-        """ Save the project file or translation file as needed """
-        with QMutexLocker(self.mutex):
-            if self.project is not None and self.project.needs_writing:
-                if self.use_project_file:
-                    self.project.UpdateProjectFile()
-                if self.project.any_translated:
-                    self.project.SaveTranslation()
-                self.project.needs_writing = False
-
     def CreateTranslationProvider(self) -> TranslationProvider|None:
         """ Create a translation provider for the current settings """
         if not self.project_options.provider:

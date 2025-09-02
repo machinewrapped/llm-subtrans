@@ -27,6 +27,6 @@ class SaveProjectFile(Command):
         if current_filepath != self.project.projectfile or current_outputpath != self.project.subtitles.outputpath:
             self.project.needs_writing = True
 
-        self.datamodel.SaveProject()
+        self.project.SaveProject()
 
         return True

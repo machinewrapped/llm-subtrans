@@ -238,7 +238,8 @@ class GuiInterface(QObject):
         if self.command_queue:
             self.command_queue.Stop()
 
-        self.datamodel.SaveProject()
+        if self.datamodel and self.datamodel.project:
+            self.datamodel.project.SaveProject()
 
     def LoadProject(self, filepath : str, reload_subtitles : bool = False):
         """
@@ -340,9 +341,9 @@ class GuiInterface(QObject):
                 self.dataModelChanged.emit(None)
 
         # Auto-save if the commmand queue is empty and the project has changed
-        if not self.command_queue.has_commands:
-            if self.datamodel and self.datamodel.autosave_enabled:
-                self.datamodel.SaveProject()
+        if self.datamodel and not self.command_queue.has_commands:
+            if self.datamodel.project and self.datamodel.autosave_enabled:
+                self.datamodel.project.SaveProject()
 
         self.commandComplete.emit(command)
 

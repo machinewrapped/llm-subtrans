@@ -189,8 +189,8 @@ class ProjectActions(QObject):
 
     def ShowProjectSettings(self, show : bool = True):
         self._validate_datamodel()
-        if self.datamodel and not show:
-            self.datamodel.SaveProject()
+        if self.datamodel and self.datamodel.project and not show:
+            self.datamodel.project.SaveProject()
 
         self.showProjectSettings.emit(show)
 

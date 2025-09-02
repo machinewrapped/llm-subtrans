@@ -266,7 +266,9 @@ class ProjectSettings(QGroupBox):
         if self.datamodel is not None:
             if key == 'provider':
                 self._update_provider_settings(str(value))
-                self.datamodel.SaveProject()
+                if self.datamodel.project is not None:
+                    self.datamodel.project.SaveProject()
+
             elif key == 'model' and not self.updating_model_list:
                 if value and value != self.settings.get('model'):
                     self.datamodel.UpdateProjectSettings({ "model": value })

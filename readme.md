@@ -242,7 +242,7 @@ llm-subtrans --project --auto -l <language> <path_to_subtitle_file>  # Project f
 LLM-Subtrans is primarily a translation application, and format conversion is probably best handled by dedicated tools, but the option exists to read one format and write another.
 
 ```sh
-# Use OpenRouter with a specific model and convert from .ass to .srt
+# Use OpenRouter and convert from .ass to .srt
 llm-subtrans --project --auto -l <language> -o <path_to_output_file.srt> <path_to_subtitle_file.ass>
 ```
 

@@ -50,8 +50,7 @@ class Subtitles:
         'format': None
     })
 
-    def __init__(self, filepath: str | None = None, outputpath: str | None = None,
-    ) -> None:
+    def __init__(self, filepath: str | None = None, outputpath: str | None = None) -> None:
         self.originals: list[SubtitleLine] | None = None
         self.translated: list[SubtitleLine] | None = None
         self.start_line_number: int = 1

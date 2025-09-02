@@ -6,7 +6,14 @@ import logging
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(base_path)
 
-from scripts.subtrans_common import InitLogger, CreateArgParser, CreateOptions, CreateTranslator, CreateProject
+from scripts.subtrans_common import (
+    InitLogger,
+    CreateArgParser,
+    CreateOptions,
+    CreateTranslator,
+    CreateProject,
+    HandleFormatListing,
+)
 
 from PySubtitle.Options import Options
 from PySubtitle.SubtitleProject import SubtitleProject
@@ -22,6 +29,7 @@ parser.add_argument('--auto', action='store_true', help="Use OpenRouter's automa
 parser.add_argument('--chat', action='store_true', help="Use chat format requests for the endpoint")
 parser.add_argument('--systemmessages', action='store_true', help="Indicates that the endpoint supports system messages in chat requests")
 args = parser.parse_args()
+HandleFormatListing(args)
 
 # Determine provider based on whether server is specified
 provider = "Custom Server" if args.server else "OpenRouter"

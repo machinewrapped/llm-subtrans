@@ -30,7 +30,7 @@ class SubtitleFormatRegistry:
         cls._ensure_discovered()
         ext = extension.lower()
         if ext not in cls._handlers:
-            raise ValueError(f"Unknown subtitle format: {extension}")
+            raise ValueError(_("Unknown subtitle format: {extension}. Available formats: {available}").format(extension=extension, available=cls.list_available_formats()))
         return cls._handlers[ext]
 
     @classmethod
@@ -40,7 +40,9 @@ class SubtitleFormatRegistry:
             extension = os.path.splitext(filename)[1].lower()
 
         if extension is None or not extension:
-            raise ValueError(_("Format cannot be deduced from filename or extension '{name}'").format(name=filename or extension or "None"))
+            raise ValueError(
+                _("Format cannot be deduced from filename or extension '{name}'. Available formats: {formats}").format(
+                    name=filename or extension or "None", formats=cls.list_available_formats()))
 
         handler_cls = cls.get_handler_by_extension(extension)
         return handler_cls()
@@ -49,6 +51,11 @@ class SubtitleFormatRegistry:
     def enumerate_formats(cls) -> list[str]:
         cls._ensure_discovered()
         return sorted(cls._handlers.keys())
+
+    @classmethod
+    def list_available_formats(cls) -> str:
+        formats = cls.enumerate_formats()
+        return _("None") if not formats else ", ".join(formats)
 
     @classmethod
     def clear(cls) -> None:

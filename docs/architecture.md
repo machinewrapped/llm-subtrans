@@ -33,6 +33,13 @@ Contains all subtitle processing, translation logic, and project management. Thi
 - `TranslationProvider` – base class for pluggable backends (OpenAI, Anthropic, etc.)
 - `Options` – centralized settings management
 
+### Subtitle Format Handling
+Subtitle files are processed through a pluggable system:
+- `SubtitleFileHandler` implementations read and write specific formats while exposing a common interface.
+- `SubtitleFormatRegistry` discovers handlers in `PySubtitle/Formats/` and maps file extensions to the appropriate handler based on priority.
+- `SubtitleProject` uses the registry to detect formats from filenames and can convert subtitles when the output extension differs from the source.
+CLI tools expose `--list-formats` to enumerate supported extensions.
+
 ### GUI (User Interface)
 PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, and user interactions.
 

@@ -6,7 +6,14 @@ import logging
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(base_path)
 
-from scripts.subtrans_common import InitLogger, CreateArgParser, CreateOptions, CreateTranslator, CreateProject
+from scripts.subtrans_common import (
+    InitLogger,
+    CreateArgParser,
+    CreateOptions,
+    CreateTranslator,
+    CreateProject,
+    HandleFormatListing,
+)
 
 from PySubtitle.Options import Options
 from PySubtitle.SubtitleProject import SubtitleProject
@@ -20,6 +27,7 @@ parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Anthro
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
 parser.add_argument('--proxy', type=str, default=None, help="SOCKS proxy URL (e.g., socks://127.0.0.1:1089)")
 args = parser.parse_args()
+HandleFormatListing(args)
 
 logger_options = InitLogger("claude-subtrans", args.debug)
 

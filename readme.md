@@ -1,6 +1,8 @@
 # LLM-Subtrans
 LLM-Subtrans is an open source subtitle translator that uses LLMs as a translation service. It can translate subtitles between any language pairs supported by the language model.
 
+The application supports multiple subtitle formats through a pluggable system. Currently `.srt` and `.ass`/`.ssa` files are supported.
+
 Note: LLM-Subtrans requires an active internet connection. Subtitles are sent to the provider's servers for translation, so their privacy policy applies.
 
 ## Installation
@@ -189,23 +191,31 @@ LLM-Subtrans can be used as a console command or shell script. The install scrip
 
 The most basic usage is:
 ```sh
+# List supported subtitle formats
+llm-subtrans --list-formats
+
 # Use OpenRouter with automatic model selection
-llm-subtrans --auto -l <language> <path_to_srt_file>
+llm-subtrans --auto -l <language> <path_to_subtitle_file>
 
 # Use OpenRouter with a specific model
-llm-subtrans --model google/gemini-2.5-flash -l <language> <path_to_srt_file>
+llm-subtrans --model google/gemini-2.5-flash -l <language> <path_to_subtitle_file>
+
+# Convert format while translating (ASS to SRT in this example)
+llm-subtrans -l <language> -o output.srt input.ass
 
 # Use any server with an OpenAI-compatible API
-llm-subtrans -s <server_address> -e <endpoint> -k <api_key> -l <language> <path_to_srt_file>
+llm-subtrans -s <server_address> -e <endpoint> -k <api_key> -l <language> <path_to_subtitle_file>
 
 # Use specific providers
-gpt-subtrans <path_to_srt_file> --target_language <target_language>
-gemini-subtrans <path_to_srt_file> --target_language <target_language>
-claude-subtrans <path_to_srt_file> --target_language <target_language>
+gpt-subtrans <path_to_subtitle_file> --target_language <target_language>
+gemini-subtrans <path_to_subtitle_file> --target_language <target_language>
+claude-subtrans <path_to_subtitle_file> --target_language <target_language>
 
 # process files in different folders (the script will need editing to configure the path and provider settings)
 python3 batch_process.py
 ```
+
+The output format is inferred from file extensions. To convert between formats, provide an output path with the desired extension.
 
 If the target language is not specified the default is English.
 
@@ -218,6 +228,23 @@ Other options that can be specified on the command line are detailed below.
 The `--project` argument or `PROJECT_FILE` .env setting control whether a project file will be written to disc for the command line.
 
 If enabled, a file will be created with the `.subtrans` extension when a subtitle file is loaded, containing details of the project. It will be updated as the translation progresses. Writing a project file allows, amongst other things, resuming a translation that was interrupted. It is highly recommended.
+
+```sh
+# Use OpenRouter and create a persistent project
+llm-subtrans --project --auto -l <language> <path_to_subtitle_file>
+
+# Use OpenRouter and resume a persistent project
+llm-subtrans --project --auto -l <language> <path_to_subtrans_file>
+llm-subtrans --project --auto -l <language> <path_to_subtitle_file>  # Project file will be detected automatically if it is in the same folder
+```
+
+## Format Conversion
+LLM-Subtrans is primarily a translation application, and format conversion is probably best handled by dedicated tools, but the option exists to read one format and write another.
+
+```sh
+# Use OpenRouter with a specific model and convert from .ass to .srt
+llm-subtrans --project --auto -l <language> -o <path_to_output_file.srt> <path_to_subtitle_file.ass>
+```
 
 ## Advanced usage
 
@@ -412,7 +439,7 @@ Some additional arguments are available for specific providers.
 If you need to use proxy in your location, you can use socks proxy by using command line
 
 ```sh
-python3 gpt-subtrans.py <path_to_srt_file> --target_language <target_language> --proxy socks://127.0.0.1:1089
+python3 gpt-subtrans.py <path_to_subtitle_file> --target_language <target_language> --proxy socks://127.0.0.1:1089
 ```
 Remember to change the local port to yours and turn on your proxy tools such as v2ray, naiveproxy and clash.
 

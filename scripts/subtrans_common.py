@@ -8,6 +8,7 @@ from PySubtitle.Helpers import GetOutputPath
 from PySubtitle.Helpers.Parse import ParseNames
 from PySubtitle.Options import Options, config_dir
 from PySubtitle.Substitutions import Substitutions
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleTranslator import SubtitleTranslator
 from PySubtitle.TranslationProvider import TranslationProvider
@@ -58,9 +59,17 @@ def CreateArgParser(description : str) -> ArgumentParser:
     """
     Create new arg parser and parse shared command line arguments between models
     """
+    pre_parser = ArgumentParser(add_help=False)
+    pre_parser.add_argument('--list-formats', action='store_true')
+    pre_args, _ = pre_parser.parse_known_args()
+    if pre_args.list_formats:
+        HandleFormatListing(pre_args)
+        
     parser = ArgumentParser(description=description)
-    parser.add_argument('input', help="Input SRT file path")
-    parser.add_argument('-o', '--output', help="Output SRT file path")
+    input_help = "Path to subtitle file (see --list-formats for supported formats)"
+    parser.add_argument('input', help=input_help)
+    parser.add_argument('-o', '--output', help="Output subtitle file path; format inferred from extension")
+    parser.add_argument('--list-formats', action='store_true', help="List supported subtitle formats and exit")
     parser.add_argument('-l', '--target_language', type=str, default=None, help="The target language for the translation")
     parser.add_argument('--batchthreshold', type=float, default=None, help="Number of seconds between lines to consider for batching")
     parser.add_argument('--debug', action='store_true', help="Run with DEBUG log level")
@@ -90,6 +99,16 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--temperature', type=float, default=0.0, help="A higher temperature increases the random variance of translations.")
     parser.add_argument('--writebackup', action='store_true', help="Write a backup of the project file when it is loaded (if it exists)")
     return parser
+
+def HandleFormatListing(args: Namespace) -> None:
+    """Print supported subtitle formats and exit if requested."""
+    if getattr(args, "list_formats", False):
+        formats = SubtitleFormatRegistry.list_available_formats()
+        if formats:
+            print(f"Supported subtitle formats: {formats}")
+        else:
+            print("No subtitle formats available.")
+        raise SystemExit(0)
 
 def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
     """ Create options with additional arguments """

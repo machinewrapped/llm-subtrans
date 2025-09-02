@@ -16,12 +16,18 @@ class TranslateSceneCommand(Command):
     """
     Ask the translator to translate a scene (optionally just select batches in the scene)
     """
-    def __init__(self, scene_number : int, batch_numbers : list[int]|None = None, line_numbers : list[int]|None = None, datamodel : ProjectDataModel|None = None):
+    def __init__(self, scene_number : int, 
+                    batch_numbers : list[int]|None = None, 
+                    line_numbers : list[int]|None = None,
+                    resume : bool = False, 
+                    datamodel : ProjectDataModel|None = None):
+
         super().__init__(datamodel)
-        self.translator = None
-        self.scene_number = scene_number
-        self.batch_numbers = batch_numbers
-        self.line_numbers = line_numbers
+        self.translator : SubtitleTranslator|None = None
+        self.resume : bool = resume
+        self.scene_number : int = scene_number
+        self.batch_numbers : list[int]|None = batch_numbers
+        self.line_numbers : list[int]|None = line_numbers
         self.can_undo = False
 
     def execute(self) -> bool:
@@ -41,7 +47,7 @@ class TranslateSceneCommand(Command):
         if not translation_provider:
             raise CommandError(_("No translation provider configured"), command=self)
 
-        self.translator = SubtitleTranslator(options, translation_provider)
+        self.translator = SubtitleTranslator(options, translation_provider, resume=self.resume)
 
         self.translator.events.batch_translated += self._on_batch_translated # type: ignore
 

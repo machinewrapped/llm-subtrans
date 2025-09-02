@@ -300,6 +300,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             ("No formatting", "No formatting"),
             ("{\\pos(100,200)}Positioned text", "Positioned text"),  # Position removed
             ("{\\c&H00FF00&}Colored text", "Colored text"),  # Color removed
+            ("Text {\\c&H00FF00&\\i1}hello{\\i0}", "Text {\\c&H00FF00&}<i>hello</i>"),
         ]
         
         for ass_input, expected_html in test_cases:

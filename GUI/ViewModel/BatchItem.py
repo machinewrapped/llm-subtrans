@@ -17,7 +17,7 @@ from PySubtitle.Helpers.Localization import _
 class BatchItem(ViewModelItem):
     """ Represents a subtitle batch in the view model"""
     def __init__(self, scene_number : int, batch : SubtitleBatch, debug_view : bool = False):
-        super(BatchItem, self).__init__(_("Scene {scene}, batch {batch}").format(scene=scene_number, batch=batch.number))
+        super().__init__(_("Scene {scene}, batch {batch}").format(scene=scene_number, batch=batch.number))
         self.scene: int = scene_number
         self.number: int = batch.number
         self.debug_view: bool = debug_view

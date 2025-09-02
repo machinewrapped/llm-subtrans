@@ -74,6 +74,20 @@ class ProjectDataModel:
         return self.translation_provider.allow_multithreaded_translation
 
     @property
+    def is_project_valid(self) -> bool:
+        """Check whether the project is valid (has any subtitles)"""
+        return self.project is not None and self.project.subtitles is not None
+
+    @property
+    def is_project_initialised(self) -> bool:
+        """Check whether the project has been initialised (subtitles loaded and batched)"""
+        return self.project is not None and self.project.subtitles is not None and bool(self.project.subtitles.scenes)
+
+    @property
+    def use_project_file(self):
+        return self.project and self.project.use_project_file
+
+    @property
     def autosave_enabled(self):
         return self.project and self.project_options.get('autosave', False)
 
@@ -99,37 +113,15 @@ class ProjectDataModel:
 
             self.project.UpdateProjectSettings(settings)
 
-            # Update the output path with optional format change
-            previous_output_path : str|None = self.project.subtitles.outputpath
-
-            self.project.subtitles.UpdateOutputPath(path=self.project.projectfile, extension=settings.get_str('format'))
-
-            if self.project.subtitles.outputpath != previous_output_path:
-                logging.info(_("Setting output path to {}").format(self.project.subtitles.outputpath))
-
-
-    def IsProjectValid(self) -> bool:
-        """Check whether the project is valid (has any subtitles)"""
-        return self.project is not None and self.project.subtitles is not None
-
-    def IsProjectInitialised(self) -> bool:
-        """Check whether the project has been initialised (subtitles loaded and batched)"""
-        return self.project is not None and self.project.subtitles is not None and bool(self.project.subtitles.scenes)
-
-    def NeedsSave(self) -> bool:
-        """Does the project have changes that should be saved"""
-        return self.project is not None and self.IsProjectInitialised() and self.project.write_project
-
-    def NeedsAutosave(self) -> bool:
-        """Does the project have changes that should be auto-saved"""
-        return self.NeedsSave() and self.project_options.get_bool('autosave')
-
     def SaveProject(self):
-        if self.project is not None and self.NeedsSave():
-            self.project.UpdateProjectFile()
-
-    def GetLock(self):
-        return QMutexLocker(self.mutex)
+        """ Save the project file or translation file as needed """
+        with QMutexLocker(self.mutex):
+            if self.project is not None and self.project.needs_writing:
+                if self.use_project_file:
+                    self.project.UpdateProjectFile()
+                elif self.project.any_translated:
+                    self.project.SaveTranslation()
+                self.project.needs_writing = False
 
     def CreateTranslationProvider(self) -> TranslationProvider|None:
         """ Create a translation provider for the current settings """

@@ -15,7 +15,7 @@ class OptionWidget(QWidget):
     contentChanged = Signal()
 
     def __init__(self, key, initial_value, parent=None, tooltip = None):
-        super(OptionWidget, self).__init__(parent)
+        super().__init__(parent)
         self.key = key
         self.name = _(key)
         self.initial_value = initial_value
@@ -31,7 +31,7 @@ class OptionWidget(QWidget):
 
 class TextOptionWidget(OptionWidget):
     def __init__(self, key, initial_value, tooltip = None):
-        super(TextOptionWidget, self).__init__(key, initial_value, tooltip=tooltip)
+        super().__init__(key, initial_value, tooltip=tooltip)
         self._layout = QHBoxLayout(self)
         self._layout.setContentsMargins(0,0,0,0)
         self.text_field = QLineEdit(self)
@@ -57,7 +57,7 @@ class TextOptionWidget(OptionWidget):
 
 class MultilineTextOptionWidget(OptionWidget):
     def __init__(self, key, initial_value, tooltip = None):
-        super(MultilineTextOptionWidget, self).__init__(key, initial_value, tooltip=tooltip)
+        super().__init__(key, initial_value, tooltip=tooltip)
         content = self._get_content(initial_value).strip()
 
         self._layout = QVBoxLayout(self)
@@ -113,7 +113,7 @@ class MultilineTextOptionWidget(OptionWidget):
 
 class IntegerOptionWidget(OptionWidget):
     def __init__(self, key, initial_value, tooltip = None):
-        super(IntegerOptionWidget, self).__init__(key, initial_value, tooltip=tooltip)
+        super().__init__(key, initial_value, tooltip=tooltip)
         self.spin_box = QSpinBox(self)
         self.spin_box.setMaximum(99999)
         self.spin_box.setMinimumWidth(100)
@@ -139,7 +139,7 @@ class IntegerOptionWidget(OptionWidget):
 
 class FloatOptionWidget(OptionWidget):
     def __init__(self, key, initial_value, tooltip = None):
-        super(FloatOptionWidget, self).__init__(key, initial_value, tooltip=tooltip)
+        super().__init__(key, initial_value, tooltip=tooltip)
         self.double_spin_box = QDoubleSpinBox(self)
         self.double_spin_box.setMaximum(9999.99)
         self.double_spin_box.setMinimumWidth(100)
@@ -165,7 +165,7 @@ class FloatOptionWidget(OptionWidget):
 
 class CheckboxOptionWidget(OptionWidget):
     def __init__(self, key, initial_value, tooltip = None):
-        super(CheckboxOptionWidget, self).__init__(key, initial_value, tooltip=tooltip)
+        super().__init__(key, initial_value, tooltip=tooltip)
         self.check_box = QCheckBox(self)
         self.check_box.stateChanged.connect(self.contentChanged)
         if initial_value:
@@ -188,7 +188,7 @@ class CheckboxOptionWidget(OptionWidget):
 
 class DropdownOptionWidget(OptionWidget):
     def __init__(self, key, values, initial_value, tooltip = None):
-        super(DropdownOptionWidget, self).__init__(key, initial_value, tooltip=tooltip)
+        super().__init__(key, initial_value, tooltip=tooltip)
         self.combo_box = QComboBox(self)
         self.combo_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.SetOptions(values, initial_value)

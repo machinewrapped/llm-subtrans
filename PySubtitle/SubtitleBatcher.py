@@ -66,13 +66,14 @@ class SubtitleBatcher:
         Recursively divide the lines at the largest gap until there is no batch larger than the maximum batch size
         """
         # If the batch is small enough, we're done
-        if len(lines) <= self.max_batch_size:
+        num_lines = len(lines)
+        if num_lines <= self.max_batch_size:
             return [ lines ]
 
         # Find the longest gap starting from the min_batch_size index
         longest_gap : timedelta = timedelta(seconds=0)
         split_index : int = self.min_batch_size
-        last_split_index : int = len(lines) - self.min_batch_size
+        last_split_index : int = num_lines - self.min_batch_size
 
         if last_split_index > split_index:
             for i in range(split_index, last_split_index):

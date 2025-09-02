@@ -58,7 +58,6 @@ def parse_arguments():
         'postprocess_translation': args.postprocess,
         'preprocess_subtitles': args.preprocess,
         'profile': args.profile,
-        'project': args.project,
         'provider': args.provider,
         'rate_limit': args.ratelimit,
         'scene_threshold': args.scenethreshold,

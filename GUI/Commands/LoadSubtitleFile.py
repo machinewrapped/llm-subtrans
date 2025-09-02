@@ -25,21 +25,21 @@ class LoadSubtitleFile(Command):
         try:
             self.options.InitialiseInstructions()
 
-            project = SubtitleProject(self.options)
+            project = SubtitleProject(persistent=self.options.project_file)
             project.InitialiseProject(self.filepath, reload_subtitles=self.reload_subtitles)
 
             if not project.subtitles:
                 raise CommandError(_("Unable to load subtitles from {file}").format(file=self.filepath), command=self)
 
             # Write a backup if an existing project was loaded
-            if self.write_backup and project.read_project:
+            if self.write_backup and project.existing_project:
                 logging.info(_("Saving backup copy of the project"))
                 project.SaveBackupFile()
 
             self.project = project
             self.datamodel = ProjectDataModel(project, self.options)
 
-            if self.datamodel.IsProjectInitialised():
+            if self.datamodel.is_project_initialised:
                 self.datamodel.CreateViewModel()
 
             return True

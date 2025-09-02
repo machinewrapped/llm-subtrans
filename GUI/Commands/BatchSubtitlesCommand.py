@@ -45,7 +45,7 @@ class BatchSubtitlesCommand(Command):
         batcher : SubtitleBatcher = SubtitleBatcher(self.options)
         project.subtitles.AutoBatch(batcher)
 
-        if project.write_project:
+        if project.use_project_file:
             self.commands_to_queue.append(SaveProjectFile(project=project))
 
         self.datamodel = ProjectDataModel(project, self.options)

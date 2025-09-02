@@ -13,7 +13,7 @@ from PySide6.QtCore import Qt
 class SceneItem(ViewModelItem):
     """ Represents a scene in the view model """
     def __init__(self, scene : SubtitleScene):
-        super(SceneItem, self).__init__()
+        super().__init__()
         self.number: int = scene.number
         self.batches: dict[int, BatchItem] = {}
         self.scene_model: dict[str, Any] = {

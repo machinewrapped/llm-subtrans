@@ -79,7 +79,11 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--names', type=str, default=None, help="A list of names to use verbatim")
     parser.add_argument('--postprocess', action='store_true', default=None, help="Postprocess the subtitles after translation")
     parser.add_argument('--preprocess', action='store_true', default=None, help="Preprocess the subtitles before translation")
-    parser.add_argument('--project', type=str, default=None, help="Read or Write project file to working directory")
+    parser.add_argument('--project', action='store_true', help="Create a persistent project file to allow resuming translation")
+    parser.add_argument('--preview', action='store_true', help="Create a project and preview the translation flow without calling the translation provider")
+    parser.add_argument('--retranslate', action='store_true', help="Retranslate all subtitles, ignoring existing translations in the project file")
+    parser.add_argument('--reparse', action='store_true', help="Reparse previous translation responses, reconstructing the translated subtitles")
+    parser.add_argument('--reload', action='store_true', help="Reload the subtitles from the original file, ignoring existing subtitles in the project file")
     parser.add_argument('--ratelimit', type=int, default=None, help="Maximum number of batches per minute to process")
     parser.add_argument('--scenethreshold', type=float, default=None, help="Number of seconds between lines to consider a new scene")
     parser.add_argument('--substitution', action='append', type=str, default=None, help="A pair of strings separated by ::, to subsitute in source or translation")
@@ -105,7 +109,11 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'names': ParseNames(args.names or args.name),
         'postprocess_translation': args.postprocess,
         'preprocess_subtitles': args.preprocess,
-        'project': args.project and args.project.lower(),
+        'project_file': args.project or args.reparse or args.retranslate or args.reload,
+        'preview': args.preview,
+        'reparse': args.reparse,
+        'retranslate': args.retranslate,
+        'reload': args.reload,
         'provider': provider,
         'rate_limit': args.ratelimit,
         'scene_threshold': args.scenethreshold,
@@ -144,11 +152,11 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     """
     Initialise a subtitle project with the provided arguments
     """
-    project = SubtitleProject(options)
+    project = SubtitleProject(persistent=options.project_file)
 
     project.InitialiseProject(args.input, args.output)
 
-    if args.writebackup and project.read_project:
+    if args.writebackup and project.existing_project:
         logging.info("Saving backup copy of the project")
         project.SaveBackupFile()
 

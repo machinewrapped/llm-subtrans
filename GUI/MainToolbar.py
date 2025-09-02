@@ -172,7 +172,7 @@ class MainToolbar(QToolBar):
         """
         datamodel : ProjectDataModel = self.gui.GetDataModel()
 
-        if not datamodel or not datamodel.IsProjectInitialised():
+        if not datamodel or not datamodel.is_project_initialised:
             self.DisableActions([ "Save Project", "Start Translating", "Start Translating Fast", "Stop Translating", "Undo", "Redo" ])
             self.EnableActions([ "Load Subtitles" ])
             return

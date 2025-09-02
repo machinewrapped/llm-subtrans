@@ -54,6 +54,8 @@ class SettingsType(dict[str, SettingType]):
     def get_dict(self, key: str, default: SettingsType|None = None) -> SettingsType:
         """Get a dict setting with type safety - returns mutable reference when possible"""
         value = self.get(key, default)
+        if value is None:
+            return default or SettingsType()
         if isinstance(value, SettingsType):
             # Return the actual SettingsType object for mutable access
             return value

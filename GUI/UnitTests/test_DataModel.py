@@ -23,7 +23,7 @@ class DataModelTests(SubtitleTestCase):
         })
         
         # Create a project using the proper initialization pattern
-        project = SubtitleProject(global_options)
+        project = SubtitleProject()
         
         # Simulate loading a subtitle file with project settings
         project_file = Subtitles()
@@ -140,7 +140,7 @@ class DataModelTests(SubtitleTestCase):
         })
         
         # Create first project
-        project1 = SubtitleProject(global_options)
+        project1 = SubtitleProject()
         project1_file = Subtitles()
         original_subtitles1 = chinese_dinner_data.get_str('original')
         if original_subtitles1 is None:
@@ -155,7 +155,7 @@ class DataModelTests(SubtitleTestCase):
         datamodel1 = ProjectDataModel(project1, global_options)
         
         # Create second project
-        project2 = SubtitleProject(global_options)
+        project2 = SubtitleProject()
         project2_file = Subtitles()
         original_subtitles2 = chinese_dinner_data.get_str('original')
         if original_subtitles2 is None:
@@ -235,7 +235,7 @@ class DataModelTests(SubtitleTestCase):
         })
         
         # Create project with different provider settings
-        project = SubtitleProject(global_options)
+        project = SubtitleProject()
         project_file = Subtitles()
         original_subtitles3 = chinese_dinner_data.get_str('original')
         if original_subtitles3 is None:

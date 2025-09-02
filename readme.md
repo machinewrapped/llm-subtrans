@@ -215,17 +215,11 @@ Other options that can be specified on the command line are detailed below.
 
 ## Project File
 
-**Note** If you are using the GUI a project file is created automatically when you open a subtitle file for the first time, and updated automatically.
+**Note**: Project files are enabled by default in the GUI.
 
-The `--project` argument or `PROJECT` .env setting can take a number of values, which control whether and when an intermediate file will be written to disc.
+The `--project` argument or `PROJECT_FILE` .env setting control whether a project file will be written to disc for the command line.
 
-The default setting is `None`, which means the project file is neither written nor read, the only output of the program is the final translation.
-
-If the argument is set to `True` then a project file will be created with the `.subtrans` extension, containing details of the translation process,
-and it will be updated as the translation progresses. Writing a project file allows, amongst other things, resuming a translation that was interrupted.
-
-Other valid options include `preview`, `resume`, `reparse` and `retranslate`. These are probably only useful if you're modifying the code, in which case
-you should be able to see what they do.
+If enabled, a file will be created with the `.subtrans` extension when a subtitle file is loaded, containing details of the project. It will be updated as the translation progresses. Writing a project file allows, amongst other things, resuming a translation that was interrupted. It is highly recommended.
 
 ## Advanced usage
 
@@ -296,6 +290,19 @@ Default values for many settings can be set in the .env file, using a NAME_IN_CA
 - `--temperature`:
   A higher temperature increases the random variance of translations. Default 0.
 
+- `--reload`:
+  Subtitles will be reloaded from the source file rather than using the subtitles saved in the project (note: this implies `--project`)
+
+- `--retranslate`:
+  Existing translations will be ignored and all subtitles will be retranslated (note: this implies `--project`)
+
+- `--reparse`:
+  Existing translations will not be sent to the translator again but the translator's response will be reprocessed to extract the translations.
+  This is mainly useful after a bug fix release, but can also be used to reset translations that have been hand-edited (note: this implies `--project`)
+
+- `--preview`:
+  Subtitles will be loaded and batched and the translation flow will run, but no calls to the translator will be made. Only useful for debug.
+
 ### Provider-specific arguments
 Some additional arguments are available for specific providers.
 
@@ -308,7 +315,7 @@ Some additional arguments are available for specific providers.
 
 #### OpenAI
 - `-k`, `--apikey`:
-  Your [OpenAI API Key](https://platform.openai.com/account/api-keys).
+  Your [OpenAI API Key](https://platform.openai.com/account/api-keys) (the app will look for OPENAI_API_KEY in the environment if this is not provided)
 
 - `-b`, `--apibase`:
   API base URL if you are using a custom instance. if it is not set, the default URL will be used.
@@ -324,17 +331,37 @@ Some additional arguments are available for specific providers.
 
 #### Gemini
 - `-k`, `--apikey`:
-  Your [Google Gemini API Key](https://aistudio.google.com/app/apikey). Not required if it is set in the .env file.
+  Your [Google Gemini API Key](https://aistudio.google.com/app/apikey). (the app will look for GEMINI_API_KEY in the environment if this is not provided)
 
 - `-m`, `--model`:
   Specify the [AI model](https://ai.google.dev/models/gemini) to use for translation
 
 #### Claude
 - `-k`, `--apikey`:
-  Your [Anthropic API Key](https://console.anthropic.com/settings/keys). Not required if it is set in the .env file.
+  Your [Anthropic API Key](https://console.anthropic.com/settings/keys). (the app will look for ANTHROPIC_API_KEY in the environment if this is not provided)
 
 - `-m`, `--model`:
   Specify the [AI model](https://docs.anthropic.com/claude/docs/models-overview#model-comparison) to use for translation. This should be the full model name, e.g. `claude-3-haiku-20240307`
+
+#### DeepSeek
+  - `-k`, `--apikey`:
+  Your [DeepSeek API Key](https://platform.deepseek.com/api_keys). (the app will look for DEEPSEEK_API_KEY in the environment if this is not provided)
+
+- `-b`, `--apibase`:
+  Base URL if you are using a custom deployment of DeepSeek. if it is not set, the official URL will be used.
+
+- `-m`, `--model`:
+  Specify the [model](https://api-docs.deepseek.com/quick_start/pricing) to use for translation. **deepseek-chat** is probably the only sensible choice (and default).
+
+#### Mistral AI
+  - `-k`, `--apikey`:
+  Your [Mistral API Key](https://console.mistral.ai/api-keys/). (the app will look for MISTRAL_API_KEY in the environment if this is not provided)
+
+- `--server_url`:
+  URL if you are using a custom deployment of Mistral. if unset, the official URL will be used.
+
+- `-m`, `--model`:
+  Specify the [model](https://docs.mistral.ai/getting-started/models/models_overview/) to use for translation. **mistral-large-latest** is recommended, the small models are not very reliable.
 
 #### OpenAI Azure
 - `--deploymentname`:
@@ -348,26 +375,6 @@ Some additional arguments are available for specific providers.
 
 - `-a`, `--apiversion`:
   Azure API version.
-
-#### DeepSeek
-  - `-k`, `--apikey`:
-  Your [DeepSeek API Key](https://platform.deepseek.com/api_keys).
-
-- `-b`, `--apibase`:
-  Base URL if you are using a custom deployment of DeepSeek. if it is not set, the official URL will be used.
-
-- `-m`, `--model`:
-  Specify the [model](https://api-docs.deepseek.com/quick_start/pricing) to use for translation. **deepseek-chat** is probably the only sensible choice (and default).
-
-#### Mistral AI
-  - `-k`, `--apikey`:
-  Your [DeepSeek API Key](https://console.mistral.ai/api-keys/).
-
-- `--server_url`:
-  URL if you are using a custom deployment of Mistral. if unset, the official URL will be used.
-
-- `-m`, `--model`:
-  Specify the [model](https://docs.mistral.ai/getting-started/models/models_overview/) to use for translation. **mistral-large-latest** is recommended, the small models are not very reliable.
 
 #### Amazon Bedrock
 - `-k`, `--accesskey`:

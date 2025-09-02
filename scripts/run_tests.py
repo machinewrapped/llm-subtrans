@@ -20,30 +20,80 @@ logging.getLogger().setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.WARNING)
 console_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+# Ensure the console handler is attached (it wasn't previously, so messages at WARNING+ were not visible)
+if console_handler not in logging.getLogger().handlers:
+    logging.getLogger().addHandler(console_handler)
 
-def run_unit_tests(results_path : str):
-    """
-    Run all unit tests in PySubtitle.UnitTests and GUI.UnitTests.
+def run_unit_tests(results_path: str) -> bool:
+    """Run all unit tests in PySubtitle.UnitTests and GUI.UnitTests.
+
+    Executes the two logical suites separately so we always see both sets of
+    results even if the first has failures. Returns True if all tests across
+    both suites succeeded, else False.
     """
     log_file = create_logfile(results_path, "unit_tests.log")
 
+    start_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
     logging.info(separator)
-    logging.info("Running unit tests at " + datetime.now().strftime("%Y-%m-%d at %H:%M"))
+    logging.info("Running unit tests at " + start_stamp)
     logging.info(separator)
 
-    # Run PySubtitle unit tests
+    loader = unittest.TestLoader()
+    runner = unittest.runner.TextTestRunner(verbosity=2)
+
+    # PySubtitle tests
     logging.info("Running PySubtitle unit tests...")
-    unittest.runner.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(PySubtitle.UnitTests))
+    py_result = runner.run(loader.loadTestsFromModule(PySubtitle.UnitTests))
 
-    # Run GUI unit tests
+    # GUI tests
     logging.info("Running GUI unit tests...")
-    unittest.runner.TextTestRunner(verbosity=2).run(unittest.TestLoader().loadTestsFromModule(GUI.UnitTests))
+    gui_result = runner.run(loader.loadTestsFromModule(GUI.UnitTests))
 
+    # Aggregate & summarize
+    def summarize(label: str, result: unittest.TestResult) -> dict:
+        return {
+            'label': label,
+            'run': result.testsRun,
+            'failures': len(result.failures),
+            'errors': len(result.errors),
+            'skipped': len(result.skipped) if hasattr(result, 'skipped') else 0,
+            'ok': result.wasSuccessful()
+        }
+
+    py_summary = summarize('PySubtitle', py_result)
+    gui_summary = summarize('GUI', gui_result)
+
+    total_run = py_summary['run'] + gui_summary['run']
+    total_failures = py_summary['failures'] + gui_summary['failures']
+    total_errors = py_summary['errors'] + gui_summary['errors']
+    total_skipped = py_summary['skipped'] + gui_summary['skipped']
+    overall_success = (total_failures == 0 and total_errors == 0)
+
+    # Use WARNING/ERROR so summary is visible on console (console handler is WARNING+)
+    summary_lines = [
+        "Unit test suite summaries:",
+        f"  PySubtitle: run={py_summary['run']} failures={py_summary['failures']} errors={py_summary['errors']} skipped={py_summary['skipped']} status={'OK' if py_summary['ok'] else 'FAIL'}",
+        f"  GUI       : run={gui_summary['run']} failures={gui_summary['failures']} errors={gui_summary['errors']} skipped={gui_summary['skipped']} status={'OK' if gui_summary['ok'] else 'FAIL'}",
+        f"Overall: run={total_run} failures={total_failures} errors={total_errors} skipped={total_skipped} => {'SUCCESS' if overall_success else 'FAILED'}"
+    ]
+
+    # Always surface summary lines to console: use WARNING when success, ERROR when failed
+    for line in summary_lines:
+        if overall_success:
+            logging.warning(line)
+        else:
+            logging.error(line)
+
+    end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
     logging.info(separator)
-    logging.info("Completed unit tests at " + datetime.now().strftime("%Y-%m-%d at %H:%M"))
+    if overall_success:
+        logging.info("Completed unit tests successfully at " + end_stamp)
+    else:
+        logging.error("Completed unit tests with failures at " + end_stamp)
     logging.info(separator)
 
     end_logfile(log_file)
+    return overall_success
 
 
 def run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=None):
@@ -101,6 +151,14 @@ if __name__ == "__main__":
 
     create_logfile(results_directory, "run_tests.log")
 
-    run_unit_tests(results_directory)
+    unit_success = run_unit_tests(results_directory)
 
-    run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=test_name)
+    if unit_success:
+        run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=test_name)
+
+    # Exit with non-zero status if unit tests failed so CI or calling scripts can detect failure.
+    if not unit_success:
+        print("*************************************************")
+        print("*******   One or more unit tests failed!  *******")
+        print("*************************************************")
+        sys.exit(1)

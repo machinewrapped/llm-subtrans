@@ -87,8 +87,12 @@ default_settings = {
     'max_retries': env_int('MAX_RETRIES', 1),
     'max_summary_length': env_int('MAX_SUMMARY_LENGTH', 240),
     'backoff_time': env_float('BACKOFF_TIME', 3.0),
-    'project' : env_str('PROJECT', None),
+    'project_file' : env_bool('PROJECT_FILE', True),
     'autosave': env_bool('AUTOSAVE', True),
+    'preview' : False,
+    'retranslate' : False,
+    'reparse' : False,
+    'reload' : False,
     'last_used_path': None,
     'stop_on_error' : env_bool('STOP_ON_ERROR'),
     'write_backup' : env_bool('WRITE_BACKUP_FILE', True),
@@ -173,6 +177,10 @@ class Options(SettingsType):
     def target_language(self) -> str:
         return self.get_str('target_language') or str(default_settings['target_language'])
 
+    @property
+    def project_file(self) -> bool:
+        return self.get_bool('project_file', True)
+
     def GetProviderSettings(self, provider : str) -> SettingsType:
         """ Get the settings for a specific provider """
         if not provider:
@@ -188,7 +196,8 @@ class Options(SettingsType):
         """
         Get a copy of the settings dictionary with only the default keys included
         """
-        settings = SettingsType({ key: deepcopy(super().get(key)) for key in self.keys() & default_settings.keys() })
+        keys = self.keys() & default_settings.keys()
+        settings = SettingsType({ key: deepcopy(dict.get(self, key)) for key in keys })
         return settings
 
     def LoadSettings(self) -> bool:

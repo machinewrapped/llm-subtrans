@@ -12,7 +12,7 @@ class AboutDialog(QDialog):
     Show application information etc.
     """
     def __init__(self, parent=None):
-        super(AboutDialog, self).__init__(parent)
+        super().__init__(parent)
         self.setWindowTitle(_("About GUI-Subtrans"))
         self.setMinimumWidth(512)
         self.setMaximumWidth(768)

@@ -15,6 +15,7 @@ from GUI.CommandQueue import CommandQueue
 from GUI.Commands.BatchSubtitlesCommand import BatchSubtitlesCommand
 from GUI.Commands.LoadSubtitleFile import LoadSubtitleFile
 from GUI.Commands.SaveProjectFile import SaveProjectFile
+from GUI.Commands.SaveTranslationFile import SaveTranslationFile
 from GUI.FirstRunOptions import FirstRunOptions
 from GUI.GUICommands import ExitProgramCommand
 from GUI.GuiHelpers import LoadStylesheet
@@ -253,8 +254,12 @@ class GuiInterface(QObject):
         if not self.datamodel or not self.datamodel.project:
             raise SubtitleError(_("No project data"))
 
-        command = SaveProjectFile(self.datamodel.project, filepath)
-        self.QueueCommand(command, callback=self._on_project_saved)
+        if self.datamodel.use_project_file:
+            command = SaveProjectFile(self.datamodel.project, filepath)
+        else:
+            command = SaveTranslationFile(self.datamodel.project, filepath)
+
+        self.QueueCommand(command, callback=self._on_save)
 
     def ShowNewProjectSettings(self, datamodel : ProjectDataModel):
         """
@@ -336,7 +341,7 @@ class GuiInterface(QObject):
 
         # Auto-save if the commmand queue is empty and the project has changed
         if not self.command_queue.has_commands:
-            if self.datamodel and self.datamodel.NeedsAutosave():
+            if self.datamodel and self.datamodel.autosave_enabled:
                 self.datamodel.SaveProject()
 
         self.commandComplete.emit(command)
@@ -351,18 +356,17 @@ class GuiInterface(QObject):
 
         self.SetDataModel(command.datamodel)
         self._update_last_used_path(command.filepath)
-        if self.datamodel.IsProjectValid():
-            is_initialised = self.datamodel.IsProjectInitialised()
-            if not is_initialised:
-                self.ShowNewProjectSettings(self.datamodel)
+        if self.datamodel.is_project_valid and not self.datamodel.is_project_initialised:
+            self.ShowNewProjectSettings(self.datamodel)
 
-    def _on_project_saved(self, command : SaveProjectFile):
+    def _on_save(self, command : SaveProjectFile|SaveTranslationFile):
         """
-        Update the data model and last used path after saving a project
+        Update the data model and last used path after saving the project
         """
         if command.datamodel and command.filepath:
             self._update_last_used_path(command.filepath)
-            self.SetDataModel(command.datamodel)
+            if command.datamodel != self.datamodel:
+                self.SetDataModel(command.datamodel)
 
     def _update_last_used_path(self, filepath : str):
         """

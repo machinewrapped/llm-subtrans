@@ -11,7 +11,7 @@ from datetime import timedelta
 
 import regex
 
-from PySubtitle.Helpers.Time import GetTimeDeltaSafe
+from PySubtitle.Helpers.Time import GetTimeDelta, GetTimeDeltaSafe
 from PySubtitle.Options import Options
 from PySubtitle.SettingsType import SettingType, SettingsType
 
@@ -245,7 +245,9 @@ def GetTimeDeltaSetting(settings: SettingsType|Mapping[str, SettingType]|Options
     if isinstance(value, timedelta):
         return value
     elif isinstance(value, (int, float, str)):
-        return GetTimeDeltaSafe(value) or default
+        result = GetTimeDelta(value)
+        if isinstance(result, timedelta):
+            return result    
 
     raise SettingsError(f"Cannot convert setting '{key}' of type {type(value).__name__} to timedelta")
 

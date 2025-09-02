@@ -59,7 +59,7 @@ class SubtitleProject:
     @property
     def any_translated(self) -> bool:
         with self.lock:
-            return bool(self.subtitles and self.subtitles.translated)
+            return bool(self.subtitles and self.subtitles.any_translated)
 
     def InitialiseProject(self, filepath : str, outputpath : str|None = None, reload_subtitles : bool = False):
         """

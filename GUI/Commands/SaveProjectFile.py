@@ -20,9 +20,6 @@ class SaveProjectFile(Command):
 
         self.project.projectfile = self.project.GetProjectFilepath(self.filepath)
         self.project.subtitles.outputpath = GetOutputPath(self.project.projectfile, self.project.target_language)
-        self.project.SaveProjectFile()
-
-        if self.project.subtitles.translated:
-            self.project.SaveTranslation()
+        self.datamodel.SaveProject()
 
         return True

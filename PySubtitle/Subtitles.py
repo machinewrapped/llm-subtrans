@@ -101,6 +101,11 @@ class Subtitles:
             self.originals, self.translated, dummy = UnbatchScenes(scenes) # type: ignore[unused-ignore]
             self.start_line_number = (self.originals[0].number if self.originals else 1) or 1
 
+    @property
+    def any_translated(self) -> bool:
+        with self.lock:
+            return any(scene.any_translated for scene in self.scenes) if self.scenes else False
+
     def GetScene(self, scene_number : int) -> SubtitleScene:
         """
         Get a scene by number

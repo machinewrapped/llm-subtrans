@@ -116,7 +116,7 @@ class ProjectDataModel:
             if self.project is not None and self.project.needs_writing:
                 if self.use_project_file:
                     self.project.UpdateProjectFile()
-                elif self.project.any_translated:
+                if self.project.any_translated:
                     self.project.SaveTranslation()
                 self.project.needs_writing = False
 

@@ -1,7 +1,7 @@
 # LLM-Subtrans
 LLM-Subtrans is an open source subtitle translator that uses LLMs as a translation service. It can translate subtitles between any language pairs supported by the language model.
 
-The application supports multiple subtitle formats through a pluggable system. Out of the box it handles `.srt` and `.ass`/`.ssa` files and can convert between them.
+The application supports multiple subtitle formats through a pluggable system. Currently `.srt` and `.ass`/`.ssa` files are supported.
 
 Note: LLM-Subtrans requires an active internet connection. Subtitles are sent to the provider's servers for translation, so their privacy policy applies.
 
@@ -228,6 +228,23 @@ Other options that can be specified on the command line are detailed below.
 The `--project` argument or `PROJECT_FILE` .env setting control whether a project file will be written to disc for the command line.
 
 If enabled, a file will be created with the `.subtrans` extension when a subtitle file is loaded, containing details of the project. It will be updated as the translation progresses. Writing a project file allows, amongst other things, resuming a translation that was interrupted. It is highly recommended.
+
+```sh
+# Use OpenRouter and create a persistent project
+llm-subtrans --project --auto -l <language> <path_to_subtitle_file>
+
+# Use OpenRouter and resume a persistent project
+llm-subtrans --project --auto -l <language> <path_to_subtrans_file>
+llm-subtrans --project --auto -l <language> <path_to_subtitle_file>  # Project file will be detected automatically if it is in the same folder
+```
+
+## Format Conversion
+LLM-Subtrans is primarily a translation application, and format conversion is probably best handled by dedicated tools, but the option exists to read one format and write another.
+
+```sh
+# Use OpenRouter with a specific model and convert from .ass to .srt
+llm-subtrans --project --auto -l <language> -o <path_to_output_file.srt> <path_to_subtitle_file.ass>
+```
 
 ## Advanced usage
 

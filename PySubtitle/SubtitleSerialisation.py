@@ -9,7 +9,6 @@ from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleScene import SubtitleScene
 from PySubtitle.Translation import Translation
 from PySubtitle.TranslationPrompt import TranslationPrompt
-from PySubtitle.Formats.VoidFileHandler import VoidFileHandler
 
 # Serialisation helpers
 def classname(obj):

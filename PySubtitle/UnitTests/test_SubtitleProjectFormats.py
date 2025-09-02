@@ -10,7 +10,6 @@ from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.Formats.AssFileHandler import AssFileHandler
-from PySubtitle.Formats.VoidFileHandler import VoidFileHandler
 from PySubtitle.SubtitleSerialisation import SubtitleEncoder, SubtitleDecoder
 from PySubtitle.Subtitles import Subtitles
 from typing import TextIO
@@ -89,9 +88,7 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         json_str = json.dumps(subtitles, cls=SubtitleEncoder)
         subtitles_restored = json.loads(json_str, cls=SubtitleDecoder)
         
-        # Verify metadata survived (linecount will be 0 since VoidFileHandler is used on restore)
         self.assertEqual(subtitles_restored.metadata.get('format'), 'srt')
-        # Note: linecount is 0 because deserialization creates VoidFileHandler by design
 
     def test_ass_metadata_serialization(self):
         """Test ASS metadata with colors survives JSON serialization through Subtitles."""
@@ -132,7 +129,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         json_str = json.dumps(subtitles, cls=SubtitleEncoder)
         subtitles_restored = json.loads(json_str, cls=SubtitleDecoder)
         
-        # Verify metadata survived (linecount will be 0 since VoidFileHandler is used on restore)
         self.assertEqual(subtitles_restored.metadata.get('format'), 'ass')
         self.assertIn('styles', subtitles_restored.metadata)
         

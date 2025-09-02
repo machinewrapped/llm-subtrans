@@ -481,6 +481,7 @@ Contributions are very welcome - you can add a new localization in minutes! See 
 This project uses several useful libraries:
 
 - srt (https://github.com/cdown/srt)
+- pysubs2 (https://github.com/tkarabela/pysubs2)
 - requests (https://github.com/psf/requests)
 - regex (https://github.com/mrabarnett/mrab-regex)
 - httpx (https://github.com/projectdiscovery/httpx)

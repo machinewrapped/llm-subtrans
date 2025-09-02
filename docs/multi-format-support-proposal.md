@@ -4,9 +4,9 @@
 
 ## Executive Summary
 
-This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 3 and outlines the remaining work. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
+This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 5 and outlines the remaining work. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
 
-## Current State After Phase 3
+## Current State After Phase 5
 
 ### Existing Architecture
 - **Core Internal Representation**: `SubtitleLine` objects with timing, text, and metadata
@@ -17,9 +17,7 @@ This document captures the architecture and decisions behind LLM-Subtrans's mult
 
 ### Current Limitations
 - Only SRT and ASS/SSA formats implemented
-- Saving always uses the source file's handler; output format detection is pending
 - Content-based format detection not yet supported
-- Format conversion logic is still unimplemented
 
 ## Architecture Overview
 
@@ -179,10 +177,13 @@ We will need to add a "format" field to new project settings to allow the user t
 - Review architecture.md and readme.md in full to ensure they are current and correct
 
 **Acceptance Tests**:
-- [ ] CLI can list supported formats (e.g., `--list-formats`)
-- [ ] Help documentation includes format information
-- [ ] Error messages specify available formats
-- [ ] Examples provided for each supported format
+- [X] CLI can list supported formats (e.g., `--list-formats`)
+- [X] Help documentation includes format information
+- [X] Error messages specify available formats
+- [X] Examples provided for each supported format
+
+**Implementation Outcome**:
+Phase 5 adds a `--list-formats` option to all CLI tools, documents supported extensions, and improves error messages with available format hints. The architecture documentation now explains the `SubtitleFormatRegistry` and `SubtitleFileHandler` components, and README examples demonstrate format-specific usage and conversion.
 
 **Files to Modify**:
 - CLI argument parsing (subtrans_common.py)

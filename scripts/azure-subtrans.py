@@ -6,7 +6,14 @@ import logging
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(base_path)
 
-from scripts.subtrans_common import InitLogger, CreateArgParser, CreateOptions, CreateTranslator, CreateProject
+from scripts.subtrans_common import (
+    InitLogger,
+    CreateArgParser,
+    CreateOptions,
+    CreateTranslator,
+    CreateProject,
+    HandleFormatListing,
+)
 from PySubtitle.Options import Options
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleTranslator import SubtitleTranslator
@@ -25,6 +32,7 @@ parser.add_argument('-b', '--apibase', type=str, default=None, help="API backend
 parser.add_argument('-a', '--apiversion', type=str, default=None, help="Azure API version")
 parser.add_argument('--deploymentname', type=str, default=None, help="Azure deployment name")
 args = parser.parse_args()
+HandleFormatListing(args)
 
 logger_options = InitLogger("azure-subtrans", args.debug)
 

@@ -156,6 +156,8 @@ We will need to add a "format" field to new project settings to allow the user t
 - Destination format auto-detected from output file extensions
 - `SubtitleProject.SaveTranslation` calls appropriate handlers for the output format
 - Handlers preserve or translate metadata as needed for the target format, passing through any fields they do not use.
+- Update open file filters to show all supported formats + `.subtrans` projects
+- Supported formats are determined from the registered handlers in `SubtitleFormatRegistry`
 
 **Acceptance Tests**
 - [X] Load .srt file and save as .srt without errors
@@ -165,28 +167,16 @@ We will need to add a "format" field to new project settings to allow the user t
 - [X] Load `SubtitleProject` with converted formats without errors
 - [X] Load legacy `SubtitleProject` without errors
 - [X] Format auto-detection from specified output path via CLI
+- [X] File open dialogs show all supported formats + `.subtrans` projects
 
-### Phase 5: GUI Integration
+### Phase 5: Documentation and CLI Updates
 **Requirements**:
-- Update open file filters to show all supported formats + `.subtrans` projects
-- Supported formats are determined from the registered handlers in `SubtitleFormatRegistry`
-- Add format-specific options to a new tab `SettingsDialog`, data-driven and extensible by registered handlers
-
-**Acceptance Tests**:
-- [ ] File open dialogs show all supported formats + `.subtrans` projects
-- [ ] Format-specific options exposed in settings
-
-**Files to Modify**:
-- GUI file dialog components (ProjectActions.LoadProject)
-- Settings dialog for format-specific options
-- Project view to show format information
-
-### Phase 6: Documentation and CLI Updates
-**Requirements**:
-- Add format listing command
+- Add format listing command to CLI
 - Update documentation with supported formats
 - Create format-specific usage examples
 - Update help text and error messages
+- Update architecture.md with details of the SubtitleFormatRegistry and SubtitleFileHandler
+- Review architecture.md and readme.md in full to ensure they are current and correct
 
 **Acceptance Tests**:
 - [ ] CLI can list supported formats (e.g., `--list-formats`)
@@ -195,11 +185,10 @@ We will need to add a "format" field to new project settings to allow the user t
 - [ ] Examples provided for each supported format
 
 **Files to Modify**:
-- CLI argument parsing
-- Help text and documentation
-- Example files for each format
+- CLI argument parsing (subtrans_common.py)
+- Documentation (readme.md, architecture.md)
 
-### Phase 7: Additional Format Support
+### Phase 6: Additional Format Support
 **Requirements**:
 - Implement `VttFileHandler` for WebVTT (common web format) using pysubs2
 - Implement `TtmlFileHandler` for TTML (advanced XML-based format) using pysubs2
@@ -237,6 +226,17 @@ Follow the proven pattern from `AssFileHandler`:
 - `_pysubs2_original` preservation for perfect round-trips
 - Format-specific optimizations within each handler
 - Comprehensive error handling with SubtitleParseError translation
+
+### Phase 7: GUI Integration
+**Requirements**:
+- Add format-specific settings to a new tab `SettingsDialog`, data-driven and extensible by registered handlers (similar to provider settings)
+
+**Acceptance Tests**:
+- [ ] Format-specific settings exposed in SettingsDialog
+
+**Files to Modify**:
+- SettingsDialog for format-specific options
+- SubtitleFileHandler for format-specific options
 
 ### Phase 8: Enhanced Format Detection
 

@@ -16,7 +16,6 @@ _START_TAGS_PATTERN = regex.compile(r'^(\{[^}]*\})+')
 _TAG_BLOCK_PATTERN = regex.compile(r'\{[^}]+\}')
 _STANDALONE_BASIC_TAG_PATTERN = regex.compile(r'^\{\\(?:[ibs][01]|u[01]?)\}$')
 _BASIC_TAG_PATTERN = regex.compile(r'\\(?:[ibs][01]|u[01]?)')
-_HTML_TAG_CLEANUP_PATTERN = regex.compile(r'<[^>]+>')
 
 # Precompiled ASS to HTML conversion patterns
 _ASS_TO_HTML_PATTERNS = [
@@ -327,8 +326,11 @@ class AssFileHandler(SubtitleFileHandler):
             # Rebuild text with only basic formatting tags preserved
             text = ''.join(basic_tags) + remaining_text
         
-        # Convert line breaks (\\N to \n)
+        # Convert line breaks:
+        # \N (hard line break) -> \n (newline for GUI)
+        # \n (soft line break) -> <wbr> (word break opportunity)
         text = text.replace('\\N', '\n')
+        text = text.replace('\\n', '<wbr>')
         
         # Convert basic formatting tags to HTML using precompiled patterns
         for pattern, replacement in _ASS_TO_HTML_PATTERNS:
@@ -347,15 +349,18 @@ class AssFileHandler(SubtitleFileHandler):
             
         text = html_text
         
-        # Convert line breaks (\n to \\N)
+        # Convert line breaks back:
+        # \n (newline from GUI) -> \N (hard line break)
+        # <wbr> (word break opportunity) -> \n (soft line break)
+        text = text.replace('<wbr>', '\\n')
         text = text.replace('\n', '\\N')
         
         # Convert HTML tags back to ASS tags using precompiled patterns
         for pattern, replacement in _HTML_TO_ASS_PATTERNS:
             text = pattern.sub(replacement, text)
         
-        # Remove any other HTML tags that we don't support
-        text = _HTML_TAG_CLEANUP_PATTERN.sub('', text)
+        # Preserve any other HTML that might be part of the dialogue content
+        # (e.g., someone translating a movie about HTML)
         
         return text
 

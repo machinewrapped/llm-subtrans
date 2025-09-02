@@ -296,6 +296,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             ("{\\s1}Strikeout{\\s0}", "<s>Strikeout</s>"),
             ("{\\i1}Mixed {\\b1}formatting{\\b0} here{\\i0}", "<i>Mixed <b>formatting</b> here</i>"),
             ("Normal\\NLine break", "Normal\nLine break"),
+            ("Normal\\nSoft break", "Normal<wbr>Soft break"),
             ("No formatting", "No formatting"),
             ("{\\pos(100,200)}Positioned text", "Positioned text"),  # Position removed
             ("{\\c&H00FF00&}Colored text", "Colored text"),  # Color removed
@@ -319,8 +320,10 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             ("<s>Strikeout</s>", "{\\s1}Strikeout{\\s0}"),
             ("<i>Mixed <b>formatting</b> here</i>", "{\\i1}Mixed {\\b1}formatting{\\b0} here{\\i0}"),
             ("Normal\nLine break", "Normal\\NLine break"),
+            ("Normal<wbr>Soft break", "Normal\\nSoft break"),
             ("No formatting", "No formatting"),
-            ("<span>Unsupported tag</span>", "Unsupported tag"),  # Unsupported tags removed
+            ("<span>Movie about HTML</span>", "<span>Movie about HTML</span>"),  # Preserve HTML content
+            ("Text<wbr>with soft break", "Text\\nwith soft break"),  # wbr preserved
         ]
         
         for html_input, expected_ass in test_cases:

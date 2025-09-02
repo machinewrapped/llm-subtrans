@@ -85,7 +85,7 @@ class SubtitleProject:
         load_subtitles : bool = reload_subtitles or not read_project
 
         if not read_project and not load_subtitles:
-            raise SubtitleError("No project or subtitles to load")
+            raise SubtitleError(_("No project or subtitles to load"))
 
         if project_file_exists and not read_project:
             logging.warning(_("Project file {} exists but will not be used").format(self.projectfile))
@@ -159,18 +159,24 @@ class SubtitleProject:
             logging.error(_("Unable to save translation: {}").format(e))
 
     def GetProjectFilepath(self, filepath : str) -> str:
-        """ Calculate the project file path based on the source file path """
+        """
+        Calculate the project file path based on the source file path
+        """
         path, ext = os.path.splitext(filepath)
         filepath = filepath if ext == '.subtrans' else f"{path}.subtrans"
         return os.path.normpath(filepath)
 
     def GetBackupFilepath(self, filepath : str) -> str:
-        """ Get the backup file path for the project file """
+        """
+        Get the backup file path for the project file
+        """
         projectfile = self.GetProjectFilepath(filepath)
         return f"{projectfile}-backup"
 
     def LoadSubtitleFile(self, filepath: str) -> Subtitles:
-        """Load subtitles from a file, auto-detecting the format by extension"""
+        """
+        Load subtitles from a file, auto-detecting the format by extension
+        """
         with self.lock:
             self.subtitles = Subtitles(filepath)
             self.subtitles.LoadSubtitles()
@@ -178,7 +184,9 @@ class SubtitleProject:
         return self.subtitles
 
     def SaveProject(self):
-        """ Save the project file or translation file as needed """
+        """
+        Save the project file or translation file as needed
+        """
         with self.lock:
             if self.needs_writing:
                 if self.use_project_file:

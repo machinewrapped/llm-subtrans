@@ -127,8 +127,9 @@ class ProjectActions(QObject):
         initial_path = self.last_used_path or os.getcwd()
         shift_pressed = self._is_shift_pressed()
 
-        # TODO: supported extensions should be queried from the SubtitleFormatRegistry. *.subtrans (project file) is always an option.
-        filters = f"{_('Subtitle files')} (*.srt *.ass *.subtrans);;{_('All Files')} (*)"
+        extensions = sorted(set(SubtitleFormatRegistry.enumerate_formats()).union(['.subtrans']))
+        extension_wildcards = ' '.join(f'*{ext}' for ext in extensions)
+        filters = f"{_('Subtitle files')} ({extension_wildcards});;{_('All Files')} (*)"
         filepath, dummy = QFileDialog.getOpenFileName(parent=self._mainwindow, caption=_("Open File"), dir=initial_path, filter=filters) # type: ignore[unused-ignore]
 
         if filepath:

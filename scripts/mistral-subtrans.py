@@ -12,7 +12,6 @@ from scripts.subtrans_common import (
     CreateOptions,
     CreateTranslator,
     CreateProject,
-    HandleFormatListing,
 )
 
 from PySubtitle.Options import Options
@@ -27,7 +26,6 @@ parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Mistra
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
 parser.add_argument('--server_url', type=str, default=None, help="Server URL (leave blank for default).")
 args = parser.parse_args()
-HandleFormatListing(args)
 
 logger_options = InitLogger("mistral-subtrans", args.debug)
 

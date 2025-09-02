@@ -59,6 +59,12 @@ def CreateArgParser(description : str) -> ArgumentParser:
     """
     Create new arg parser and parse shared command line arguments between models
     """
+    pre_parser = ArgumentParser(add_help=False)
+    pre_parser.add_argument('--list-formats', action='store_true')
+    pre_args, _ = pre_parser.parse_known_args()
+    if pre_args.list_formats:
+        HandleFormatListing(pre_args)
+        
     parser = ArgumentParser(description=description)
     input_help = "Path to subtitle file (see --list-formats for supported formats)"
     parser.add_argument('input', help=input_help)
@@ -97,10 +103,11 @@ def CreateArgParser(description : str) -> ArgumentParser:
 def HandleFormatListing(args: Namespace) -> None:
     """Print supported subtitle formats and exit if requested."""
     if getattr(args, "list_formats", False):
-        formats = SubtitleFormatRegistry.enumerate_formats()
-        print("Supported subtitle formats:")
-        for ext in formats:
-            print(f"  {ext}")
+        formats = SubtitleFormatRegistry.list_available_formats()
+        if formats:
+            print(f"Supported subtitle formats: {formats}")
+        else:
+            print("No subtitle formats available.")
         raise SystemExit(0)
 
 def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:

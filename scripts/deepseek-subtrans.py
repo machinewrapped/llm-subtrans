@@ -12,7 +12,6 @@ from scripts.subtrans_common import (
     CreateOptions,
     CreateTranslator,
     CreateProject,
-    HandleFormatListing,
 )
 
 from PySubtitle.Options import Options
@@ -27,7 +26,6 @@ parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your DeepSe
 parser.add_argument('-b', '--apibase', type=str, default="https://api.deepseek.com", help="API backend base address.")
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
 args = parser.parse_args()
-HandleFormatListing(args)
 
 logger_options = InitLogger("deepseek-subtrans", args.debug)
 

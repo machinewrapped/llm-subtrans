@@ -12,7 +12,6 @@ from scripts.subtrans_common import (
     CreateOptions,
     CreateTranslator,
     CreateProject,
-    HandleFormatListing,
 )
 from PySubtitle.Options import Options
 from PySubtitle.SubtitleProject import SubtitleProject
@@ -31,7 +30,6 @@ parser.add_argument('-s', '--secretkey', type=str, default=None, help="AWS Secre
 parser.add_argument('-r', '--region', type=str, default=None, help="AWS Region (default: us-east-1)")
 parser.add_argument('-m', '--model', type=str, default=None, help="Model ID to use (e.g., amazon.titan-text-express-v1)")
 args = parser.parse_args()
-HandleFormatListing(args)
 
 logger_options = InitLogger("bedrock-subtrans", args.debug)
 

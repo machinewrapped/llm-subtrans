@@ -14,8 +14,8 @@ from PySubtitle.Helpers.Localization import _
 # Precompiled regex patterns for performance
 _START_TAGS_PATTERN = regex.compile(r'^(\{[^}]*\})+')
 _TAG_BLOCK_PATTERN = regex.compile(r'\{[^}]+\}')
-_STANDALONE_BASIC_TAG_PATTERN = regex.compile(r'^\{\\[ibus][01]\}$')
-_BASIC_TAG_PATTERN = regex.compile(r'\\[ibus][01]')
+_STANDALONE_BASIC_TAG_PATTERN = regex.compile(r'^\{\\(?:[ibs][01]|u[01]?)\}$')
+_BASIC_TAG_PATTERN = regex.compile(r'\\(?:[ibs][01]|u[01]?)')
 _HTML_TAG_CLEANUP_PATTERN = regex.compile(r'<[^>]+>')
 
 # Precompiled ASS to HTML conversion patterns

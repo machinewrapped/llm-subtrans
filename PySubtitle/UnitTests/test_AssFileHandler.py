@@ -537,6 +537,73 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
                 result = self.handler._ass_to_html(ass_input)
                 log_input_expected_result(f"Convert: {ass_input}", expected_html, result)
                 self.assertEqual(result, expected_html)
+    
+    def test_composite_tags_with_basic_formatting(self):
+        """Test that basic formatting tags within composite blocks are preserved."""
+        log_test_name("AssFileHandler composite tags with basic formatting")
+        
+        # Test cases for composite blocks containing basic formatting
+        test_cases = [
+            # Composite block with italic
+            ("{\\pos(100,200)\\i1}Italic text{\\i0}", "<i>Italic text</i>"),
+            # Composite block with bold
+            ("{\\pos(50,100)\\b1}Bold text{\\b0}", "<b>Bold text</b>"),
+            # Composite block with multiple basic formatting
+            ("{\\pos(100,200)\\i1\\b1}Bold italic{\\b0}{\\i0}", "<i><b>Bold italic</b></i>"),
+            # Complex composite with color and italic
+            ("{\\pos(100,200)\\c&H00FF00&\\i1}Green italic{\\i0}", "<i>Green italic</i>"),
+            # Multiple composite blocks
+            ("{\\pos(50,100)}{\\c&H00FF00&\\b1}Green bold{\\b0}", "<b>Green bold</b>"),
+        ]
+        
+        for ass_input, expected_html in test_cases:
+            with self.subTest(input=ass_input):
+                result = self.handler._ass_to_html(ass_input)
+                log_input_expected_result(f"Composite: {ass_input}", expected_html, result)
+                self.assertEqual(result, expected_html)
+        
+        # Test round-trip preservation with composite tags
+        composite_ass_content = """[Script Info]
+Title: Composite Test
+ScriptType: v4.00+
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,50,&H00FFFFFF,&H0000FFFF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,2,0,2,30,30,30,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\i1}Italic positioned text{\\i0}
+Dialogue: 0,0:00:04.00,0:00:06.00,Default,,0,0,0,,{\\c&H00FF00&\\b1}Green bold text{\\b0}
+"""
+        
+        # Parse and verify GUI display
+        data = self.handler.parse_string(composite_ass_content)
+        lines = data.lines
+        
+        self.assertEqual(len(lines), 2)
+        
+        # Verify italic formatting preserved in GUI
+        italic_line = lines[0]
+        log_input_expected_result("Composite italic in GUI", "<i>Italic positioned text</i>", italic_line.text)
+        self.assertEqual(italic_line.text, "<i>Italic positioned text</i>")
+        self.assertEqual(italic_line.metadata.get('ssa_tags_start'), "{\\pos(100,200)}")
+        
+        # Verify bold formatting preserved in GUI
+        bold_line = lines[1]
+        log_input_expected_result("Composite bold in GUI", "<b>Green bold text</b>", bold_line.text)
+        self.assertEqual(bold_line.text, "<b>Green bold text</b>")
+        self.assertEqual(bold_line.metadata.get('ssa_tags_start'), "{\\c&H00FF00&}")
+        
+        # Test round-trip - verify both positioning and formatting restored
+        composed = self.handler.compose(data)
+        log_input_expected_result("Round-trip composite preservation", True, 
+                                "{\\pos(100,200)}{\\i1}Italic positioned text{\\i0}" in composed)
+        log_input_expected_result("Round-trip composite bold preservation", True,
+                                "{\\c&H00FF00&}{\\b1}Green bold text{\\b0}" in composed)
+        
+        self.assertIn("{\\pos(100,200)}{\\i1}Italic positioned text{\\i0}", composed)
+        self.assertIn("{\\c&H00FF00&}{\\b1}Green bold text{\\b0}", composed)
 
 if __name__ == '__main__':
     unittest.main()

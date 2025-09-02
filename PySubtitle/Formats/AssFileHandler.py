@@ -245,9 +245,15 @@ class AssFileHandler(SubtitleFileHandler):
             complex_tags = []
             for tag_match in re.finditer(r'\{[^}]+\}', tags_section):
                 tag = tag_match.group(0)
-                # If it's not a basic formatting tag, it's complex
-                if not re.match(r'^\{\\[ibus][01]\}$', tag):
-                    complex_tags.append(tag)
+                # If it's a standalone basic formatting tag, skip it entirely
+                if re.match(r'^\{\\[ibus][01]\}$', tag):
+                    continue
+                
+                # For composite tags, remove basic formatting but keep the rest
+                cleaned_tag = re.sub(r'\\[ibus][01]', '', tag)
+                # Only keep non-empty complex tags
+                if cleaned_tag != '{}':
+                    complex_tags.append(cleaned_tag)
             
             # Only store if we found complex tags
             if complex_tags:
@@ -275,10 +281,17 @@ class AssFileHandler(SubtitleFileHandler):
             tags_section = start_match.group(0)
             remaining_text = text[len(tags_section):]
             
-            # Extract just the basic formatting tags to keep
+            # Extract basic formatting tags from both standalone blocks and composite blocks
             basic_tags = []
-            for tag_match in re.finditer(r'\{\\[ibus][01]\}', tags_section):
-                basic_tags.append(tag_match.group(0))
+            for tag_match in re.finditer(r'\{[^}]+\}', tags_section):
+                tag_content = tag_match.group(0)
+                # Check if this is a standalone basic formatting tag
+                if re.match(r'^\{\\[ibus][01]\}$', tag_content):
+                    basic_tags.append(tag_content)
+                else:
+                    # Extract basic formatting tags from within composite blocks
+                    for basic_tag in re.finditer(r'\\[ibus][01]', tag_content):
+                        basic_tags.append('{' + basic_tag.group(0) + '}')
             
             # Rebuild text with only basic formatting tags preserved
             text = ''.join(basic_tags) + remaining_text

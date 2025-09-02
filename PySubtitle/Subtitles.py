@@ -50,15 +50,15 @@ class Subtitles:
         'format': None
     })
 
-    def __init__(self, filepath: str | None = None, outputpath: str | None = None) -> None:
-        self.originals: list[SubtitleLine] | None = None
-        self.translated: list[SubtitleLine] | None = None
+    def __init__(self, filepath: str|None = None, outputpath: str|None = None) -> None:
+        self.originals: list[SubtitleLine]|None = None
+        self.translated: list[SubtitleLine]|None = None
         self.start_line_number: int = 1
         self._scenes: list[SubtitleScene] = []
         self.lock = threading.RLock()
 
-        self.sourcepath: str | None = GetInputPath(filepath)
-        self.outputpath: str | None = outputpath or None
+        self.sourcepath: str|None = GetInputPath(filepath)
+        self.outputpath: str|None = outputpath or None
 
         self.metadata: dict[str, Any] = {}
 

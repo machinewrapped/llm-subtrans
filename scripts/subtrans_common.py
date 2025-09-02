@@ -152,7 +152,7 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     """
     Initialise a subtitle project with the provided arguments
     """
-    project = SubtitleProject(persistent=options.project_file)
+    project = SubtitleProject(persistent=options.use_project_file)
 
     project.InitialiseProject(args.input, args.output)
 

@@ -26,16 +26,16 @@ class DataModelTests(SubtitleTestCase):
         project = SubtitleProject()
         
         # Simulate loading a subtitle file with project settings
-        project_file = Subtitles()
+        subtitles = Subtitles()
         original_subtitles = chinese_dinner_data.get_str('original')
         if original_subtitles is None:
             self.fail("Couldn't load subtitles")
             return
 
-        project_file.LoadSubtitlesFromString(original_subtitles, SrtFileHandler())
+        subtitles.LoadSubtitlesFromString(original_subtitles, SrtFileHandler())
         
         # Set the project's subtitle file and apply test-specific project settings
-        project.subtitles = project_file
+        project.subtitles = subtitles
         # Apply the project-specific settings that were set on the SubtitleFile
         project.UpdateProjectSettings(SettingsType({
             'provider': 'Dummy Claude',
@@ -236,13 +236,13 @@ class DataModelTests(SubtitleTestCase):
         
         # Create project with different provider settings
         project = SubtitleProject()
-        project_file = Subtitles()
+        subtitles = Subtitles()
         original_subtitles3 = chinese_dinner_data.get_str('original')
         if original_subtitles3 is None:
             self.fail("Couldn't load subtitles")
             return
-        project_file.LoadSubtitlesFromString(original_subtitles3, SrtFileHandler())
-        project.subtitles = project_file
+        subtitles.LoadSubtitlesFromString(original_subtitles3, SrtFileHandler())
+        project.subtitles = subtitles
         project.UpdateProjectSettings(SettingsType({
             'provider': 'Dummy GPT',
             'model': 'gpt-4'

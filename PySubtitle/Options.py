@@ -178,7 +178,7 @@ class Options(SettingsType):
         return self.get_str('target_language') or str(default_settings['target_language'])
 
     @property
-    def project_file(self) -> bool:
+    def use_project_file(self) -> bool:
         return self.get_bool('project_file', True)
 
     def GetProviderSettings(self, provider : str) -> SettingsType:

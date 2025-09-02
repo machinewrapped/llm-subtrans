@@ -18,8 +18,15 @@ class SaveProjectFile(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
+        current_filepath = self.datamodel.project.projectfile
+        current_outputpath = self.datamodel.project.subtitles.outputpath
+
         self.project.projectfile = self.project.GetProjectFilepath(self.filepath)
         self.project.subtitles.outputpath = GetOutputPath(self.project.projectfile, self.project.target_language)
+
+        if current_filepath != self.project.projectfile or current_outputpath != self.project.subtitles.outputpath:
+            self.project.needs_writing = True
+
         self.datamodel.SaveProject()
 
         return True

@@ -26,6 +26,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 from GUI.ProjectSelection import ProjectSelection
 
 from PySubtitle.Options import Options
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.Helpers.Localization import _
 

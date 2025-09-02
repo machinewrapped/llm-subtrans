@@ -45,7 +45,7 @@ class TestSubtitleProjectFormats(unittest.TestCase):
 
     def test_auto_detect_srt(self):
         path = self._create_temp_srt()
-        project = SubtitleProject(Options())
+        project = SubtitleProject()
         project.InitialiseProject(path)
         self.assertIsNotNone(project.subtitles)
         self.assertEqual(project.subtitles.format, ".srt")
@@ -53,7 +53,7 @@ class TestSubtitleProjectFormats(unittest.TestCase):
 
     def test_project_file_roundtrip_preserves_handler(self):
         path = self._create_temp_srt()
-        project = SubtitleProject(Options())
+        project = SubtitleProject()
         project.InitialiseProject(path)
         self.assertIsNotNone(project.subtitles)
         self.assertEqual(project.subtitles.format, ".srt")
@@ -66,7 +66,7 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         project.WriteProjectToFile(project_path, encoder_class=SubtitleEncoder)
         self.addCleanup(os.remove, project_path)
 
-        reopened_project = SubtitleProject(Options())
+        reopened_project = SubtitleProject()
         reopened_project.ReadProjectFile(project_path)
         self.assertIsNotNone(reopened_project.subtitles)
         self.assertEqual(reopened_project.subtitles.format, ".srt")

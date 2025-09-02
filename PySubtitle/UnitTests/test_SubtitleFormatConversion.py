@@ -38,8 +38,8 @@ class TestSubtitleFormatConversion(unittest.TestCase):
     def test_ass_to_srt_conversion(self):
         ass_path = self._write_temp(".ass", ASS_SAMPLE)
         out_path = ass_path + ".srt"
-        options = Options(project=None)
-        project = SubtitleProject(options)
+        options = Options()
+        project = SubtitleProject()
         project.InitialiseProject(filepath=ass_path, outputpath=out_path)
         self.assertIsNotNone(project.subtitles)
         project.subtitles.AutoBatch(SubtitleBatcher(options))
@@ -47,7 +47,7 @@ class TestSubtitleFormatConversion(unittest.TestCase):
         project.SaveTranslation()
         self.assertTrue(os.path.exists(out_path))
 
-        converted_project = SubtitleProject(options)
+        converted_project = SubtitleProject()
         converted_project.LoadSubtitleFile(out_path)
         self.assertTrue(converted_project.subtitles.format == ".srt")
 
@@ -57,7 +57,7 @@ class TestSubtitleFormatConversion(unittest.TestCase):
         srt_path = self._write_temp(".srt", SRT_SAMPLE)
         out_path = srt_path + ".ass"
         options = Options(project=None)
-        project = SubtitleProject(options)
+        project = SubtitleProject()
         project.InitialiseProject(filepath=srt_path, outputpath=out_path)
         self.assertIsNotNone(project.subtitles)
         project.subtitles.AutoBatch(SubtitleBatcher(options))
@@ -66,7 +66,7 @@ class TestSubtitleFormatConversion(unittest.TestCase):
         tmp_project.close()
         project.WriteProjectToFile(tmp_project.name, encoder_class=SubtitleEncoder)
 
-        project2 = SubtitleProject(Options())
+        project2 = SubtitleProject()
         project2.ReadProjectFile(tmp_project.name)
         self.assertEqual(project2.subtitles.format, '.ass')
         self.addCleanup(os.remove, tmp_project.name)

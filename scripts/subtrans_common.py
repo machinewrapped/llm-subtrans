@@ -60,7 +60,7 @@ def CreateArgParser(description : str) -> ArgumentParser:
     Create new arg parser and parse shared command line arguments between models
     """
     parser = ArgumentParser(description=description)
-    input_help = "Input subtitle file path (see --list-formats for supported formats)"
+    input_help = "Path to subtitle file (see --list-formats for supported formats)"
     parser.add_argument('input', help=input_help)
     parser.add_argument('-o', '--output', help="Output subtitle file path; format inferred from extension")
     parser.add_argument('--list-formats', action='store_true', help="List supported subtitle formats and exit")

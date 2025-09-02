@@ -38,7 +38,7 @@ class BatchSubtitlesCommand(Command):
             if self.options.get('save_preprocessed', False):
                 changed = len(originals) != len(project.subtitles.originals) or any(o != n for o, n in zip(originals, project.subtitles.originals))
                 if changed:
-                    output_path = GetOutputPath(project.projectfile, "preprocessed")
+                    output_path = GetOutputPath(project.subtitles.sourcepath, "preprocessed")
                     logging.info(f"Saving preprocessed subtitles to {output_path}")
                     project.SaveOriginal(output_path)
 

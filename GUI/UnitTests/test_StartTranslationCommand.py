@@ -1,10 +1,11 @@
 from copy import deepcopy
 
-from GUI.Command import Command
-from GUI.UnitTests.DataModelHelpers import CreateTestDataModelBatched
+from GUI.Commands.SaveTranslationFile import SaveTranslationFile
 from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name
 
+from GUI.Command import Command
+from GUI.UnitTests.DataModelHelpers import CreateTestDataModelBatched
 from GUI.Commands.SaveProjectFile import SaveProjectFile
 from GUI.Commands.TranslateSceneCommand import TranslateSceneCommand
 from GUI.ProjectDataModel import ProjectDataModel
@@ -42,7 +43,7 @@ test_cases = [
                         2 : {}
                     }
                 },
-                "expected_commands_to_queue" : [ TranslateSceneCommand, SaveProjectFile ],
+                "expected_commands_to_queue" : [ TranslateSceneCommand, SaveTranslationFile ],
                 "expected_translations" : [ (2, None, None) ],
                 "expected_translated_batches": [ (1,1), (2,1) ],
                 "expected_untranslated_batches": [ (3,1), (4,1) ]
@@ -82,7 +83,7 @@ test_cases = [
                     "resume" : True,
                     "autosave" : True,
                 },
-                "expected_commands_to_queue" : [ TranslateSceneCommand, SaveProjectFile ],
+                "expected_commands_to_queue" : [ TranslateSceneCommand, SaveTranslationFile ],
                 "expected_translations" : [ (4, None, None) ],
                 "expected_translated_batches": [ (1,1), (2,1), (3,1), (4,1) ],
                 "expected_untranslated_batches": []
@@ -124,8 +125,8 @@ class StartTranslationCommandTests(SubtitleTestCase):
                 queued_commands = self._flatten_queued_commands(command)
                 queued_command_types = [type(command) for command in queued_commands]
 
-                expected_commands_to_queue = command_data.get('expected_commands_to_queue')
-                expected_translations = command_data.get('expected_translations')
+                expected_commands_to_queue = list(command_data.get('expected_commands_to_queue'))
+                expected_translations = list(command_data.get('expected_translations'))
                 log_input_expected_result("Queued commands", queued_command_types, expected_commands_to_queue)
 
                 self.assertEqual(len(queued_commands), len(expected_commands_to_queue))

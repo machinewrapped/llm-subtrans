@@ -63,7 +63,7 @@ class SubtitleScene:
     @property
     def any_translated(self) -> bool:
         """ Check if any batch in the scene has translations """
-        return any(batch.all_translated for batch in self.batches)
+        return any(batch.any_translated for batch in self.batches)
 
     @property
     def summary(self) -> str|None:

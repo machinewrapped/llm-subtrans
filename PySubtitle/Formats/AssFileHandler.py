@@ -1,6 +1,6 @@
 import pysubs2
 import pysubs2.time
-import re
+import regex
 from datetime import timedelta
 from typing import TextIO
 
@@ -10,6 +10,37 @@ from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
 from PySubtitle.Helpers.Localization import _
+
+# Precompiled regex patterns for performance
+_START_TAGS_PATTERN = regex.compile(r'^(\{[^}]*\})+')
+_TAG_BLOCK_PATTERN = regex.compile(r'\{[^}]+\}')
+_STANDALONE_BASIC_TAG_PATTERN = regex.compile(r'^\{\\[ibus][01]\}$')
+_BASIC_TAG_PATTERN = regex.compile(r'\\[ibus][01]')
+_HTML_TAG_CLEANUP_PATTERN = regex.compile(r'<[^>]+>')
+
+# Precompiled ASS to HTML conversion patterns
+_ASS_TO_HTML_PATTERNS = [
+    (regex.compile(r'{\\i1}'), '<i>'),
+    (regex.compile(r'{\\i0}'), '</i>'),
+    (regex.compile(r'{\\b1}'), '<b>'),
+    (regex.compile(r'{\\b0}'), '</b>'),
+    (regex.compile(r'{\\u1}'), '<u>'),
+    (regex.compile(r'{\\u0}'), '</u>'),
+    (regex.compile(r'{\\s1}'), '<s>'),
+    (regex.compile(r'{\\s0}'), '</s>')
+]
+
+# Precompiled HTML to ASS conversion patterns
+_HTML_TO_ASS_PATTERNS = [
+    (regex.compile(r'<i>'), r'{\\i1}'),
+    (regex.compile(r'</i>'), r'{\\i0}'),
+    (regex.compile(r'<b>'), r'{\\b1}'),
+    (regex.compile(r'</b>'), r'{\\b0}'),
+    (regex.compile(r'<u>'), r'{\\u1}'),
+    (regex.compile(r'</u>'), r'{\\u0}'),
+    (regex.compile(r'<s>'), r'{\\s1}'),
+    (regex.compile(r'</s>'), r'{\\s0}')
+]
 
 
 class AssFileHandler(SubtitleFileHandler):
@@ -237,20 +268,20 @@ class AssFileHandler(SubtitleFileHandler):
         metadata = {}
         
         # Match consecutive ASS tags at the start of the line
-        start_tags_match = re.match(r'^(\{[^}]*\})+', ass_text)
+        start_tags_match = _START_TAGS_PATTERN.match(ass_text)
         if start_tags_match:
             tags_section = start_tags_match.group(0)
             
             # Extract only the complex (non-basic formatting) tags
             complex_tags = []
-            for tag_match in re.finditer(r'\{[^}]+\}', tags_section):
+            for tag_match in _TAG_BLOCK_PATTERN.finditer(tags_section):
                 tag = tag_match.group(0)
                 # If it's a standalone basic formatting tag, skip it entirely
-                if re.match(r'^\{\\[ibus][01]\}$', tag):
+                if _STANDALONE_BASIC_TAG_PATTERN.match(tag):
                     continue
                 
                 # For composite tags, remove basic formatting but keep the rest
-                cleaned_tag = re.sub(r'\\[ibus][01]', '', tag)
+                cleaned_tag = _BASIC_TAG_PATTERN.sub('', tag)
                 # Only keep non-empty complex tags
                 if cleaned_tag != '{}':
                     complex_tags.append(cleaned_tag)
@@ -276,21 +307,21 @@ class AssFileHandler(SubtitleFileHandler):
         
         # Remove complex whole-line tags at the start (they'll be stored in metadata)
         # But preserve basic formatting tags for HTML conversion
-        start_match = re.match(r'^(\{[^}]*\})+', text)
+        start_match = _START_TAGS_PATTERN.match(text)
         if start_match:
             tags_section = start_match.group(0)
             remaining_text = text[len(tags_section):]
             
             # Extract basic formatting tags from both standalone blocks and composite blocks
             basic_tags = []
-            for tag_match in re.finditer(r'\{[^}]+\}', tags_section):
+            for tag_match in _TAG_BLOCK_PATTERN.finditer(tags_section):
                 tag_content = tag_match.group(0)
                 # Check if this is a standalone basic formatting tag
-                if re.match(r'^\{\\[ibus][01]\}$', tag_content):
+                if _STANDALONE_BASIC_TAG_PATTERN.match(tag_content):
                     basic_tags.append(tag_content)
                 else:
                     # Extract basic formatting tags from within composite blocks
-                    for basic_tag in re.finditer(r'\\[ibus][01]', tag_content):
+                    for basic_tag in _BASIC_TAG_PATTERN.finditer(tag_content):
                         basic_tags.append('{' + basic_tag.group(0) + '}')
             
             # Rebuild text with only basic formatting tags preserved
@@ -299,15 +330,9 @@ class AssFileHandler(SubtitleFileHandler):
         # Convert line breaks (\\N to \n)
         text = text.replace('\\N', '\n')
         
-        # Convert basic formatting tags to HTML
-        text = re.sub(r'{\\i1}', '<i>', text)
-        text = re.sub(r'{\\i0}', '</i>', text)
-        text = re.sub(r'{\\b1}', '<b>', text)
-        text = re.sub(r'{\\b0}', '</b>', text)
-        text = re.sub(r'{\\u1}', '<u>', text)
-        text = re.sub(r'{\\u0}', '</u>', text)
-        text = re.sub(r'{\\s1}', '<s>', text)
-        text = re.sub(r'{\\s0}', '</s>', text)
+        # Convert basic formatting tags to HTML using precompiled patterns
+        for pattern, replacement in _ASS_TO_HTML_PATTERNS:
+            text = pattern.sub(replacement, text)
         
         # For any remaining ASS tags that aren't basic formatting, preserve them
         # This allows translators to see and preserve complex inline formatting
@@ -325,18 +350,12 @@ class AssFileHandler(SubtitleFileHandler):
         # Convert line breaks (\n to \\N)
         text = text.replace('\n', '\\N')
         
-        # Convert HTML tags back to ASS tags
-        text = re.sub(r'<i>', r'{\\i1}', text)
-        text = re.sub(r'</i>', r'{\\i0}', text)
-        text = re.sub(r'<b>', r'{\\b1}', text)
-        text = re.sub(r'</b>', r'{\\b0}', text)
-        text = re.sub(r'<u>', r'{\\u1}', text)
-        text = re.sub(r'</u>', r'{\\u0}', text)
-        text = re.sub(r'<s>', r'{\\s1}', text)
-        text = re.sub(r'</s>', r'{\\s0}', text)
+        # Convert HTML tags back to ASS tags using precompiled patterns
+        for pattern, replacement in _HTML_TO_ASS_PATTERNS:
+            text = pattern.sub(replacement, text)
         
         # Remove any other HTML tags that we don't support
-        text = re.sub(r'<[^>]+>', '', text)
+        text = _HTML_TAG_CLEANUP_PATTERN.sub('', text)
         
         return text
 

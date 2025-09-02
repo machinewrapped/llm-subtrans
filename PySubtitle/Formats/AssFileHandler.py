@@ -1,5 +1,6 @@
 import pysubs2
 import pysubs2.time
+import re
 from datetime import timedelta
 from typing import TextIO
 
@@ -96,8 +97,9 @@ class AssFileHandler(SubtitleFileHandler):
         start = timedelta(milliseconds=pysubs2_line.start)
         end = timedelta(milliseconds=pysubs2_line.end)
         
-        # Extract text content using plaintext for GUI compatibility (converts \\N to \n)
-        text = pysubs2_line.plaintext
+        # Extract text content using .text to preserve inline formatting,
+        # then convert ASS tags to HTML for GUI compatibility
+        text = self._ass_to_html(pysubs2_line.text)
         
         # Create comprehensive metadata from pysubs2 properties
         # This is "pass-through" - we preserve everything for format fidelity
@@ -112,6 +114,12 @@ class AssFileHandler(SubtitleFileHandler):
             'effect': pysubs2_line.effect,
             'type': pysubs2_line.type
         }
+        
+        # Extract whole-line ASS override tags and store in metadata
+        if pysubs2_line.text:
+            extracted_tags = self._extract_whole_line_tags(pysubs2_line.text)
+            if extracted_tags:
+                metadata.update(extracted_tags)
         
         return SubtitleLine.Construct(
             number=index,
@@ -138,8 +146,14 @@ class AssFileHandler(SubtitleFileHandler):
         else:
             event.end = 0
         
-        # Set text using plaintext property (automatically converts \n to \\N)
-        event.plaintext = line.text or ""
+        # Convert HTML tags back to ASS tags, then set text directly
+        ass_text = self._html_to_ass(line.text or "")
+        
+        # Restore whole-line ASS tags from metadata
+        ass_text = self._restore_whole_line_tags(ass_text, line.metadata or {})
+        
+        # Use .text property instead of .plaintext to preserve formatting
+        event.text = ass_text
         
         # Restore metadata if available, otherwise use sensible defaults
         metadata = line.metadata or {}
@@ -214,4 +228,102 @@ class AssFileHandler(SubtitleFileHandler):
         # Restore aegisub project data if present
         if 'aegisub_project' in metadata and hasattr(subs, 'aegisub_project'):
             subs.aegisub_project.update(metadata['aegisub_project'])
+    
+    def _extract_whole_line_tags(self, ass_text: str) -> dict:
+        """Extract whole-line ASS override tags from start of line and return as metadata."""
+        if not ass_text:
+            return {}
+            
+        metadata = {}
+        
+        # Match consecutive ASS tags at the start of the line
+        start_tags_match = re.match(r'^(\{[^}]*\})+', ass_text)
+        if start_tags_match:
+            tags_section = start_tags_match.group(0)
+            
+            # Extract only the complex (non-basic formatting) tags
+            complex_tags = []
+            for tag_match in re.finditer(r'\{[^}]+\}', tags_section):
+                tag = tag_match.group(0)
+                # If it's not a basic formatting tag, it's complex
+                if not re.match(r'^\{\\[ibus][01]\}$', tag):
+                    complex_tags.append(tag)
+            
+            # Only store if we found complex tags
+            if complex_tags:
+                metadata['ssa_tags_start'] = ''.join(complex_tags)
+        
+        return metadata
+    
+    def _restore_whole_line_tags(self, text: str, metadata: dict) -> str:
+        """Restore whole-line ASS tags from metadata."""
+        if 'ssa_tags_start' in metadata:
+            return f"{metadata['ssa_tags_start']}{text}"
+        return text
+    
+    def _ass_to_html(self, ass_text: str) -> str:
+        """Convert ASS inline formatting tags to HTML tags for GUI display."""
+        if not ass_text:
+            return ""
+            
+        text = ass_text
+        
+        # Remove complex whole-line tags at the start (they'll be stored in metadata)
+        # But preserve basic formatting tags for HTML conversion
+        start_match = re.match(r'^(\{[^}]*\})+', text)
+        if start_match:
+            tags_section = start_match.group(0)
+            remaining_text = text[len(tags_section):]
+            
+            # Extract just the basic formatting tags to keep
+            basic_tags = []
+            for tag_match in re.finditer(r'\{\\[ibus][01]\}', tags_section):
+                basic_tags.append(tag_match.group(0))
+            
+            # Rebuild text with only basic formatting tags preserved
+            text = ''.join(basic_tags) + remaining_text
+        
+        # Convert line breaks (\\N to \n)
+        text = text.replace('\\N', '\n')
+        
+        # Convert basic formatting tags to HTML
+        text = re.sub(r'{\\i1}', '<i>', text)
+        text = re.sub(r'{\\i0}', '</i>', text)
+        text = re.sub(r'{\\b1}', '<b>', text)
+        text = re.sub(r'{\\b0}', '</b>', text)
+        text = re.sub(r'{\\u1}', '<u>', text)
+        text = re.sub(r'{\\u0}', '</u>', text)
+        text = re.sub(r'{\\s1}', '<s>', text)
+        text = re.sub(r'{\\s0}', '</s>', text)
+        
+        # For any remaining ASS tags that aren't basic formatting, preserve them
+        # This allows translators to see and preserve complex inline formatting
+        # (colors, fonts, etc.) that don't have HTML equivalents
+        
+        return text
+    
+    def _html_to_ass(self, html_text: str) -> str:
+        """Convert HTML tags back to ASS inline formatting tags."""
+        if not html_text:
+            return ""
+            
+        text = html_text
+        
+        # Convert line breaks (\n to \\N)
+        text = text.replace('\n', '\\N')
+        
+        # Convert HTML tags back to ASS tags
+        text = re.sub(r'<i>', r'{\\i1}', text)
+        text = re.sub(r'</i>', r'{\\i0}', text)
+        text = re.sub(r'<b>', r'{\\b1}', text)
+        text = re.sub(r'</b>', r'{\\b0}', text)
+        text = re.sub(r'<u>', r'{\\u1}', text)
+        text = re.sub(r'</u>', r'{\\u0}', text)
+        text = re.sub(r'<s>', r'{\\s1}', text)
+        text = re.sub(r'</s>', r'{\\s0}', text)
+        
+        # Remove any other HTML tags that we don't support
+        text = re.sub(r'<[^>]+>', '', text)
+        
+        return text
 

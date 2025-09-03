@@ -83,7 +83,7 @@ class GuiInterface(QObject):
         self.action_handler.showAboutDialog.connect(self.ShowAboutDialog)
         self.action_handler.exitProgram.connect(self._exit_program)
 
-        # Autosave timer - triggers 30 seconds after last change
+        # Autosave timer - triggers 20 seconds after last change
         self._autosave_timer = QTimer()
         self._autosave_timer.setSingleShot(True)
         self._autosave_timer.timeout.connect(self._perform_autosave)

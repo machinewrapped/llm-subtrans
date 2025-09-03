@@ -82,3 +82,26 @@ class SubtitleFormatRegistry:
     def _ensure_discovered(cls) -> None:
         if not cls._discovered:
             cls.discover()
+
+    @classmethod
+    def detect_format(cls, content : str) -> str|None:
+        """Detect subtitle format from content using pysubs2."""
+        try:
+            import pysubs2.fileio
+            return pysubs2.fileio.detect_format(content)
+        except Exception:
+            return None
+
+    @classmethod
+    def format_to_extension(cls, format_name : str|None) -> str|None:
+        """Map a detected format name to a file extension."""
+        if not format_name:
+            return None
+        mapping = {
+            'srt': '.srt',
+            'ass': '.ass',
+            'ssa': '.ssa',
+            'vtt': '.vtt',
+            'ttml': '.ttml'
+        }
+        return mapping.get(format_name.lower())

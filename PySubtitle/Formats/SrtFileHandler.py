@@ -23,7 +23,7 @@ class SrtFileHandler(SubtitleFileHandler):
         """
         lines = list(self._parse_srt_items(file_obj))
         metadata = {'format': 'srt'}
-        return SubtitleData(lines=lines, metadata=metadata)
+        return SubtitleData(lines=lines, metadata=metadata, detected_format='srt')
     
     def parse_string(self, content: str) -> SubtitleData:
         """
@@ -31,7 +31,7 @@ class SrtFileHandler(SubtitleFileHandler):
         """
         lines = list(self._parse_srt_items(content))
         metadata = {'format': 'srt'}
-        return SubtitleData(lines=lines, metadata=metadata)
+        return SubtitleData(lines=lines, metadata=metadata, detected_format='srt')
 
     def compose(self, data: SubtitleData) -> str:
         """

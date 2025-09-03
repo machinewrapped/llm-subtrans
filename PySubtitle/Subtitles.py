@@ -61,6 +61,7 @@ class Subtitles:
         self.outputpath : str|None = outputpath or None
 
         self.metadata : dict[str, Any] = {}
+        self.detected_format : str|None = None
 
         self.settings : SettingsType = deepcopy(self.DEFAULT_PROJECT_SETTINGS)
 
@@ -74,7 +75,19 @@ class Subtitles:
 
     @property
     def format(self) -> str:
-        return os.path.splitext(self.outputpath)[1] if self.outputpath else os.path.splitext(self.sourcepath)[1] if self.sourcepath else '.srt'
+        if self.outputpath:
+            ext = os.path.splitext(self.outputpath)[1]
+            if ext:
+                return ext
+        if self.detected_format:
+            ext = SubtitleFormatRegistry.format_to_extension(self.detected_format)
+            if ext:
+                return ext
+        if self.sourcepath:
+            ext = os.path.splitext(self.sourcepath)[1]
+            if ext:
+                return ext
+        return '.srt'
     
     @property
     def task_type(self) -> str:
@@ -266,31 +279,37 @@ class Subtitles:
         """
         if filepath:
             self.sourcepath = GetInputPath(filepath)
-            # Set default output path using same format as input
-            self.outputpath = GetOutputPath(self.sourcepath, self.target_language)
 
         if not self.sourcepath:
             raise ValueError("No source path set for subtitles")
 
-        file_handler: SubtitleFileHandler = SubtitleFormatRegistry.create_handler(filename=self.sourcepath)
-    
         try:
             with open(self.sourcepath, 'r', encoding=default_encoding, newline='') as f:
-                data = file_handler.parse_file(f)
-
-        except SubtitleParseError as e:
+                content = f.read()
+        except UnicodeDecodeError as e:
             logging.warning(_("Error parsing file... trying with fallback encoding: {}").format(str(e)))
-            try:
-                with open(self.sourcepath, 'r', encoding=fallback_encoding) as f:
-                    data = file_handler.parse_file(f)
-            except SubtitleParseError as e2:
-                logging.error(_("Failed to parse file with fallback encoding: {}").format(str(e2)))
-                raise e2
+            with open(self.sourcepath, 'r', encoding=fallback_encoding) as f:
+                content = f.read()
+
+        detected_format = SubtitleFormatRegistry.detect_format(content)
+        extension = SubtitleFormatRegistry.format_to_extension(detected_format) if detected_format else os.path.splitext(self.sourcepath)[1]
+
+        try:
+            file_handler = SubtitleFormatRegistry.create_handler(extension=extension)
+            data = file_handler.parse_string(content)
+        except Exception as e:
+            logging.error(_("Failed to parse file with detected format: {}").format(str(e)))
+            raise SubtitleParseError(_("Unable to parse subtitle file"), e)
 
         with self.lock:
             self._renumber_if_needed(data.lines)
             self.originals = data.lines
             self.metadata = data.metadata
+            self.detected_format = data.detected_format or detected_format
+            self.metadata['detected_format'] = self.detected_format
+            if self.outputpath is None:
+                ext = SubtitleFormatRegistry.format_to_extension(self.detected_format)
+                self.outputpath = GetOutputPath(self.sourcepath, self.target_language, ext)
 
     def LoadSubtitlesFromString(self, subtitles_string: str, file_handler: SubtitleFileHandler) -> None:
         """
@@ -302,6 +321,8 @@ class Subtitles:
                 self._renumber_if_needed(data.lines)
                 self.originals = data.lines
                 self.metadata = data.metadata
+                self.detected_format = data.detected_format
+                self.metadata['detected_format'] = self.detected_format
 
         except SubtitleParseError as e:
             logging.error(_("Failed to parse subtitles string: {}").format(str(e)))

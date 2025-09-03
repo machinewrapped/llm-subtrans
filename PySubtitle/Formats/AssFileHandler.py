@@ -110,8 +110,8 @@ class AssFileHandler(SubtitleFileHandler):
 
         # Extract serializable metadata
         metadata = self._parse_metadata(subs, subtitle_format)
-            
-        return SubtitleData(lines=lines, metadata=metadata)
+
+        return SubtitleData(lines=lines, metadata=metadata, detected_format=subtitle_format)
         
     def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int) -> SubtitleLine:
         """Convert pysubs2 SSAEvent to SubtitleLine with metadata preservation."""

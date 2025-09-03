@@ -50,7 +50,7 @@ class SubtitleTranslator:
         self.retranslate = settings.get_bool('retranslate')
         self.reparse = settings.get_bool('reparse')
         self.preview = settings.get_bool('preview')
-        self.resume = not self.reparse and not self.retranslate
+        self.resume = resume and not self.reparse and not self.retranslate
 
         settings = Options(settings)
 

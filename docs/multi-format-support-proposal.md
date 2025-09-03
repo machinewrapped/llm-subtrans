@@ -189,30 +189,52 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 - CLI argument parsing (subtrans_common.py)
 - Documentation (readme.md, architecture.md)
 
-### Phase 6: Additional Format Support
+### Phase 6: Enhanced Format Detection
+
+**IMPORTANT NOTE:** `pysubs2` supports format detection from content. We should aim to leverage that rather than implement our own detection logic.
+
 **Requirements**:
+- Support format detection when file extension is missing/incorrect
+- Report detected_format via `SubtitleData` and automatically update the project output format
+- Project format and file extension should be determined by output_path > detected_format > source_path > default (srt) priority order.
+- Error reporting for format detection failures
+
+**Acceptance Tests**:
+- [ ] Detect SRT format with .txt extension
+- [ ] Detect ASS format with .txt extension
+- [ ] Detect SSA format with .ass extension
+- [ ] Provide clear error messages for undetectable formats
+- [ ] Handle edge cases with malformed files gracefully
+
+**Files to Modify**:
+- `PySubtitle/SubtitleFormatRegistry.py`: Add format detection hooks
+- `PySubtitle/SubtitleFileHandler.py` and subclasses: Add detection methods if necessary
+
+### Phase 7: Additional Format Support
+**Requirements**:
+- Keep existing `SrtFileHandler` (well-tested, SRT-specialized)
+- Maintain `AssFileHandler` for custom handling of tags and metadata
 - Implement `VttFileHandler` for WebVTT (common web format) using pysubs2
 - Implement `TtmlFileHandler` for TTML (advanced XML-based format) using pysubs2
-- Keep existing `SrtFileHandler` (well-tested, SRT-specialized)
 - Consider `SccFileHandler` for SCC (broadcast standard) if needed
 - Support speaker diarization metadata preservation from Whisper+PyAnnote workflows
 - Leverage pysubs2's native Whisper format support
+- Add helper functions or a common base class to standardise and leverage pysubs2's support for multiple formats
+- Export in any format maintaining compliance with respective standards and preserving as much metadata as possible
 
 **Priority Format Rationale**:
 - **WebVTT**: Universal web standard, supported by all major platforms
 - **TTML**: Advanced format supporting complex styling, used by streaming services
-- **SRT**: Keep existing specialized `srt` module implementation
 - **Whisper**: Native support for OpenAI Whisper transcription output
-- **SCC**: Evaluate custom implementation if broadcast support needed
 
 **Acceptance Tests**:
+- [ ] Maintain existing SRT parsing with current `srt` module
+- [ ] Maintain existing SSA/ASS parsing with current `AssFileHandler`
 - [ ] Parse WebVTT files with WEBVTT header and cue settings using pysubs2
 - [ ] Parse TTML files with XML structure and advanced styling using pysubs2
-- [ ] Maintain existing SRT parsing with current `srt` module
 - [ ] Preserve speaker identification metadata from transcription workflows
-- [ ] Export to each format maintaining compliance with respective standards
-- [ ] Handle timestamp format conversions between formats
 - [ ] Support transcription service output formats (OpenAI Whisper, Gemini)
+- [ ] Handle timestamp format conversions between formats
 - [ ] Test format conversion between all supported formats
 
 **Files to Create**:
@@ -228,7 +250,7 @@ Follow the proven pattern from `AssFileHandler`:
 - Format-specific optimizations within each handler
 - Comprehensive error handling with SubtitleParseError translation
 
-### Phase 7: GUI Integration
+### Phase 8: GUI Integration
 **Requirements**:
 - Add format-specific settings to a new tab `SettingsDialog`, data-driven and extensible by registered handlers (similar to provider settings)
 
@@ -238,25 +260,6 @@ Follow the proven pattern from `AssFileHandler`:
 **Files to Modify**:
 - SettingsDialog for format-specific options
 - SubtitleFileHandler for format-specific options
-
-### Phase 8: Enhanced Format Detection
-
-**IMPORTANT NOTE:** `pysubs2` supports format detection from content. We should aim to leverage that rather than implement our own detection logic.
-
-**Requirements**:
-- Request sample files from the user for testing format detection
-- Support format detection when file extension is missing/incorrect
-- Error reporting for format detection failures
-
-**Acceptance Tests**:
-- [ ] Detect SRT format with .txt extension
-- [ ] Detect ASS format with .txt extension
-- [ ] Provide clear error messages for undetectable formats
-- [ ] Handle edge cases with malformed files gracefully
-
-**Files to Modify**:
-- `PySubtitle/SubtitleFormatRegistry.py`: Add format detection hooks
-- `PySubtitle/SubtitleFileHandler.py` and subclasses: Add detection methods if necessary
 
 ## Technical Specifications
 
@@ -318,7 +321,6 @@ class ExampleFileHandler(SubtitleFileHandler):
 ```python
 # ASS Format Metadata
 {
-    "format": "ass",
     "style": "Default",
     "layer": 0,
     "margin_l": 0,
@@ -330,7 +332,6 @@ class ExampleFileHandler(SubtitleFileHandler):
 
 # WebVTT Format Metadata
 {
-    "format": "vtt",
     "cue_id": "subtitle-001",
     "settings": "align:center position:50%",
     "styling": "<c.class>colored text</c>"
@@ -533,8 +534,7 @@ The multi-format architecture naturally supports transcription service outputs:
 ### Additional Format Support (Lower Priority)
 - YouTube SBV (simple timestamped format)
 - MicroDVD (SUB) (frame-based timing)
-- SAMI (SMI) (Microsoft legacy format)
-- EBU-STL (European broadcast standard)
+- Whisper captions
 
 ### Advanced Features
 - **Format-specific editing**: Maintain format integrity during translation

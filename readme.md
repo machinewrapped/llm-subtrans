@@ -39,6 +39,8 @@ Gemini 2.5 Flash is perhaps the leading model for translation speed and fluency 
 
 You will need a Google Gemini API key from https://ai.google.dev/ or from a project created on https://console.cloud.google.com/. You must ensure that Generative AI is enabled for the api key and project.
 
+Unfortunately Gemini has some censorship and will refuse to translate content that contains certain words or phrases, even with minimal safety settings. If you hit this you will need to use another provider.
+
 ### OpenAI
 https://openai.com/policies/privacy-policy
 
@@ -242,7 +244,7 @@ llm-subtrans --project --auto -l <language> <path_to_subtitle_file>  # Project f
 LLM-Subtrans is primarily a translation application, and format conversion is probably best handled by dedicated tools, but the option exists to read one format and write another.
 
 ```sh
-# Use OpenRouter with a specific model and convert from .ass to .srt
+# Use OpenRouter and convert from .ass to .srt
 llm-subtrans --project --auto -l <language> -o <path_to_output_file.srt> <path_to_subtitle_file.ass>
 ```
 

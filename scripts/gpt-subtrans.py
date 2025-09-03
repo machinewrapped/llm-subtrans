@@ -12,7 +12,6 @@ from scripts.subtrans_common import (
     CreateOptions,
     CreateTranslator,
     CreateProject,
-    HandleFormatListing,
 )
 
 from PySubtitle.Options import Options
@@ -30,7 +29,6 @@ parser.add_argument('-m', '--model', type=str, default=None, help="The model to 
 parser.add_argument('--httpx', action='store_true', help="Use the httpx library for custom api_base requests. May help if you receive a 307 redirect error.")
 parser.add_argument('--proxy', type=str, default=None, help="SOCKS proxy URL (e.g., socks://127.0.0.1:1089)")
 args = parser.parse_args()
-HandleFormatListing(args)
 
 logger_options = InitLogger("gpt-subtrans", args.debug)
 

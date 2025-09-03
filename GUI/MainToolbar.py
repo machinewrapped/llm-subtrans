@@ -167,14 +167,16 @@ class MainToolbar(QToolBar):
         """
         tooltip_config = self._action_tooltips.get(name)
         if not tooltip_config:
-            return ""
-        
-        if use_shift_tooltip and 'shift_tooltip' in tooltip_config:
-            return _(tooltip_config['shift_tooltip'])
-        elif 'tooltip' in tooltip_config:
-            return _(tooltip_config['tooltip'])
+            return None
 
-        return None
+        tooltip_text = None
+        if use_shift_tooltip:
+            tooltip_text = tooltip_config.get('shift_tooltip')
+
+        if not tooltip_text:
+            tooltip_text = tooltip_config.get('tooltip')
+
+        return _(tooltip_text) if tooltip_text else None
 
     def _update_action_tooltip(self, action : QAction, name : str, shortcut : str|None):
         """

@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import logging
 import os
 import sys
@@ -5,6 +6,7 @@ from datetime import datetime
 from typing import Any
 
 from PySubtitle.SettingsType import SettingsType
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Subtitles import Subtitles
 from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 
@@ -112,7 +114,7 @@ def _add_test_file_logger(logger, results_path, input_filename, test_name):
     logger.addHandler(file_handler)
     return file_handler
 
-def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str, results_path: str|None = None):
+def RunTestOnAllSubtitleFiles(run_test : Callable, test_options: list[dict], directory_path: str, results_path: str|None = None):
     """
     Run a series of tests on all .srt files in the test_subtitles directory.
     """
@@ -131,8 +133,11 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
     logger.info(separator)
     logger.info("")
 
+    supported_formats = SubtitleFormatRegistry.enumerate_formats()
+
     for file in os.listdir(directory_path):
-        if not file.endswith(".srt"):
+        extension = os.path.splitext(file)[1].lower()
+        if extension not in supported_formats:
             continue
 
         file_handler = _add_test_file_logger(logger, results_path, file, test_name)

@@ -17,7 +17,7 @@ _TAG_BLOCK_PATTERN = regex.compile(r'\{[^}]+\}')
 _STANDALONE_BASIC_TAG_PATTERN = regex.compile(r'^\{\\(?:[ibs][01]|u[01]?)\}$')
 _BASIC_TAG_PATTERN = regex.compile(r'\\(?:[ibs][01]|u[01]?)')
 
-# Precompiled ASS to HTML conversion patterns
+# Precompiled SSA to HTML conversion patterns
 _ASS_TO_HTML_PATTERNS = [
     (regex.compile(r'{\\i1}'), '<i>'),
     (regex.compile(r'{\\i0}'), '</i>'),
@@ -29,7 +29,7 @@ _ASS_TO_HTML_PATTERNS = [
     (regex.compile(r'{\\s0}'), '</s>')
 ]
 
-# Precompiled HTML to ASS conversion patterns
+# Precompiled HTML to SSA conversion patterns
 _HTML_TO_ASS_PATTERNS = [
     (regex.compile(r'<i>'), r'{\\i1}'),
     (regex.compile(r'</i>'), r'{\\i0}'),
@@ -52,89 +52,78 @@ class AssFileHandler(SubtitleFileHandler):
     
     def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """
-        Parse ASS file content and return SubtitleData with lines and metadata.
+        Parse file content and return SubtitleData with lines and metadata.
         """
         try:
-            # pysubs2 expects file path or string content, so read the file
-            content = file_obj.read()
-            subs = pysubs2.SSAFile.from_string(content)
-            
-            lines = []
-            for index, line in enumerate(subs, 1):
-                lines.append(self._pysubs2_to_subtitle_line(line, index))
-            
-            # Extract serializable metadata using helper
-            metadata = self._parse_metadata(subs)
-            
-            return SubtitleData(lines=lines, metadata=metadata)
+            subs : pysubs2.SSAFile = pysubs2.SSAFile.from_file(file_obj)
+            return self._parse_subs(subs)
                 
         except Exception as e:
-            raise SubtitleParseError(_("Failed to parse ASS file: {}").format(str(e)), e)
-    
+            raise SubtitleParseError(_("Failed to parse file: {}").format(str(e)), e)
+
     def parse_string(self, content: str) -> SubtitleData:
         """
-        Parse ASS string content and return SubtitleData with lines and metadata.
+        Parse string content and return SubtitleData with lines and metadata.
         """
         try:
-            # pysubs2 can load from string
             subs = pysubs2.SSAFile.from_string(content)
-            
-            lines = []
-            for index, line in enumerate(subs, 1):
-                lines.append(self._pysubs2_to_subtitle_line(line, index))
-            
-            # Extract serializable metadata using helper
-            metadata = self._parse_metadata(subs)
-            
-            return SubtitleData(lines=lines, metadata=metadata)
+            return self._parse_subs(subs)
                 
         except Exception as e:
-            raise SubtitleParseError(_("Failed to parse ASS content: {}").format(str(e)), e)
+            raise SubtitleParseError(_("Failed to parse content: {}").format(str(e)), e)
     
     def compose(self, data: SubtitleData) -> str:
         """
-        Compose subtitle lines into ASS format string using metadata.
+        Compose subtitle lines into SSA/ASS format string using metadata.
         
         Args:
             data: SubtitleData containing lines and file metadata
             
         Returns:
-            str: ASS formatted subtitle content
+            str: formatted subtitle content
         """
-        # Create pysubs2 SSAFile
         subs : pysubs2.SSAFile = pysubs2.SSAFile()
-
         subs.info["TranslatedBy"] = "LLM-Subtrans"
 
-        # Restore metadata using helper
-        if data.metadata:
-            self._build_metadata(subs, data.metadata)
-        
+        self._build_metadata(subs, data.metadata)
+
+        # Restore original detected format (TODO: allow SSA/ASS conversions)
+        file_format = data.metadata.get('pysubs2_format', 'ass')
+
         # Convert SubtitleLines to pysubs2 format
         for line in data.lines:
             if line.text and line.start is not None and line.end is not None:
                 pysubs2_line = self._subtitle_line_to_pysubs2(line)
                 subs.append(pysubs2_line)
         
-        # Return as string
-        return subs.to_string("ass")
+        return subs.to_string(file_format)
     
-    
+    def _parse_subs(self, subs : pysubs2.SSAFile):
+        """
+        Convert pysubs2 subtitles to SubtitleLines, adding an index
+        """
+        subtitle_format : str = getattr(subs, "format", "ass")
+
+        lines : list[SubtitleLine] = []
+        for index, line in enumerate(subs, 1):
+            lines.append(self._pysubs2_to_subtitle_line(line, index))
+
+        # Extract serializable metadata
+        metadata = self._parse_metadata(subs, subtitle_format)
+            
+        return SubtitleData(lines=lines, metadata=metadata)
+        
     def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int) -> SubtitleLine:
         """Convert pysubs2 SSAEvent to SubtitleLine with metadata preservation."""
         
-        # Convert timing from milliseconds to timedelta
         start = timedelta(milliseconds=pysubs2_line.start)
         end = timedelta(milliseconds=pysubs2_line.end)
         
         # Extract text content using .text to preserve inline formatting,
-        # then convert ASS tags to HTML for GUI compatibility
-        text = self._ass_to_html(pysubs2_line.text)
+        # then convert SSA tags to HTML for SRT and GUI compatibility
+        text = self._ssa_to_html(pysubs2_line.text)
         
-        # Create comprehensive metadata from pysubs2 properties
-        # This is "pass-through" - we preserve everything for format fidelity
         metadata = {
-            'format': 'ass',
             'style': pysubs2_line.style,
             'layer': pysubs2_line.layer,
             'name': pysubs2_line.name,
@@ -160,12 +149,11 @@ class AssFileHandler(SubtitleFileHandler):
         )
     
     def _subtitle_line_to_pysubs2(self, line: SubtitleLine) -> pysubs2.SSAEvent:
-        """Convert SubtitleLine back to pysubs2 SSAEvent using preserved metadata."""
-        
-        # Create pysubs2 event
+        """
+        Convert SubtitleLine back to pysubs2 SSAEvent using preserved metadata.
+        """
         event = pysubs2.SSAEvent()
         
-        # Set timing (convert from timedelta to milliseconds)
         if line.start:
             event.start = pysubs2.time.make_time(s=line.start.total_seconds())
         else:
@@ -176,36 +164,36 @@ class AssFileHandler(SubtitleFileHandler):
         else:
             event.end = 0
         
-        # Convert HTML tags back to ASS tags, then set text directly
+        # Convert HTML tags back to SSA tags, then set text directly
         ass_text = self._html_to_ass(line.text or "")
         
-        # Restore whole-line ASS tags from metadata
+        # Restore whole-line SSA tags from metadata
         ass_text = self._restore_whole_line_tags(ass_text, line.metadata or {})
         
         # Use .text property instead of .plaintext to preserve formatting
         event.text = ass_text
         
-        # Restore metadata if available, otherwise use sensible defaults
-        metadata = line.metadata or {}
-        event.style = metadata.get('style', 'Default')
-        event.layer = metadata.get('layer', 0)
-        event.name = metadata.get('name', '')
-        event.marginl = metadata.get('margin_l', 0)
-        event.marginr = metadata.get('margin_r', 0)
-        event.marginv = metadata.get('margin_v', 0)
-        event.effect = metadata.get('effect', '')
-        event.type = metadata.get('type', 'Dialogue')
+        # Restore metadata if available, otherwise use pysubs2 defaults
+        if line.metadata:
+            event.style = line.metadata.get('style', event.style)
+            event.layer = line.metadata.get('layer', event.layer)
+            event.name = line.metadata.get('name', event.name)
+            event.marginl = line.metadata.get('margin_l', event.marginl)
+            event.marginr = line.metadata.get('margin_r', event.marginr)
+            event.marginv = line.metadata.get('margin_v', event.marginv)
+            event.effect = line.metadata.get('effect', event.effect)
+            event.type = line.metadata.get('type', event.type)
         
         return event
 
-    def _parse_metadata(self, subs : pysubs2.SSAFile) -> dict:
+    def _parse_metadata(self, subs : pysubs2.SSAFile, subtitle_format : str) -> dict:
         """
         Convert pysubs2 metadata to JSON-serializable format.
         Handles Color objects and other pysubs2-specific types.
         """
         # Extract serializable metadata from the pysubs2 file
         metadata = {
-            'format': 'ass',
+            'pysubs2_format': subtitle_format,
             'info': dict(subs.info),  # Script info section
             'aegisub_project': dict(subs.aegisub_project) if hasattr(subs, 'aegisub_project') else {}
         }
@@ -260,13 +248,13 @@ class AssFileHandler(SubtitleFileHandler):
             subs.aegisub_project.update(metadata['aegisub_project'])
     
     def _extract_whole_line_tags(self, ass_text: str) -> dict:
-        """Extract whole-line ASS override tags from start of line and return as metadata."""
+        """Extract whole-line SSA override tags from start of line and return as metadata."""
         if not ass_text:
             return {}
             
         metadata = {}
         
-        # Match consecutive ASS tags at the start of the line
+        # Match consecutive SSA tags at the start of the line
         start_tags_match = _START_TAGS_PATTERN.match(ass_text)
         if start_tags_match:
             tags_section = start_tags_match.group(0)
@@ -287,18 +275,18 @@ class AssFileHandler(SubtitleFileHandler):
             
             # Only store if we found complex tags
             if complex_tags:
-                metadata['ssa_tags_start'] = ''.join(complex_tags)
+                metadata['override_tags_start'] = ''.join(complex_tags)
         
         return metadata
     
     def _restore_whole_line_tags(self, text: str, metadata: dict) -> str:
-        """Restore whole-line ASS tags from metadata."""
-        if 'ssa_tags_start' in metadata:
-            return f"{metadata['ssa_tags_start']}{text}"
+        """Restore whole-line SSA tags from metadata."""
+        if 'override_tags_start' in metadata:
+            return f"{metadata['override_tags_start']}{text}"
         return text
     
-    def _ass_to_html(self, ass_text: str) -> str:
-        """Convert ASS inline formatting tags to HTML tags for GUI display."""
+    def _ssa_to_html(self, ass_text: str) -> str:
+        """Convert SSA inline formatting tags to HTML tags for GUI display."""
         if not ass_text:
             return ""
             
@@ -355,14 +343,14 @@ class AssFileHandler(SubtitleFileHandler):
         for pattern, replacement in _ASS_TO_HTML_PATTERNS:
             text = pattern.sub(replacement, text)
         
-        # For any remaining ASS tags that aren't basic formatting, preserve them
+        # For any remaining SSA tags that aren't basic formatting, preserve them
         # This allows translators to see and preserve complex inline formatting
         # (colors, fonts, etc.) that don't have HTML equivalents
         
         return text
     
     def _html_to_ass(self, html_text: str) -> str:
-        """Convert HTML tags back to ASS inline formatting tags."""
+        """Convert HTML tags back to SSA inline formatting tags."""
         if not html_text:
             return ""
             
@@ -374,7 +362,7 @@ class AssFileHandler(SubtitleFileHandler):
         text = text.replace('<wbr>', '\\n')
         text = text.replace('\n', '\\N')
         
-        # Convert HTML tags back to ASS tags using precompiled patterns
+        # Convert HTML tags back to SSA tags using precompiled patterns
         for pattern, replacement in _HTML_TO_ASS_PATTERNS:
             text = pattern.sub(replacement, text)
         

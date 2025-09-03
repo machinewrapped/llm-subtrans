@@ -1,7 +1,7 @@
 import logging
 import os
 
-from PySide6.QtCore import Qt, QObject, Signal
+from PySide6.QtCore import Qt, QObject, Signal, QTimer, QMutexLocker
 from PySide6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -43,6 +43,7 @@ class GuiInterface(QObject):
     commandComplete = Signal(object)
     commandUndone = Signal(object)
     prepareForSave = Signal()
+    projectSaved = Signal()
     showProjectSettings = Signal(bool)
 
     def __init__(self, mainwindow : QMainWindow, options : Options):
@@ -82,6 +83,11 @@ class GuiInterface(QObject):
         self.action_handler.showAboutDialog.connect(self.ShowAboutDialog)
         self.action_handler.exitProgram.connect(self._exit_program)
 
+        # Autosave timer - triggers 20 seconds after last change
+        self._autosave_timer = QTimer()
+        self._autosave_timer.setSingleShot(True)
+        self._autosave_timer.timeout.connect(self._perform_autosave)
+        
         if self.global_options.get('last_used_path'):
             self.action_handler.last_used_path = self.global_options.get_str('last_used_path')
 
@@ -340,12 +346,21 @@ class GuiInterface(QObject):
             elif command.datamodel is None:
                 self.dataModelChanged.emit(None)
 
-        # Auto-save if the commmand queue is empty and the project has changed
-        if self.datamodel and not self.command_queue.has_commands:
-            if self.datamodel.project and self.datamodel.autosave_enabled:
-                self.datamodel.project.SaveProject()
+        # Schedule autosave if the command queue is empty and the project has changed
+        if not self.command_queue.has_commands:
+            if self.datamodel and self.datamodel.autosave_enabled and self.datamodel.project and self.datamodel.project.needs_writing:
+                self._autosave_timer.start(20000)
 
         self.commandComplete.emit(command)
+
+    def _perform_autosave(self):
+        """
+        Perform autosave if conditions are met
+        """
+        if self.datamodel:
+            with QMutexLocker(self.datamodel.mutex):
+                if self.datamodel.autosave_enabled and self.datamodel.project and self.datamodel.project.needs_writing:
+                    self.SaveProject()
 
     def _on_project_loaded(self, command : LoadSubtitleFile):
         """
@@ -368,6 +383,8 @@ class GuiInterface(QObject):
             self._update_last_used_path(command.filepath)
             if command.datamodel != self.datamodel:
                 self.SetDataModel(command.datamodel)
+
+        self.projectSaved.emit()
 
     def _update_last_used_path(self, filepath : str):
         """

@@ -15,6 +15,7 @@ class LoadSubtitleFile(Command):
         self.reload_subtitles = reload_subtitles
         self.write_backup = self.options.get('write_backup', False)
         self.can_undo = False
+        self.mark_project_dirty = False
 
     def execute(self) -> bool:
         logging.debug(_("Executing LoadSubtitleFile {file}").format(file=self.filepath))

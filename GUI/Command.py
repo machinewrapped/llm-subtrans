@@ -26,9 +26,10 @@ class Command(QRunnable, QObject):
         QRunnable.__init__(self)
         QObject.__init__(self)
         self.datamodel : ProjectDataModel|None = datamodel
-        self.can_undo : bool = True         # If true, cannot undo past this command
-        self.skip_undo : bool = False       # If true, do not add this command to the undo stack
-        self.is_blocking : bool = False      # If true, do not execute any other commands in parallel
+        self.can_undo : bool = True             # If true, cannot undo past this command
+        self.skip_undo : bool = False           # If true, do not add this command to the undo stack
+        self.is_blocking : bool = False         # If true, do not execute any other commands in parallel
+        self.mark_project_dirty : bool = True  # If true, mark the project as needing saving after executing this command
         self.queued : bool = False
         self.started : bool = False
         self.executed : bool = False
@@ -87,6 +88,10 @@ class Command(QRunnable, QObject):
                 logging.error(_("Unrecoverable error in {name}").format(name=type(self).__name__))
             else:
                 self.succeeded = success
+
+            # Mark the project as dirty if the command modified it
+            if self.succeeded and self.mark_project_dirty and self.datamodel and self.datamodel.project:
+                self.datamodel.project.needs_writing = True
 
             self.commandCompleted.emit(self)
 

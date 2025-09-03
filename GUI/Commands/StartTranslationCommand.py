@@ -16,6 +16,7 @@ class StartTranslationCommand(Command):
         self.multithreaded = multithreaded
         self.skip_undo = True
         self.is_blocking = True
+        self.mark_project_dirty = False
         self.resume = resume
         self.scenes = scenes or {}
 
@@ -57,7 +58,7 @@ class StartTranslationCommand(Command):
                 batches = [ batch for batch in scene.batches if not batch.all_translated ]
                 batch_numbers = [ batch.number for batch in batches ]
 
-            command = TranslateSceneCommand(scene.number, batch_numbers, line_numbers, datamodel=self.datamodel)
+            command = TranslateSceneCommand(scene.number, batch_numbers, line_numbers, resume=self.resume, datamodel=self.datamodel)
 
             if self.multithreaded:
                 # Queue the commands in parallel

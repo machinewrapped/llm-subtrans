@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 from PySide6.QtWidgets import QToolBar, QStyle, QApplication
-from PySide6.QtCore import Qt, SignalInstance
+from PySide6.QtCore import Qt, SignalInstance, QCoreApplication
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtCore import QByteArray
@@ -27,6 +27,35 @@ class MainToolbar(QToolBar):
         ["Settings"],
         ["About", "Quit"]
         ]
+    
+    _action_tooltips = {
+        'Quit': { 'tooltip': _('Exit Program') },
+        'Load Subtitles':
+        {
+            'tooltip': _('Load project/translation (Hold shift to reload subtitles)'), 
+            'shift_tooltip': _('Load project/translation (reload subtitles)')
+        },
+        'Save Project':
+        {
+            'tooltip': _('Save project/translation (Hold shift to save as...)'), 
+            'shift_tooltip': _('Save project/translation as...')
+        },
+        'Settings': { 'tooltip': _('Settings') },
+        'Start Translating':
+        {
+            'tooltip': _('Start Translating (hold shift to retranslate)'),
+            'shift_tooltip': _('Start retranslating')
+        },
+        'Start Translating Fast':
+        {
+            'tooltip': _('Start translating on multiple threads (fast but unsafe)'),
+            'shift_tooltip': _('Start retranslating on multiple threads')
+        },
+        'Stop Translating': {'tooltip': _('Stop translation')},
+        'Undo': {'tooltip': _('Undo last action')},
+        'Redo': {'tooltip': _('Redo last undone action')},
+        'About': {'tooltip': _('About this program')}
+    }
 
     def __init__(self,  gui_interface : GuiInterface):
         super().__init__(_("Main Toolbar"))
@@ -37,9 +66,16 @@ class MainToolbar(QToolBar):
 
         self._enabled_icons : dict[str, QIcon] = {}
         self._disabled_icons : dict[str, QIcon] = {}
+        
+        self._shift_pressed : bool = False
 
         # Subscribe to UI language changes
         self.gui.uiLanguageChanged.connect(self.UpdateUiLanguage, Qt.ConnectionType.QueuedConnection)
+        
+        # Install global event filter to capture shift key events
+        application : QCoreApplication|None = QApplication.instance()
+        if application:
+            application.installEventFilter(self)
 
         self.DefineActions()
         self.AddActionGroups()
@@ -51,6 +87,8 @@ class MainToolbar(QToolBar):
         Update the toolbar
         """
         self.UpdateBusyStatus()
+        self.UpdateSaveButton()
+        self.UpdateTranslateButtons()
         self.UpdateTooltips()
 
     def UpdateUiLanguage(self):
@@ -84,16 +122,16 @@ class MainToolbar(QToolBar):
         """
         self._actions = {}
         action_handler : ProjectActions = self.gui.GetActionHandler()
-        self.DefineAction('Quit', action_handler.exitProgram, self._icon_file('quit'), 'Ctrl+W', _('Exit Program'))
-        self.DefineAction('Load Subtitles', action_handler.LoadProject, self._icon_file('load_subtitles'), 'Ctrl+O', _('Load Project/Subtitles (Hold shift to reload subtitles)'))
-        self.DefineAction('Save Project', action_handler.SaveProject, self._icon_file('save_project'), 'Ctrl+S', _('Save project (Hold shift to save as...)'))
-        self.DefineAction('Settings', action_handler.showSettings, self._icon_file('settings'), 'Ctrl+?', _('Settings'))
-        self.DefineAction('Start Translating', action_handler.StartTranslating, self._icon_file('start_translating'), 'Ctrl+T', _('Start Translating (hold shift to retranslate)'))
-        self.DefineAction('Start Translating Fast', action_handler.StartTranslatingFast, self._icon_file('start_translating_fast'), None, _('Start translating on multiple threads (fast but unsafe)'))
-        self.DefineAction('Stop Translating', action_handler.StopTranslating, self._icon_file('stop_translating'), 'Esc', _('Stop translation'))
-        self.DefineAction('Undo', action_handler.UndoLastCommand, self._icon_file('undo'), 'Ctrl+Z', _('Undo last action'))
-        self.DefineAction('Redo', action_handler.RedoLastCommand, self._icon_file('redo'), 'Ctrl+Shift+Z', _('Redo last undone action'))
-        self.DefineAction('About', action_handler.showAboutDialog, self._icon_file('about'), tooltip=_('About this program'))
+        self.DefineAction('Quit', action_handler.exitProgram, self._icon_file('quit'), 'Ctrl+W')
+        self.DefineAction('Load Subtitles', action_handler.LoadProject, self._icon_file('load_subtitles'), 'Ctrl+O')
+        self.DefineAction('Save Project', action_handler.SaveProject, self._icon_file('save_project'), 'Ctrl+S')
+        self.DefineAction('Settings', action_handler.showSettings, self._icon_file('settings'), 'Ctrl+?')
+        self.DefineAction('Start Translating', action_handler.StartTranslating, self._icon_file('start_translating'), 'Ctrl+T')
+        self.DefineAction('Start Translating Fast', action_handler.StartTranslatingFast, self._icon_file('start_translating_fast'), None)
+        self.DefineAction('Stop Translating', action_handler.StopTranslating, self._icon_file('stop_translating'), 'Esc')
+        self.DefineAction('Undo', action_handler.UndoLastCommand, self._icon_file('undo'), 'Ctrl+Z')
+        self.DefineAction('Redo', action_handler.RedoLastCommand, self._icon_file('redo'), 'Ctrl+Shift+Z')
+        self.DefineAction('About', action_handler.showAboutDialog, self._icon_file('about'))
 
     def DefineAction(self, name : str, function : Callable[..., None]|SignalInstance, icon : str|QIcon|None = None, shortcut : str|None = None, tooltip : str|None =None):
         """
@@ -118,11 +156,36 @@ class MainToolbar(QToolBar):
         if shortcut:
             action.setShortcut(shortcut)
 
-        if tooltip:
-            tip = _(tooltip)
-            action.setToolTip(f"{tip} ({shortcut})" if shortcut else tip)
+        # Set initial tooltip based on current shift state
+        self._update_action_tooltip(action, name, shortcut)
 
         self._actions[name] = action
+
+    def _get_tooltip_for_action(self, name : str, use_shift_tooltip : bool = False) -> str|None:
+        """
+        Get the appropriate tooltip for an action based on shift state
+        """
+        tooltip_config = self._action_tooltips.get(name)
+        if not tooltip_config:
+            return None
+
+        tooltip_text = None
+        if use_shift_tooltip:
+            tooltip_text = tooltip_config.get('shift_tooltip')
+
+        if not tooltip_text:
+            tooltip_text = tooltip_config.get('tooltip')
+
+        return _(tooltip_text) if tooltip_text else None
+
+    def _update_action_tooltip(self, action : QAction, name : str, shortcut : str|None):
+        """
+        Update an action's tooltip based on current shift state
+        """
+        tooltip = self._get_tooltip_for_action(name, self._shift_pressed)
+        if tooltip:
+            formatted_tooltip = f"{tooltip} ({shortcut})" if shortcut else tooltip
+            action.setToolTip(formatted_tooltip)
 
     def EnableActions(self, action_list : list[str]):
         """
@@ -192,10 +255,42 @@ class MainToolbar(QToolBar):
         self.SetActionsEnabled([ "Undo" ], no_blocking_commands and command_queue.can_undo)
         self.SetActionsEnabled([ "Redo" ], no_blocking_commands and command_queue.can_redo)
 
+    def UpdateSaveButton(self):
+        """
+        Update the save button to indicate whether the project needs saving
+        """
+        if self._shift_pressed:
+            return
+
+        datamodel : ProjectDataModel = self.gui.GetDataModel()
+        action : QAction|None = self._actions.get("Save Project")
+        if not action:
+            return
+
+        if datamodel and datamodel.project and not datamodel.project.needs_writing:
+            self.SetActionsEnabled(["Save Project"], False)
+
+    def UpdateTranslateButtons(self):
+        """
+        Update translate buttons to disable them when project is fully translated, unless shift is pressed
+        """
+        if self._shift_pressed:
+            return
+
+        datamodel : ProjectDataModel = self.gui.GetDataModel()
+        if datamodel and datamodel.project and datamodel.project.all_translated:
+            self.SetActionsEnabled(["Start Translating", "Start Translating Fast"], False)
+
     def UpdateTooltips(self):
         """
         Update the labels on the toolbar
         """
+        # Update shift-sensitive tooltips for all actions
+        for name, action in self._actions.items():
+            shortcut = action.shortcut().toString() if action.shortcut() else None
+            self._update_action_tooltip(action, name, shortcut)
+        
+        # Update dynamic tooltips for undo/redo
         command_queue : CommandQueue = self.gui.GetCommandQueue()
         if command_queue.can_undo:
             last_command = command_queue.undo_stack[-1]
@@ -214,6 +309,33 @@ class MainToolbar(QToolBar):
         Get the file path for an icon
         """
         return GetResourcePath("assets", "icons", f"{icon_name}.svg")
+
+    def eventFilter(self, obj, event):
+        """
+        Global event filter to capture shift key press/release events
+        """
+        # Always track shift state, but only update UI when main window has focus
+        should_update_ui = self.gui.GetMainWindow().isActiveWindow()
+        
+        if event.type() == event.Type.KeyPress:
+            if event.key() == Qt.Key.Key_Shift:
+                if not self._shift_pressed:
+                    self._shift_pressed = True
+                    if should_update_ui:
+                        self.UpdateToolbar()
+        elif event.type() == event.Type.KeyRelease:
+            if event.key() == Qt.Key.Key_Shift:
+                if self._shift_pressed:
+                    self._shift_pressed = False
+                    if should_update_ui:
+                        self.UpdateToolbar()
+        elif event.type() == event.Type.WindowActivate:
+            # Reset toolbar when main window regains focus (shift state probably changed)
+            if obj == self.gui.GetMainWindow():
+                self._shift_pressed = False
+                self.UpdateToolbar()
+        
+        return super().eventFilter(obj, event)
 
 def _create_disabled_icon(svg_path : str) -> QIcon:
     """Generate a disabled version of an SVG icon"""

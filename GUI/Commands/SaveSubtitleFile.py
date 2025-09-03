@@ -7,6 +7,8 @@ class SaveSubtitleFile(Command):
         super().__init__()
         self.filepath = filepath
         self.project = project
+        self.mark_project_dirty = False
+        self.can_undo = False
 
     def execute(self) -> bool:
         self.project.SaveOriginal(self.filepath)

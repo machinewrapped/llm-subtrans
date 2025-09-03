@@ -82,6 +82,7 @@ class MainWindow(QMainWindow):
         self.gui_interface.dataModelChanged.connect(self._on_data_model_changed, Qt.ConnectionType.QueuedConnection)
         self.gui_interface.settingsChanged.connect(self._settings_changed, Qt.ConnectionType.QueuedConnection)
         self.gui_interface.prepareForSave.connect(self._prepare_for_save, Qt.ConnectionType.QueuedConnection)
+        self.gui_interface.projectSaved.connect(self._on_project_saved, Qt.ConnectionType.QueuedConnection)
         self.gui_interface.showProjectSettings.connect(self._show_project_settings, Qt.ConnectionType.QueuedConnection)
         self.gui_interface.uiLanguageChanged.connect(self._on_ui_language_changed, Qt.ConnectionType.QueuedConnection)
 
@@ -92,6 +93,12 @@ class MainWindow(QMainWindow):
         """
         if self.model_viewer:
             self.model_viewer.ShowProjectSettings(False)
+
+    def _on_project_saved(self):
+        """
+        Handle project saved event
+        """
+        self.toolbar.UpdateToolbar()
 
     def _on_data_model_changed(self, datamodel : ProjectDataModel):
         """

@@ -61,6 +61,11 @@ class SubtitleProject:
         with self.lock:
             return bool(self.subtitles and self.subtitles.any_translated)
 
+    @property
+    def all_translated(self) -> bool:
+        with self.lock:
+            return bool(self.subtitles and self.subtitles.all_translated)
+
     def InitialiseProject(self, filepath: str, outputpath: str|None = None, reload_subtitles: bool = False):
         """
         Initialize the project by either loading an existing project file or creating a new one.
@@ -106,6 +111,7 @@ class SubtitleProject:
 
                 if subtitles.scenes:
                     self.existing_project = True
+                    self.needs_writing = False
                     load_subtitles = reload_subtitles
                     if load_subtitles:
                         logging.info(_("Reloading subtitles from the source file"))
@@ -132,9 +138,9 @@ class SubtitleProject:
 
         if outputpath:
             subtitles.outputpath = outputpath
+            self.needs_writing = self.use_project_file
 
         self.subtitles = subtitles
-        self.needs_writing = self.use_project_file
 
     def SaveOriginal(self, outputpath : str|None = None):
         """

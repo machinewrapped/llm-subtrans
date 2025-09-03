@@ -7,6 +7,7 @@ class SaveProjectFile(Command):
         super().__init__()
         self.can_undo = False
         self.is_blocking = True
+        self.mark_project_dirty = False
         self.project : SubtitleProject = project
         self.filepath : str|None = filepath or project.projectfile
 

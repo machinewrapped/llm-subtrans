@@ -328,7 +328,7 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
         
         for ass_input, expected_html in test_cases:
             with self.subTest(input=ass_input):
-                result = self.handler._ass_to_html(ass_input)
+                result = self.handler._ssa_to_html(ass_input)
                 log_input_expected_result(ass_input, expected_html, result)
                 self.assertEqual(result, expected_html)
     
@@ -561,7 +561,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         
         for ass_input, expected_html in conversion_cases:
             with self.subTest(input=ass_input):
-                result = self.handler._ass_to_html(ass_input)
+                result = self.handler._ssa_to_html(ass_input)
                 log_input_expected_result(f"Convert: {ass_input}", expected_html, result)
                 self.assertEqual(result, expected_html)
     
@@ -585,7 +585,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         
         for ass_input, expected_html in test_cases:
             with self.subTest(input=ass_input):
-                result = self.handler._ass_to_html(ass_input)
+                result = self.handler._ssa_to_html(ass_input)
                 log_input_expected_result(f"Composite: {ass_input}", expected_html, result)
                 self.assertEqual(result, expected_html)
         

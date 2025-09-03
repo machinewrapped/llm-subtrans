@@ -261,6 +261,7 @@ class GuiInterface(QObject):
         if not self.datamodel or not self.datamodel.project:
             raise SubtitleError(_("No project data"))
 
+        #TODO: consolidate SaveProjectFile and SaveTranslationFile into a single SaveProject command
         if self.datamodel.use_project_file:
             command = SaveProjectFile(self.datamodel.project, filepath)
         else:

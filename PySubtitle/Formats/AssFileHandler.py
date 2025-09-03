@@ -58,11 +58,12 @@ class AssFileHandler(SubtitleFileHandler):
             # pysubs2 expects file path or string content, so read the file
             content = file_obj.read()
             subs = pysubs2.SSAFile.from_string(content)
-            
+            subtitle_format = getattr(subs, "format", "ass")
+
             lines = []
             for index, line in enumerate(subs, 1):
-                lines.append(self._pysubs2_to_subtitle_line(line, index))
-            
+                lines.append(self._pysubs2_to_subtitle_line(line, index, subtitle_format))
+
             # Extract serializable metadata using helper
             metadata = self._parse_metadata(subs)
             
@@ -78,11 +79,12 @@ class AssFileHandler(SubtitleFileHandler):
         try:
             # pysubs2 can load from string
             subs = pysubs2.SSAFile.from_string(content)
-            
+            subtitle_format = getattr(subs, "format", "ass")
+
             lines = []
             for index, line in enumerate(subs, 1):
-                lines.append(self._pysubs2_to_subtitle_line(line, index))
-            
+                lines.append(self._pysubs2_to_subtitle_line(line, index, subtitle_format))
+
             # Extract serializable metadata using helper
             metadata = self._parse_metadata(subs)
             
@@ -103,12 +105,15 @@ class AssFileHandler(SubtitleFileHandler):
         """
         # Create pysubs2 SSAFile
         subs : pysubs2.SSAFile = pysubs2.SSAFile()
-
         subs.info["TranslatedBy"] = "LLM-Subtrans"
+
+        file_format = data.metadata.get('format', 'ass') if data.metadata else 'ass'
 
         # Restore metadata using helper
         if data.metadata:
             self._build_metadata(subs, data.metadata)
+
+        subs.format = file_format
         
         # Convert SubtitleLines to pysubs2 format
         for line in data.lines:
@@ -117,10 +122,11 @@ class AssFileHandler(SubtitleFileHandler):
                 subs.append(pysubs2_line)
         
         # Return as string
-        return subs.to_string("ass")
+        return subs.to_string(file_format)
     
     
-    def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int) -> SubtitleLine:
+    def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int,
+                                  subtitle_format: str) -> SubtitleLine:
         """Convert pysubs2 SSAEvent to SubtitleLine with metadata preservation."""
         
         # Convert timing from milliseconds to timedelta
@@ -134,7 +140,7 @@ class AssFileHandler(SubtitleFileHandler):
         # Create comprehensive metadata from pysubs2 properties
         # This is "pass-through" - we preserve everything for format fidelity
         metadata = {
-            'format': 'ass',
+            'format': subtitle_format,
             'style': pysubs2_line.style,
             'layer': pysubs2_line.layer,
             'name': pysubs2_line.name,
@@ -205,7 +211,7 @@ class AssFileHandler(SubtitleFileHandler):
         """
         # Extract serializable metadata from the pysubs2 file
         metadata = {
-            'format': 'ass',
+            'format': getattr(subs, 'format', 'ass'),
             'info': dict(subs.info),  # Script info section
             'aegisub_project': dict(subs.aegisub_project) if hasattr(subs, 'aegisub_project') else {}
         }
@@ -230,6 +236,7 @@ class AssFileHandler(SubtitleFileHandler):
         Restore pysubs2 metadata from JSON-serialized format.
         Converts Color dicts back to pysubs2.Color objects.
         """
+        subs.format = metadata.get('format', 'ass')
         # Restore script info from metadata
         if 'info' in metadata:
             subs.info.update(metadata['info'])
@@ -287,14 +294,14 @@ class AssFileHandler(SubtitleFileHandler):
             
             # Only store if we found complex tags
             if complex_tags:
-                metadata['ssa_tags_start'] = ''.join(complex_tags)
+                metadata['override_tags_start'] = ''.join(complex_tags)
         
         return metadata
     
     def _restore_whole_line_tags(self, text: str, metadata: dict) -> str:
         """Restore whole-line ASS tags from metadata."""
-        if 'ssa_tags_start' in metadata:
-            return f"{metadata['ssa_tags_start']}{text}"
+        if 'override_tags_start' in metadata:
+            return f"{metadata['override_tags_start']}{text}"
         return text
     
     def _ass_to_html(self, ass_text: str) -> str:

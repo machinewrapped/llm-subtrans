@@ -251,6 +251,29 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             self.assertEqual(original.start, round_trip.start)
             self.assertEqual(original.end, round_trip.end)
             self.assertEqual(original.text, round_trip.text)
+
+    def test_detect_ssa_format(self):
+        """Ensure SSA files retain their format information."""
+        log_test_name("AssFileHandler SSA format detection")
+
+        sample_ssa = """[Script Info]
+ScriptType: v4.00
+
+[V4 Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, TertiaryColour, BackColour, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding
+Style: Default,Arial,20,16777215,16777215,16777215,0,-1,0,1,2,2,2,10,10,10,0,0
+
+[Events]
+Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
+
+        data = self.handler.parse_string(sample_ssa)
+        log_input_expected_result("SSA format", "ssa", data.metadata.get('format'))
+        self.assertEqual(data.metadata.get('format'), 'ssa')
+
+        composed = self.handler.compose(data)
+        log_input_expected_result("Round trip format", True, "ScriptType: v4.00" in composed)
+        self.assertIn("ScriptType: v4.00", composed)
     
     def test_subtitle_line_to_pysubs2_time_conversion(self):
         """Test that _subtitle_line_to_pysubs2 correctly converts timedelta to pysubs2 milliseconds."""
@@ -419,27 +442,27 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         # Test complex whole-line tags extraction
         complex_line = lines[0]
         log_input_expected_result("Complex tags extracted", "{\\pos(100,200)\\an5\\fs20}", 
-                                complex_line.metadata.get('ssa_tags_start', ''))
+                                complex_line.metadata.get('override_tags_start', ''))
         
         self.assertEqual(complex_line.text, "Complex positioned text")
-        self.assertIn('ssa_tags_start', complex_line.metadata)
-        self.assertEqual(complex_line.metadata['ssa_tags_start'], "{\\pos(100,200)\\an5\\fs20}")
+        self.assertIn('override_tags_start', complex_line.metadata)
+        self.assertEqual(complex_line.metadata['override_tags_start'], "{\\pos(100,200)\\an5\\fs20}")
         
         # Test multiple tag blocks
         multi_line = lines[1]
         log_input_expected_result("Multiple blocks extracted", "{\\pos(50,100)}{\\c&H00FF00&}", 
-                                multi_line.metadata.get('ssa_tags_start', ''))
+                                multi_line.metadata.get('override_tags_start', ''))
         
         self.assertEqual(multi_line.text, "Multiple tag blocks")
-        self.assertIn('ssa_tags_start', multi_line.metadata)
-        self.assertEqual(multi_line.metadata['ssa_tags_start'], "{\\pos(50,100)}{\\c&H00FF00&}")
+        self.assertIn('override_tags_start', multi_line.metadata)
+        self.assertEqual(multi_line.metadata['override_tags_start'], "{\\pos(50,100)}{\\c&H00FF00&}")
         
         # Test normal text unchanged
         normal_line = lines[2]
         log_input_expected_result("Normal text unchanged", "Normal text", normal_line.text)
         
         self.assertEqual(normal_line.text, "Normal text")
-        self.assertNotIn('ssa_tags_start', normal_line.metadata)
+        self.assertNotIn('override_tags_start', normal_line.metadata)
         
         # Test inline tags preserved
         inline_line = lines[3]
@@ -450,7 +473,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
             
             self.assertIn("{\\c&H0000FF&}", inline_line.text)
             self.assertIn("{\\c}", inline_line.text)
-            self.assertNotIn('ssa_tags_start', inline_line.metadata)
+            self.assertNotIn('override_tags_start', inline_line.metadata)
         
         # Test mixed HTML and inline ASS tags
         mixed_line = lines[4]
@@ -458,7 +481,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
                                 "<i>Italic with <b>bold</b> inside</i>", mixed_line.text)
         
         self.assertEqual(mixed_line.text, "<i>Italic with <b>bold</b> inside</i>")
-        self.assertNotIn('ssa_tags_start', mixed_line.metadata)
+        self.assertNotIn('override_tags_start', mixed_line.metadata)
         
         # Test round-trip preservation
         composed_ass = self.handler.compose(data)
@@ -477,10 +500,10 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         # Verify round-trip preservation of metadata
         rt_complex = round_trip_lines[0]
         log_input_expected_result("Round-trip metadata preserved", True, 
-                                rt_complex.metadata.get('ssa_tags_start', '') == "{\\pos(100,200)\\an5\\fs20}")
+                                rt_complex.metadata.get('override_tags_start', '') == "{\\pos(100,200)\\an5\\fs20}")
         
         self.assertEqual(rt_complex.text, "Complex positioned text")
-        self.assertEqual(rt_complex.metadata.get('ssa_tags_start', ''), "{\\pos(100,200)\\an5\\fs20}")
+        self.assertEqual(rt_complex.metadata.get('override_tags_start', ''), "{\\pos(100,200)\\an5\\fs20}")
     
     def test_tag_extraction_functions(self):
         """Test ASS tag extraction and restoration functions."""
@@ -489,11 +512,11 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         # Test extraction function
         extraction_cases = [
             # Single tag block
-            ("{\\pos(100,200)}Text here", {"ssa_tags_start": "{\\pos(100,200)}"}),
+            ("{\\pos(100,200)}Text here", {"override_tags_start": "{\\pos(100,200)}"}),
             # Multiple consecutive tags
-            ("{\\pos(100,200)\\an5\\fs20}Text", {"ssa_tags_start": "{\\pos(100,200)\\an5\\fs20}"}),
+            ("{\\pos(100,200)\\an5\\fs20}Text", {"override_tags_start": "{\\pos(100,200)\\an5\\fs20}"}),
             # Multiple tag blocks
-            ("{\\pos(50,100)}{\\c&H00FF00&}Text", {"ssa_tags_start": "{\\pos(50,100)}{\\c&H00FF00&}"}),
+            ("{\\pos(50,100)}{\\c&H00FF00&}Text", {"override_tags_start": "{\\pos(50,100)}{\\c&H00FF00&}"}),
             # No whole-line tags
             ("Normal text", {}),
             # Inline tags only
@@ -509,9 +532,9 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         # Test restoration function
         restoration_cases = [
             # Restore single tag
-            ("Text", {"ssa_tags_start": "{\\pos(100,200)}"}, "{\\pos(100,200)}Text"),
+            ("Text", {"override_tags_start": "{\\pos(100,200)}"}, "{\\pos(100,200)}Text"),
             # Restore complex tags
-            ("Text", {"ssa_tags_start": "{\\pos(100,200)\\an5\\fs20}"}, "{\\pos(100,200)\\an5\\fs20}Text"),
+            ("Text", {"override_tags_start": "{\\pos(100,200)\\an5\\fs20}"}, "{\\pos(100,200)\\an5\\fs20}Text"),
             # No metadata
             ("Text", {}, "Text"),
             # Other metadata present
@@ -591,13 +614,13 @@ Dialogue: 0,0:00:04.00,0:00:06.00,Default,,0,0,0,,{\\c&H00FF00&\\b1}Green bold t
         italic_line = lines[0]
         log_input_expected_result("Composite italic in GUI", "<i>Italic positioned text</i>", italic_line.text)
         self.assertEqual(italic_line.text, "<i>Italic positioned text</i>")
-        self.assertEqual(italic_line.metadata.get('ssa_tags_start'), "{\\pos(100,200)}")
+        self.assertEqual(italic_line.metadata.get('override_tags_start'), "{\\pos(100,200)}")
         
         # Verify bold formatting preserved in GUI
         bold_line = lines[1]
         log_input_expected_result("Composite bold in GUI", "<b>Green bold text</b>", bold_line.text)
         self.assertEqual(bold_line.text, "<b>Green bold text</b>")
-        self.assertEqual(bold_line.metadata.get('ssa_tags_start'), "{\\c&H00FF00&}")
+        self.assertEqual(bold_line.metadata.get('override_tags_start'), "{\\c&H00FF00&}")
         
         # Test round-trip - verify both positioning and formatting restored
         composed = self.handler.compose(data)

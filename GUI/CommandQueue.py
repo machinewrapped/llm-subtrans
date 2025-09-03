@@ -159,6 +159,10 @@ class CommandQueue(QObject):
                 command.started = True
                 command.succeeded = command.execute()
 
+                # Mark the project as dirty if the command modified it
+                if command.succeeded and command.mark_project_dirty and command.datamodel and command.datamodel.project:
+                    command.datamodel.project.needs_writing = True
+
                 if command.succeeded and not command.skip_undo:
                     self.undo_stack.append(command)
                     self.ClearRedoStack()

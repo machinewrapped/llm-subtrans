@@ -16,6 +16,7 @@ class StartTranslationCommand(Command):
         self.multithreaded = multithreaded
         self.skip_undo = True
         self.is_blocking = True
+        self.mark_project_dirty = False
         self.resume = resume
         self.scenes = scenes or {}
 

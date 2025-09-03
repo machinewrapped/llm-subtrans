@@ -3,7 +3,6 @@ import tempfile
 import unittest
 import json
 
-from PySubtitle.Options import Options
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler

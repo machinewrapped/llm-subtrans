@@ -470,49 +470,7 @@ Any libraries used must be:
 - **Translation Focus**: Optimize for subtitle translation workflow while maintaining format integrity
 
 ### Handler Template Pattern
-All pysubs2-based handlers follow this proven pattern from `AssFileHandler`:
-
-```python
-class [Format]FileHandler(SubtitleFileHandler):
-    def parse_string(self, content: str) -> SubtitleData:
-        subs = pysubs2.SSAFile.from_string(content)
-        
-        lines = []
-        for index, line in enumerate(subs, 1):
-            lines.append(self._pysubs2_to_subtitle_line(line, index))
-        
-        # Extract serializable metadata
-        metadata = {
-            'format': '[format]',
-            'info': dict(subs.info),
-            'styles': {name: style.as_dict() for name, style in subs.styles.items()}
-        }
-        
-        return SubtitleData(lines=lines, metadata=metadata)
-    
-    def compose(self, data: SubtitleData) -> str:
-        subs = pysubs2.SSAFile()
-        
-        # Restore file-level metadata
-        if 'info' in data.metadata:
-            subs.info.update(data.metadata['info'])
-        if 'styles' in data.metadata:
-            for style_name, style_fields in data.metadata['styles'].items():
-                subs.styles[style_name] = pysubs2.SSAStyle(**style_fields)
-        
-        # Convert lines
-        for line in data.lines:
-            pysubs2_line = self._subtitle_line_to_pysubs2(line)
-            subs.append(pysubs2_line)
-        
-        return subs.to_string("[format]")
-    
-    def _pysubs2_to_subtitle_line(self, pysubs2_line, index):
-        # Convert with metadata preservation
-    
-    def _subtitle_line_to_pysubs2(self, line):
-        # Restore from preserved metadata or use defaults
-```
+All pysubs2-based handlers follow the pattern from `AssFileHandler` (TODO: extract a pysubs2 file parser to handle commonalities)
 
 ### Metadata Strategy
 - **Standard Fields**: Common subtitle properties (timing, text, style, layer)

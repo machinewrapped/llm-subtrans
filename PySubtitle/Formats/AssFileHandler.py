@@ -85,7 +85,7 @@ class AssFileHandler(SubtitleFileHandler):
         subs : pysubs2.SSAFile = pysubs2.SSAFile()
         subs.info["TranslatedBy"] = "LLM-Subtrans"
 
-        file_format = data.metadata.get('format', 'ass') if data.metadata else 'ass'
+        file_format = data.metadata.get('pysubs2_format', 'ass') if data.metadata else 'ass'
 
         if data.metadata:
             self._build_metadata(subs, data.metadata)
@@ -108,15 +108,14 @@ class AssFileHandler(SubtitleFileHandler):
 
         lines : list[SubtitleLine] = []
         for index, line in enumerate(subs, 1):
-            lines.append(self._pysubs2_to_subtitle_line(line, index, subtitle_format))
+            lines.append(self._pysubs2_to_subtitle_line(line, index))
 
         # Extract serializable metadata
-        metadata = self._parse_metadata(subs)
+        metadata = self._parse_metadata(subs, subtitle_format)
             
         return SubtitleData(lines=lines, metadata=metadata)
         
-    def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int,
-                                  subtitle_format: str) -> SubtitleLine:
+    def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int) -> SubtitleLine:
         """Convert pysubs2 SSAEvent to SubtitleLine with metadata preservation."""
         
         start = timedelta(milliseconds=pysubs2_line.start)
@@ -127,7 +126,6 @@ class AssFileHandler(SubtitleFileHandler):
         text = self._ssa_to_html(pysubs2_line.text)
         
         metadata = {
-            'format': subtitle_format,
             'style': pysubs2_line.style,
             'layer': pysubs2_line.layer,
             'name': pysubs2_line.name,
@@ -190,14 +188,14 @@ class AssFileHandler(SubtitleFileHandler):
         
         return event
 
-    def _parse_metadata(self, subs : pysubs2.SSAFile) -> dict:
+    def _parse_metadata(self, subs : pysubs2.SSAFile, subtitle_format : str) -> dict:
         """
         Convert pysubs2 metadata to JSON-serializable format.
         Handles Color objects and other pysubs2-specific types.
         """
         # Extract serializable metadata from the pysubs2 file
         metadata = {
-            'format': getattr(subs, 'format', 'ass'),
+            'pysubs2_format': subtitle_format,
             'info': dict(subs.info),  # Script info section
             'aegisub_project': dict(subs.aegisub_project) if hasattr(subs, 'aegisub_project') else {}
         }
@@ -222,7 +220,8 @@ class AssFileHandler(SubtitleFileHandler):
         Restore pysubs2 metadata from JSON-serialized format.
         Converts Color dicts back to pysubs2.Color objects.
         """
-        subs.format = metadata.get('format', 'ass')
+        subs.format = metadata.get('pysubs2_format', 'ass')
+
         # Restore script info from metadata
         if 'info' in metadata:
             subs.info.update(metadata['info'])

@@ -42,7 +42,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
                 end=timedelta(seconds=3),
                 text="First subtitle line",
                 metadata={
-                    'format': 'ass',
                     'layer': 0,
                     'style': 'Default',
                     'name': '',
@@ -58,7 +57,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
                 end=timedelta(seconds=6, milliseconds=500),
                 text="Second subtitle line\nwith line break",
                 metadata={
-                    'format': 'ass',
                     'layer': 0,
                     'style': 'Default',
                     'name': '',
@@ -74,7 +72,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
                 end=timedelta(seconds=9),
                 text="Third subtitle line",
                 metadata={
-                    'format': 'ass',
                     'layer': 0,
                     'style': 'Default',
                     'name': '',
@@ -112,9 +109,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
                 self.assertEqual(actual.number, expected.number)
                 self.assertEqual(actual.start, expected.start)
                 self.assertEqual(actual.end, expected.end)
-                # pysubs2 plaintext property converts \\N to \n for GUI compatibility
                 self.assertEqual(actual.text, expected.text)
-                self.assertEqual(actual.metadata['format'], expected.metadata['format'])
                 self.assertEqual(actual.metadata['style'], expected.metadata['style'])
     
     def test_parse_file(self):
@@ -140,12 +135,12 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
                 start=timedelta(seconds=1, milliseconds=500),
                 end=timedelta(seconds=3),
                 text="Test subtitle",
-                metadata={'format': 'ass', 'style': 'Default', 'layer': 0, 'name': '', 
+                metadata={'style': 'Default', 'layer': 0, 'name': '', 
                          'margin_l': 0, 'margin_r': 0, 'margin_v': 0, 'effect': ''}
             )
         ]
         
-        data = SubtitleData(lines=lines, metadata={'format': 'ass'})
+        data = SubtitleData(lines=lines, metadata={'pysubs2_format': 'ass'})
         result = self.handler.compose(data)
         
         # Log before assertions
@@ -169,12 +164,11 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
                 start=timedelta(seconds=1),
                 end=timedelta(seconds=3),
                 text="First line\nSecond line",
-                metadata={'format': 'ass', 'style': 'Default', 'layer': 0, 'name': '', 
-                         'margin_l': 0, 'margin_r': 0, 'margin_v': 0, 'effect': ''}
+                metadata={'style': 'Default', 'layer': 0, 'name': '', 'margin_l': 0, 'margin_r': 0, 'margin_v': 0, 'effect': ''}
             )
         ]
         
-        data = SubtitleData(lines=lines, metadata={'format': 'ass'})
+        data = SubtitleData(lines=lines, metadata={'pysubs2_format': 'ass'})
         result = self.handler.compose(data)
         
         # pysubs2 converts newlines back to \\N in ASS format output
@@ -241,7 +235,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         
         # Validate metadata preservation
         log_input_expected_result("Metadata preserved", True, True)
-        self.assertEqual(original_data.metadata['format'], round_trip_data.metadata['format'])
+        self.assertEqual(original_data.metadata['pysubs2_format'], round_trip_data.metadata['pysubs2_format'])
         self.assertIn('styles', original_data.metadata)
         self.assertIn('styles', round_trip_data.metadata)
         self.assertEqual(original_data.metadata['styles'], round_trip_data.metadata['styles'])
@@ -268,8 +262,8 @@ Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
 
         data = self.handler.parse_string(sample_ssa)
-        log_input_expected_result("SSA format", "ssa", data.metadata.get('format'))
-        self.assertEqual(data.metadata.get('format'), 'ssa')
+        log_input_expected_result("SSA format", "ssa", data.metadata.get('pysubs2_format'))
+        self.assertEqual(data.metadata.get('pysubs2_format'), 'ssa')
 
         composed = self.handler.compose(data)
         log_input_expected_result("Round trip format", True, "ScriptType: v4.00" in composed)
@@ -297,7 +291,7 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
                     start=test_timedelta,
                     end=test_timedelta + timedelta(seconds=2),
                     text="Test",
-                    metadata={'format': 'ass', 'style': 'Default', 'layer': 0, 'name': '', 
+                    metadata={'style': 'Default', 'layer': 0, 'name': '', 
                              'margin_l': 0, 'margin_r': 0, 'margin_v': 0, 'effect': ''}
                 )
                 

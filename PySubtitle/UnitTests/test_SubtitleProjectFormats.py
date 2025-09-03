@@ -48,7 +48,6 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         project.InitialiseProject(path)
         self.assertIsNotNone(project.subtitles)
         self.assertEqual(project.subtitles.format, ".srt")
-        self.assertEqual(project.subtitles.metadata.get('format'), 'srt')
 
     def test_project_file_roundtrip_preserves_handler(self):
         path = self._create_temp_srt()
@@ -56,7 +55,6 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         project.InitialiseProject(path)
         self.assertIsNotNone(project.subtitles)
         self.assertEqual(project.subtitles.format, ".srt")
-        self.assertEqual(project.subtitles.metadata.get('format'), 'srt')
         
         # Set outputpath so file handler can be restored on load
         project_path = path.replace('.srt', '.subtrans')
@@ -69,7 +67,6 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         reopened_project.ReadProjectFile(project_path)
         self.assertIsNotNone(reopened_project.subtitles)
         self.assertEqual(reopened_project.subtitles.format, ".srt")
-        self.assertEqual(reopened_project.subtitles.metadata.get('format'), 'srt')
 
     def test_srt_metadata_serialization(self):
         """Test SRT metadata survives JSON serialization through Subtitles."""
@@ -82,14 +79,7 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         
         # Verify basic loading
         self.assertEqual(subtitles.linecount, 1)
-        self.assertEqual(subtitles.metadata.get('format'), 'srt')
         
-        # Test JSON serialization roundtrip
-        json_str = json.dumps(subtitles, cls=SubtitleEncoder)
-        subtitles_restored = json.loads(json_str, cls=SubtitleDecoder)
-        
-        self.assertEqual(subtitles_restored.metadata.get('format'), 'srt')
-
     def test_ass_metadata_serialization(self):
         """Test ASS metadata with colors survives JSON serialization through Subtitles."""
         ass_content = """[Script Info]
@@ -112,7 +102,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         
         # Verify basic loading
         self.assertEqual(subtitles.linecount, 1)
-        self.assertEqual(subtitles.metadata.get('format'), 'ass')
+        self.assertEqual(subtitles.metadata.get('pysubs2_format'), 'ass')
         self.assertIn('styles', subtitles.metadata)
         
         # Check that colors are properly converted to Color object
@@ -129,7 +119,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         json_str = json.dumps(subtitles, cls=SubtitleEncoder)
         subtitles_restored = json.loads(json_str, cls=SubtitleDecoder)
         
-        self.assertEqual(subtitles_restored.metadata.get('format'), 'ass')
+        self.assertEqual(subtitles_restored.metadata.get('pysubs2_format'), 'ass')
         self.assertIn('styles', subtitles_restored.metadata)
         
         # Verify colors survived serialization

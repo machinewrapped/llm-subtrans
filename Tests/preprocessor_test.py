@@ -2,7 +2,7 @@ import os
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.Subtitles import Subtitles
 from PySubtitle.SubtitleProcessor import SubtitleProcessor
-from PySubtitle.Helpers.Tests import RunTestOnAllSrtFiles, separator
+from PySubtitle.Helpers.Tests import RunTestOnAllSubtitleFiles, separator
 
 def preprocess_test(subtitles: Subtitles, logger, options : SettingsType):
     if not subtitles.originals:
@@ -47,7 +47,7 @@ def run_tests(directory_path : str, results_path : str|None = None):
         { 'max_line_duration': 4.0, 'min_line_duration': 0.8, 'min_gap': 0.05, 'min_split_chars': 8, 'whitespaces_to_newline': True, 'break_dialog_on_one_line': False, 'normalise_dialog_tags': False}
     ]
 
-    RunTestOnAllSrtFiles(preprocess_test, test_options, directory_path, results_path)
+    RunTestOnAllSubtitleFiles(preprocess_test, test_options, directory_path, results_path)
 
 if __name__ == "__main__":
     directory_path = os.path.join(os.getcwd(), "test_subtitles")

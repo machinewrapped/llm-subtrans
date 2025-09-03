@@ -85,13 +85,10 @@ class AssFileHandler(SubtitleFileHandler):
         subs : pysubs2.SSAFile = pysubs2.SSAFile()
         subs.info["TranslatedBy"] = "LLM-Subtrans"
 
-        if data.metadata:
-            self._build_metadata(subs, data.metadata)
+        self._build_metadata(subs, data.metadata)
 
-            # Restore original detected format (TODO: allow SSA/ASS conversions)
-            file_format = data.metadata.get('pysubs2_format', 'ass')
-        else:
-            file_format = 'ass'
+        # Restore original detected format (TODO: allow SSA/ASS conversions)
+        file_format = data.metadata.get('pysubs2_format', 'ass')
 
         # Convert SubtitleLines to pysubs2 format
         for line in data.lines:

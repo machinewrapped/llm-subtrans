@@ -85,13 +85,14 @@ class AssFileHandler(SubtitleFileHandler):
         subs : pysubs2.SSAFile = pysubs2.SSAFile()
         subs.info["TranslatedBy"] = "LLM-Subtrans"
 
-        file_format = data.metadata.get('pysubs2_format', 'ass') if data.metadata else 'ass'
-
         if data.metadata:
             self._build_metadata(subs, data.metadata)
 
-        subs.format = file_format
-        
+            # Restore original detected format (TODO: allow SSA/ASS conversions)
+            file_format = data.metadata.get('pysubs2_format', 'ass')
+        else:
+            file_format = 'ass'
+
         # Convert SubtitleLines to pysubs2 format
         for line in data.lines:
             if line.text and line.start is not None and line.end is not None:
@@ -220,8 +221,6 @@ class AssFileHandler(SubtitleFileHandler):
         Restore pysubs2 metadata from JSON-serialized format.
         Converts Color dicts back to pysubs2.Color objects.
         """
-        subs.format = metadata.get('pysubs2_format', 'ass')
-
         # Restore script info from metadata
         if 'info' in metadata:
             subs.info.update(metadata['info'])

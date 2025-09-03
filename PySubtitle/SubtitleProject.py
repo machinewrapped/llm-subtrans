@@ -61,6 +61,11 @@ class SubtitleProject:
         with self.lock:
             return bool(self.subtitles and self.subtitles.any_translated)
 
+    @property
+    def all_translated(self) -> bool:
+        with self.lock:
+            return bool(self.subtitles and self.subtitles.all_translated)
+
     def InitialiseProject(self, filepath : str, outputpath : str|None = None, reload_subtitles : bool = False):
         """
         Initialize the project by either loading an existing project file or creating a new one.

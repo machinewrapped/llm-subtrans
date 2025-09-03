@@ -81,6 +81,16 @@ class Subtitles:
         return self.linecount > 0 or self.scenecount > 0
 
     @property
+    def any_translated(self) -> bool:
+        with self.lock:
+            return any(scene.any_translated for scene in self.scenes) if self.scenes else False
+
+    @property
+    def all_translated(self) -> bool:
+        with self.lock:
+            return all(scene.all_translated for scene in self.scenes) if self.scenes else False
+
+    @property
     def linecount(self) -> int:
         with self.lock:
             return len(self.originals) if self.originals else 0
@@ -100,11 +110,6 @@ class Subtitles:
             self._scenes = scenes
             self.originals, self.translated, dummy = UnbatchScenes(scenes) # type: ignore[unused-ignore]
             self.start_line_number = (self.originals[0].number if self.originals else 1) or 1
-
-    @property
-    def any_translated(self) -> bool:
-        with self.lock:
-            return any(scene.any_translated for scene in self.scenes) if self.scenes else False
 
     def GetScene(self, scene_number : int) -> SubtitleScene:
         """

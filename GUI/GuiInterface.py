@@ -43,6 +43,7 @@ class GuiInterface(QObject):
     commandComplete = Signal(object)
     commandUndone = Signal(object)
     prepareForSave = Signal()
+    projectSaved = Signal()
     showProjectSettings = Signal(bool)
 
     def __init__(self, mainwindow : QMainWindow, options : Options):
@@ -381,6 +382,8 @@ class GuiInterface(QObject):
             self._update_last_used_path(command.filepath)
             if command.datamodel != self.datamodel:
                 self.SetDataModel(command.datamodel)
+
+        self.projectSaved.emit()
 
     def _update_last_used_path(self, filepath : str):
         """

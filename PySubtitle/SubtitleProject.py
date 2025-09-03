@@ -105,6 +105,7 @@ class SubtitleProject:
 
                 if subtitles.scenes:
                     self.existing_project = True
+                    self.needs_writing = False
                     load_subtitles = reload_subtitles
                     if load_subtitles:
                         logging.info(_("Reloading subtitles from the source file"))
@@ -132,7 +133,7 @@ class SubtitleProject:
             if outputpath:
                 subtitles.outputpath = outputpath
 
-        self.needs_writing = self.use_project_file
+            self.needs_writing = self.use_project_file
 
     def SaveOriginal(self, outputpath : str|None = None):
         """

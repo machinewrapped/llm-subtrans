@@ -332,7 +332,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test serialization
         # Focus on testing that metadata is preserved correctly
         log_input_expected_result("format preserved", subtitles.metadata.get('pysubs2_format'), subtitles_restored.metadata.get('pysubs2_format'))
         self.assertEqual(subtitles_restored.metadata.get('pysubs2_format'), subtitles.metadata.get('pysubs2_format'))
-        self.assertEqual(subtitles_restored.metadata.get('pysubs2_format'), subtitles.metadata.get('pysubs2_format'))
         
         # Verify colors survived serialization
         original_style = subtitles.metadata['styles'].get('Default', {})

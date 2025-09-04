@@ -1,6 +1,7 @@
 import unittest
-from io import StringIO
 from datetime import timedelta
+import tempfile
+import os
 
 from PySubtitle.Formats.AssFileHandler import AssFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
@@ -112,14 +113,20 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
                 self.assertEqual(actual.text, expected.text)
                 self.assertEqual(actual.metadata['style'], expected.metadata['style'])
     
-    def test_parse_file(self):
-        """Test parsing from file object."""
-        log_test_name("AssFileHandler.parse_file")
-        
-        file_obj = StringIO(self.sample_ass_content)
-        data = self.handler.parse_file(file_obj)
+    def test_load_file(self):
+        """Test parsing from file path."""
+        log_test_name("AssFileHandler.load_file")
+
+        with tempfile.NamedTemporaryFile('w', delete=False, suffix='.ass', encoding='utf-8') as f:
+            f.write(self.sample_ass_content)
+            temp_path = f.name
+
+        try:
+            data = self.handler.load_file(temp_path)
+        finally:
+            os.remove(temp_path)
+
         lines = data.lines
-        
         log_input_expected_result("File content", 3, len(lines))
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0].text, "First subtitle line")

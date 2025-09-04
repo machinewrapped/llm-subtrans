@@ -4,8 +4,16 @@ import os
 import pkgutil
 from pathlib import Path
 
+import pysubs2
+
 from PySubtitle.Helpers.Localization import _
-from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.SubtitleFileHandler import (
+    SubtitleFileHandler,
+    default_encoding,
+    fallback_encoding,
+)
+from PySubtitle.SubtitleData import SubtitleData
+from PySubtitle.SubtitleError import SubtitleParseError
 
 
 class SubtitleFormatRegistry:
@@ -82,3 +90,21 @@ class SubtitleFormatRegistry:
     def _ensure_discovered(cls) -> None:
         if not cls._discovered:
             cls.discover()
+
+    @classmethod
+    def detect_format_and_load_file(cls, path: str) -> SubtitleData:
+        """Detect subtitle format using content and load file accordingly."""
+        cls._ensure_discovered()
+        try:
+            try:
+                subs = pysubs2.load(path, encoding=default_encoding)
+            except UnicodeDecodeError:
+                subs = pysubs2.load(path, encoding=fallback_encoding)
+        except Exception as e:
+            raise SubtitleParseError(_("Failed to detect subtitle format: {}" ).format(str(e)), e)
+
+        detected_extension = f".{getattr(subs, 'format', 'srt').lower()}"
+        handler = cls.create_handler(detected_extension)
+        data = handler.load_file(path)
+        data.metadata['detected_extension'] = detected_extension
+        return data

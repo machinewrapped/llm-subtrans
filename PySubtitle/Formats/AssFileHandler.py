@@ -5,7 +5,11 @@ from datetime import timedelta
 from typing import TextIO
 
 from PySubtitle.Helpers.Color import Color
-from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.SubtitleFileHandler import (
+    SubtitleFileHandler,
+    default_encoding,
+    fallback_encoding,
+)
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
@@ -49,6 +53,14 @@ class AssFileHandler(SubtitleFileHandler):
     """
     
     SUPPORTED_EXTENSIONS = {'.ass': 10, '.ssa': 10}
+
+    def load_file(self, path: str) -> SubtitleData:
+        try:
+            with open(path, 'r', encoding=default_encoding, newline='') as f:
+                return self.parse_file(f)
+        except UnicodeDecodeError:
+            with open(path, 'r', encoding=fallback_encoding, newline='') as f:
+                return self.parse_file(f)
     
     def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """

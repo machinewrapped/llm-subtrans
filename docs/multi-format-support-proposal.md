@@ -17,7 +17,7 @@ This document captures the architecture and decisions behind LLM-Subtrans's mult
 
 ### Current Limitations
 - Only SRT and ASS/SSA formats implemented
-- Content-based format detection not yet supported
+- Content-based format detection now implemented via `pysubs2`
 
 ## Architecture Overview
 
@@ -194,17 +194,22 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 **IMPORTANT NOTE:** `pysubs2` supports format detection from content. We should aim to leverage that rather than implement our own detection logic.
 
 **Requirements**:
-- Support format detection when file extension is missing/incorrect
-- Report detected_format via `SubtitleData` and automatically update the project output format
-- Project format and file extension should be determined by output_path > detected_format > source_path > default (srt) priority order.
-- Error reporting for format detection failures
+- [x] Support format detection when file extension is missing/incorrect
+- [x] Report detected_format via `SubtitleData` and automatically update the project output format
+- [x] Project format and file extension determined by output_path > detected_format > source_path > default (srt) priority order
+- [x] Error reporting for format detection failures
 
 **Acceptance Tests**:
-- [ ] Detect SRT format with .txt extension
-- [ ] Detect ASS format with .txt extension
-- [ ] Detect SSA format with .ass extension
-- [ ] Provide clear error messages for undetectable formats
-- [ ] Handle edge cases with malformed files gracefully
+- [x] Detect SRT format with .txt extension
+- [x] Detect ASS format with .txt extension
+- [x] Detect SSA format with .ass extension
+- [x] Provide clear error messages for undetectable formats
+- [x] Handle edge cases with malformed files gracefully
+
+**Implementation Notes**:
+- Leveraged `pysubs2.fileio.detect_format` for content-based detection.
+- `SubtitleData` now carries a `detected_format` field consumed by `Subtitles` to select default output extensions.
+- CLI `--output` parameters still override auto-detected paths; GUI defaults can be overridden in `NewProjectSettings`.
 
 **Files to Modify**:
 - `PySubtitle/SubtitleFormatRegistry.py`: Add format detection hooks

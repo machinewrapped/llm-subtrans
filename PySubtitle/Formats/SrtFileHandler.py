@@ -2,7 +2,11 @@ import srt # type: ignore
 from collections.abc import Iterator
 from typing import TextIO
 
-from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.SubtitleFileHandler import (
+    SubtitleFileHandler,
+    default_encoding,
+    fallback_encoding,
+)
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
@@ -16,22 +20,28 @@ class SrtFileHandler(SubtitleFileHandler):
     """
     
     SUPPORTED_EXTENSIONS = {'.srt': 10}
+
+    def load_file(self, path: str) -> SubtitleData:
+        try:
+            with open(path, 'r', encoding=default_encoding, newline='') as f:
+                return self.parse_file(f)
+        except UnicodeDecodeError:
+            with open(path, 'r', encoding=fallback_encoding, newline='') as f:
+                return self.parse_file(f)
     
     def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """
         Parse SRT file content and return SubtitleData with lines and metadata.
         """
         lines = list(self._parse_srt_items(file_obj))
-        metadata = {'format': 'srt'}
-        return SubtitleData(lines=lines, metadata=metadata)
+        return SubtitleData(lines=lines, metadata={}, detected_format='.srt')
     
     def parse_string(self, content: str) -> SubtitleData:
         """
         Parse SRT string content and return SubtitleData with lines and metadata.
         """
         lines = list(self._parse_srt_items(content))
-        metadata = {'format': 'srt'}
-        return SubtitleData(lines=lines, metadata=metadata)
+        return SubtitleData(lines=lines, metadata={}, detected_format='.srt')
 
     def compose(self, data: SubtitleData) -> str:
         """
@@ -97,6 +107,8 @@ class SrtFileHandler(SubtitleFileHandler):
                 )
                 yield line
                 
+        except UnicodeDecodeError:
+            raise  # Re-raise UnicodeDecodeError for fallback handling
         except srt.SRTParseError as e:
             raise SubtitleParseError(_("Failed to parse SRT: {}" ).format(str(e)), e)
         except Exception as e:

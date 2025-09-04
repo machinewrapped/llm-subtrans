@@ -25,7 +25,6 @@ from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
 
 default_encoding = os.getenv('DEFAULT_ENCODING', 'utf-8')
-fallback_encoding = os.getenv('DEFAULT_ENCODING', 'iso-8859-1')
 
 class Subtitles:
     """
@@ -61,6 +60,7 @@ class Subtitles:
         self.outputpath : str|None = outputpath or None
 
         self.metadata : dict[str, Any] = {}
+        self.format : str|None = None
 
         self.settings : SettingsType = deepcopy(self.DEFAULT_PROJECT_SETTINGS)
 
@@ -72,10 +72,6 @@ class Subtitles:
     def target_language(self) -> str|None:
         return self._get_setting_str('target_language')
 
-    @property
-    def format(self) -> str:
-        return os.path.splitext(self.outputpath)[1] if self.outputpath else os.path.splitext(self.sourcepath)[1] if self.sourcepath else '.srt'
-    
     @property
     def task_type(self) -> str:
         return self._get_setting_str('task_type') or DEFAULT_TASK_TYPE
@@ -266,31 +262,25 @@ class Subtitles:
         """
         if filepath:
             self.sourcepath = GetInputPath(filepath)
-            # Set default output path using same format as input
-            self.outputpath = GetOutputPath(self.sourcepath, self.target_language)
 
         if not self.sourcepath:
             raise ValueError("No source path set for subtitles")
 
         file_handler: SubtitleFileHandler = SubtitleFormatRegistry.create_handler(filename=self.sourcepath)
-    
-        try:
-            with open(self.sourcepath, 'r', encoding=default_encoding, newline='') as f:
-                data = file_handler.parse_file(f)
 
+        try:
+            data = file_handler.load_file(self.sourcepath)
         except SubtitleParseError as e:
-            logging.warning(_("Error parsing file... trying with fallback encoding: {}").format(str(e)))
-            try:
-                with open(self.sourcepath, 'r', encoding=fallback_encoding) as f:
-                    data = file_handler.parse_file(f)
-            except SubtitleParseError as e2:
-                logging.error(_("Failed to parse file with fallback encoding: {}").format(str(e2)))
-                raise e2
+            logging.warning(_("Error parsing file... attempting format detection: {}").format(str(e)))
+            data = SubtitleFormatRegistry.detect_format_and_load_file(self.sourcepath)
 
         with self.lock:
             self._renumber_if_needed(data.lines)
             self.originals = data.lines
             self.metadata = data.metadata
+            self.format = data.detected_format
+            if self.outputpath is None:
+                self.outputpath = GetOutputPath(self.sourcepath, self.target_language, self.format)
 
     def LoadSubtitlesFromString(self, subtitles_string: str, file_handler: SubtitleFileHandler) -> None:
         """
@@ -302,6 +292,7 @@ class Subtitles:
                 self._renumber_if_needed(data.lines)
                 self.originals = data.lines
                 self.metadata = data.metadata
+                self.format = data.detected_format
 
         except SubtitleParseError as e:
             logging.error(_("Failed to parse subtitles string: {}").format(str(e)))
@@ -409,9 +400,13 @@ class Subtitles:
         Set or generate the output path for the translated subtitles
         """
         path = path or self.sourcepath
-        extension = extension or self.format
+        if not extension:
+            extension = SubtitleFormatRegistry.get_format_from_filename(path) if path else None
+            extension = extension or self.format or '.srt'
+
         outputpath = GetOutputPath(path, self.target_language, extension)
         self.outputpath = outputpath
+        self.format = extension
 
     def PreProcess(self, preprocessor: SubtitleProcessor) -> None:
         """

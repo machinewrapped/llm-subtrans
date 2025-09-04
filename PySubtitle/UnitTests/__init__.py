@@ -13,4 +13,4 @@ from PySubtitle.UnitTests.test_Subtitles import TestSubtitles, SubtitleProcessor
 from PySubtitle.UnitTests.test_Text import TestTextHelpers
 from PySubtitle.UnitTests.test_Time import TestTimeHelpers
 from PySubtitle.UnitTests.test_Translator import SubtitleTranslatorTests
-from PySubtitle.UnitTests.test_FormatDetection import TestFormatDetection
+

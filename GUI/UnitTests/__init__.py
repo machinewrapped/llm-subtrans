@@ -1,8 +1,3 @@
-from GUI.UnitTests.test_BatchCommands import BatchCommandTests
-from GUI.UnitTests.test_DataModel import DataModelTests
-from GUI.UnitTests.test_MergeSplitCommands import MergeSplitCommandsTests
-from GUI.UnitTests.test_MergeLinesCommand import MergeLinesCommandTest
-from GUI.UnitTests.test_DeleteLinesCommand import DeleteLinesCommandTest
-from GUI.UnitTests.test_ReparseTranslationCommand import ReparseTranslationsCommandTest
-from GUI.UnitTests.test_StartTranslationCommand import StartTranslationCommandTests
-from GUI.UnitTests.test_EditCommands import EditCommandsTests
+# This module is left intentionally minimal.
+# Test discovery is now handled automatically by unittest.TestLoader().discover()
+# in the main test runner at Tests/unit_tests.py

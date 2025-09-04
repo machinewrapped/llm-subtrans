@@ -1,4 +1,3 @@
-from importlib.machinery import ModuleSpec
 import os
 import logging
 import importlib.util
@@ -12,13 +11,12 @@ import unittest
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(base_path)
 
-import PySubtitle.UnitTests
-import GUI.UnitTests
 from PySubtitle.Helpers.Tests import create_logfile, end_logfile, separator
+from Tests.unit_tests import discover_tests
 
 logging.getLogger().setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setLevel(logging.WARNING)
+console_handler.setLevel(logging.WARNING)  # Only show warnings and above on console
 console_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
 # Ensure the console handler is attached (it wasn't previously, so messages at WARNING+ were not visible)
 if console_handler not in logging.getLogger().handlers:
@@ -38,16 +36,18 @@ def run_unit_tests(results_path: str) -> bool:
     logging.info("Running unit tests at " + start_stamp)
     logging.info(separator)
 
-    loader = unittest.TestLoader()
-    runner = unittest.runner.TextTestRunner(verbosity=2)
-
+    runner = unittest.runner.TextTestRunner(verbosity=1)
+    
+    # Get separate test suites
+    py_tests, gui_tests = discover_tests(base_path, separate_suites=True)
+    
     # PySubtitle tests
     logging.info("Running PySubtitle unit tests...")
-    py_result = runner.run(loader.loadTestsFromModule(PySubtitle.UnitTests))
+    py_result = runner.run(py_tests)
 
-    # GUI tests
+    # GUI tests  
     logging.info("Running GUI unit tests...")
-    gui_result = runner.run(loader.loadTestsFromModule(GUI.UnitTests))
+    gui_result = runner.run(gui_tests)
 
     # Aggregate & summarize
     def summarize(label: str, result: unittest.TestResult) -> dict:
@@ -77,10 +77,10 @@ def run_unit_tests(results_path: str) -> bool:
         f"Overall: run={total_run} failures={total_failures} errors={total_errors} skipped={total_skipped} => {'SUCCESS' if overall_success else 'FAILED'}"
     ]
 
-    # Always surface summary lines to console: use WARNING when success, ERROR when failed
+    # Always surface summary lines to console: print when successful, since we don't log INFO to console, but ERROR when failed
     for line in summary_lines:
         if overall_success:
-            logging.warning(line)
+            print(line)
         else:
             logging.error(line)
 
@@ -118,7 +118,7 @@ def run_functional_tests(tests_directory, subtitles_directory, results_directory
         filepath = os.path.join(tests_directory, filename)
 
         # Load the module
-        spec : ModuleSpec|None = importlib.util.spec_from_file_location(module_name, filepath)
+        spec = importlib.util.spec_from_file_location(module_name, filepath)
         if spec is None or spec.loader is None:
             logging.error(f"Could not load module {module_name} from {filepath}")
             continue

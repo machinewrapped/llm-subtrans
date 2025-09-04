@@ -92,6 +92,11 @@ class SubtitleFormatRegistry:
         cls._discovered = True
 
     @classmethod
+    def enable_autodiscovery(cls) -> None:
+        """ Enable automatic discovery of subtitle formats (for testing) """
+        cls._discovered = False
+
+    @classmethod
     def discover(cls) -> None:
         """
         Discover and register all subtitle file handlers in the Formats package.

@@ -1,5 +1,5 @@
-from typing import TextIO
 import unittest
+from typing import TextIO
 
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
@@ -15,7 +15,7 @@ from PySubtitle.Helpers.Tests import (
 
 class DummySrtHandler(SubtitleFileHandler):
     SUPPORTED_EXTENSIONS = {'.srt': 5}
-    
+
     def parse_file(self, file_obj : TextIO) -> SubtitleData:
         return SubtitleData(lines=[], metadata={})
 
@@ -24,6 +24,9 @@ class DummySrtHandler(SubtitleFileHandler):
 
     def compose(self, data : SubtitleData) -> str:
         return ""
+
+    def load_file(self, path: str) -> SubtitleData:
+        return self.parse_string("")
 
 
 class TestSubtitleFormatRegistry(unittest.TestCase):

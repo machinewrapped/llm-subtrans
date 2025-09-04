@@ -4,8 +4,16 @@ import os
 import pkgutil
 from pathlib import Path
 
+import pysubs2
+
 from PySubtitle.Helpers.Localization import _
-from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.SubtitleFileHandler import (
+    SubtitleFileHandler,
+    default_encoding,
+    fallback_encoding,
+)
+from PySubtitle.SubtitleData import SubtitleData
+from PySubtitle.SubtitleError import SubtitleParseError
 
 
 class SubtitleFormatRegistry:
@@ -84,24 +92,19 @@ class SubtitleFormatRegistry:
             cls.discover()
 
     @classmethod
-    def detect_format(cls, content : str) -> str|None:
-        """Detect subtitle format from content using pysubs2."""
+    def detect_format_and_load_file(cls, path: str) -> SubtitleData:
+        """Detect subtitle format using content and load file accordingly."""
+        cls._ensure_discovered()
         try:
-            import pysubs2.fileio
-            return pysubs2.fileio.detect_format(content)
-        except Exception:
-            return None
+            try:
+                subs = pysubs2.load(path, encoding=default_encoding)
+            except UnicodeDecodeError:
+                subs = pysubs2.load(path, encoding=fallback_encoding)
+        except Exception as e:
+            raise SubtitleParseError(_("Failed to detect subtitle format: {}" ).format(str(e)), e)
 
-    @classmethod
-    def format_to_extension(cls, format_name : str|None) -> str|None:
-        """Map a detected format name to a file extension."""
-        if not format_name:
-            return None
-        mapping = {
-            'srt': '.srt',
-            'ass': '.ass',
-            'ssa': '.ssa',
-            'vtt': '.vtt',
-            'ttml': '.ttml'
-        }
-        return mapping.get(format_name.lower())
+        detected_extension = f".{getattr(subs, 'format', 'srt').lower()}"
+        handler = cls.create_handler(detected_extension)
+        data = handler.load_file(path)
+        data.metadata['detected_extension'] = detected_extension
+        return data

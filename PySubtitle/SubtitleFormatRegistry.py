@@ -142,7 +142,9 @@ class SubtitleFormatRegistry:
 
         detected_extension = pysubs2.formats.get_file_extension(subs.format or "srt")
         handler = cls.create_handler(detected_extension)
+        
         data = handler.load_file(path)
+        
         data.metadata['detected_format'] = detected_extension
         return data
 

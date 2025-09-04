@@ -70,6 +70,8 @@ class AssFileHandler(SubtitleFileHandler):
             subs : pysubs2.SSAFile = pysubs2.SSAFile.from_file(file_obj)
             return self._parse_subs(subs)
                 
+        except UnicodeDecodeError:
+            raise  # Re-raise UnicodeDecodeError for fallback handling
         except Exception as e:
             raise SubtitleParseError(_("Failed to parse file: {}").format(str(e)), e)
 

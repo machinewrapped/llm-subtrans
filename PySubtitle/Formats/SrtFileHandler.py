@@ -107,6 +107,8 @@ class SrtFileHandler(SubtitleFileHandler):
                 )
                 yield line
                 
+        except UnicodeDecodeError:
+            raise  # Re-raise UnicodeDecodeError for fallback handling
         except srt.SRTParseError as e:
             raise SubtitleParseError(_("Failed to parse SRT: {}" ).format(str(e)), e)
         except Exception as e:

@@ -532,6 +532,68 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
             SubtitleFormatRegistry.detect_format_and_load_file(filename)
         log_input_expected_error(f"filename={filename}", SubtitleParseError, e.exception)
 
+    def test_FormatDetectionWithNonUtf8SrtFile(self):
+        log_test_name("FormatDetectionWithNonUtf8SrtFile")
+        
+        # SRT content with non-ASCII characters (French accents)
+        srt_content = "1\n00:00:01,000 --> 00:00:02,000\nCafé à Paris\n\n2\n00:00:03,000 --> 00:00:04,000\nHôtel très cher\n"
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='iso-8859-1') as f:
+            f.write(srt_content)
+            temp_path = f.name
+        
+        try:
+            data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
+            detected_format = data.metadata.get('detected_format')
+            log_input_expected_result(f"detected_format={detected_format}", ".srt", detected_format)
+            self.assertEqual(".srt", detected_format)
+            lines_count = len(data.lines)
+            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
+            self.assertGreater(lines_count, 0)
+            # Verify content was loaded correctly
+            first_line_text = data.lines[0].text if data.lines else ""
+            log_input_expected_result(f"first_line_text={first_line_text}", "Café à Paris", first_line_text)
+            self.assertEqual("Café à Paris", first_line_text)
+        finally:
+            os.unlink(temp_path)
+
+    def test_FormatDetectionWithNonUtf8AssFile(self):
+        log_test_name("FormatDetectionWithNonUtf8AssFile")
+        
+        # ASS content with non-ASCII characters
+        ass_content = """[Script Info]
+Title: Test with accents
+ScriptType: v4.00+
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColor, SecondaryColor, OutlineColor, BackColor, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,0,2,10,10,10,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Café à Paris
+Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Hôtel très cher
+"""
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='iso-8859-1') as f:
+            f.write(ass_content)
+            temp_path = f.name
+        
+        try:
+            data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
+            detected_format = data.metadata.get('detected_format')
+            log_input_expected_result(f"detected_format={detected_format}", ".ass", detected_format)
+            self.assertEqual(".ass", detected_format)
+            lines_count = len(data.lines)
+            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
+            self.assertGreater(lines_count, 0)
+            # Verify content was loaded correctly
+            first_line_text = data.lines[0].text if data.lines else ""
+            log_input_expected_result(f"first_line_text={first_line_text}", "Café à Paris", first_line_text)
+            self.assertEqual("Café à Paris", first_line_text)
+        finally:
+            os.unlink(temp_path)
+
 
 
 if __name__ == '__main__':

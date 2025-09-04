@@ -27,6 +27,9 @@ Secrets are stored in a .env file - NEVER read the contents of the file.
 - **Unit Tests**: New tests must be registered in `PySubtitle.UnitTests.__init__` or `GUI.UnitTests.__init__`
   - Tests should adhere to the project test structure - see `GUI\UnitTests\test_BatchCommands.py` for an example.
   - Use functions like `log_input_expected_result` (logs input value, expected result and actual result or suitable proxies) defined in `Helpers\Test.py`.
+  - **CRITICAL**: Always call `log_input_expected_result()` BEFORE the corresponding assertion so that if the assertion fails the log will show the reason.
+  - **Pattern**: `log_input_expected_result("desc", expected, actual)` then `self.assertEqual(expected, actual)`
+  - **None Safety**: Use `.get(key, default)` with appropriate default values to avoid Pylance warnings, or assert then test for None values.
 - **Console Output**: Avoid Unicode characters (✓ ✗) in print/log messages - Windows console encoding issues
 
 ## Information

@@ -135,11 +135,11 @@ def RunTestOnAllSubtitleFiles(run_test : Callable, test_options: list[dict], dir
 
     supported_formats = SubtitleFormatRegistry.enumerate_formats()
 
-    for file in os.listdir(directory_path):
-        extension = os.path.splitext(file)[1].lower()
-        if extension not in supported_formats:
-            continue
+    files = [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f)) and f.endswith(".srt")]
 
+    print (f"Running {test_name} on {len(files)} files in {directory_path}...")
+
+    for file in files:
         file_handler = _add_test_file_logger(logger, results_path, file, test_name)
 
         filepath = os.path.join(directory_path, file)

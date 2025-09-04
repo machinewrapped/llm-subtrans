@@ -337,6 +337,202 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         log_input_expected_result("priorities unchanged after double discovery", priorities_after_first, priorities_after_second)
         self.assertEqual(priorities_after_first, priorities_after_second)
 
+    # Phase 6: Enhanced Format Detection Tests
+    def test_DetectSrtFormatWithTxtExtension(self):
+        log_test_name("DetectSrtFormatWithTxtExtension")
+        
+        srt_content = "1\n00:00:01,000 --> 00:00:02,000\nTest subtitle\n\n2\n00:00:03,000 --> 00:00:04,000\nAnother line\n"
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+            f.write(srt_content)
+            temp_path = f.name
+        
+        try:
+            data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
+            detected_format = data.metadata.get('detected_format')
+            log_input_expected_result(f"detected_format={detected_format}", ".srt", detected_format)
+            self.assertEqual(".srt", detected_format)
+            lines_count = len(data.lines)
+            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
+            self.assertGreater(lines_count, 0)
+        finally:
+            os.unlink(temp_path)
+
+    def test_DetectAssFormatWithTxtExtension(self):
+        log_test_name("DetectAssFormatWithTxtExtension")
+        
+        ass_content = """[Script Info]
+Title: Test
+ScriptType: v4.00+
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColor, SecondaryColor, OutlineColor, BackColor, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,0,2,10,10,10,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
+Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
+"""
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+            f.write(ass_content)
+            temp_path = f.name
+        
+        try:
+            data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
+            detected_format = data.metadata.get('detected_format')
+            log_input_expected_result(f"detected_format={detected_format}", ".ass", detected_format)
+            self.assertEqual(".ass", detected_format)
+            lines_count = len(data.lines)
+            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
+            self.assertGreater(lines_count, 0)
+        finally:
+            os.unlink(temp_path)
+
+    def test_DetectSsaFormatWithAssExtension(self):
+        log_test_name("DetectSsaFormatWithAssExtension")
+        
+        ssa_content = """[Script Info]
+Title: Test SSA
+ScriptType: v4.00
+
+[V4 Styles]
+Format: Name, Fontname, Fontsize, PrimaryColor, SecondaryColor, TertiaryColor, BackColor, Bold, Italic, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, AlphaLevel, Encoding
+Style: Default,Arial,20,65535,255,0,0,0,0,1,2,0,2,10,10,10,0,1
+
+[Events]
+Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
+Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
+"""
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.ass', delete=False, encoding='utf-8') as f:
+            f.write(ssa_content)
+            temp_path = f.name
+        
+        try:
+            data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
+            # SSA files are correctly detected as .ssa by pysubs2
+            detected_format = data.metadata.get('detected_format')
+            log_input_expected_result(f"detected_format={detected_format}", ".ssa", detected_format)
+            self.assertEqual(".ssa", detected_format)
+            lines_count = len(data.lines)
+            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
+            self.assertGreater(lines_count, 0)
+        finally:
+            os.unlink(temp_path)
+
+    def test_FormatDetectionWithMalformedFile(self):
+        if skip_if_debugger_attached("FormatDetectionWithMalformedFile"):
+            return
+            
+        log_test_name("FormatDetectionWithMalformedFile")
+        
+        malformed_content = "This is not a valid subtitle file\nJust random text\nWith no format\n"
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+            f.write(malformed_content)
+            temp_path = f.name
+        
+        try:
+            with self.assertRaises(SubtitleParseError) as e:
+                SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
+            log_input_expected_error("malformed file content", SubtitleParseError, e.exception)
+            # Verify the error message is user-friendly
+            error_msg = str(e.exception)
+            log_input_expected_result(f"error_msg='{error_msg[:50]}...'", True, 'format' in error_msg.lower())
+            self.assertIn('format', error_msg.lower())
+        finally:
+            os.unlink(temp_path)
+
+    def test_FormatDetectionWithEmptyFile(self):
+        if skip_if_debugger_attached("FormatDetectionWithEmptyFile"):
+            return
+            
+        log_test_name("FormatDetectionWithEmptyFile")
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
+            f.write("")  # Empty file
+            temp_path = f.name
+        
+        try:
+            with self.assertRaises(SubtitleParseError) as e:
+                SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
+            log_input_expected_error("empty file content", SubtitleParseError, e.exception)
+        finally:
+            os.unlink(temp_path)
+
+    def test_FormatDetectionWithBinaryFile(self):
+        if skip_if_debugger_attached("FormatDetectionWithBinaryFile"):
+            return
+            
+        log_test_name("FormatDetectionWithBinaryFile")
+        
+        # Create a binary file that's definitely not a subtitle
+        with tempfile.NamedTemporaryFile(mode='wb', suffix='.txt', delete=False) as f:
+            f.write(b'\x00\x01\x02\x03\x04\x05\xFF\xFE')  # Binary data
+            temp_path = f.name
+        
+        try:
+            with self.assertRaises(SubtitleParseError) as e:
+                SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
+            log_input_expected_error("binary file content", SubtitleParseError, e.exception)
+        finally:
+            os.unlink(temp_path)
+
+    def test_FormatDetectionPreservesOriginalMetadata(self):
+        log_test_name("FormatDetectionPreservesOriginalMetadata")
+        
+        # Use ASS format since it has rich metadata
+        ass_content = """[Script Info]
+Title: Test Movie
+ScriptType: v4.00+
+WrapStyle: 0
+Collisions: Normal
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColor, SecondaryColor, OutlineColor, BackColor, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,0,2,10,10,10,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
+"""
+        
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.unknown', delete=False, encoding='utf-8') as f:
+            f.write(ass_content)
+            temp_path = f.name
+        
+        try:
+            data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
+            detected_format = data.metadata.get('detected_format')
+            log_input_expected_result(f"detected_format={detected_format}", ".ass", detected_format)
+            self.assertEqual(".ass", detected_format)
+            # Check that original metadata from ASS file is preserved
+            has_info = 'info' in data.metadata
+            log_input_expected_result(f"'info' in metadata={has_info}", True, has_info)
+            self.assertIn('info', data.metadata)
+            script_info = data.metadata['info']
+            title = script_info.get('Title')
+            log_input_expected_result(f"script_info['Title']={title}", "Test Movie", title)
+            self.assertEqual("Test Movie", title)
+        finally:
+            os.unlink(temp_path)
+
+    def test_FormatDetectionNonexistentFile(self):
+        if skip_if_debugger_attached("FormatDetectionNonexistentFile"):
+            return
+            
+        log_test_name("FormatDetectionNonexistentFile")
+        
+        filename = "nonexistent_file.txt"
+        with self.assertRaises(SubtitleParseError) as e:
+            SubtitleFormatRegistry.detect_format_and_load_file(filename)
+        log_input_expected_error(f"filename={filename}", SubtitleParseError, e.exception)
+
+
 
 if __name__ == '__main__':
     unittest.main()

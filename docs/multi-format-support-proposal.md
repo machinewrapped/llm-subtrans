@@ -200,11 +200,11 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 - [x] Error reporting for format detection failures
 
 **Acceptance Tests**:
-- [ ] Detect SRT format with .txt extension
-- [ ] Detect ASS format with .txt extension
-- [ ] Detect SSA format with .ass extension
-- [ ] Provide clear error messages for undetectable formats
-- [ ] Handle edge cases with malformed files gracefully
+- [x] Detect SRT format with .txt extension
+- [x] Detect ASS format with .txt extension
+- [x] Detect SSA format with .ass extension
+- [x] Provide clear error messages for undetectable formats
+- [x] Handle edge cases with malformed files gracefully
 
 **Implementation Notes**:
 - Leveraged `pysubs2.fileio.detect_format` for content-based detection.

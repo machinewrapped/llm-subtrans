@@ -166,9 +166,9 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\b1}Hello{\\b0} World!
         
         log_input_expected_result("line count", 1, subtitles.linecount)
         self.assertEqual(subtitles.linecount, 1)
-        log_input_expected_result("metadata keys for pysubs2_format", "pysubs2_format", list(subtitles.metadata.keys()))
+        log_input_expected_result("pysubs2_format in metadata keys", True, 'pysubs2_format' in subtitles.metadata.keys())
         self.assertIn('pysubs2_format', subtitles.metadata)
-        log_input_expected_result("metadata keys for styles", "styles", list(subtitles.metadata.keys()))
+        log_input_expected_result("styles in metadata keys", True, 'styles' in subtitles.metadata.keys())
         self.assertIn('styles', subtitles.metadata)
         
         assert subtitles.originals is not None
@@ -199,16 +199,16 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test line
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, handler)
         
-        log_input_expected_result("metadata keys for styles", "styles", list(subtitles.metadata.keys()))
+        log_input_expected_result("styles in metadata keys", True, 'styles' in subtitles.metadata.keys())
         self.assertIn('styles', subtitles.metadata)
         
         default_style = subtitles.metadata['styles'].get('Default', {})
         primary_color = default_style.get('primarycolor')
         
-        log_input_expected_result("primary color from default style", "<Color instance>", str(primary_color) if primary_color else None)
+        log_input_expected_result("primary color found", True, primary_color is not None)
         self.assertIsNotNone(primary_color)
         
-        log_input_expected_result("primary color type", Color, type(primary_color))
+        log_input_expected_result("primary color type", True, isinstance(primary_color, Color))
         self.assertIsInstance(primary_color, Color)
         
         log_input_expected_result("primary color red component", 0, primary_color.r)
@@ -267,9 +267,9 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Bold text 
         self.assertGreater(len(subtitles.originals), 0)
         line = subtitles.originals[0]
         assert line.text is not None
-        log_input_expected_result("line metadata keys", "override_tags_start", list(line.metadata.keys()))
+        log_input_expected_result("override_tags_start in line metadata", True, 'override_tags_start' in line.metadata)
         self.assertIn('override_tags_start', line.metadata)
-        log_input_expected_result("override tags content", "\\pos(100,200)", line.metadata['override_tags_start'])
+        log_input_expected_result("positioning tag in override tags", True, '\\\\pos(100,200)' in line.metadata['override_tags_start'])
         self.assertIn('\\pos(100,200)', line.metadata['override_tags_start'])
         log_input_expected_result("basic formatting converted to HTML", "<b>Bold text with positioning</b>", line.text)
         self.assertEqual(line.text, "<b>Bold text with positioning</b>")
@@ -294,11 +294,11 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Test{\\b0}
         data = handler.parse_string(ass_content)
         recomposed = handler.compose(data)
         
-        log_input_expected_result("recomposed content (title check)", "Title: Test Script", recomposed[:100] if len(recomposed) > 100 else recomposed)
+        log_input_expected_result("title in recomposed content", True, "Title: Test Script" in recomposed)
         self.assertIn("Title: Test Script", recomposed)
-        log_input_expected_result("recomposed content (pos check)", "\\pos(100,200)", recomposed)
+        log_input_expected_result("positioning tag in recomposed", True, "\\pos(100,200)" in recomposed)
         self.assertIn("\\pos(100,200)", recomposed)
-        log_input_expected_result("recomposed content (bold check)", "\\b1 and \\b0", recomposed)
+        log_input_expected_result("bold tags in recomposed", True, "\\b1" in recomposed and "\\b0" in recomposed)
         self.assertIn("\\b1", recomposed)
         self.assertIn("\\b0", recomposed)
 
@@ -374,9 +374,9 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hard\\Nbreak and\\nsoft break
         self.assertGreater(len(subtitles.originals), 0)
         line = subtitles.originals[0]
         assert line.text is not None
-        log_input_expected_result("line text (newline check)", "contains \\n", line.text)
+        log_input_expected_result("newline in line text", True, "\\n" in line.text)
         self.assertIn("\n", line.text)
-        log_input_expected_result("line text (wbr check)", "contains <wbr>", line.text)
+        log_input_expected_result("wbr tag in line text", True, "<wbr>" in line.text)
         self.assertIn("<wbr>", line.text)
         log_input_expected_result("complete conversion", "Hard\nbreak and<wbr>soft break", line.text)
         self.assertEqual(line.text, "Hard\nbreak and<wbr>soft break")

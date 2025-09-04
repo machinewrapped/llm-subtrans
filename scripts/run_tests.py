@@ -36,7 +36,7 @@ def run_unit_tests(results_path: str) -> bool:
     logging.info("Running unit tests at " + start_stamp)
     logging.info(separator)
 
-    runner = unittest.runner.TextTestRunner(verbosity=2)
+    runner = unittest.runner.TextTestRunner(verbosity=1)
     
     # Get separate test suites
     py_tests, gui_tests = discover_tests(base_path, separate_suites=True)

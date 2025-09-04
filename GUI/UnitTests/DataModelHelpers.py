@@ -13,7 +13,7 @@ def CreateTestDataModel(test_data : dict, options : Options|None = None) -> Proj
     """
     options = options or Options()
     file : Subtitles = PrepareSubtitles(test_data, 'original')
-    project = SubtitleProject()
+    project = SubtitleProject(persistent = options.use_project_file)
     project.write_translation = False
     project.subtitles = file
     project.UpdateProjectSettings(options)

@@ -64,6 +64,7 @@ default_settings = {
     'max_newlines': env_int('MAX_NEWLINES', 2),
     'max_single_line_length': env_int('MAX_SINGLE_LINE_LENGTH', 44),
     'min_single_line_length': env_int('MIN_SINGLE_LINE_LENGTH', 8),
+    'prevent_overlapping_times': env_bool('PREVENT_OVERLAPPING_TIMES', False),
     'postprocess_translation': env_bool('POSTPROCESS_TRANSLATION', False),
     'preprocess_subtitles': env_bool('PREPROCESS_SUBTITLES', False),
     'save_preprocessed_subtitles': env_bool('SAVE_PREPROCESSED_SUBTITLES', False),
@@ -178,7 +179,7 @@ class Options(SettingsType):
         return self.get_str('target_language') or str(default_settings['target_language'])
 
     @property
-    def project_file(self) -> bool:
+    def use_project_file(self) -> bool:
         return self.get_bool('project_file', True)
 
     def GetProviderSettings(self, provider : str) -> SettingsType:

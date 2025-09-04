@@ -5,7 +5,7 @@ import regex
 
 from PySubtitle.Instructions import DEFAULT_TASK_TYPE
 from PySubtitle.Options import Options
-from PySubtitle.Helpers.Subtitles import MergeTranslations
+from PySubtitle.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtitle.Helpers.Text import IsTextContentEqual
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleError import NoTranslationError, TranslationError, UntranslatedLinesError
@@ -119,11 +119,12 @@ class TranslationParser:
         unmatched = []
 
         for item in originals:
-            translation = self.translations.get(item.key)
+            translation : SubtitleLine|None = self.translations.get(item.key)
             if translation:
                 translation.number = item.number
                 translation.start = item.start or timedelta(seconds=0)
                 translation.end = item.end or timedelta(seconds=0)
+                translation.metadata = item.metadata
 
                 if translation.original and IsTextContentEqual(translation.text, item.text):
                     # Check for swapped original & translation

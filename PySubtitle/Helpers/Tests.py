@@ -1,10 +1,14 @@
+from collections.abc import Callable
 import logging
 import os
+import sys
 from datetime import datetime
 from typing import Any
 
 from PySubtitle.SettingsType import SettingsType
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Subtitles import Subtitles
+from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 
 separator = "".center(60, "-")
 wide_separator = "".center(120, "-")
@@ -53,6 +57,16 @@ def log_input_expected_error(input : Any, expected_error : type[Exception], resu
     log_info(str(result), prefix="-->".ljust(10))
     logging.info(separator)
 
+def skip_if_debugger_attached(test_name : str) -> bool:
+    """
+    Returns True if running under a debugger and logs that the test is being skipped.
+    Use this to skip tests that raise expected exceptions when debugging.
+    """
+    if sys.gettrace() is not None:
+        print(f"\nSkipping {test_name} when debugger is attached")
+        return True
+    return False
+
 def create_logfile(results_dir : str, log_name : str, log_level = logging.DEBUG) -> logging.FileHandler:
     """
     Creates a log file with the specified name in the specified directory and adds it to the root logger.
@@ -100,7 +114,7 @@ def _add_test_file_logger(logger, results_path, input_filename, test_name):
     logger.addHandler(file_handler)
     return file_handler
 
-def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str, results_path: str|None = None):
+def RunTestOnAllSubtitleFiles(run_test : Callable, test_options: list[dict], directory_path: str, results_path: str|None = None):
     """
     Run a series of tests on all .srt files in the test_subtitles directory.
     """
@@ -111,10 +125,15 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
 
     logger = _configure_base_logger(results_path, test_name)
 
+    print(separator)
+    print(f"Running {test_name}")
+
     logger.info(separator)
     logger.info(f"Running {test_name}")
     logger.info(separator)
     logger.info("")
+
+    supported_formats = SubtitleFormatRegistry.enumerate_formats()
 
     files = [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f)) and f.endswith(".srt")]
 
@@ -140,6 +159,7 @@ def RunTestOnAllSrtFiles(run_test, test_options: list[dict], directory_path: str
 
         except Exception as e:
             logger.error(f"Error processing {filepath}: {str(e)}")
+            print(f"!!! ERROR RUNNING {test_name} ON {file} !!!")
 
         finally:
             logger.removeHandler(file_handler)

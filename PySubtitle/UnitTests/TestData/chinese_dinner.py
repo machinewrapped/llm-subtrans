@@ -547,6 +547,7 @@ response_S4B1 = """
 
 chinese_dinner_data = SettingsType({
     'movie_name': _movie,
+    'filename': 'chinese_dinner.srt',
     'description': _description,
     'names': _names,
     'original': chinese_dinner_jp,

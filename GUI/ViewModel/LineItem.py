@@ -90,6 +90,17 @@ class LineItem(QStandardItem):
         return gap
 
     @property
+    def style(self) -> str|None:
+        if 'style' not in self.line_model:
+            return None
+
+        style = self.line_model['style']
+        if style is not None and not isinstance(style, str):
+            raise ViewModelError(f"Model field {'style'} is not a string: {self.line_model}")
+
+        return style
+
+    @property
     def line_text(self) -> str:
         if 'text' not in self.line_model:
             raise ViewModelError(f"Line model does not contain a valid 'text' field: {self.line_model}")

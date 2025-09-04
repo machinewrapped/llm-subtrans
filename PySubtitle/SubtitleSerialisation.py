@@ -1,6 +1,6 @@
 import json
-from datetime import timedelta
 
+from PySubtitle.Helpers.Color import Color
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleBatch import SubtitleBatch
@@ -45,6 +45,7 @@ class SubtitleEncoder(json.JSONEncoder):
                 "outputpath": obj.outputpath,
                 "scenecount": len(obj.scenes),
                 "settings": getattr(obj, 'settings') or getattr(obj, 'context'),
+                "metadata": getattr(obj, 'metadata', {}),
                 "scenes": obj.scenes,
             }
         elif isinstance(obj, SubtitleScene):
@@ -99,6 +100,8 @@ class SubtitleEncoder(json.JSONEncoder):
                 "supports_system_prompt": obj.supports_system_prompt,
                 "conversation": obj.conversation,
             }
+        elif isinstance(obj, Color):
+            return { "hex": obj.to_hex() }
         elif hasattr(obj, "name"):
             return obj.name
 
@@ -117,6 +120,7 @@ def _object_hook(dct):
             outpath = dct.get('outputpath') or dct.get('filename')
             obj = Subtitles(sourcepath, outpath)
             obj.settings = SettingsType(dct.get('settings', {}) or dct.get('context', {}))
+            obj.metadata = dct.get('metadata', {})
             obj.scenes = dct.get('scenes', [])
             obj.UpdateProjectSettings(SettingsType()) # Force update for legacy files
             return obj
@@ -160,6 +164,8 @@ def _object_hook(dct):
             obj.batch_prompt = dct.get('batch_prompt')
             obj.messages = dct.get('messages')
             return obj
+        elif class_name == classname(Color):
+            return Color.from_hex(dct.get('hex', '#00000000'))
         elif class_name == classname(TranslationError):
             return TranslationError(dct.get('message'))
 

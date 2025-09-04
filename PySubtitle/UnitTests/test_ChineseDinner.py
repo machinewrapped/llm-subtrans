@@ -5,6 +5,7 @@ from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_te
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
 from PySubtitle.Subtitles import Subtitles
+from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleScene import SubtitleScene
@@ -28,7 +29,7 @@ class ChineseDinnerTests(SubtitleTestCase):
                 self.fail("No original subtitles in test data")
                 return
 
-            subtitles.LoadSubtitlesFromString(original_srt)
+            subtitles.LoadSubtitlesFromString(original_srt, SrtFileHandler())
             self.assertIsNotNone(subtitles)
 
             if not subtitles or not subtitles.has_subtitles or not subtitles.originals:

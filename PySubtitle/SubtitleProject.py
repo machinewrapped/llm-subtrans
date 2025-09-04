@@ -66,13 +66,14 @@ class SubtitleProject:
         with self.lock:
             return bool(self.subtitles and self.subtitles.all_translated)
 
-    def InitialiseProject(self, filepath : str, outputpath : str|None = None, reload_subtitles : bool = False):
+    def InitialiseProject(self, filepath: str, outputpath: str|None = None, reload_subtitles: bool = False):
         """
         Initialize the project by either loading an existing project file or creating a new one.
         Load the subtitles to be translated, either from the project file or the source file.
 
-        :param filepath: the path to the project or a source subtitle file (in .srt format) to be translated
-        :param outputpath: the path to write the translated subtitles too (a default path is used if None specified)
+        :param filepath: the path to the project or a source subtitle file
+        :param outputpath: the path to write the translated subtitles to
+        :param reload_subtitles: force reloading subtitles from source file
         """
         filepath = os.path.normpath(filepath)
         sourcepath : str = filepath
@@ -88,18 +89,23 @@ class SubtitleProject:
         read_project : bool = self.use_project_file and project_file_exists
         load_subtitles : bool = reload_subtitles or not read_project
 
+        if not read_project and not load_subtitles:
+            raise SubtitleError(_("No project or subtitles to load"))
+
         if project_file_exists and not read_project:
             logging.warning(_("Project file {} exists but will not be used").format(self.projectfile))
+
+        subtitles : Subtitles|None = None
 
         if read_project:
             logging.info(_("Loading existing project file {}").format(self.projectfile))
 
             # Try to load the project file
-            subtitles : Subtitles|None = self.ReadProjectFile(self.projectfile)
+            subtitles = self.ReadProjectFile(self.projectfile)
             project_settings = self.GetProjectSettings()
 
             if subtitles:
-                outputpath = outputpath or GetOutputPath(self.projectfile, subtitles.target_language)
+                outputpath = outputpath or GetOutputPath(self.projectfile, subtitles.target_language, subtitles.format)
                 sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath               
                 logging.info(_("Project file loaded"))
 
@@ -127,13 +133,14 @@ class SubtitleProject:
                 logging.error(_("Failed to load subtitle file {}: {}").format(filepath, str(e)))
                 raise
 
-            if not subtitles or not subtitles.has_subtitles:
-                raise ValueError(_("No subtitles to translate in {}").format(filepath))
+        if not subtitles or not subtitles.has_subtitles:
+            raise ValueError(_("No subtitles to translate in {}").format(filepath))
 
-            if outputpath:
-                subtitles.outputpath = outputpath
-
+        if outputpath:
+            subtitles.outputpath = outputpath
             self.needs_writing = self.use_project_file
+
+        self.subtitles = subtitles
 
     def SaveOriginal(self, outputpath : str|None = None):
         """
@@ -158,25 +165,41 @@ class SubtitleProject:
             logging.error(_("Unable to save translation: {}").format(e))
 
     def GetProjectFilepath(self, filepath : str) -> str:
-        """ Calculate the project file path based on the source file path """
+        """
+        Calculate the project file path based on the source file path
+        """
         path, ext = os.path.splitext(filepath)
         filepath = filepath if ext == '.subtrans' else f"{path}.subtrans"
         return os.path.normpath(filepath)
 
     def GetBackupFilepath(self, filepath : str) -> str:
-        """ Get the backup file path for the project file """
+        """
+        Get the backup file path for the project file
+        """
         projectfile = self.GetProjectFilepath(filepath)
         return f"{projectfile}-backup"
 
-    def LoadSubtitleFile(self, filepath : str) -> Subtitles:
+    def LoadSubtitleFile(self, filepath: str) -> Subtitles:
         """
-        Load subtitles from a file
+        Load subtitles from a file, auto-detecting the format by extension
         """
         with self.lock:
             self.subtitles = Subtitles(filepath)
             self.subtitles.LoadSubtitles()
 
         return self.subtitles
+
+    def SaveProject(self):
+        """
+        Save the project file or translation file as needed
+        """
+        with self.lock:
+            if self.needs_writing:
+                if self.use_project_file:
+                    self.UpdateProjectFile()
+                if self.any_translated and self.write_translation:
+                    self.SaveTranslation()
+                self.needs_writing = False
 
     def SaveProjectFile(self, projectfile : str|None = None) -> None:
         """
@@ -200,7 +223,6 @@ class SubtitleProject:
             if not projectfile:
                 raise Exception("No file path provided")
 
-            self.subtitles.outputpath = GetOutputPath(projectfile, self.subtitles.target_language)
             self.WriteProjectToFile(projectfile, encoder_class=SubtitleEncoder)
 
             self.needs_writing = False
@@ -230,6 +252,7 @@ class SubtitleProject:
                     subtitles: Subtitles = json.load(f, cls=SubtitleDecoder)
 
                 subtitles.Sanitise()
+
                 self.subtitles = subtitles
                 return subtitles
 
@@ -270,14 +293,9 @@ class SubtitleProject:
                 return
 
             common_keys = settings.keys() & self.subtitles.settings.keys()
-            if all(settings.get(key) == self.subtitles.settings.get(key) for key in common_keys):
-                return
-
-            self.subtitles.UpdateProjectSettings(settings)
-
-        if self.subtitles.scenes:
-            self.subtitles.UpdateOutputPath()
-            self.needs_writing = self.use_project_file
+            if not all(settings.get(key) == self.subtitles.settings.get(key) for key in common_keys):
+                self.subtitles.UpdateProjectSettings(settings)
+                self.needs_writing = bool(self.subtitles.scenes) and self.use_project_file
 
     def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:
         """
@@ -324,7 +342,8 @@ class SubtitleProject:
             logging.info(_("Translation aborted"))
 
         except Exception as e:
-            if save_translation and self.subtitles and translator.stop_on_error:
+            if save_translation and self.subtitles.any_translated:
+                logging.warning(_("Translation failed, saving partial results"))
                 self.SaveTranslation()
 
             logging.error(_("Failed to translate subtitles: {}").format(str(e)))
@@ -388,3 +407,5 @@ class SubtitleProject:
         logging.debug("Scene translated")
         self.needs_writing = self.use_project_file
         self.events.scene_translated(scene)
+
+

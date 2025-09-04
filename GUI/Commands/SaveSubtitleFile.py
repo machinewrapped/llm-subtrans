@@ -11,5 +11,5 @@ class SaveSubtitleFile(Command):
         self.can_undo = False
 
     def execute(self) -> bool:
-        self.project.subtitles.SaveOriginal(self.filepath)
+        self.project.SaveOriginal(self.filepath)
         return True

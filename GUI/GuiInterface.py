@@ -244,7 +244,8 @@ class GuiInterface(QObject):
         if self.command_queue:
             self.command_queue.Stop()
 
-        self.datamodel.SaveProject()
+        if self.datamodel and self.datamodel.project:
+            self.datamodel.project.SaveProject()
 
     def LoadProject(self, filepath : str, reload_subtitles : bool = False):
         """
@@ -260,6 +261,7 @@ class GuiInterface(QObject):
         if not self.datamodel or not self.datamodel.project:
             raise SubtitleError(_("No project data"))
 
+        #TODO: consolidate SaveProjectFile and SaveTranslationFile into a single SaveProject command
         if self.datamodel.use_project_file:
             command = SaveProjectFile(self.datamodel.project, filepath)
         else:

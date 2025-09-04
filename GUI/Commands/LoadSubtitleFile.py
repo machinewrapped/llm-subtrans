@@ -26,7 +26,7 @@ class LoadSubtitleFile(Command):
         try:
             self.options.InitialiseInstructions()
 
-            project = SubtitleProject(persistent=self.options.project_file)
+            project = SubtitleProject(persistent=self.options.use_project_file)
             project.InitialiseProject(self.filepath, reload_subtitles=self.reload_subtitles)
 
             if not project.subtitles:

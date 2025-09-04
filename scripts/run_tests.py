@@ -77,10 +77,10 @@ def run_unit_tests(results_path: str) -> bool:
         f"Overall: run={total_run} failures={total_failures} errors={total_errors} skipped={total_skipped} => {'SUCCESS' if overall_success else 'FAILED'}"
     ]
 
-    # Always surface summary lines to console: use INFO when success, ERROR when failed
+    # Always surface summary lines to console: print when successful, since we don't log INFO to console, but ERROR when failed
     for line in summary_lines:
         if overall_success:
-            logging.info(line)
+            print(line)
         else:
             logging.error(line)
 

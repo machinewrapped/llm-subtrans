@@ -25,7 +25,6 @@ from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
 
 default_encoding = os.getenv('DEFAULT_ENCODING', 'utf-8')
-fallback_encoding = os.getenv('DEFAULT_ENCODING', 'iso-8859-1')
 
 class Subtitles:
     """
@@ -273,19 +272,12 @@ class Subtitles:
             raise ValueError("No source path set for subtitles")
 
         file_handler: SubtitleFileHandler = SubtitleFormatRegistry.create_handler(filename=self.sourcepath)
-    
-        try:
-            with open(self.sourcepath, 'r', encoding=default_encoding, newline='') as f:
-                data = file_handler.parse_file(f)
 
+        try:
+            data = file_handler.load_file(self.sourcepath)
         except SubtitleParseError as e:
-            logging.warning(_("Error parsing file... trying with fallback encoding: {}").format(str(e)))
-            try:
-                with open(self.sourcepath, 'r', encoding=fallback_encoding) as f:
-                    data = file_handler.parse_file(f)
-            except SubtitleParseError as e2:
-                logging.error(_("Failed to parse file with fallback encoding: {}").format(str(e2)))
-                raise e2
+            logging.warning(_("Error parsing file... attempting format detection: {}").format(str(e)))
+            data = SubtitleFormatRegistry.detect_format_and_load_file(self.sourcepath)
 
         with self.lock:
             self._renumber_if_needed(data.lines)

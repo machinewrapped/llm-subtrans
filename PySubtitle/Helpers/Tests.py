@@ -136,7 +136,7 @@ def RunTestOnAllSubtitleFiles(run_test : Callable, test_options: list[dict], dir
     supported_formats = SubtitleFormatRegistry.enumerate_formats()
 
     for file in os.listdir(directory_path):
-        extension = os.path.splitext(file)[1].lower()
+        extension = SubtitleFormatRegistry.get_format_from_filename(file)
         if extension not in supported_formats:
             continue
 

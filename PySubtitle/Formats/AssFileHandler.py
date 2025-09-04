@@ -114,16 +114,18 @@ class AssFileHandler(SubtitleFileHandler):
         """
         Convert pysubs2 subtitles to SubtitleLines, adding an index
         """
-        subtitle_format : str = getattr(subs, "format", "ass")
+        format : str = getattr(subs, "format", "ass")
 
         lines : list[SubtitleLine] = []
         for index, line in enumerate(subs, 1):
             lines.append(self._pysubs2_to_subtitle_line(line, index))
 
         # Extract serializable metadata
-        metadata = self._parse_metadata(subs, subtitle_format)
+        metadata = self._parse_metadata(subs, format)
 
-        return SubtitleData(lines=lines, metadata=metadata, detected_format=subtitle_format)
+        detected_format : str = pysubs2.formats.get_file_extension(format)
+
+        return SubtitleData(lines=lines, metadata=metadata, detected_format=detected_format)
         
     def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int) -> SubtitleLine:
         """Convert pysubs2 SSAEvent to SubtitleLine with metadata preservation."""

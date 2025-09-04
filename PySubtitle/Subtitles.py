@@ -60,7 +60,7 @@ class Subtitles:
         self.outputpath : str|None = outputpath or None
 
         self.metadata : dict[str, Any] = {}
-        self.detected_format : str|None = None
+        self.format : str|None = None
 
         self.settings : SettingsType = deepcopy(self.DEFAULT_PROJECT_SETTINGS)
 
@@ -72,22 +72,6 @@ class Subtitles:
     def target_language(self) -> str|None:
         return self._get_setting_str('target_language')
 
-    @property
-    def format(self) -> str:
-        if self.outputpath:
-            ext = os.path.splitext(self.outputpath)[1]
-            if ext:
-                return ext
-        if self.detected_format:
-            ext = SubtitleFormatRegistry.format_to_extension(self.detected_format)
-            if ext:
-                return ext
-        if self.sourcepath:
-            ext = os.path.splitext(self.sourcepath)[1]
-            if ext:
-                return ext
-        return '.srt'
-    
     @property
     def task_type(self) -> str:
         return self._get_setting_str('task_type') or DEFAULT_TASK_TYPE
@@ -294,9 +278,9 @@ class Subtitles:
             self._renumber_if_needed(data.lines)
             self.originals = data.lines
             self.metadata = data.metadata
-            self.detected_format = data.detected_format
+            self.format = data.detected_format
             if self.outputpath is None:
-                self.outputpath = GetOutputPath(self.sourcepath, self.target_language, self.detected_format)
+                self.outputpath = GetOutputPath(self.sourcepath, self.target_language, self.format)
 
     def LoadSubtitlesFromString(self, subtitles_string: str, file_handler: SubtitleFileHandler) -> None:
         """
@@ -308,7 +292,7 @@ class Subtitles:
                 self._renumber_if_needed(data.lines)
                 self.originals = data.lines
                 self.metadata = data.metadata
-                self.detected_format = data.detected_format
+                self.format = data.detected_format
 
         except SubtitleParseError as e:
             logging.error(_("Failed to parse subtitles string: {}").format(str(e)))
@@ -416,9 +400,13 @@ class Subtitles:
         Set or generate the output path for the translated subtitles
         """
         path = path or self.sourcepath
-        extension = extension or self.format
+        if not extension:
+            extension = SubtitleFormatRegistry.get_format_from_filename(path) if path else None
+            extension = extension or self.format or '.srt'
+
         outputpath = GetOutputPath(path, self.target_language, extension)
         self.outputpath = outputpath
+        self.format = extension
 
     def PreProcess(self, preprocessor: SubtitleProcessor) -> None:
         """

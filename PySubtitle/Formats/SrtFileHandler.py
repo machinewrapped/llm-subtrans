@@ -34,16 +34,14 @@ class SrtFileHandler(SubtitleFileHandler):
         Parse SRT file content and return SubtitleData with lines and metadata.
         """
         lines = list(self._parse_srt_items(file_obj))
-        metadata = {'format': 'srt'}
-        return SubtitleData(lines=lines, metadata=metadata, detected_format='srt')
+        return SubtitleData(lines=lines, metadata={}, detected_format='.srt')
     
     def parse_string(self, content: str) -> SubtitleData:
         """
         Parse SRT string content and return SubtitleData with lines and metadata.
         """
         lines = list(self._parse_srt_items(content))
-        metadata = {'format': 'srt'}
-        return SubtitleData(lines=lines, metadata=metadata, detected_format='srt')
+        return SubtitleData(lines=lines, metadata={}, detected_format='.srt')
 
     def compose(self, data: SubtitleData) -> str:
         """

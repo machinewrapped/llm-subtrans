@@ -17,14 +17,23 @@ from PySubtitle.SubtitleError import SubtitleParseError
 
 
 class SubtitleFormatRegistry:
-    """Manages discovery and lookup of subtitle file handlers."""
+    """
+    Manages discovery and lookup of subtitle file handlers.
 
+    Uses lazy discovery to find all subclasses of SubtitleFileHandler in the Formats package.
+    Handlers are registered by their supported file extensions and priorities.
+
+    Provides methods to create handler instances based on file extensions or filenames.    
+    """
     _handlers : dict[str, type[SubtitleFileHandler]] = {}
     _priorities : dict[str, int] = {}
     _discovered : bool = False
 
     @classmethod
     def register_handler(cls, handler_class : type[SubtitleFileHandler]) -> None:
+        """
+        Register a subtitle file handler class for its supported extensions.
+        """
         instance = handler_class()
         priorities = instance.get_extension_priorities()
         for ext, priority in priorities.items():
@@ -35,6 +44,9 @@ class SubtitleFormatRegistry:
 
     @classmethod
     def get_handler_by_extension(cls, extension : str) -> type[SubtitleFileHandler]:
+        """
+        Get the subtitle file handler class for the given extension.
+        """
         cls._ensure_discovered()
         ext = extension.lower()
         if ext not in cls._handlers:
@@ -43,9 +55,11 @@ class SubtitleFormatRegistry:
 
     @classmethod
     def create_handler(cls, extension: str|None = None, filename: str|None = None) -> SubtitleFileHandler:
-        """Instantiate a subtitle file handler for the given extension."""
+        """
+        Instantiate a subtitle file handler for the given extension.
+        """
         if extension is None and filename is not None:
-            extension = os.path.splitext(filename)[1].lower()
+            extension = cls.get_format_from_filename(filename)
 
         if extension is None or not extension:
             raise ValueError(
@@ -57,27 +71,31 @@ class SubtitleFormatRegistry:
 
     @classmethod
     def enumerate_formats(cls) -> list[str]:
+        """
+        List all supported subtitle formats (file extensions).
+        """
         cls._ensure_discovered()
         return sorted(cls._handlers.keys())
 
     @classmethod
     def list_available_formats(cls) -> str:
+        """
+        Get a comma-separated string of all supported subtitle formats.
+        """
         formats = cls.enumerate_formats()
         return _("None") if not formats else ", ".join(formats)
 
     @classmethod
-    def clear(cls) -> None:
-        cls._handlers.clear()
-        cls._priorities.clear()
-        cls._discovered = False
-
-    @classmethod
     def disable_autodiscovery(cls) -> None:
+        """ Disable automatic discovery of subtitle formats (for testing) """
         cls.clear()
         cls._discovered = True
 
     @classmethod
     def discover(cls) -> None:
+        """
+        Discover and register all subtitle file handlers in the Formats package.
+        """
         package_path = Path(__file__).parent / "Formats"
         for _, module_name, _ in pkgutil.iter_modules([str(package_path)]):
             module = importlib.import_module(f"PySubtitle.Formats.{module_name}")
@@ -87,13 +105,27 @@ class SubtitleFormatRegistry:
         cls._discovered = True
 
     @classmethod
-    def _ensure_discovered(cls) -> None:
-        if not cls._discovered:
-            cls.discover()
+    def clear(cls) -> None:
+        """
+        Clear all registered handlers
+        """
+        cls._handlers.clear()
+        cls._priorities.clear()
+        cls._discovered = False
+
+    @classmethod
+    def get_format_from_filename(cls, filename):
+        """
+        Deduce subtitle format from file extension
+        """
+        base, extension = os.path.splitext(filename) # type: ignore[ignore-unused]
+        return extension.lower() if extension else None
 
     @classmethod
     def detect_format_and_load_file(cls, path: str) -> SubtitleData:
-        """Detect subtitle format using content and load file accordingly."""
+        """
+        Detect subtitle format using content and load file accordingly.
+        """
         cls._ensure_discovered()
         try:
             try:
@@ -106,5 +138,11 @@ class SubtitleFormatRegistry:
         detected_extension = pysubs2.formats.get_file_extension(subs.format or "srt")
         handler = cls.create_handler(detected_extension)
         data = handler.load_file(path)
-        data.metadata['detected_extension'] = detected_extension
+        data.metadata['detected_format'] = detected_extension
         return data
+
+    @classmethod
+    def _ensure_discovered(cls) -> None:
+        if not cls._discovered:
+            cls.discover()
+

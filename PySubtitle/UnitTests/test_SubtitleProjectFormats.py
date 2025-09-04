@@ -15,6 +15,11 @@ from typing import TextIO
 
 
 class DummyHandler(SubtitleFileHandler):
+    """
+    A dummy subtitle handler for testing purposes.
+    """
+    SUPPORTED_EXTENSIONS: dict[str, int] = { ".dummy": 1 }
+
     def parse_file(self, file_obj: TextIO) -> SubtitleData:
         return SubtitleData(lines=[], metadata={})
 
@@ -24,8 +29,8 @@ class DummyHandler(SubtitleFileHandler):
     def compose(self, data: SubtitleData) -> str:
         return ""
 
-    def get_file_extensions(self) -> list[str]:
-        return [".dummy"]
+    def load_file(self, path: str) -> SubtitleData:
+        return SubtitleData(lines=[], metadata={})
 
 
 class TestSubtitleProjectFormats(unittest.TestCase):

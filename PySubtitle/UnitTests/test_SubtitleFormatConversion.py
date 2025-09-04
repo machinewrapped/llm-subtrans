@@ -44,6 +44,7 @@ class TestSubtitleFormatConversion(unittest.TestCase):
         self.assertIsNotNone(project.subtitles)
         project.subtitles.AutoBatch(SubtitleBatcher(options))
         project.subtitles._duplicate_originals_as_translations()
+        project.needs_writing = True
         project.SaveTranslation()
         self.assertTrue(os.path.exists(out_path))
 
@@ -62,6 +63,7 @@ class TestSubtitleFormatConversion(unittest.TestCase):
         self.assertIsNotNone(project.subtitles)
         project.subtitles.AutoBatch(SubtitleBatcher(options))
         project.subtitles._duplicate_originals_as_translations()
+        project.needs_writing = True
         tmp_project = tempfile.NamedTemporaryFile(delete=False, suffix=".subtrans")
         tmp_project.close()
         project.WriteProjectToFile(tmp_project.name, encoder_class=SubtitleEncoder)

@@ -103,7 +103,7 @@ class SubtitleFormatRegistry:
         except Exception as e:
             raise SubtitleParseError(_("Failed to detect subtitle format: {}" ).format(str(e)), e)
 
-        detected_extension = f".{getattr(subs, 'format', 'srt').lower()}"
+        detected_extension = pysubs2.formats.get_file_extension(subs.format or "srt")
         handler = cls.create_handler(detected_extension)
         data = handler.load_file(path)
         data.metadata['detected_extension'] = detected_extension

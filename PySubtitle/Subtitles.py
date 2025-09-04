@@ -294,11 +294,9 @@ class Subtitles:
             self._renumber_if_needed(data.lines)
             self.originals = data.lines
             self.metadata = data.metadata
-            self.detected_format = data.detected_format or detected_format
-            self.metadata['detected_format'] = self.detected_format
+            self.detected_format = data.detected_format
             if self.outputpath is None:
-                ext = SubtitleFormatRegistry.format_to_extension(self.detected_format)
-                self.outputpath = GetOutputPath(self.sourcepath, self.target_language, ext)
+                self.outputpath = GetOutputPath(self.sourcepath, self.target_language, self.detected_format)
 
     def LoadSubtitlesFromString(self, subtitles_string: str, file_handler: SubtitleFileHandler) -> None:
         """
@@ -311,7 +309,6 @@ class Subtitles:
                 self.originals = data.lines
                 self.metadata = data.metadata
                 self.detected_format = data.detected_format
-                self.metadata['detected_format'] = self.detected_format
 
         except SubtitleParseError as e:
             logging.error(_("Failed to parse subtitles string: {}").format(str(e)))

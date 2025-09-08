@@ -56,11 +56,11 @@ class AssFileHandler(SubtitleFileHandler):
 
     def load_file(self, path: str) -> SubtitleData:
         try:
-            with open(path, 'r', encoding=default_encoding, newline='') as f:
-                return self.parse_file(f)
+            subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=default_encoding)
+            return self._parse_subs(subs)
         except UnicodeDecodeError:
-            with open(path, 'r', encoding=fallback_encoding, newline='') as f:
-                return self.parse_file(f)
+            subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=fallback_encoding, newline='')
+            return self._parse_subs(subs)
     
     def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """

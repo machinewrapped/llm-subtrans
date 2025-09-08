@@ -8,6 +8,7 @@ from PySubtitle.Helpers.Localization import _
 from PySubtitle.Options import Options, SettingsType
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleError import SubtitleError, TranslationAbortedError
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Subtitles import Subtitles
 
 from PySubtitle.SubtitleBatch import SubtitleBatch
@@ -105,6 +106,7 @@ class SubtitleProject:
             project_settings = self.GetProjectSettings()
 
             if subtitles:
+                subtitles.UpdateOutputPath()
                 outputpath = outputpath or GetOutputPath(self.projectfile, subtitles.target_language, subtitles.format)
                 sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath               
                 logging.info(_("Project file loaded"))
@@ -138,6 +140,7 @@ class SubtitleProject:
 
         if outputpath:
             subtitles.outputpath = outputpath
+            subtitles.format = SubtitleFormatRegistry.get_format_from_filename(outputpath)
             self.needs_writing = self.use_project_file
 
         self.subtitles = subtitles
@@ -148,6 +151,7 @@ class SubtitleProject:
         """
         try:
             with self.lock:
+                outputpath = outputpath or GetOutputPath(self.subtitles.sourcepath, None, self.subtitles.format)
                 self.subtitles.SaveOriginal(outputpath)
 
         except Exception as e:

@@ -64,7 +64,7 @@ def GetOutputPath(filepath : str|None, language : str|None = None, format_extens
     
     Args:
         filepath: Input file path to base output path on
-        language: Language code to add as suffix (defaults to "translated")
+        language: Optional language code to add as suffix
         format_extension: Target format extension (e.g., '.ass', '.srt'). If None, infers from input filepath.
         
     Returns:
@@ -79,10 +79,10 @@ def GetOutputPath(filepath : str|None, language : str|None = None, format_extens
     basename, current_extension = os.path.splitext(os.path.basename(filepath))
 
     # Add language suffix
-    language = language or "translated"
-    language_suffix = f".{language.lower()}"
-    if not basename.endswith(language_suffix):
-        basename = basename + language_suffix
+    if language:
+        language_suffix = f".{language.lower()}"
+        if not basename.endswith(language_suffix):
+            basename = basename + language_suffix
 
     # Determine extension
     if not format_extension:

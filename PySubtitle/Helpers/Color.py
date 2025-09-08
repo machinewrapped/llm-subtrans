@@ -16,6 +16,9 @@ class Color:
 
         return (self.r, self.g, self.b, self.a) == (value.r, value.g, value.b, value.a)
 
+    def __repr__(self) -> str:
+        return f"Color(r={self.r}, g={self.g}, b={self.b}, a={self.a})"
+
     @classmethod
     def from_hex(cls, hex_str : str) -> 'Color':
         """Create Color from #RRGGBB or #RRGGBBAA format"""

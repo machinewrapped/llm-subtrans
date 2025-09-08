@@ -33,7 +33,19 @@ Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Window
   - Tests should adhere to the project test structure - see `GUI\UnitTests\test_BatchCommands.py` for an example.
   - Use functions like `log_input_expected_result` (logs input value, expected result and actual result or suitable proxies) defined in `Helpers\Test.py`.
   - **CRITICAL**: Always call `log_input_expected_result()` BEFORE the corresponding assertion so that if the assertion fails the log will show the reason.
-  - **Pattern**: `log_input_expected_result("desc", expected, actual)` then `self.assertEqual(expected, actual)`
+  - **Input Parameter**: Use actual input values or reasonable proxies, NOT generic descriptions:
+    - ✅ `log_input_expected_result(text, expected, result)` - actual input
+    - ✅ `log_input_expected_result((text, max_length, min_length), expected, result)` - tuple of inputs  
+    - ✅ `log_input_expected_result(f"len(data.lines)={len(data.lines)}", True, len(data.lines) > 0)` - computed proxy
+    - ❌ `log_input_expected_result("has subtitle lines", True, len(data.lines) > 0)` - generic description
+  - **Exception Tests**: Tests that expect exceptions must use `skip_if_debugger_attached("TestName")` guard to allow debugging:
+    ```python
+    def test_ExceptionCase(self):
+        if skip_if_debugger_attached("ExceptionCase"):
+            return
+        # ... test code that expects exceptions
+    ```
+  - **Pattern**: `log_input_expected_result(input_proxy, expected, actual)` then `self.assertEqual(expected, actual)`
   - **None Safety**: Use `.get(key, default)` with appropriate default values to avoid Pylance warnings, or assert then test for None values.
   - **Regular Expressions**: The project uses the `regex` module for regular expression handling, rather than the standard `re`.
 

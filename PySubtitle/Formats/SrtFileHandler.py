@@ -1,8 +1,13 @@
+import logging
 import srt # type: ignore
 from collections.abc import Iterator
 from typing import TextIO
 
-from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.SubtitleFileHandler import (
+    SubtitleFileHandler,
+    default_encoding,
+    fallback_encoding,
+)
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
@@ -16,22 +21,28 @@ class SrtFileHandler(SubtitleFileHandler):
     """
     
     SUPPORTED_EXTENSIONS = {'.srt': 10}
+
+    def load_file(self, path: str) -> SubtitleData:
+        try:
+            with open(path, 'r', encoding=default_encoding, newline='') as f:
+                return self.parse_file(f)
+        except UnicodeDecodeError:
+            with open(path, 'r', encoding=fallback_encoding, newline='') as f:
+                return self.parse_file(f)
     
     def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """
         Parse SRT file content and return SubtitleData with lines and metadata.
         """
         lines = list(self._parse_srt_items(file_obj))
-        metadata = {'format': 'srt'}
-        return SubtitleData(lines=lines, metadata=metadata)
+        return SubtitleData(lines=lines, metadata={}, detected_format='.srt')
     
     def parse_string(self, content: str) -> SubtitleData:
         """
         Parse SRT string content and return SubtitleData with lines and metadata.
         """
         lines = list(self._parse_srt_items(content))
-        metadata = {'format': 'srt'}
-        return SubtitleData(lines=lines, metadata=metadata)
+        return SubtitleData(lines=lines, metadata={}, detected_format='.srt')
 
     def compose(self, data: SubtitleData) -> str:
         """
@@ -56,14 +67,24 @@ class SrtFileHandler(SubtitleFileHandler):
                     line_number, line.start, line.end, line.text, line.metadata
                 ))
                 line_number += 1
-        
-        # Handle RTL markers if requested (marginal case)
+
+        # Log a warning if any lines had no text or start time
+        if len(output_lines) < len(data.lines):
+            num_invalid = len([line for line in data.lines if line.start is None])
+            if num_invalid:
+                logging.warning(_("{} lines were invalid and were not written to the output file").format(num_invalid))
+
+            num_empty = len([line for line in data.lines if not line.text])
+            if num_empty:
+                logging.warning(_("{} lines were empty and were not written to the output file").format(num_empty))
+
+        # Add RTL markers if required
         if data.metadata.get('add_rtl_markers'):
             for line in output_lines:
                 if line.text and IsRightToLeftText(line.text) and not line.text.startswith("\u202b"):
                     line.text = f"\u202b{line.text}\u202c"
         
-        # Convert SubtitleLine objects to srt.Subtitle objects for composition
+
         srt_items = []
         for line in output_lines:
             proprietary = line.metadata.get('proprietary', '')
@@ -77,7 +98,7 @@ class SrtFileHandler(SubtitleFileHandler):
             )
             srt_items.append(srt_item)
         
-        return srt.compose(srt_items, reindex=False)  # We handle reindexing above
+        return srt.compose(srt_items, reindex=False)
 
     def _parse_srt_items(self, source) -> Iterator[SubtitleLine]:
         """
@@ -97,6 +118,8 @@ class SrtFileHandler(SubtitleFileHandler):
                 )
                 yield line
                 
+        except UnicodeDecodeError:
+            raise  # Re-raise UnicodeDecodeError for fallback handling
         except srt.SRTParseError as e:
             raise SubtitleParseError(_("Failed to parse SRT: {}" ).format(str(e)), e)
         except Exception as e:

@@ -5,7 +5,11 @@ from datetime import timedelta
 from typing import TextIO
 
 from PySubtitle.Helpers.Color import Color
-from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.SubtitleFileHandler import (
+    SubtitleFileHandler,
+    default_encoding,
+    fallback_encoding,
+)
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
@@ -49,6 +53,14 @@ class AssFileHandler(SubtitleFileHandler):
     """
     
     SUPPORTED_EXTENSIONS = {'.ass': 10, '.ssa': 10}
+
+    def load_file(self, path: str) -> SubtitleData:
+        try:
+            subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=default_encoding)
+            return self._parse_subs(subs)
+        except UnicodeDecodeError:
+            subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=fallback_encoding, newline='')
+            return self._parse_subs(subs)
     
     def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """
@@ -58,6 +70,8 @@ class AssFileHandler(SubtitleFileHandler):
             subs : pysubs2.SSAFile = pysubs2.SSAFile.from_file(file_obj)
             return self._parse_subs(subs)
                 
+        except UnicodeDecodeError:
+            raise  # Re-raise UnicodeDecodeError for fallback handling
         except Exception as e:
             raise SubtitleParseError(_("Failed to parse file: {}").format(str(e)), e)
 
@@ -102,16 +116,18 @@ class AssFileHandler(SubtitleFileHandler):
         """
         Convert pysubs2 subtitles to SubtitleLines, adding an index
         """
-        subtitle_format : str = getattr(subs, "format", "ass")
+        format : str = getattr(subs, "format", "ass")
 
         lines : list[SubtitleLine] = []
         for index, line in enumerate(subs, 1):
             lines.append(self._pysubs2_to_subtitle_line(line, index))
 
         # Extract serializable metadata
-        metadata = self._parse_metadata(subs, subtitle_format)
-            
-        return SubtitleData(lines=lines, metadata=metadata)
+        metadata = self._parse_metadata(subs, format)
+
+        detected_format : str = pysubs2.formats.get_file_extension(format)
+
+        return SubtitleData(lines=lines, metadata=metadata, detected_format=detected_format)
         
     def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int) -> SubtitleLine:
         """Convert pysubs2 SSAEvent to SubtitleLine with metadata preservation."""

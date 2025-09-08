@@ -53,95 +53,11 @@ class VttFileHandler(SubtitleFileHandler):
         try:
             lines = content.splitlines()
             
-            # Validate WebVTT header (handle BOM)
             if not lines or not lines[0].strip().lstrip('\ufeff').startswith('WEBVTT'):
                 raise SubtitleParseError(_("Invalid WebVTT file: missing WEBVTT header"))
             
-            subtitle_lines = []
-            file_metadata = {
-                'vtt_styles': [],
-                'header_text': lines[0].strip()
-            }
-            
-            i = 1
-            line_number = 1
-            
-            while i < len(lines):
-                line = lines[i].strip()
-                
-                # Skip empty lines
-                if not line:
-                    i += 1
-                    continue
-                
-                # Handle STYLE blocks
-                if self._STYLE_BLOCK_START.match(line):
-                    style_block, i = self._parse_style_block(lines, i + 1)
-                    if style_block:
-                        file_metadata['vtt_styles'].append(style_block)
-                    continue
-                
-                # Handle NOTE blocks (skip them)
-                if self._NOTE_BLOCK_START.match(line):
-                    i = self._skip_note_block(lines, i + 1)
-                    continue
-                
-                # Try to parse as cue identifier + timestamp, or just timestamp
-                cue_id = None
-                timestamp_line_idx = i
-                
-                # Check if this line is a cue identifier (next line should be timestamp)
-                if i + 1 < len(lines):
-                    next_line = lines[i + 1].strip()
-                    if self._TIMESTAMP_PATTERN.match(next_line):
-                        cue_id = line
-                        timestamp_line_idx = i + 1
-                
-                # Parse timestamp line
-                if timestamp_line_idx < len(lines):
-                    timestamp_match = self._TIMESTAMP_PATTERN.match(lines[timestamp_line_idx].strip())
-                    if timestamp_match:
-                        # Parse timing and cue settings
-                        start_time = self._parse_timestamp(timestamp_match.groups()[:4])
-                        end_time = self._parse_timestamp(timestamp_match.groups()[4:8])
-                        cue_settings = timestamp_match.group(9).strip() if timestamp_match.group(9) else ""
-                        
-                        # Parse cue text (may be multi-line)
-                        cue_text_lines = []
-                        i = timestamp_line_idx + 1
-                        
-                        while i < len(lines) and lines[i].strip():
-                            cue_text_lines.append(lines[i])
-                            i += 1
-                        
-                        cue_text = '\n'.join(cue_text_lines) if cue_text_lines else ""
-                        
-                        # Extract speaker and process text
-                        speaker_name = self._extract_speaker_name(cue_text)
-                        processed_text = self._process_vtt_text(cue_text)
-                        
-                        # Build line metadata
-                        line_metadata = {}
-                        if cue_id:
-                            line_metadata['cue_id'] = cue_id
-                        if cue_settings:
-                            line_metadata['vtt_settings'] = cue_settings
-                        if speaker_name:
-                            line_metadata['speaker'] = speaker_name
-                        
-                        subtitle_lines.append(SubtitleLine.Construct(
-                            number=line_number,
-                            start=start_time,
-                            end=end_time,
-                            text=processed_text,
-                            metadata=line_metadata
-                        ))
-                        
-                        line_number += 1
-                        continue
-                
-                # If we get here, skip this line as unrecognized content
-                i += 1
+            file_metadata = self._parse_file_header(lines)
+            subtitle_lines = self._parse_cues(lines, file_metadata)
             
             return SubtitleData(
                 lines=subtitle_lines, 
@@ -158,26 +74,30 @@ class VttFileHandler(SubtitleFileHandler):
         """Compose subtitle lines into WebVTT format string."""
         output_lines = []
         
-        # Add header
         header_text = data.metadata.get('header_text', 'WEBVTT')
-        output_lines.append(header_text)
-        output_lines.append('')  # Blank line after header
+        if '\n' in header_text:
+            for header_line in header_text.split('\n'):
+                output_lines.append(header_line)
+        else:
+            output_lines.append(header_text)
+        output_lines.append('')
         
-        # Add STYLE blocks if present
+        vtt_notes = data.metadata.get('vtt_notes', [])
+        for note_block in vtt_notes:
+            output_lines.append(note_block)
+            output_lines.append('')
+        
         vtt_styles = data.metadata.get('vtt_styles', [])
         for style_block in vtt_styles:
             output_lines.append('STYLE')
             output_lines.append(style_block)
             output_lines.append('')
         
-        # Add cues
         for line in data.lines:
             if line.text and line.start is not None and line.end is not None:
-                # Add cue identifier if present
                 if line.metadata and 'cue_id' in line.metadata:
                     output_lines.append(line.metadata['cue_id'])
                 
-                # Format timestamp line with cue settings
                 start_time = self._format_timestamp(line.start)
                 end_time = self._format_timestamp(line.end)
                 timestamp_line = f"{start_time} --> {end_time}"
@@ -187,10 +107,9 @@ class VttFileHandler(SubtitleFileHandler):
                 
                 output_lines.append(timestamp_line)
                 
-                # Restore speaker and process text for output
                 output_text = self._restore_vtt_text(line.text or "", line.metadata or {})
                 output_lines.append(output_text)
-                output_lines.append('')  # Blank line after cue
+                output_lines.append('')
         
         return '\n'.join(output_lines)
     
@@ -198,6 +117,121 @@ class VttFileHandler(SubtitleFileHandler):
         """Parse timestamp components into timedelta."""
         hours, minutes, seconds, milliseconds = map(int, time_parts)
         return timedelta(hours=hours, minutes=minutes, seconds=seconds, milliseconds=milliseconds)
+    
+    def _parse_file_header(self, lines: list[str]) -> dict:
+        """Parse WebVTT file header including extended headers."""
+        header_lines = [lines[0].strip()]
+        header_end_idx = 1
+        
+        while header_end_idx < len(lines):
+            line = lines[header_end_idx].strip()
+            if not line:
+                break
+            if not self._is_content_line(line):
+                header_lines.append(line)
+            else:
+                break
+            header_end_idx += 1
+        
+        return {
+            'vtt_styles': [],
+            'vtt_notes': [],
+            'header_text': header_lines[0] if len(header_lines) == 1 else '\n'.join(header_lines),
+            '_header_end_idx': header_end_idx
+        }
+    
+    def _is_content_line(self, line: str) -> bool:
+        """Check if line looks like content rather than header metadata."""
+        return bool(self._TIMESTAMP_PATTERN.match(line) or 
+                self._STYLE_BLOCK_START.match(line) or 
+                self._NOTE_BLOCK_START.match(line))
+    
+    def _parse_cues(self, lines: list[str], file_metadata: dict) -> list[SubtitleLine]:
+        """Parse all cues from lines starting after header."""
+        subtitle_lines = []
+        i = file_metadata.pop('_header_end_idx', 1)
+        line_number = 1
+        
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            if not line:
+                i += 1
+                continue
+            
+            if self._STYLE_BLOCK_START.match(line):
+                style_block, i = self._parse_style_block(lines, i + 1)
+                if style_block:
+                    file_metadata['vtt_styles'].append(style_block)
+                continue
+            
+            if self._NOTE_BLOCK_START.match(line):
+                note_content, i = self._parse_note_block(lines, i)
+                if note_content:
+                    file_metadata['vtt_notes'].append(note_content)
+                continue
+            
+            cue_line, i = self._parse_single_cue(lines, i, line_number)
+            if cue_line:
+                subtitle_lines.append(cue_line)
+                line_number += 1
+            else:
+                i += 1
+        
+        return subtitle_lines
+    
+    def _parse_single_cue(self, lines: list[str], start_idx: int, line_number: int) -> tuple[SubtitleLine|None, int]:
+        """Parse a single cue starting at start_idx."""
+        i = start_idx
+        cue_id = None
+        timestamp_line_idx = i
+        
+        if i + 1 < len(lines) and self._TIMESTAMP_PATTERN.match(lines[i + 1].strip()):
+            cue_id = lines[i].strip()
+            timestamp_line_idx = i + 1
+        
+        if timestamp_line_idx >= len(lines):
+            return None, i + 1
+            
+        timestamp_match = self._TIMESTAMP_PATTERN.match(lines[timestamp_line_idx].strip())
+        if not timestamp_match:
+            return None, i + 1
+        
+        start_time = self._parse_timestamp(timestamp_match.groups()[:4])
+        end_time = self._parse_timestamp(timestamp_match.groups()[4:8])
+        cue_settings = timestamp_match.group(9).strip() if timestamp_match.group(9) else ""
+        
+        cue_text, next_idx = self._parse_cue_text(lines, timestamp_line_idx + 1)
+        voice_metadata = self._extract_voice_metadata(cue_text)
+        processed_text = self._process_vtt_text(cue_text)
+        
+        line_metadata = {}
+        if cue_id:
+            line_metadata['cue_id'] = cue_id
+        if cue_settings:
+            line_metadata['vtt_settings'] = cue_settings
+        line_metadata.update(voice_metadata)
+        
+        subtitle_line = SubtitleLine.Construct(
+            number=line_number,
+            start=start_time,
+            end=end_time,
+            text=processed_text,
+            metadata=line_metadata
+        )
+        
+        return subtitle_line, next_idx
+    
+    def _parse_cue_text(self, lines: list[str], start_idx: int) -> tuple[str, int]:
+        """Parse multi-line cue text."""
+        cue_text_lines = []
+        i = start_idx
+        
+        while i < len(lines) and lines[i].strip():
+            cue_text_lines.append(lines[i])
+            i += 1
+        
+        return '\n'.join(cue_text_lines), i
     
     def _format_timestamp(self, td: timedelta) -> str:
         """Format timedelta as WebVTT timestamp."""
@@ -218,29 +252,29 @@ class VttFileHandler(SubtitleFileHandler):
         while i < len(lines):
             line = lines[i].strip()
             
-            # End of style block (blank line or new block)
             if not line or self._STYLE_BLOCK_START.match(line) or self._NOTE_BLOCK_START.match(line):
                 break
             
-            style_lines.append(lines[i])  # Preserve original formatting
+            style_lines.append(lines[i])
             i += 1
         
         return '\n'.join(style_lines) if style_lines else None, i
     
-    def _skip_note_block(self, lines, start_idx):
-        """Skip a NOTE block and return next index."""
-        i = start_idx
+    def _parse_note_block(self, lines, start_idx):
+        """Parse a NOTE block and return (note_content, next_index)."""
+        note_lines = [lines[start_idx]]
+        i = start_idx + 1
         
         while i < len(lines):
             line = lines[i].strip()
             
-            # End of note block (blank line or new block)
-            if not line:
+            if not line or self._STYLE_BLOCK_START.match(line) or self._NOTE_BLOCK_START.match(line):
                 break
             
+            note_lines.append(lines[i])
             i += 1
         
-        return i
+        return '\n'.join(note_lines) if len(note_lines) > 1 else note_lines[0], i
     
     def _extract_speaker_name(self, text: str) -> str|None:
         """Extract speaker name from voice tags."""
@@ -249,17 +283,34 @@ class VttFileHandler(SubtitleFileHandler):
             return match.group(1).strip()
         return None
     
+    def _extract_voice_metadata(self, text: str) -> dict:
+        """Extract comprehensive voice tag metadata including CSS classes."""
+        voice_metadata = {}
+        
+        # Enhanced pattern to capture CSS classes: <v.class1.class2 Speaker Name>
+        enhanced_voice_pattern = regex.compile(r'<v((?:\.[\w-]+)*)(?:\s+([^>]+))?>')
+        match = enhanced_voice_pattern.search(text)
+        
+        if match:
+            css_classes = match.group(1)
+            speaker_name = match.group(2)
+            
+            if css_classes:
+                classes = css_classes[1:].split('.') if css_classes.startswith('.') else []
+                voice_metadata['voice_classes'] = classes
+            
+            if speaker_name:
+                voice_metadata['speaker'] = speaker_name.strip()
+        
+        return voice_metadata
+    
     def _process_vtt_text(self, text: str) -> str:
         """Process VTT text for internal representation, preserving HTML tags."""
         if not text:
             return ""
         
-        # Remove voice tags but preserve the content
-        # <v Speaker>text</v> -> text, <v.class Speaker>text -> text
         text = self._VOICE_TAG_PATTERN.sub('', text)
         text = self._CLOSING_VOICE_TAG_PATTERN.sub('', text)
-        
-        # WebVTT supports HTML tags natively, so preserve them
         return text.strip()
     
     def _restore_vtt_text(self, text: str, metadata: dict) -> str:
@@ -267,9 +318,20 @@ class VttFileHandler(SubtitleFileHandler):
         if not text:
             return ""
         
-        # Add voice tags back if speaker is present
+        # Reconstruct voice tag with CSS classes and speaker
+        voice_classes = metadata.get('voice_classes', [])
         speaker = metadata.get('speaker')
-        if speaker:
-            return f"<v {speaker}>{text}</v>"
+        
+        if voice_classes or speaker:
+            voice_tag = '<v'
+            
+            if voice_classes:
+                voice_tag += '.' + '.'.join(voice_classes)
+            
+            if speaker:
+                voice_tag += f' {speaker}' if voice_classes else f' {speaker}'
+            
+            voice_tag += '>'
+            return f"{voice_tag}{text}</v>"
         
         return text

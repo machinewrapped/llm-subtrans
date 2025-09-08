@@ -7,6 +7,8 @@ from datetime import datetime
 from types import ModuleType
 import unittest
 
+summary_lines = []
+
 # Add the parent directory to the sys path so that modules can be found
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(base_path)
@@ -69,20 +71,12 @@ def run_unit_tests(results_path: str) -> bool:
     total_skipped = py_summary['skipped'] + gui_summary['skipped']
     overall_success = (total_failures == 0 and total_errors == 0)
 
-    # Use WARNING/ERROR so summary is visible on console (console handler is WARNING+)
-    summary_lines = [
+    summary_lines.extend([
         "Unit test suite summaries:",
         f"  PySubtitle: run={py_summary['run']} failures={py_summary['failures']} errors={py_summary['errors']} skipped={py_summary['skipped']} status={'OK' if py_summary['ok'] else 'FAIL'}",
         f"  GUI       : run={gui_summary['run']} failures={gui_summary['failures']} errors={gui_summary['errors']} skipped={gui_summary['skipped']} status={'OK' if gui_summary['ok'] else 'FAIL'}",
         f"Overall: run={total_run} failures={total_failures} errors={total_errors} skipped={total_skipped} => {'SUCCESS' if overall_success else 'FAILED'}"
-    ]
-
-    # Always surface summary lines to console: print when successful, since we don't log INFO to console, but ERROR when failed
-    for line in summary_lines:
-        if overall_success:
-            print(line)
-        else:
-            logging.error(line)
+    ])
 
     end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
     logging.info(separator)
@@ -133,6 +127,7 @@ def run_functional_tests(tests_directory, subtitles_directory, results_directory
 
             except Exception as e:
                 logging.error(f"Error running tests in {filename}: {e}")
+                summary_lines.append(f"Tests in {filename} failed")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run Python tests")
@@ -151,14 +146,21 @@ if __name__ == "__main__":
 
     create_logfile(results_directory, "run_tests.log")
 
-    unit_success = run_unit_tests(results_directory)
+    overall_success : bool = run_unit_tests(results_directory)
 
-    if unit_success:
+    if overall_success:
         run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=test_name)
 
+    # Always surface summary lines to console: print when successful, since we don't log INFO to console, but ERROR when failed
+    for line in summary_lines:
+        if overall_success:
+            print(line)
+        else:
+            logging.error(line)
+
     # Exit with non-zero status if unit tests failed so CI or calling scripts can detect failure.
-    if not unit_success:
+    if not overall_success:
         print("*************************************************")
-        print("*******   One or more unit tests failed!  *******")
+        print("*******     One or more tests failed!    ********")
         print("*************************************************")
         sys.exit(1)

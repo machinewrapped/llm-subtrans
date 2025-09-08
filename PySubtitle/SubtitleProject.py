@@ -151,6 +151,7 @@ class SubtitleProject:
         """
         try:
             with self.lock:
+                outputpath = outputpath or GetOutputPath(self.subtitles.sourcepath, None, self.subtitles.format)
                 self.subtitles.SaveOriginal(outputpath)
 
         except Exception as e:

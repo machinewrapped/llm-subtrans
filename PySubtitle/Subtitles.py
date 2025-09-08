@@ -389,9 +389,13 @@ class Subtitles:
         Set or generate the output path for the translated subtitles
         """
         path = path or self.sourcepath
+        extension = extension or self.format
         if not extension:
             extension = SubtitleFormatRegistry.get_format_from_filename(path) if path else None
-            extension = extension or self.format or '.srt'
+            extension = extension or '.srt'
+
+        if extension == ".subtrans":
+            raise SubtitleError("Cannot use .subtrans as output format")
 
         outputpath = GetOutputPath(path, self.target_language, extension)
         self.outputpath = outputpath

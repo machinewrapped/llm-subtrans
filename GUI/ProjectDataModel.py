@@ -116,7 +116,7 @@ class ProjectDataModel:
             # Update the output path with optional format change
             previous_output_path : str|None = self.project.subtitles.outputpath
 
-            self.project.subtitles.UpdateOutputPath(path=self.project.projectfile, extension=settings.get_str('format'))
+            self.project.subtitles.UpdateOutputPath(path=self.project.projectfile)
 
             if self.project.subtitles.outputpath != previous_output_path:
                 logging.info(_("Setting output path to {}").format(self.project.subtitles.outputpath))

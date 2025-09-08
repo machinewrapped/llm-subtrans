@@ -1,3 +1,4 @@
+import logging
 import srt # type: ignore
 from collections.abc import Iterator
 from typing import TextIO
@@ -66,14 +67,24 @@ class SrtFileHandler(SubtitleFileHandler):
                     line_number, line.start, line.end, line.text, line.metadata
                 ))
                 line_number += 1
-        
-        # Handle RTL markers if requested (marginal case)
+
+        # Log a warning if any lines had no text or start time
+        if len(output_lines) < len(data.lines):
+            num_invalid = len([line for line in data.lines if line.start is None])
+            if num_invalid:
+                logging.warning(_("{} lines were invalid and were not written to the output file").format(num_invalid))
+
+            num_empty = len([line for line in data.lines if not line.text])
+            if num_empty:
+                logging.warning(_("{} lines were empty and were not written to the output file").format(num_empty))
+
+        # Add RTL markers if required
         if data.metadata.get('add_rtl_markers'):
             for line in output_lines:
                 if line.text and IsRightToLeftText(line.text) and not line.text.startswith("\u202b"):
                     line.text = f"\u202b{line.text}\u202c"
         
-        # Convert SubtitleLine objects to srt.Subtitle objects for composition
+
         srt_items = []
         for line in output_lines:
             proprietary = line.metadata.get('proprietary', '')
@@ -87,7 +98,7 @@ class SrtFileHandler(SubtitleFileHandler):
             )
             srt_items.append(srt_item)
         
-        return srt.compose(srt_items, reindex=False)  # We handle reindexing above
+        return srt.compose(srt_items, reindex=False)
 
     def _parse_srt_items(self, source) -> Iterator[SubtitleLine]:
         """

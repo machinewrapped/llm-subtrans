@@ -116,11 +116,7 @@ class VttFileHandler(SubtitleFileHandler):
     
     def _parse_timestamp(self, time_parts) -> timedelta:
         """Parse timestamp components into timedelta."""
-        hour_str, minute_str, second_str, millisecond_str = time_parts
-        hours = int(hour_str) if hour_str is not None else 0
-        minutes = int(minute_str)
-        seconds = int(second_str)
-        milliseconds = int(millisecond_str)
+        hours, minutes, seconds, milliseconds = [int(p or 0) for p in time_parts]
         return timedelta(hours=hours, minutes=minutes, seconds=seconds, milliseconds=milliseconds)
     
     def _parse_file_header(self, lines: list[str]) -> dict:

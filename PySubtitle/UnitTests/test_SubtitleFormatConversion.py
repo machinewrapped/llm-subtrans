@@ -5,10 +5,7 @@ from copy import deepcopy
 
 from PySubtitle.Options import Options
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
-from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
-from PySubtitle.Formats.AssFileHandler import AssFileHandler
 from PySubtitle.SubtitleSerialisation import SubtitleEncoder
 
 ASS_SAMPLE = """[Script Info]

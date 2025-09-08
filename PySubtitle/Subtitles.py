@@ -363,15 +363,6 @@ class Subtitles:
             with open(outputpath, 'w', encoding=default_encoding) as f:
                 f.write(subtitle_file)
 
-            # Log a warning if any lines had no text or start time
-            num_invalid = len([line for line in translated if line.start is None])
-            if num_invalid:
-                logging.warning(_("{} lines were invalid and were not written to the output file").format(num_invalid))
-
-            num_empty = len([line for line in translated if not line.text])
-            if num_empty:
-                logging.warning(_("{} lines were empty and were not written to the output file").format(num_empty))
-
             self.translated = translated
             self.outputpath = outputpath
 

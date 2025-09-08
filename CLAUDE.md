@@ -29,11 +29,10 @@ Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Window
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()
 - **Threading safety**: Use locks (RLock/QRecursiveMutex) for thread-safe operations
-- **Unit Tests**: New tests must be registered in `PySubtitle.UnitTests.__init__` or `GUI.UnitTests.__init__`
-  - Tests should adhere to the project test structure - see `GUI\UnitTests\test_BatchCommands.py` for an example.
+- **Unit Tests**: Tests should adhere to the project test structure - see `GUI\UnitTests\test_BatchCommands.py` for an example.
   - Use functions like `log_input_expected_result` (logs input value, expected result and actual result or suitable proxies) defined in `Helpers\Test.py`.
-  - **CRITICAL**: Always call `log_input_expected_result()` BEFORE the corresponding assertion so that if the assertion fails the log will show the reason.
-  - **Input Parameter**: Use actual input values or reasonable proxies, NOT generic descriptions:
+  - Always call `log_input_expected_result()` BEFORE the corresponding assertion so that if the assertion fails the log will show the reason.
+  - Use actual input values or reasonable proxies, NOT generic descriptions:
     - ✅ `log_input_expected_result(text, expected, result)` - actual input
     - ✅ `log_input_expected_result((text, max_length, min_length), expected, result)` - tuple of inputs  
     - ✅ `log_input_expected_result(f"len(data.lines)={len(data.lines)}", True, len(data.lines) > 0)` - computed proxy

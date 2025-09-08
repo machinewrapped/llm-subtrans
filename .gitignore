@@ -41,3 +41,4 @@ untranslated_msgids_*.txt
 /test_projects
 git-cleanup-gone.ps1
 *.ssa
+*.vtt

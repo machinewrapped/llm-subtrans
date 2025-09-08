@@ -57,11 +57,14 @@ class SSAFileHandler(SubtitleFileHandler):
     SUPPORTED_EXTENSIONS = {'.ass': 10, '.ssa': 10}
 
     def load_file(self, path: str) -> SubtitleData:
+        # Use .ssa extension as format hint
+        format_hint = 'ssa' if path.lower().endswith('.ssa') else None
+        
         try:
-            subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=default_encoding)
+            subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=default_encoding, format_=format_hint)
             return self._parse_subs(subs)
         except UnicodeDecodeError:
-            subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=fallback_encoding, newline='')
+            subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=fallback_encoding, format_=format_hint, newline='')
             return self._parse_subs(subs)
     
     def parse_file(self, file_obj: TextIO) -> SubtitleData:
@@ -103,7 +106,7 @@ class SSAFileHandler(SubtitleFileHandler):
 
         self._build_metadata(subs, data.metadata)
 
-        # Restore original detected format (TODO: allow SSA/ASS conversions)
+        # Restore original detected format
         file_format = data.metadata.get('pysubs2_format', 'ass')
 
         # Convert SubtitleLines to pysubs2 format
@@ -149,7 +152,8 @@ class SSAFileHandler(SubtitleFileHandler):
             'margin_r': pysubs2_line.marginr,
             'margin_v': pysubs2_line.marginv,
             'effect': pysubs2_line.effect,
-            'type': pysubs2_line.type
+            'type': pysubs2_line.type,
+            'marked': getattr(pysubs2_line, 'marked', False)
         }
         
         # Extract whole-line SSA override tags and store in metadata
@@ -201,6 +205,7 @@ class SSAFileHandler(SubtitleFileHandler):
             event.marginv = line.metadata.get('margin_v', event.marginv)
             event.effect = line.metadata.get('effect', event.effect)
             event.type = line.metadata.get('type', event.type)
+            event.marked = line.metadata.get('marked', False)
         
         return event
 

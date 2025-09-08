@@ -24,10 +24,12 @@ class VttFileHandler(SubtitleFileHandler):
     SUPPORTED_EXTENSIONS = {'.vtt': 10}
     
     # Regex patterns for VTT parsing
-    _TIMESTAMP_PATTERN = regex.compile(r'(\d{2,}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2,}):(\d{2}):(\d{2})\.(\d{3})(.*)')
+    _TIMESTAMP_PATTERN = regex.compile(
+        r'(?:(\d{2,}):)?(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(?:(\d{2,}):)?(\d{2}):(\d{2})\.(\d{3})(.*)'
+    )
     _VOICE_TAG_PATTERN = regex.compile(r'^\s*<v((?:\.[\w-]+)*)(?:\s+([^>]+))?>((?:(?!</?v).)*)</v>\s*$')
     _STYLE_BLOCK_START = regex.compile(r'^\s*STYLE\s*$')
-    _NOTE_BLOCK_START = regex.compile(r'^\s*NOTE\s')
+    _NOTE_BLOCK_START = regex.compile(r'^\s*NOTE(?:\s.*)?$')
 
     def load_file(self, path: str) -> SubtitleData:
         try:
@@ -114,7 +116,11 @@ class VttFileHandler(SubtitleFileHandler):
     
     def _parse_timestamp(self, time_parts) -> timedelta:
         """Parse timestamp components into timedelta."""
-        hours, minutes, seconds, milliseconds = map(int, time_parts)
+        hour_str, minute_str, second_str, millisecond_str = time_parts
+        hours = int(hour_str) if hour_str is not None else 0
+        minutes = int(minute_str)
+        seconds = int(second_str)
+        milliseconds = int(millisecond_str)
         return timedelta(hours=hours, minutes=minutes, seconds=seconds, milliseconds=milliseconds)
     
     def _parse_file_header(self, lines: list[str]) -> dict:

@@ -100,6 +100,18 @@ Third subtitle line with <i>formatting</i>
         log_input_expected_result("File content", 3, len(lines))
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0].text, "First subtitle line")
+
+    def test_load_real_vtt_file(self):
+        """Test loading a real VTT file using a relative path."""
+        log_test_name("VttFileHandler.load_real_vtt_file")
+
+        test_file_path = os.path.join(os.path.dirname(__file__), "test-vtt.vtt")
+        data = self.handler.load_file(test_file_path)
+
+        log_input_expected_result("Real file line count", 1, len(data.lines))
+        self.assertEqual(len(data.lines), 1)
+        log_input_expected_result("Real file text", "Real file subtitle", data.lines[0].text)
+        self.assertEqual(data.lines[0].text, "Real file subtitle")
     
     def test_compose_lines_basic(self):
         """Test basic line composition to WebVTT format."""
@@ -310,6 +322,44 @@ Single line subtitle
         second_line_text = lines[1].text
         log_input_expected_result("Single line text", "Single line subtitle", second_line_text)
         self.assertEqual(second_line_text, "Single line subtitle")
+
+    def test_parse_without_hour_timestamps(self):
+        """Ensure cues without hour field parse correctly."""
+        log_test_name("VttFileHandler without hour timestamps")
+
+        vtt_content = """WEBVTT
+
+00:01.500 --> 00:03.000
+No hour field
+"""
+
+        data = self.handler.parse_string(vtt_content)
+        log_input_expected_result("Line count", 1, len(data.lines))
+        self.assertEqual(len(data.lines), 1)
+        expected_start = timedelta(seconds=1, milliseconds=500)
+        log_input_expected_result("Start time", expected_start, data.lines[0].start)
+        self.assertEqual(data.lines[0].start, expected_start)
+
+    def test_note_block_without_inline_text(self):
+        """Ensure NOTE blocks starting with just 'NOTE' are preserved."""
+        log_test_name("VttFileHandler NOTE block without inline text")
+
+        vtt_content = """WEBVTT
+
+NOTE
+This is a note
+spanning lines
+
+00:00:00.000 --> 00:00:01.000
+Subtitle
+"""
+
+        data = self.handler.parse_string(vtt_content)
+        notes = data.metadata.get('vtt_notes', [])
+        log_input_expected_result("Note count", 1, len(notes))
+        self.assertEqual(len(notes), 1)
+        log_input_expected_result("Note contains text", True, "This is a note" in notes[0])
+        self.assertIn("This is a note", notes[0])
     
     def test_cue_settings_preservation(self):
         """Test that cue settings are preserved in metadata."""

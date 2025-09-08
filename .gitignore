@@ -42,3 +42,4 @@ untranslated_msgids_*.txt
 git-cleanup-gone.ps1
 *.ssa
 *.vtt
+!PySubtitle/UnitTests/test-vtt.vtt

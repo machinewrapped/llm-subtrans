@@ -17,7 +17,7 @@ class TestSSAFileHandler(unittest.TestCase):
         self.handler = SSAFileHandler()
         
         # Sample SSA content for testing
-        self.sample_ass_content = """[Script Info]
+        self.sample_ssa_content = """[Script Info]
 Title: Test Subtitles
 ScriptType: v4.00+
 PlayDepth: 0
@@ -98,10 +98,10 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         """Test parsing of basic SSA content."""
         log_test_name("SSAFileHandler.parse_string - basic parsing")
         
-        data = self.handler.parse_string(self.sample_ass_content)
+        data = self.handler.parse_string(self.sample_ssa_content)
         lines = data.lines
         
-        log_input_expected_result(self.sample_ass_content[:100] + "...", len(self.expected_lines), len(lines))
+        log_input_expected_result(self.sample_ssa_content[:100] + "...", len(self.expected_lines), len(lines))
         
         self.assertEqual(len(lines), len(self.expected_lines))
         
@@ -118,7 +118,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         log_test_name("SSAFileHandler.load_file")
 
         with tempfile.NamedTemporaryFile('w', delete=False, suffix='.ass', encoding='utf-8') as f:
-            f.write(self.sample_ass_content)
+            f.write(self.sample_ssa_content)
             temp_path = f.name
 
         try:
@@ -205,9 +205,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         log_input_expected_result("SSA with no dialogue lines", 0, len(lines))
         self.assertEqual(len(lines), 0)
     
-    def test_parse_invalid_ass_content(self):
+    def test_parse_invalid_ssa_content(self):
         """Test error handling for invalid SSA content."""
-        if skip_if_debugger_attached("test_parse_invalid_ass_content"):
+        if skip_if_debugger_attached("test_parse_invalid_ssa_content"):
             return
             
         log_test_name("SSAFileHandler.parse_string - invalid content")
@@ -227,7 +227,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         log_test_name("SSAFileHandler round-trip conversion")
         
         # Parse the sample content
-        original_data = self.handler.parse_string(self.sample_ass_content)
+        original_data = self.handler.parse_string(self.sample_ssa_content)
         original_lines = original_data.lines
         
         # Compose back to SSA format using original metadata
@@ -308,9 +308,9 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
                 log_input_expected_result(f"Timedelta {test_timedelta}", expected_ms, pysubs2_event.start)
                 self.assertEqual(pysubs2_event.start, expected_ms)
     
-    def test_ass_to_html_formatting_conversion(self):
+    def test_ssa_to_html_formatting_conversion(self):
         """Test SSA tag to HTML conversion."""
-        log_test_name("SSAFileHandler._ass_to_html - formatting conversion")
+        log_test_name("SSAFileHandler._ssa_to_html - formatting conversion")
         
         # Test cases: (input_ass, expected_html)
         test_cases = [
@@ -327,13 +327,13 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
             ("Text {\\c&H00FF00&\\i1}hello{\\i0}", "Text {\\c&H00FF00&}<i>hello</i>"),
         ]
         
-        for ass_input, expected_html in test_cases:
-            with self.subTest(input=ass_input):
-                result = self.handler._ssa_to_html(ass_input)
-                log_input_expected_result(ass_input, expected_html, result)
+        for ssa_input, expected_html in test_cases:
+            with self.subTest(input=ssa_input):
+                result = self.handler._ssa_to_html(ssa_input)
+                log_input_expected_result(ssa_input, expected_html, result)
                 self.assertEqual(result, expected_html)
     
-    def test_html_to_ass_formatting_conversion(self):
+    def test_html_to_ssa_formatting_conversion(self):
         """Test HTML tag to SSA conversion."""
         log_test_name("SSAFileHandler._html_to_ass - formatting conversion")
         
@@ -362,7 +362,7 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
         log_test_name("SSAFileHandler formatting round-trip")
         
         # Sample SSA content with formatting
-        formatted_ass_content = """[Script Info]
+        formatted_ssa_content = """[Script Info]
 Title: Formatting Test
 ScriptType: v4.00+
 
@@ -378,7 +378,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Normal text with\\Nline break
 """
         
         # Parse the formatted content
-        original_data = self.handler.parse_string(formatted_ass_content)
+        original_data = self.handler.parse_string(formatted_ssa_content)
         original_lines = original_data.lines
         
         # Verify HTML conversion occurred
@@ -412,12 +412,12 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Normal text with\\Nline break
         self.assertIn("{\\i1}This is italic text{\\i0}", composed_ass)
         self.assertIn("{\\b1}This is bold{\\b0}", composed_ass)
     
-    def test_comprehensive_ass_tag_preservation(self):
+    def test_comprehensive_ssa_tag_preservation(self):
         """Test that comprehensive SSA override tags are preserved in metadata."""
         log_test_name("SSAFileHandler comprehensive SSA tag preservation")
         
         # Sample SSA content with various tag types
-        complex_ass_content = """[Script Info]
+        complex_ssa_content = """[Script Info]
 Title: Complex Tags Test
 ScriptType: v4.00+
 
@@ -435,7 +435,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
 """
         
         # Parse the complex content
-        data = self.handler.parse_string(complex_ass_content)
+        data = self.handler.parse_string(complex_ssa_content)
         lines = data.lines
         
         self.assertEqual(len(lines), 5)
@@ -524,10 +524,10 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
             ("Text with {\\c&H0000FF&}color", {}),
         ]
         
-        for ass_input, expected_metadata in extraction_cases:
-            with self.subTest(input=ass_input):
-                result = self.handler._extract_whole_line_tags(ass_input)
-                log_input_expected_result(f"Extract: {ass_input}", expected_metadata, result)
+        for ssa_input, expected_metadata in extraction_cases:
+            with self.subTest(input=ssa_input):
+                result = self.handler._extract_whole_line_tags(ssa_input)
+                log_input_expected_result(f"Extract: {ssa_input}", expected_metadata, result)
                 self.assertEqual(result, expected_metadata)
         
         # Test restoration function
@@ -560,10 +560,10 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
             ("{\\pos(50,100)}Text with {\\c&H00FF00&}inline{\\c} color", "Text with {\\c&H00FF00&}inline{\\c} color"),
         ]
         
-        for ass_input, expected_html in conversion_cases:
-            with self.subTest(input=ass_input):
-                result = self.handler._ssa_to_html(ass_input)
-                log_input_expected_result(f"Convert: {ass_input}", expected_html, result)
+        for ssa_input, expected_html in conversion_cases:
+            with self.subTest(input=ssa_input):
+                result = self.handler._ssa_to_html(ssa_input)
+                log_input_expected_result(f"Convert: {ssa_input}", expected_html, result)
                 self.assertEqual(result, expected_html)
     
     def test_composite_tags_with_basic_formatting(self):
@@ -584,14 +584,14 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
             ("{\\pos(50,100)}{\\c&H00FF00&\\b1}Green bold{\\b0}", "<b>Green bold</b>"),
         ]
         
-        for ass_input, expected_html in test_cases:
-            with self.subTest(input=ass_input):
-                result = self.handler._ssa_to_html(ass_input)
-                log_input_expected_result(f"Composite: {ass_input}", expected_html, result)
+        for ssa_input, expected_html in test_cases:
+            with self.subTest(input=ssa_input):
+                result = self.handler._ssa_to_html(ssa_input)
+                log_input_expected_result(f"Composite: {ssa_input}", expected_html, result)
                 self.assertEqual(result, expected_html)
         
         # Test round-trip preservation with composite tags
-        composite_ass_content = """[Script Info]
+        composite_ssa_content = """[Script Info]
 Title: Composite Test
 ScriptType: v4.00+
 
@@ -606,7 +606,7 @@ Dialogue: 0,0:00:04.00,0:00:06.00,Default,,0,0,0,,{\\c&H00FF00&\\b1}Green bold t
 """
         
         # Parse and verify GUI display
-        data = self.handler.parse_string(composite_ass_content)
+        data = self.handler.parse_string(composite_ssa_content)
         lines = data.lines
         
         self.assertEqual(len(lines), 2)

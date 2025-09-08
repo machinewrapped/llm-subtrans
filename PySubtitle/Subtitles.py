@@ -16,15 +16,13 @@ from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleError import SubtitleError, SubtitleParseError
 from PySubtitle.Helpers import GetInputPath, GetOutputPath
 from PySubtitle.Helpers.Parse import ParseNames
-from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.SubtitleFileHandler import SubtitleFileHandler, default_encoding
 from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.SubtitleProcessor import SubtitleProcessor
 from PySubtitle.SubtitleScene import SubtitleScene, UnbatchScenes
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
-
-default_encoding = os.getenv('DEFAULT_ENCODING', 'utf-8')
 
 class Subtitles:
     """

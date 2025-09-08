@@ -280,7 +280,7 @@ class Subtitles:
             self.metadata = data.metadata
             self.format = data.detected_format
             if self.outputpath is None:
-                self.outputpath = GetOutputPath(self.sourcepath, self.target_language, self.format)
+                self.outputpath = GetOutputPath(self.sourcepath, self.target_language or "translated", self.format)
 
     def LoadSubtitlesFromString(self, subtitles_string: str, file_handler: SubtitleFileHandler) -> None:
         """
@@ -323,7 +323,7 @@ class Subtitles:
         outputpath = outputpath or self.outputpath
         if not outputpath:
             if self.sourcepath and os.path.exists(self.sourcepath):
-                outputpath = GetOutputPath(self.sourcepath, self.target_language, self.format)
+                outputpath = GetOutputPath(self.sourcepath, self.target_language or "translated", self.format)
             if not outputpath:
                 raise SubtitleError(_("I don't know where to save the translated subtitles"))
 

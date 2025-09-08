@@ -57,8 +57,9 @@ class SSAFileHandler(SubtitleFileHandler):
     SUPPORTED_EXTENSIONS = {'.ass': 10, '.ssa': 10}
 
     def load_file(self, path: str) -> SubtitleData:
-        # Use .ssa extension as format hint
-        format_hint = 'ssa' if path.lower().endswith('.ssa') else None
+        # TEST: Use .ssa extension as format hint to detect Marked lines ... this causes more problems than it fixes, let's trust pysubs2
+        # format_hint = 'ssa' if path.lower().endswith('.ssa') else None
+        format_hint = None
         
         try:
             subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=default_encoding, format_=format_hint)

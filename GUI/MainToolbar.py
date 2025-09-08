@@ -1,7 +1,7 @@
 from collections.abc import Callable
 
 from PySide6.QtWidgets import QToolBar, QStyle, QApplication
-from PySide6.QtCore import Qt, SignalInstance, QCoreApplication
+from PySide6.QtCore import Qt, SignalInstance, QCoreApplication, QObject
 from PySide6.QtGui import QAction, QIcon
 from PySide6.QtSvg import QSvgRenderer
 from PySide6.QtCore import QByteArray
@@ -314,22 +314,28 @@ class MainToolbar(QToolBar):
         """
         Global event filter to capture shift key press/release events
         """
+        # Only process QObject instances for event filtering
+        if not isinstance(obj, QObject):
+            return False
+            
         # Always track shift state, but only update UI when main window has focus
         should_update_ui = self.gui.GetMainWindow().isActiveWindow()
+
+        event_type = event.type()
         
-        if event.type() == event.Type.KeyPress:
+        if event_type == event.Type.KeyPress:
             if event.key() == Qt.Key.Key_Shift:
                 if not self._shift_pressed:
                     self._shift_pressed = True
                     if should_update_ui:
                         self.UpdateToolbar()
-        elif event.type() == event.Type.KeyRelease:
+        elif event_type == event.Type.KeyRelease:
             if event.key() == Qt.Key.Key_Shift:
                 if self._shift_pressed:
                     self._shift_pressed = False
                     if should_update_ui:
                         self.UpdateToolbar()
-        elif event.type() == event.Type.WindowActivate:
+        elif event_type == event.Type.WindowActivate:
             # Reset toolbar when main window regains focus (shift state probably changed)
             if obj == self.gui.GetMainWindow():
                 self._shift_pressed = False

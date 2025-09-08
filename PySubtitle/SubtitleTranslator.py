@@ -50,7 +50,7 @@ class SubtitleTranslator:
         self.retranslate = settings.get_bool('retranslate')
         self.reparse = settings.get_bool('reparse')
         self.preview = settings.get_bool('preview')
-        self.resume = resume and not self.reparse and not self.retranslate
+        self.resume = resume and (not self.reparse and not self.retranslate)
 
         settings = Options(settings)
 
@@ -218,7 +218,7 @@ class SubtitleTranslator:
             self.ProcessBatchTranslation(batch, batch.translation, line_numbers)
             return
 
-        if not self.retranslate and batch.all_translated:
+        if self.resume and not self.retranslate and batch.all_translated:
             logging.info(_("Scene {scene} batch {batch} already translated {lines} lines...").format(scene=batch.scene, batch=batch.number, lines=batch.size))
             return
 

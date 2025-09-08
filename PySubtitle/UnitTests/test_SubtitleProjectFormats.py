@@ -9,7 +9,7 @@ from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
-from PySubtitle.Formats.AssFileHandler import AssFileHandler
+from PySubtitle.Formats.SSAFileHandler import SSAFileHandler
 from PySubtitle.SubtitleSerialisation import SubtitleEncoder, SubtitleDecoder
 from PySubtitle.Subtitles import Subtitles
 from PySubtitle.Helpers.Color import Color
@@ -160,7 +160,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\b1}Hello{\\b0} World!
 """
         
-        handler = AssFileHandler()
+        handler = SSAFileHandler()
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, handler)
         
@@ -195,7 +195,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test line
 """
         
-        handler = AssFileHandler()
+        handler = SSAFileHandler()
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, handler)
         
@@ -233,7 +233,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\i1}Italic{\\i0} and {\\b1}bold{\\b0} text
 """
         
-        handler = AssFileHandler()
+        handler = SSAFileHandler()
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, handler)
         
@@ -259,7 +259,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Bold text with positioning{\\b0}
 """
         
-        handler = AssFileHandler()
+        handler = SSAFileHandler()
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, handler)
         
@@ -290,7 +290,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Test{\\b0} line
 """
         
-        handler = AssFileHandler()
+        handler = SSAFileHandler()
         data = handler.parse_string(ass_content)
         recomposed = handler.compose(data)
         
@@ -317,7 +317,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test serialization
 """
         
-        handler = AssFileHandler()
+        handler = SSAFileHandler()
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, handler)
         
@@ -365,7 +365,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hard\\Nbreak and\\nsoft break
 """
         
-        handler = AssFileHandler()
+        handler = SSAFileHandler()
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, handler)
         

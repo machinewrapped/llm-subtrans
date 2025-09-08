@@ -3,20 +3,20 @@ from datetime import timedelta
 import tempfile
 import os
 
-from PySubtitle.Formats.AssFileHandler import AssFileHandler
+from PySubtitle.Formats.SSAFileHandler import SSAFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleData import SubtitleData
 from PySubtitle.SubtitleError import SubtitleParseError
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name, skip_if_debugger_attached
 
-class TestAssFileHandler(unittest.TestCase):
-    """Test cases for ASS file handler."""
+class TestSSAFileHandler(unittest.TestCase):
+    """Test cases for SSA file handler."""
     
     def setUp(self):
         """Set up test fixtures."""
-        self.handler = AssFileHandler()
+        self.handler = SSAFileHandler()
         
-        # Sample ASS content for testing
+        # Sample SSA content for testing
         self.sample_ass_content = """[Script Info]
 Title: Test Subtitles
 ScriptType: v4.00+
@@ -86,7 +86,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_get_file_extensions(self):
         """Test that the handler returns correct file extensions."""
-        log_test_name("AssFileHandler.get_file_extensions")
+        log_test_name("SSAFileHandler.get_file_extensions")
         
         expected = ['.ass', '.ssa']
         result = self.handler.get_file_extensions()
@@ -95,8 +95,8 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         self.assertEqual(result, expected)
     
     def test_parse_string_basic(self):
-        """Test parsing of basic ASS content."""
-        log_test_name("AssFileHandler.parse_string - basic parsing")
+        """Test parsing of basic SSA content."""
+        log_test_name("SSAFileHandler.parse_string - basic parsing")
         
         data = self.handler.parse_string(self.sample_ass_content)
         lines = data.lines
@@ -115,7 +115,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_load_file(self):
         """Test parsing from file path."""
-        log_test_name("AssFileHandler.load_file")
+        log_test_name("SSAFileHandler.load_file")
 
         with tempfile.NamedTemporaryFile('w', delete=False, suffix='.ass', encoding='utf-8') as f:
             f.write(self.sample_ass_content)
@@ -133,8 +133,8 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     
     def test_compose_lines_basic(self):
-        """Test basic line composition to ASS format."""
-        log_test_name("AssFileHandler.compose_lines - basic")
+        """Test basic line composition to SSA format."""
+        log_test_name("SSAFileHandler.compose_lines - basic")
         
         lines = [
             SubtitleLine.Construct(
@@ -155,7 +155,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         has_all_sections = all(section in result for section in expected_sections)
         log_input_expected_result("1 line", True, has_all_sections)
         
-        # Check that the result contains key ASS sections
+        # Check that the result contains key SSA sections
         self.assertIn("[Script Info]", result)
         self.assertIn("[V4+ Styles]", result)
         self.assertIn("[Events]", result)
@@ -163,7 +163,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_compose_lines_with_line_breaks(self):
         """Test composition with line breaks."""
-        log_test_name("AssFileHandler.compose_lines - line breaks")
+        log_test_name("SSAFileHandler.compose_lines - line breaks")
         
         lines = [
             SubtitleLine.Construct(
@@ -178,15 +178,15 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         data = SubtitleData(lines=lines, metadata={'pysubs2_format': 'ass'})
         result = self.handler.compose(data)
         
-        # pysubs2 converts newlines back to \\N in ASS format output
+        # pysubs2 converts newlines back to \\N in SSA format output
         expected_text = "First line\\NSecond line"
         contains_expected = expected_text in result
-        log_input_expected_result("Contains ASS line break", True, contains_expected)
+        log_input_expected_result("Contains SSA line break", True, contains_expected)
         self.assertIn(expected_text, result)
     
     def test_parse_empty_events_section(self):
-        """Test parsing ASS file with no events."""
-        log_test_name("AssFileHandler.parse_string - no events")
+        """Test parsing SSA file with no events."""
+        log_test_name("SSAFileHandler.parse_string - no events")
         
         content_no_events = """[Script Info]
 Title: Test
@@ -202,17 +202,17 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         data = self.handler.parse_string(content_no_events)
         lines = data.lines
         
-        log_input_expected_result("ASS with no dialogue lines", 0, len(lines))
+        log_input_expected_result("SSA with no dialogue lines", 0, len(lines))
         self.assertEqual(len(lines), 0)
     
     def test_parse_invalid_ass_content(self):
-        """Test error handling for invalid ASS content."""
+        """Test error handling for invalid SSA content."""
         if skip_if_debugger_attached("test_parse_invalid_ass_content"):
             return
             
-        log_test_name("AssFileHandler.parse_string - invalid content")
+        log_test_name("SSAFileHandler.parse_string - invalid content")
         
-        invalid_content = """This is not ASS format content"""
+        invalid_content = """This is not SSA format content"""
         
         assert_raised : bool = True
         with self.assertRaises(SubtitleParseError):
@@ -224,13 +224,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     
     def test_round_trip_conversion(self):
         """Test that parsing and composing results in similar content."""
-        log_test_name("AssFileHandler round-trip conversion")
+        log_test_name("SSAFileHandler round-trip conversion")
         
         # Parse the sample content
         original_data = self.handler.parse_string(self.sample_ass_content)
         original_lines = original_data.lines
         
-        # Compose back to ASS format using original metadata
+        # Compose back to SSA format using original metadata
         composed = self.handler.compose(original_data)
         
         # Parse the composed content again
@@ -255,7 +255,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     def test_detect_ssa_format(self):
         """Ensure SSA files retain their format information."""
-        log_test_name("AssFileHandler SSA format detection")
+        log_test_name("SSAFileHandler SSA format detection")
 
         sample_ssa = """[Script Info]
 ScriptType: v4.00
@@ -278,7 +278,7 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
     
     def test_subtitle_line_to_pysubs2_time_conversion(self):
         """Test that _subtitle_line_to_pysubs2 correctly converts timedelta to pysubs2 milliseconds."""
-        log_test_name("AssFileHandler._subtitle_line_to_pysubs2 - time conversion")
+        log_test_name("SSAFileHandler._subtitle_line_to_pysubs2 - time conversion")
         
         # Test various time formats with precise timedelta values
         test_cases = [
@@ -309,8 +309,8 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
                 self.assertEqual(pysubs2_event.start, expected_ms)
     
     def test_ass_to_html_formatting_conversion(self):
-        """Test ASS tag to HTML conversion."""
-        log_test_name("AssFileHandler._ass_to_html - formatting conversion")
+        """Test SSA tag to HTML conversion."""
+        log_test_name("SSAFileHandler._ass_to_html - formatting conversion")
         
         # Test cases: (input_ass, expected_html)
         test_cases = [
@@ -334,8 +334,8 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
                 self.assertEqual(result, expected_html)
     
     def test_html_to_ass_formatting_conversion(self):
-        """Test HTML tag to ASS conversion."""
-        log_test_name("AssFileHandler._html_to_ass - formatting conversion")
+        """Test HTML tag to SSA conversion."""
+        log_test_name("SSAFileHandler._html_to_ass - formatting conversion")
         
         # Test cases: (input_html, expected_ass)
         test_cases = [
@@ -359,9 +359,9 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
     
     def test_formatting_round_trip_preservation(self):
         """Test that formatting is preserved through round-trip conversion."""
-        log_test_name("AssFileHandler formatting round-trip")
+        log_test_name("SSAFileHandler formatting round-trip")
         
-        # Sample ASS content with formatting
+        # Sample SSA content with formatting
         formatted_ass_content = """[Script Info]
 Title: Formatting Test
 ScriptType: v4.00+
@@ -392,7 +392,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Normal text with\\Nline break
         
         self.assertEqual(original_lines[2].text, "Normal text with\nline break")
         
-        # Compose back to ASS
+        # Compose back to SSA
         composed_ass = self.handler.compose(original_data)
         
         # Parse again to test round-trip
@@ -407,16 +407,16 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Normal text with\\Nline break
         
         log_input_expected_result("Round-trip formatting preserved", True, True)
         
-        # Verify original ASS tags are in composed output
-        log_input_expected_result("ASS tags in output", True, "{\\i1}" in composed_ass and "{\\b1}" in composed_ass)
+        # Verify original SSA tags are in composed output
+        log_input_expected_result("SSA tags in output", True, "{\\i1}" in composed_ass and "{\\b1}" in composed_ass)
         self.assertIn("{\\i1}This is italic text{\\i0}", composed_ass)
         self.assertIn("{\\b1}This is bold{\\b0}", composed_ass)
     
     def test_comprehensive_ass_tag_preservation(self):
-        """Test that comprehensive ASS override tags are preserved in metadata."""
-        log_test_name("AssFileHandler comprehensive ASS tag preservation")
+        """Test that comprehensive SSA override tags are preserved in metadata."""
+        log_test_name("SSAFileHandler comprehensive SSA tag preservation")
         
-        # Sample ASS content with various tag types
+        # Sample SSA content with various tag types
         complex_ass_content = """[Script Info]
 Title: Complex Tags Test
 ScriptType: v4.00+
@@ -476,7 +476,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
             self.assertIn("{\\c}", inline_line.text)
             self.assertNotIn('override_tags_start', inline_line.metadata)
         
-        # Test mixed HTML and inline ASS tags
+        # Test mixed HTML and inline SSA tags
         mixed_line = lines[4]
         log_input_expected_result("HTML conversion with inline preservation", 
                                 "<i>Italic with <b>bold</b> inside</i>", mixed_line.text)
@@ -507,8 +507,8 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         self.assertEqual(rt_complex.metadata.get('override_tags_start', ''), "{\\pos(100,200)\\an5\\fs20}")
     
     def test_tag_extraction_functions(self):
-        """Test ASS tag extraction and restoration functions."""
-        log_test_name("AssFileHandler tag extraction functions")
+        """Test SSA tag extraction and restoration functions."""
+        log_test_name("SSAFileHandler tag extraction functions")
         
         # Test extraction function
         extraction_cases = [
@@ -568,7 +568,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
     
     def test_composite_tags_with_basic_formatting(self):
         """Test that basic formatting tags within composite blocks are preserved."""
-        log_test_name("AssFileHandler composite tags with basic formatting")
+        log_test_name("SSAFileHandler composite tags with basic formatting")
         
         # Test cases for composite blocks containing basic formatting
         test_cases = [

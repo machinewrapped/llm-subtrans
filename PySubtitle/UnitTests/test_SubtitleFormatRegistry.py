@@ -510,7 +510,7 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
             detected_format = data.metadata.get('detected_format')
             log_input_expected_result(f"detected_format={detected_format}", ".ass", detected_format)
             self.assertEqual(".ass", detected_format)
-            # Check that original metadata from ASS file is preserved
+            # Check that original metadata from SSA file is preserved
             has_info = 'info' in data.metadata
             log_input_expected_result(f"'info' in metadata={has_info}", True, has_info)
             self.assertIn('info', data.metadata)

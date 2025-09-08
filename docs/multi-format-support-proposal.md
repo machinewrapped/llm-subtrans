@@ -10,13 +10,13 @@ This document captures the architecture and decisions behind LLM-Subtrans's mult
 
 ### Existing Architecture
 - **Core Internal Representation**: `SubtitleLine` objects with timing, text, and metadata
-- **File Format Handling**: `SubtitleFormatRegistry` discovers handlers such as `SrtFileHandler` and `AssFileHandler`
+- **File Format Handling**: `SubtitleFormatRegistry` discovers handlers such as `SrtFileHandler` and `SSAFileHandler`
 - **Integration Points**: `SubtitleProject` reads and writes `Subtitles` files by extension
 - **Serialization**: `SubtitleSerialisation.py` handles project file persistence
 - **Interface**: Abstract `SubtitleFileHandler` defines parsing and composing operations
 
 ### Current Limitations
-- Only SRT and ASS/SSA formats implemented
+- Only SRT and SSA/ASS formats implemented
 - Content-based format detection now implemented via `pysubs2`
 
 ## Architecture Overview
@@ -88,12 +88,12 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - `PySubtitle/Subtitles.py`: Require `file_handler` parameter, remove hardcoded SRT handler
 - `PySubtitle/SubtitleProject.py`: Add format detection, handler selection, conversion logic
 
-### Phase 3: ASS/SSA Format Support [X] COMPLETED
+### Phase 3: SSA/ASS Format Support [X] COMPLETED
 **Requirements**:
-- [X] Implement `AssFileHandler` class supporting Advanced SubStation Alpha format
-- [X] Handle ASS-specific features: styles, positioning, effects, colors
-- [X] Store ASS-specific data in `SubtitleLine.metadata`
-- [X] Support both reading and writing ASS format
+- [X] Implement `SSAFileHandler` class supporting Advanced SubStation Alpha format
+- [X] Handle SSA-specific features: styles, positioning, effects, colors
+- [X] Store SSA-specific data in `SubtitleLine.metadata`
+- [X] Support both reading and writing SSA format
 - [X] Maintain index uniqueness for dialogue events
 
 **Priority System Implementation**:
@@ -103,33 +103,33 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - [x] Registry supports `disable_autodiscovery()` for precise test control
 
 **Acceptance Tests**:
-- [X] Parse basic ASS files with dialogue events
+- [X] Parse basic SSA files with dialogue events
 - [X] Preserve style information in metadata
 - [X] Handle multi-line dialogue correctly
-- [X] Export to ASS format maintaining original styling
+- [X] Export to SSA format maintaining original styling
 - [X] Assign unique indices to all dialogue events
-- [X] Handle ASS timing format conversion
+- [X] Handle SSA timing format conversion
 - [X] Support V4+ Styles and V4 Styles sections
 - [x] `SrtFileHandler` (priority 10) maintains highest priority for .srt files
 
 **Files Created**:
-- [X] `PySubtitle/Formats/AssFileHandler.py` (pysubs2-based implementation)
-- [X] `PySubtitle/UnitTests/test_AssFileHandler.py`
+- [X] `PySubtitle/Formats/SSAFileHandler.py` (pysubs2-based implementation)
+- [X] `PySubtitle/UnitTests/test_SSAFileHandler.py`
 
 **Implementation Outcome**:
-The project standardised on a pysubs2-based `AssFileHandler`, which provides full metadata preservation and round-trip fidelity. Early custom efforts were discarded in favour of the library-backed approach.
+The project standardised on a pysubs2-based `SSAFileHandler`, which provides full metadata preservation and round-trip fidelity. Early custom efforts were discarded in favour of the library-backed approach.
 
 **pysubs2 Library Evaluation**:
 After implementation comparison, `pysubs2` was identified as the superior approach for most formats:
 - **Battle-tested**: Used by video editing professionals
-- **Comprehensive**: Supports ASS, WebVTT, TTML, MicroDVD, MPL2, SAMI, TMP, Whisper formats
+- **Comprehensive**: Supports SSA, WebVTT, TTML, MicroDVD, MPL2, SAMI, TMP, Whisper formats
 - **Perfect fidelity**: Complete metadata preservation with round-trip accuracy
 - **Professional quality**: Proper format structure and compliance
 - **Future-proof**: Automatic updates as library evolves
 
 **Format-Specific Strategy**: 
 - **SRT**: Keep existing `srt` module (well-tested, SRT-specialized)
-- **ASS/WebVTT/TTML**: Use pysubs2 for professional-grade handling
+- **SSA/WebVTT/TTML**: Use pysubs2 for professional-grade handling
 - **Specialized formats**: Evaluate on case-by-case basis
 
 ### Phase 4: Format conversion
@@ -201,7 +201,7 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 
 **Acceptance Tests**:
 - [x] Detect SRT format with .txt extension
-- [x] Detect ASS format with .txt extension
+- [x] Detect SSA format with .txt extension
 - [x] Detect SSA format with .ass extension
 - [x] Provide clear error messages for undetectable formats
 - [x] Handle edge cases with malformed files gracefully
@@ -218,7 +218,7 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 ### Phase 7: Additional Format Support
 **Requirements**:
 - Keep existing `SrtFileHandler` (well-tested, SRT-specialized)
-- Maintain `AssFileHandler` for custom handling of tags and metadata
+- Maintain `SSAFileHandler` for custom handling of tags and metadata
 - Implement `VttFileHandler` for WebVTT (common web format) using pysubs2
 - Implement `TtmlFileHandler` for TTML (advanced XML-based format) using pysubs2
 - Consider `SccFileHandler` for SCC (broadcast standard) if needed
@@ -234,7 +234,7 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 
 **Acceptance Tests**:
 - [ ] Maintain existing SRT parsing with current `srt` module
-- [ ] Maintain existing SSA/ASS parsing with current `AssFileHandler`
+- [ ] Maintain existing SSA/ASS parsing with current `SSAFileHandler`
 - [ ] Parse WebVTT files with WEBVTT header and cue settings using pysubs2
 - [ ] Parse TTML files with XML structure and advanced styling using pysubs2
 - [ ] Preserve speaker identification metadata from transcription workflows
@@ -249,7 +249,7 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 - `PySubtitle/UnitTests/test_TtmlFileHandler.py`
 
 **Implementation Strategy**:
-Follow the proven pattern from `AssFileHandler`:
+Follow the proven pattern from `SSAFileHandler`:
 - Consistent metadata pass-through approach
 - `_pysubs2_original` preservation for perfect round-trips
 - Format-specific optimizations within each handler
@@ -324,7 +324,7 @@ class ExampleFileHandler(SubtitleFileHandler):
 
 ### Extended SubtitleLine Metadata Schema
 ```python
-# ASS Format Metadata
+# SSA Format Metadata
 {
     "style": "Default",
     "layer": 0,
@@ -347,7 +347,7 @@ class ExampleFileHandler(SubtitleFileHandler):
 File handlers must capture and preserve format-specific file context, e.g.
 
 ```python
-# ASS File Metadata
+# SSA File Metadata
 {
     "format": "ass",
     "script_info": {"Title": "Movie", "ScriptType": "v4.00+", ...},
@@ -374,7 +374,7 @@ All format handlers must:
 7. Support both file and string input/output
 
 ### Unique Index Assignment Strategy
-For formats that don't have native indices (like ASS):
+For formats that don't have native indices (like SSA):
 - Sequential numbering starting from 1
 - Preserve original event order
 - Handle missing/duplicate indices by reassignment
@@ -389,7 +389,7 @@ For formats that don't have native indices (like ASS):
   - **Mitigation**: Efficient detection algorithms, caching mechanisms
 
 ### Medium Risk
-- **Format Complexity**: ASS format has many advanced features that could be difficult to implement
+- **Format Complexity**: SSA format has many advanced features that could be difficult to implement
   - **Mitigation**: Phased implementation, focus on common use cases first
 - **Metadata Loss**: Converting between formats could lose format-specific information
   - **Mitigation**: Comprehensive metadata preservation, format-specific warnings
@@ -428,7 +428,7 @@ For formats that don't have native indices (like ASS):
 
 ### Required Libraries
 - **pysubs2** (v1.8.0+): Universal subtitle format library (MIT License)
-  - Provides professional-grade parsing for ASS, SRT, WebVTT, TTML, and more
+  - Provides professional-grade parsing for SSA, SRT, WebVTT, TTML, and more
   - Battle-tested by video editing community
   - Comprehensive metadata preservation with round-trip accuracy
   - Provides support for format detection from content
@@ -457,12 +457,12 @@ Any libraries used must be:
 
 - [X] **All existing functionality preserved** (81 unit tests continue to pass)
 - [X] **Format Registry implemented** with auto-discovery mechanism
-- [X] **ASS format support** completed with both fallback and pysubs2-based implementations  
+- [X] **SSA format support** completed with both fallback and pysubs2-based implementations  
 - [X] **Multi-format path handling** fixed for project files and output generation
 - [X] **Zero breaking changes** to public API
-- [X] **Comprehensive test coverage** for new components (AssFileHandler, FormatRegistry)
+- [X] **Comprehensive test coverage** for new components (SSAFileHandler, FormatRegistry)
 - [X] Keep existing SRT handling with specialized `srt` module
-- [ ] At least 3 additional formats supported (ASS [X], WebVTT, TTML pending)
+- [ ] At least 3 additional formats supported (SSA [X], WebVTT, TTML pending)
 - [ ] User acceptance validation
 
 **Current Status**: Phase 1-3 completed successfully. pysubs2 integration strategy validated and ready for Phase 4 implementation.
@@ -476,7 +476,7 @@ Any libraries used must be:
 - **Translation Focus**: Optimize for subtitle translation workflow while maintaining format integrity
 
 ### Handler Template Pattern
-All pysubs2-based handlers follow the pattern from `AssFileHandler` (TODO: extract a pysubs2 file parser to handle commonalities)
+All pysubs2-based handlers follow the pattern from `SSAFileHandler` (TODO: extract a pysubs2 file parser to handle commonalities)
 
 ### Metadata Strategy
 - **Standard Fields**: Common subtitle properties (timing, text, style, layer)

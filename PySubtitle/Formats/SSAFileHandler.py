@@ -22,7 +22,7 @@ _STANDALONE_BASIC_TAG_PATTERN = regex.compile(r'^\{\\(?:[ibs][01]|u[01]?)\}$')
 _BASIC_TAG_PATTERN = regex.compile(r'\\(?:[ibs][01]|u[01]?)')
 
 # Precompiled SSA to HTML conversion patterns
-_ASS_TO_HTML_PATTERNS = [
+_SSA_TO_HTML_PATTERNS = [
     (regex.compile(r'{\\i1}'), '<i>'),
     (regex.compile(r'{\\i0}'), '</i>'),
     (regex.compile(r'{\\b1}'), '<b>'),
@@ -34,7 +34,7 @@ _ASS_TO_HTML_PATTERNS = [
 ]
 
 # Precompiled HTML to SSA conversion patterns
-_HTML_TO_ASS_PATTERNS = [
+_HTML_TO_SSA_PATTERNS = [
     (regex.compile(r'<i>'), r'{\\i1}'),
     (regex.compile(r'</i>'), r'{\\i0}'),
     (regex.compile(r'<b>'), r'{\\b1}'),
@@ -46,10 +46,11 @@ _HTML_TO_ASS_PATTERNS = [
 ]
 
 
-class AssFileHandler(SubtitleFileHandler):
+class SSAFileHandler(SubtitleFileHandler):
     """
-    File handler for Advanced SubStation Alpha (ASS/SSA) subtitle format using pysubs2 library.
-    Provides professional-grade ASS handling with full metadata preservation.
+    File handler for Advanced SubStation Alpha (SSA/ASS) subtitle format using pysubs2 library.
+
+    Supports reading and writing SSA/ASS with file- and line-level metadata.
     """
     
     SUPPORTED_EXTENSIONS = {'.ass': 10, '.ssa': 10}
@@ -150,7 +151,7 @@ class AssFileHandler(SubtitleFileHandler):
             'type': pysubs2_line.type
         }
         
-        # Extract whole-line ASS override tags and store in metadata
+        # Extract whole-line SSA override tags and store in metadata
         if pysubs2_line.text:
             extracted_tags = self._extract_whole_line_tags(pysubs2_line.text)
             if extracted_tags:
@@ -356,7 +357,7 @@ class AssFileHandler(SubtitleFileHandler):
         text = text.replace('\\n', '<wbr>')
         
         # Convert basic formatting tags to HTML using precompiled patterns
-        for pattern, replacement in _ASS_TO_HTML_PATTERNS:
+        for pattern, replacement in _SSA_TO_HTML_PATTERNS:
             text = pattern.sub(replacement, text)
         
         # For any remaining SSA tags that aren't basic formatting, preserve them
@@ -379,7 +380,7 @@ class AssFileHandler(SubtitleFileHandler):
         text = text.replace('\n', '\\N')
         
         # Convert HTML tags back to SSA tags using precompiled patterns
-        for pattern, replacement in _HTML_TO_ASS_PATTERNS:
+        for pattern, replacement in _HTML_TO_SSA_PATTERNS:
             text = pattern.sub(replacement, text)
         
         # Preserve any other HTML that might be part of the dialogue content

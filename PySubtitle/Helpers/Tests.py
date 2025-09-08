@@ -134,8 +134,15 @@ def RunTestOnAllSubtitleFiles(run_test : Callable, test_options: list[dict], dir
     logger.info("")
 
     supported_formats = SubtitleFormatRegistry.enumerate_formats()
-    files = [f for f in os.listdir(directory_path) if os.path.isfile(os.path.join(directory_path, f)) if SubtitleFormatRegistry.get_format_from_filename(f) in supported_formats]
 
+    def _is_supported_subtitle_file(f):
+        file_path = os.path.join(directory_path, f)
+        return (
+            os.path.isfile(file_path)
+            and SubtitleFormatRegistry.get_format_from_filename(f) in supported_formats
+        )
+
+    files = [f for f in os.listdir(directory_path) if _is_supported_subtitle_file(f)]
     print (f"Running {test_name} on {len(files)} files in {directory_path}...")
 
     for file in files:

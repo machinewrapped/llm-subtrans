@@ -25,9 +25,11 @@ class VttFileHandler(SubtitleFileHandler):
     
     # Regex patterns for VTT parsing
     _TIMESTAMP_PATTERN = regex.compile(r'(\d{2,}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2,}):(\d{2}):(\d{2})\.(\d{3})(.*)')
-    _VOICE_TAG_PATTERN = regex.compile(r'<v(?:\.[\w.]+)?\s+([^>]+)>')
-    _CLOSING_VOICE_TAG_PATTERN = regex.compile(r'</v>')
+    _VOICE_TAG_PATTERN = regex.compile(r'<v(?:[^>]*)>|</v>')
+    _VOICE_TAG_DETECTION = regex.compile(r'<v(?:[^>]*)')
+    _VOICE_TAG_METADATA = regex.compile(r'<v((?:\.[\w-]+)*)(?:\s+([^>]+))?>')
     _LANG_TAG_PATTERN = regex.compile(r'<lang(?:\s+([^>]+))?>([^<]*)</lang>')
+    _LANG_CODE_PATTERN = regex.compile(r'lang="([^"]+)"')
     _STYLE_BLOCK_START = regex.compile(r'^\s*STYLE\s*$')
     _NOTE_BLOCK_START = regex.compile(r'^\s*NOTE\s')
 
@@ -203,7 +205,7 @@ class VttFileHandler(SubtitleFileHandler):
         cue_settings = timestamp_match.group(9).strip() if timestamp_match.group(9) else ""
         
         cue_text, next_idx = self._parse_cue_text(lines, timestamp_line_idx + 1)
-        voice_metadata = self._extract_voice_metadata(cue_text)
+        voice_metadata = self._extract_voice_metadata(cue_text) if self._VOICE_TAG_DETECTION.search(cue_text) else {}
         processed_text = self._process_vtt_text(cue_text)
         
         line_metadata = {}
@@ -277,20 +279,12 @@ class VttFileHandler(SubtitleFileHandler):
         
         return '\n'.join(note_lines) if len(note_lines) > 1 else note_lines[0], i
     
-    def _extract_speaker_name(self, text: str) -> str|None:
-        """Extract speaker name from voice tags."""
-        match = self._VOICE_TAG_PATTERN.search(text)
-        if match:
-            return match.group(1).strip()
-        return None
-    
     def _extract_voice_metadata(self, text: str) -> dict:
         """Extract comprehensive voice tag metadata including CSS classes and language tags."""
         voice_metadata = {}
         
-        # Enhanced pattern to capture CSS classes: <v.class1.class2 Speaker Name>
-        enhanced_voice_pattern = regex.compile(r'<v((?:\.[\w-]+)*)(?:\s+([^>]+))?>')
-        match = enhanced_voice_pattern.search(text)
+        # Extract CSS classes and speaker name: <v.class1.class2 Speaker Name>
+        match = self._VOICE_TAG_METADATA.search(text)
         
         if match:
             css_classes = match.group(1)
@@ -311,7 +305,7 @@ class VttFileHandler(SubtitleFileHandler):
                 lang_info = {'text': lang_content}
                 if lang_attr:
                     # Parse lang="code" attribute
-                    lang_code_match = regex.search(r'lang="([^"]+)"', lang_attr)
+                    lang_code_match = self._LANG_CODE_PATTERN.search(lang_attr)
                     if lang_code_match:
                         lang_info['lang'] = lang_code_match.group(1)
                 lang_segments.append(lang_info)
@@ -325,7 +319,6 @@ class VttFileHandler(SubtitleFileHandler):
             return ""
         
         text = self._VOICE_TAG_PATTERN.sub('', text)
-        text = self._CLOSING_VOICE_TAG_PATTERN.sub('', text)
         text = self._LANG_TAG_PATTERN.sub(r'\2', text)
         return text.strip()
     

@@ -101,28 +101,6 @@ Third subtitle line with <i>formatting</i>
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0].text, "First subtitle line")
     
-    def test_load_real_vtt_file(self):
-        """Test loading the actual test-vtt.vtt file."""
-        log_test_name("VttFileHandler.load_file - real test file")
-        
-        # Use the actual test file
-        test_file_path = "D:\\Development\\Github\\llm-subtrans\\test-vtt.vtt"
-        
-        if os.path.exists(test_file_path):
-            data = self.handler.load_file(test_file_path)
-            lines = data.lines
-            
-            log_input_expected_result("Real VTT file lines", True, len(lines) > 0)
-            self.assertTrue(len(lines) > 0)
-            
-            # Check first line contains expected Chinese text
-            if lines and lines[0].text:
-                first_line_text = lines[0].text
-                log_input_expected_result("First line contains Chinese", True, "這是我的師傅" in first_line_text)
-                self.assertIn("這是我的師傅", first_line_text)
-        else:
-            self.skipTest(f"Test file not found: {test_file_path}")
-    
     def test_compose_lines_basic(self):
         """Test basic line composition to WebVTT format."""
         log_test_name("VttFileHandler.compose_lines - basic")
@@ -236,8 +214,9 @@ Third subtitle line with <i>formatting</i>
         log_test_name("VttFileHandler WebVTT format detection")
 
         data = self.handler.parse_string(self.sample_vtt_content)
-        log_input_expected_result("WebVTT format", '.vtt', data.detected_format)
-        self.assertEqual(data.detected_format, '.vtt')
+
+        log_input_expected_result("Detected format", ".vtt", data.detected_format)
+        self.assertEqual(data.detected_format, ".vtt")
 
         composed = self.handler.compose(data)
         log_input_expected_result("Round trip format", True, "WEBVTT" in composed)
@@ -331,15 +310,6 @@ Single line subtitle
         second_line_text = lines[1].text
         log_input_expected_result("Single line text", "Single line subtitle", second_line_text)
         self.assertEqual(second_line_text, "Single line subtitle")
-    
-    def test_detected_format_field(self):
-        """Test that detected_format is correctly set to .vtt"""
-        log_test_name("VttFileHandler detected_format field")
-        
-        data = self.handler.parse_string(self.sample_vtt_content)
-        
-        log_input_expected_result("Detected format", ".vtt", data.detected_format)
-        self.assertEqual(data.detected_format, ".vtt")
     
     def test_cue_settings_preservation(self):
         """Test that cue settings are preserved in metadata."""

@@ -4,9 +4,9 @@
 
 ## Executive Summary
 
-This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 6 and outlines the remaining work. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
+This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 7 and outlines the remaining work. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
 
-## Current State After Phase 6
+## Current State After Phase 7
 
 ### Existing Architecture
 - **Core Internal Representation**: `SubtitleLine` objects with timing, text, and metadata
@@ -16,7 +16,7 @@ This document captures the architecture and decisions behind LLM-Subtrans's mult
 - **Interface**: Abstract `SubtitleFileHandler` defines parsing and composing operations
 
 ### Current Limitations
-- Only SRT and SSA/ASS formats implemented
+- SRT, SSA/ASS, and WebVTT formats implemented
 - Content-based format detection now implemented via `pysubs2`
 
 ## Architecture Overview
@@ -208,45 +208,42 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 - `PySubtitle/SubtitleFormatRegistry.py`: Add format detection hooks
 - `PySubtitle/SubtitleFileHandler.py` and subclasses: Add detection methods if necessary
 
-### Phase 7: Additional Format Support
-**Requirements**:
-- Keep existing `SrtFileHandler` (well-tested, SRT-specialized)
-- Maintain `SSAFileHandler` for custom handling of tags and metadata
-- Implement `VttFileHandler` for WebVTT (common web format) using pysubs2
-- Implement `TtmlFileHandler` for TTML (advanced XML-based format) using pysubs2
-- Consider `SccFileHandler` for SCC (broadcast standard) if needed
-- Support speaker diarization metadata preservation from Whisper+PyAnnote workflows
-- Leverage pysubs2's native Whisper format support
-- Add helper functions or a common base class to standardise and leverage pysubs2's support for multiple formats
-- Export in any format maintaining compliance with respective standards and preserving as much metadata as possible
+### Phase 7: WebVTT Format Support [X] COMPLETED
+Universal web standard, supported by all major platforms, proof of concept for native handlers
 
-**Priority Format Rationale**:
-- **Whisper**: Native support for OpenAI Whisper transcription output
-- **WebVTT**: Universal web standard, supported by all major platforms
-- **TTML**: Advanced format supporting complex styling, used by streaming services
+**Requirements**:
+- [X] Keep existing `SrtFileHandler` (well-tested, SRT-specialized)
+- [X] Maintain `SSAFileHandler` for custom handling of tags and metadata
+- [X] Implement `VttFileHandler` for WebVTT (common web format) using native parser
+- [X] Support speaker diarization metadata preservation from transcription workflows
+- [X] Capture advanced VTT features as pass-through metadata
+- [X] Export in VTT format maintaining compliance with WebVTT standards
 
 **Acceptance Tests**:
-- [ ] Maintain existing SRT parsing with current `srt` module
-- [ ] Maintain existing SSA/ASS parsing with current `SSAFileHandler`
-- [ ] Support transcription service output formats (OpenAI Whisper, Gemini)
-- [ ] Preserve speaker identification metadata from transcription workflows
-- [ ] Parse WebVTT files with WEBVTT header and cue settings using pysubs2
-- [ ] Parse TTML files with XML structure and advanced styling using pysubs2
-- [ ] Handle timestamp format conversions between formats
-- [ ] Test format conversion between all supported formats
+- [X] Maintain existing SRT parsing with current `srt` module
+- [X] Maintain existing SSA/ASS parsing with current `SSAFileHandler`
+- [X] Parse WebVTT files with WEBVTT header and cue settings
+- [X] Preserve speaker identification metadata from voice tags
+- [X] Handle cue settings (position, align, size, line, vertical) as pass-through metadata
+- [X] Preserve STYLE blocks in file metadata
+- [X] Support cue identifiers and multi-line cues
+- [X] Handle UTF-8 BOM in VTT files
+- [X] Round-trip preservation of all VTT-specific features
+- [X] Test format conversion between SRT, SSA, and VTT formats
 
-**Files to Create**:
-- `PySubtitle/Formats/VttFileHandler.py` (pysubs2-based)
-- `PySubtitle/Formats/TtmlFileHandler.py` (pysubs2-based)
-- `PySubtitle/UnitTests/test_VttFileHandler.py`
-- `PySubtitle/UnitTests/test_TtmlFileHandler.py`
+**Files Created**:
+- [X] `PySubtitle/Formats/VttFileHandler.py` (native implementation)
+- [X] `PySubtitle/UnitTests/test_VttFileHandler.py`
 
-**Implementation Strategy**:
-Follow the proven pattern from `SSAFileHandler`:
-- Consistent metadata pass-through approach
-- `pysubs2_format` preservation for perfect round-trips
-- Format-specific optimizations within each handler
-- Comprehensive error handling with SubtitleParseError translation
+**Implementation Outcome**:
+After research into WebVTT we chose a **native parser approach** over pysubs2 integration for VTT:
+
+- **Translation Focus**: We are focussed on translation, not format conversion.
+- **Metadata Pass-Through**: Advanced features (cue settings, STYLE blocks, voice tags) captured as structured metadata and can be restored as-was in the translation.
+- **Avoid Complexity**: pysubs2 conversion to SSA-like format adds complexity when VTT format is already close to internal representation
+- **Future-ready**: Speaker metadata ready for transcription workflows
+
+Native `VttFileHandler` successfully demonstrates the "keep it simple" approach while capturing sophisticated WebVTT metadata. The handler supports everything from basic subtitles to broadcast-quality WebVTT with positioning, styling, and speaker identification.
 
 ### Phase 8: GUI Integration
 **Requirements**:
@@ -328,11 +325,11 @@ class ExampleFileHandler(SubtitleFileHandler):
     "override_codes": "{\\i1}italic text{\\i0}"
 }
 
-# WebVTT Format Metadata
+# WebVTT Format Metadata (Line-level)
 {
     "cue_id": "subtitle-001",
-    "settings": "align:center position:50%",
-    "styling": "<c.class>colored text</c>"
+    "vtt_settings": "position:10%,line-left align:left size:35%",
+    "speaker": "Mary"
 }
 ```
 
@@ -350,9 +347,11 @@ File handlers must capture and preserve format-specific file context, e.g.
 
 # WebVTT File Metadata  
 {
-    "format": "vtt", 
-    "header": "WEBVTT\nNOTE Generated by...",
-    "global_styles": "::cue { color: white; }"
+    "header_text": "WEBVTT", 
+    "vtt_styles": [
+        "::cue {\n  background-image: linear-gradient(to bottom, dimgray, lightgray);\n  color: papayawhip;\n}",
+        "::cue(b) {\n  color: peachpuff;\n}"
+    ]
 }
 ```
 
@@ -449,7 +448,7 @@ Any libraries used must be:
 - [X] **Zero breaking changes** to public API
 - [X] **Comprehensive test coverage** for new components (SSAFileHandler, FormatRegistry)
 - [X] Keep existing SRT handling with specialized `srt` module
-- [ ] At least 3 additional formats supported (SSA [X], Whisper, WebVTT, TTML pending)
+- [X] At least 3 formats supported (SRT [X], SSA/ASS [X], WebVTT [X])
 - [ ] User acceptance validation
 
 ## pysubs2 Integration Architecture

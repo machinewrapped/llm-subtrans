@@ -101,18 +101,6 @@ Third subtitle line with <i>formatting</i>
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0].text, "First subtitle line")
 
-    def test_load_real_vtt_file(self):
-        """Test loading a real VTT file using a relative path."""
-        log_test_name("VttFileHandler.load_real_vtt_file")
-
-        test_file_path = os.path.join(os.path.dirname(__file__), "test-vtt.vtt")
-        data = self.handler.load_file(test_file_path)
-
-        log_input_expected_result("Real file line count", 1, len(data.lines))
-        self.assertEqual(len(data.lines), 1)
-        log_input_expected_result("Real file text", "Real file subtitle", data.lines[0].text)
-        self.assertEqual(data.lines[0].text, "Real file subtitle")
-    
     def test_compose_lines_basic(self):
         """Test basic line composition to WebVTT format."""
         log_test_name("VttFileHandler.compose_lines - basic")

@@ -46,7 +46,7 @@ class TestLocalization(unittest.TestCase):
         self.assertEqual(en_result, "Cancel")
 
     def test_missing_language_fallback(self):
-        if skip_if_debugger_attached("test_missing_language_fallback"):
+        if skip_if_debugger_attached(self._testMethodName):
             return
             
         log_test_name("Localization: missing_language_fallback")

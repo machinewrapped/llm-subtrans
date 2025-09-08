@@ -4,9 +4,9 @@
 
 ## Executive Summary
 
-This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 5 and outlines the remaining work. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
+This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 6 and outlines the remaining work. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
 
-## Current State After Phase 5
+## Current State After Phase 6
 
 ### Existing Architecture
 - **Core Internal Representation**: `SubtitleLine` objects with timing, text, and metadata
@@ -36,14 +36,13 @@ This document captures the architecture and decisions behind LLM-Subtrans's mult
 The `SubtitleFormatRegistry`:
 - Auto-discovers handlers in `PySubtitle/Formats/` directory
 - Maps file extensions to appropriate handlers using priority values
+- Can auto-detect format based on content
 - Supports disabling auto-discovery for controlled test environments
-- Can be extended with content-based detection in the future
 
 ### Handler Auto-Discovery
 - Handler classes in `PySubtitle/Formats/*.py` that inherit from `SubtitleFileHandler` are automatically registered
 - Registration is driven by each handler's `SUPPORTED_EXTENSIONS` class variable
 - Higher priority handlers override lower priority ones
-- Runtime registration allows dynamic handler loading
 
 ### Core Use Case Focus
 The implementation prioritizes **subtitle translation** over format conversion:
@@ -80,7 +79,6 @@ The implementation prioritizes **subtitle translation** over format conversion:
 **Acceptance Tests**:
  - [x] Existing SRT files continue to load without changes via `SubtitleProject`
  - [x] `SubtitleProject` detects format automatically by file extension
- - [x] `Subtitles` constructor requires `file_handler` parameter
  - [x] All existing unit tests continue to pass
  - [x] Project files instantiate appropriate file handler when loading project
 
@@ -127,14 +125,9 @@ After implementation comparison, `pysubs2` was identified as the superior approa
 - **Professional quality**: Proper format structure and compliance
 - **Future-proof**: Automatic updates as library evolves
 
-**Format-Specific Strategy**: 
-- **SRT**: Keep existing `srt` module (well-tested, SRT-specialized)
-- **SSA/WebVTT/TTML**: Use pysubs2 for professional-grade handling
-- **Specialized formats**: Evaluate on case-by-case basis
-
 ### Phase 4: Format conversion
 
-We will provide the option to read from one format and write to another as a convenience, but the focus of the application is translation of existing subtitles, format conversion is not a core feature (it is best handled by dedicated tools).
+We provide the option to read from one format and write to another as a convenience, but the focus of the application is translation of existing subtitles, format conversion is not a core feature (it is best handled by dedicated tools).
 
 ### Conversion process
 - Source format is autodetected based on the input filename
@@ -176,6 +169,10 @@ We will need to add a "format" field to new project settings to allow the user t
 - Update architecture.md with details of the SubtitleFormatRegistry and SubtitleFileHandler
 - Review architecture.md and readme.md in full to ensure they are current and correct
 
+**Files to Modify**:
+- CLI argument parsing (subtrans_common.py)
+- Documentation (readme.md, architecture.md)
+
 **Acceptance Tests**:
 - [X] CLI can list supported formats (e.g., `--list-formats`)
 - [X] Help documentation includes format information
@@ -184,10 +181,6 @@ We will need to add a "format" field to new project settings to allow the user t
 
 **Implementation Outcome**:
 Phase 5 adds a `--list-formats` option to all CLI tools, documents supported extensions, and improves error messages with available format hints. The architecture documentation now explains the `SubtitleFormatRegistry` and `SubtitleFileHandler` components, and README examples demonstrate format-specific usage and conversion.
-
-**Files to Modify**:
-- CLI argument parsing (subtrans_common.py)
-- Documentation (readme.md, architecture.md)
 
 ### Phase 6: Enhanced Format Detection
 
@@ -228,17 +221,17 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 - Export in any format maintaining compliance with respective standards and preserving as much metadata as possible
 
 **Priority Format Rationale**:
+- **Whisper**: Native support for OpenAI Whisper transcription output
 - **WebVTT**: Universal web standard, supported by all major platforms
 - **TTML**: Advanced format supporting complex styling, used by streaming services
-- **Whisper**: Native support for OpenAI Whisper transcription output
 
 **Acceptance Tests**:
 - [ ] Maintain existing SRT parsing with current `srt` module
 - [ ] Maintain existing SSA/ASS parsing with current `SSAFileHandler`
+- [ ] Support transcription service output formats (OpenAI Whisper, Gemini)
+- [ ] Preserve speaker identification metadata from transcription workflows
 - [ ] Parse WebVTT files with WEBVTT header and cue settings using pysubs2
 - [ ] Parse TTML files with XML structure and advanced styling using pysubs2
-- [ ] Preserve speaker identification metadata from transcription workflows
-- [ ] Support transcription service output formats (OpenAI Whisper, Gemini)
 - [ ] Handle timestamp format conversions between formats
 - [ ] Test format conversion between all supported formats
 
@@ -251,7 +244,7 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 **Implementation Strategy**:
 Follow the proven pattern from `SSAFileHandler`:
 - Consistent metadata pass-through approach
-- `_pysubs2_original` preservation for perfect round-trips
+- `pysubs2_format` preservation for perfect round-trips
 - Format-specific optimizations within each handler
 - Comprehensive error handling with SubtitleParseError translation
 
@@ -386,17 +379,13 @@ For formats that don't have native indices (like SSA):
 - **Breaking Changes**: Modifications to core `Subtitles` class could break existing functionality
   - **Mitigation**: Comprehensive regression testing, backward compatibility preservation
 - **Performance Impact**: Format detection could slow file loading
-  - **Mitigation**: Efficient detection algorithms, caching mechanisms
+  - **Mitigation**: Measure and respond
 
 ### Medium Risk
 - **Format Complexity**: SSA format has many advanced features that could be difficult to implement
   - **Mitigation**: Phased implementation, focus on common use cases first
 - **Metadata Loss**: Converting between formats could lose format-specific information
-  - **Mitigation**: Comprehensive metadata preservation, format-specific warnings
-
-### Low Risk
-- **Registry Discovery**: Auto-discovery mechanism could fail to find handlers
-  - **Mitigation**: Explicit registration fallback, detailed error messages
+  - **Mitigation**: Preserve and convert metadata as much as possible, but format conversion is not a priority focus for the app.
 
 ## Testing Strategy
 
@@ -448,10 +437,8 @@ Any libraries used must be:
 4. GUI provides intuitive format selection
 
 ### For Developers
-1. Existing `SubtitleFileHandler` interface maintained and extended
-2. New handlers follow established patterns
-3. Format registry provides central management
-4. Comprehensive documentation for adding new formats
+1. New handlers follow established patterns
+2. Format registry provides central management
 
 ## Success Metrics
 
@@ -462,34 +449,23 @@ Any libraries used must be:
 - [X] **Zero breaking changes** to public API
 - [X] **Comprehensive test coverage** for new components (SSAFileHandler, FormatRegistry)
 - [X] Keep existing SRT handling with specialized `srt` module
-- [ ] At least 3 additional formats supported (SSA [X], WebVTT, TTML pending)
+- [ ] At least 3 additional formats supported (SSA [X], Whisper, WebVTT, TTML pending)
 - [ ] User acceptance validation
-
-**Current Status**: Phase 1-3 completed successfully. pysubs2 integration strategy validated and ready for Phase 4 implementation.
 
 ## pysubs2 Integration Architecture
 
-### Design Philosophy
-- **Format-Specific Handlers**: Maintain separate handler classes for each format to enable future format-specific optimizations
+All pysubs2-based handlers follow the pattern from `SSAFileHandler` (TODO: extract commonalities into a helper or base class)
+
+- **Format-Specific Handlers**: Maintain separate handler classes for each format to enable format-specific optimizations
 - **pysubs2 Foundation**: Leverage pysubs2's robust parsing and composition engines
 - **Metadata Pass-Through**: Preserve all format-specific metadata for round-trip fidelity
 - **Translation Focus**: Optimize for subtitle translation workflow while maintaining format integrity
-
-### Handler Template Pattern
-All pysubs2-based handlers follow the pattern from `SSAFileHandler` (TODO: extract a pysubs2 file parser to handle commonalities)
 
 ### Metadata Strategy
 - **Standard Fields**: Common subtitle properties (timing, text, style, layer)
 - **Format-Specific**: Preserve format-unique properties in structured metadata
 - **Round-Trip Preservation**: Store original pysubs2 object data in `_pysubs2_original`
-- **Translation-Friendly**: Basic inline formatting (bold, italic) accessible to translators
-
-### Migration Benefits
-- **Immediate**: Professional-grade format handling
-- **Consistency**: Unified behavior across all formats
-- **Reliability**: Battle-tested parsing and error handling
-- **Future-Proof**: Automatic support for new formats as pysubs2 evolves
-- **Maintainability**: Less custom parsing code to maintain
+- **Translation-Friendly**: Basic inline formatting (bold, italic) accessible to translators as SRT/HTML style tags
 
 ## Future Development considerations: Transcription + Translation Workflow
 
@@ -544,9 +520,3 @@ The multi-format architecture naturally supports transcription service outputs:
 ### Advanced Features
 - **Format-specific editing**: Maintain format integrity during translation
 - **Quality validation**: Format compliance checking and repair
-
-## Conclusion
-
-This proposal provides a comprehensive roadmap for implementing multi-format subtitle support in LLM-Subtrans. The phased approach minimizes risk while ensuring backward compatibility and extensibility. The format-agnostic architecture will enable easy addition of new formats in the future while maintaining the clean separation between business logic and file I/O operations.
-
-The implementation leverages the existing `SubtitleFileHandler` interface and builds upon the solid foundation already established in the codebase. By following this plan, LLM-Subtrans will become a more versatile subtitle translation tool that can serve many more users.

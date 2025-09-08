@@ -409,7 +409,7 @@ Styled subtitle
         vtt_with_speakers = """WEBVTT
 
 00:00:00.000 --> 00:00:02.000
-<v.first.loud Esme>It's a blue apple tree!
+<v.first.loud Esme>It's a blue apple tree!</v>
 
 00:00:02.000 --> 00:00:04.000
 <v Mary>No way!</v>
@@ -418,7 +418,7 @@ Styled subtitle
 <v Esme>Hee!</v> <i>laughter</i>
 
 00:00:06.000 --> 00:00:08.000
-<v.loud Mary>That's awesome!
+<v.loud Mary>That's awesome!</v>
 """
         
         data = self.handler.parse_string(vtt_with_speakers)
@@ -426,18 +426,18 @@ Styled subtitle
         
         self.assertEqual(len(lines), 4)
         
-        # Check speaker extraction
+        # Check speaker extraction - partial voice tags are ignored
         speakers = [line.metadata.get('speaker') for line in lines]
-        expected_speakers = ['Esme', 'Mary', 'Esme', 'Mary']
+        expected_speakers = ['Esme', 'Mary', None, 'Mary']
         log_input_expected_result("Extracted speakers", expected_speakers, speakers)
         self.assertEqual(speakers, expected_speakers)
         
-        # Check text processing (voice tags removed)
+        # Check text processing (full-line voice tags removed, partial tags left)
         texts = [line.text for line in lines]
         expected_texts = [
             "It's a blue apple tree!",
             "No way!",
-            "Hee! <i>laughter</i>",
+            "<v Esme>Hee!</v> <i>laughter</i>",
             "That's awesome!"
         ]
         log_input_expected_result("Processed texts", expected_texts, texts)
@@ -454,6 +454,94 @@ Styled subtitle
         rt_speakers = [line.metadata.get('speaker') for line in round_trip_data.lines]
         log_input_expected_result("Round-trip speakers", expected_speakers, rt_speakers)
         self.assertEqual(rt_speakers, expected_speakers)
+    
+    voice_tag_cases = {
+        "<v Mary>Hello world</v>": "Hello world",
+        "<v.class>Test text</v>": "Test text", 
+        "<v.first-second Mary>Hyphenated class</v>": "Hyphenated class",
+        "<v.multi-word-class John>Multiple hyphens</v>": "Multiple hyphens",
+        "<v.under_score-mixed>Mixed separators</v>": "Mixed separators",
+        "<v>No attributes</v>": "No attributes",
+        "<v.class1.class2>Multiple classes</v>": "Multiple classes",
+        "Text <v Speaker>with voice</v> inside": "Text <v Speaker>with voice</v> inside",
+        "<v.loud Mary>Start</v> and <v John>end</v>": "<v.loud Mary>Start</v> and <v John>end</v>"
+    }
+    
+    def test_voice_tag_stripping(self):
+        """Test that all voice tag variations are completely stripped."""
+        log_test_name("VttFileHandler voice tag stripping")
+        
+        for vtt_text, expected_clean in self.voice_tag_cases.items():
+            with self.subTest(vtt_text=vtt_text):
+                result_text, _ = self.handler._process_vtt_text(vtt_text)
+                log_input_expected_result(vtt_text, expected_clean, result_text)
+                self.assertEqual(result_text, expected_clean)
+    
+    voice_metadata_cases = {
+        "<v Mary>Hello</v>": {"speaker": "Mary"},
+        "<v.class>Test</v>": {"voice_classes": ["class"]},
+        "<v.first-second Mary>Text</v>": {"voice_classes": ["first-second"], "speaker": "Mary"},
+        "<v.class1.class2 John>Multiple</v>": {"voice_classes": ["class1", "class2"], "speaker": "John"},
+        "<v>No attrs</v>": {},
+        "<v.loud>Class only</v>": {"voice_classes": ["loud"]},
+        "<v Speaker>Name only</v>": {"speaker": "Speaker"},
+        "Text <v Speaker>partial</v> inside": {}
+    }
+    
+    def test_voice_tag_metadata_extraction(self):
+        """Test that voice tag metadata is correctly extracted."""
+        log_test_name("VttFileHandler voice tag metadata extraction")
+        
+        for vtt_text, expected_metadata in self.voice_metadata_cases.items():
+            with self.subTest(vtt_text=vtt_text):
+                _, result = self.handler._process_vtt_text(vtt_text)
+                log_input_expected_result(vtt_text, expected_metadata, result)
+                self.assertEqual(result, expected_metadata)
+    
+    def test_voice_tag_round_trip(self):
+        """Test that voice tags are preserved through parse/compose cycle."""
+        log_test_name("VttFileHandler voice tag round-trip")
+        
+        test_vtt = """WEBVTT
+
+00:00:01.000 --> 00:00:02.000
+<v.first-second Mary>Hyphenated class text</v>
+
+00:00:02.000 --> 00:00:03.000
+<v.class1.class2 John>Multiple classes</v>
+
+00:00:03.000 --> 00:00:04.000
+<v Speaker>Simple speaker</v>
+"""
+        
+        # Parse the VTT
+        data = self.handler.parse_string(test_vtt)
+        lines = data.lines
+        
+        # Verify clean text extraction
+        clean_texts = [line.text for line in lines]
+        expected_clean = ["Hyphenated class text", "Multiple classes", "Simple speaker"]
+        log_input_expected_result("Clean texts", expected_clean, clean_texts)
+        self.assertEqual(clean_texts, expected_clean)
+        
+        # Compose back to VTT
+        composed = self.handler.compose(data)
+        
+        # Verify tags are restored (no duplication)
+        log_input_expected_result("No tag duplication", False, "<v.first-second Mary><v.first-second Mary>" in composed)
+        self.assertNotIn("<v.first-second Mary><v.first-second Mary>", composed)
+        self.assertNotIn("</v></v>", composed)
+        
+        # Parse again to verify metadata preservation
+        round_trip_data = self.handler.parse_string(composed)
+        rt_lines = round_trip_data.lines
+        
+        # Check metadata preservation
+        first_metadata = rt_lines[0].metadata
+        expected_first = {"voice_classes": ["first-second"], "speaker": "Mary"}
+        log_input_expected_result("Round-trip metadata", expected_first, {k: v for k, v in first_metadata.items() if k in ["voice_classes", "speaker"]})
+        self.assertEqual(first_metadata.get("voice_classes"), ["first-second"])
+        self.assertEqual(first_metadata.get("speaker"), "Mary")
 
 if __name__ == '__main__':
     unittest.main()

@@ -25,9 +25,7 @@ class VttFileHandler(SubtitleFileHandler):
     
     # Regex patterns for VTT parsing
     _TIMESTAMP_PATTERN = regex.compile(r'(\d{2,}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2,}):(\d{2}):(\d{2})\.(\d{3})(.*)')
-    _VOICE_TAG_PATTERN = regex.compile(r'<v(?:[^>]*)>|</v>')
-    _VOICE_TAG_DETECTION = regex.compile(r'<v(?:[^>]*)')
-    _VOICE_TAG_METADATA = regex.compile(r'<v((?:\.[\w-]+)*)(?:\s+([^>]+))?>')
+    _VOICE_TAG_PATTERN = regex.compile(r'^\s*<v((?:\.[\w-]+)*)(?:\s+([^>]+))?>((?:(?!</?v).)*)</v>\s*$')
     _LANG_TAG_PATTERN = regex.compile(r'<lang(?:\s+([^>]+))?>([^<]*)</lang>')
     _LANG_CODE_PATTERN = regex.compile(r'lang="([^"]+)"')
     _STYLE_BLOCK_START = regex.compile(r'^\s*STYLE\s*$')
@@ -205,8 +203,7 @@ class VttFileHandler(SubtitleFileHandler):
         cue_settings = timestamp_match.group(9).strip() if timestamp_match.group(9) else ""
         
         cue_text, next_idx = self._parse_cue_text(lines, timestamp_line_idx + 1)
-        voice_metadata = self._extract_voice_metadata(cue_text) if self._VOICE_TAG_DETECTION.search(cue_text) else {}
-        processed_text = self._process_vtt_text(cue_text)
+        processed_text, voice_metadata = self._process_vtt_text(cue_text)
         
         line_metadata = {}
         if cue_id:
@@ -279,48 +276,46 @@ class VttFileHandler(SubtitleFileHandler):
         
         return '\n'.join(note_lines) if len(note_lines) > 1 else note_lines[0], i
     
-    def _extract_voice_metadata(self, text: str) -> dict:
-        """Extract comprehensive voice tag metadata including CSS classes and language tags."""
-        voice_metadata = {}
+    def _process_vtt_text(self, text: str) -> tuple[str, dict]:
+        """Process VTT text and extract metadata for internal representation."""
+        if not text:
+            return "", {}
         
-        # Extract CSS classes and speaker name: <v.class1.class2 Speaker Name>
-        match = self._VOICE_TAG_METADATA.search(text)
+        metadata = {}
+        processed_text = text
         
-        if match:
-            css_classes = match.group(1)
-            speaker_name = match.group(2)
+        # Only process voice tags that wrap the entire line
+        voice_match = self._VOICE_TAG_PATTERN.match(processed_text)
+        if voice_match:
+            css_classes, speaker_name, voice_content = voice_match.groups()
             
             if css_classes:
                 classes = css_classes[1:].split('.') if css_classes.startswith('.') else []
-                voice_metadata['voice_classes'] = classes
+                metadata['voice_classes'] = classes
             
             if speaker_name:
-                voice_metadata['speaker'] = speaker_name.strip()
+                metadata['speaker'] = speaker_name.strip()
+            
+            # Replace with just the content
+            processed_text = voice_content
         
-        # Extract language tags: <lang lang="zh">中文</lang>
-        lang_matches = self._LANG_TAG_PATTERN.findall(text)
+        # Extract language tag metadata and content
+        lang_matches = self._LANG_TAG_PATTERN.findall(processed_text)
         if lang_matches:
             lang_segments = []
             for lang_attr, lang_content in lang_matches:
                 lang_info = {'text': lang_content}
                 if lang_attr:
-                    # Parse lang="code" attribute
                     lang_code_match = self._LANG_CODE_PATTERN.search(lang_attr)
                     if lang_code_match:
                         lang_info['lang'] = lang_code_match.group(1)
                 lang_segments.append(lang_info)
-            voice_metadata['lang_segments'] = lang_segments
+            metadata['lang_segments'] = lang_segments
+            
+            # Replace language tags with their content
+            processed_text = self._LANG_TAG_PATTERN.sub(r'\2', processed_text)
         
-        return voice_metadata
-    
-    def _process_vtt_text(self, text: str) -> str:
-        """Process VTT text for internal representation, preserving HTML tags."""
-        if not text:
-            return ""
-        
-        text = self._VOICE_TAG_PATTERN.sub('', text)
-        text = self._LANG_TAG_PATTERN.sub(r'\2', text)
-        return text.strip()
+        return processed_text.strip(), metadata
     
     def _restore_vtt_text(self, text: str, metadata: dict) -> str:
         """Restore VTT text for output, adding back voice and language tags."""

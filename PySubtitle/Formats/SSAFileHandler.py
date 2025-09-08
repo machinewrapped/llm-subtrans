@@ -19,6 +19,7 @@ from PySubtitle.Helpers.Localization import _
 _START_TAGS_PATTERN = regex.compile(r'^(\{[^}]*\})+')
 _TAG_BLOCK_PATTERN = regex.compile(r'\{[^}]+\}')
 _STANDALONE_BASIC_TAG_PATTERN = regex.compile(r'^\{\\(?:[ibs][01]|u[01]?)\}$')
+# Matches SSA basic formatting tags: italic (\i1, \i0), bold (\b1, \b0), strikeout (\s1, \s0), underline (\u1, \u0)
 _BASIC_TAG_PATTERN = regex.compile(r'\\(?:[ibs][01]|u[01]?)')
 
 # Precompiled SSA to HTML conversion patterns

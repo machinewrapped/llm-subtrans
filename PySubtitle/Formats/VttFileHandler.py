@@ -26,8 +26,6 @@ class VttFileHandler(SubtitleFileHandler):
     # Regex patterns for VTT parsing
     _TIMESTAMP_PATTERN = regex.compile(r'(\d{2,}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2,}):(\d{2}):(\d{2})\.(\d{3})(.*)')
     _VOICE_TAG_PATTERN = regex.compile(r'^\s*<v((?:\.[\w-]+)*)(?:\s+([^>]+))?>((?:(?!</?v).)*)</v>\s*$')
-    _LANG_TAG_PATTERN = regex.compile(r'<lang(?:\s+([^>]+))?>([^<]*)</lang>')
-    _LANG_CODE_PATTERN = regex.compile(r'lang="([^"]+)"')
     _STYLE_BLOCK_START = regex.compile(r'^\s*STYLE\s*$')
     _NOTE_BLOCK_START = regex.compile(r'^\s*NOTE\s')
 
@@ -299,57 +297,20 @@ class VttFileHandler(SubtitleFileHandler):
             # Replace with just the content
             processed_text = voice_content
         
-        # Extract language tag metadata and content
-        lang_matches = self._LANG_TAG_PATTERN.findall(processed_text)
-        if lang_matches:
-            lang_segments = []
-            for lang_attr, lang_content in lang_matches:
-                lang_info = {'text': lang_content}
-                if lang_attr:
-                    lang_code_match = self._LANG_CODE_PATTERN.search(lang_attr)
-                    if lang_code_match:
-                        lang_info['lang'] = lang_code_match.group(1)
-                lang_segments.append(lang_info)
-            metadata['lang_segments'] = lang_segments
-            
-            # Replace language tags with their content
-            processed_text = self._LANG_TAG_PATTERN.sub(r'\2', processed_text)
-        
         return processed_text.strip(), metadata
     
     def _restore_vtt_text(self, text: str, metadata: dict) -> str:
-        """Restore VTT text for output, adding back voice and language tags."""
+        """Restore VTT text for output, adding back voice tags."""
         if not text:
             return ""
         
-        result_text = text
-        
-        # Restore language segments if present
-        lang_segments = metadata.get('lang_segments', [])
-        if lang_segments:
-            for segment in lang_segments:
-                segment_text = segment['text']
-                if segment_text in result_text:
-                    if 'lang' in segment:
-                        lang_tag = f'<lang lang="{segment["lang"]}">{segment_text}</lang>'
-                    else:
-                        lang_tag = f'<lang>{segment_text}</lang>'
-                    result_text = result_text.replace(segment_text, lang_tag, 1)
-        
         # Reconstruct voice tag with CSS classes and speaker
         voice_classes = metadata.get('voice_classes', [])
-        speaker = metadata.get('speaker')
+        speaker = metadata.get('speaker', '')
         
         if voice_classes or speaker:
-            voice_tag = '<v'
-            
-            if voice_classes:
-                voice_tag += '.' + '.'.join(voice_classes)
-            
-            if speaker:
-                voice_tag += f' {speaker}' if voice_classes else f' {speaker}'
-            
-            voice_tag += '>'
-            return f"{voice_tag}{result_text}</v>"
-        
-        return result_text
+            tag_parts = '.'.join(['v'] + voice_classes)
+            speaker_part = f' {speaker}' if speaker else ''
+            return f"<{tag_parts}{speaker_part}>{text}</v>"
+        else:
+            return text

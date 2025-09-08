@@ -27,6 +27,7 @@ class VttFileHandler(SubtitleFileHandler):
     _TIMESTAMP_PATTERN = regex.compile(r'(\d{2,}):(\d{2}):(\d{2})\.(\d{3})\s*-->\s*(\d{2,}):(\d{2}):(\d{2})\.(\d{3})(.*)')
     _VOICE_TAG_PATTERN = regex.compile(r'<v(?:\.[\w.]+)?\s+([^>]+)>')
     _CLOSING_VOICE_TAG_PATTERN = regex.compile(r'</v>')
+    _LANG_TAG_PATTERN = regex.compile(r'<lang(?:\s+([^>]+))?>([^<]*)</lang>')
     _STYLE_BLOCK_START = regex.compile(r'^\s*STYLE\s*$')
     _NOTE_BLOCK_START = regex.compile(r'^\s*NOTE\s')
 
@@ -284,7 +285,7 @@ class VttFileHandler(SubtitleFileHandler):
         return None
     
     def _extract_voice_metadata(self, text: str) -> dict:
-        """Extract comprehensive voice tag metadata including CSS classes."""
+        """Extract comprehensive voice tag metadata including CSS classes and language tags."""
         voice_metadata = {}
         
         # Enhanced pattern to capture CSS classes: <v.class1.class2 Speaker Name>
@@ -302,6 +303,20 @@ class VttFileHandler(SubtitleFileHandler):
             if speaker_name:
                 voice_metadata['speaker'] = speaker_name.strip()
         
+        # Extract language tags: <lang lang="zh">中文</lang>
+        lang_matches = self._LANG_TAG_PATTERN.findall(text)
+        if lang_matches:
+            lang_segments = []
+            for lang_attr, lang_content in lang_matches:
+                lang_info = {'text': lang_content}
+                if lang_attr:
+                    # Parse lang="code" attribute
+                    lang_code_match = regex.search(r'lang="([^"]+)"', lang_attr)
+                    if lang_code_match:
+                        lang_info['lang'] = lang_code_match.group(1)
+                lang_segments.append(lang_info)
+            voice_metadata['lang_segments'] = lang_segments
+        
         return voice_metadata
     
     def _process_vtt_text(self, text: str) -> str:
@@ -311,12 +326,27 @@ class VttFileHandler(SubtitleFileHandler):
         
         text = self._VOICE_TAG_PATTERN.sub('', text)
         text = self._CLOSING_VOICE_TAG_PATTERN.sub('', text)
+        text = self._LANG_TAG_PATTERN.sub(r'\2', text)
         return text.strip()
     
     def _restore_vtt_text(self, text: str, metadata: dict) -> str:
-        """Restore VTT text for output, adding back voice tags if needed."""
+        """Restore VTT text for output, adding back voice and language tags."""
         if not text:
             return ""
+        
+        result_text = text
+        
+        # Restore language segments if present
+        lang_segments = metadata.get('lang_segments', [])
+        if lang_segments:
+            for segment in lang_segments:
+                segment_text = segment['text']
+                if segment_text in result_text:
+                    if 'lang' in segment:
+                        lang_tag = f'<lang lang="{segment["lang"]}">{segment_text}</lang>'
+                    else:
+                        lang_tag = f'<lang>{segment_text}</lang>'
+                    result_text = result_text.replace(segment_text, lang_tag, 1)
         
         # Reconstruct voice tag with CSS classes and speaker
         voice_classes = metadata.get('voice_classes', [])
@@ -332,6 +362,6 @@ class VttFileHandler(SubtitleFileHandler):
                 voice_tag += f' {speaker}' if voice_classes else f' {speaker}'
             
             voice_tag += '>'
-            return f"{voice_tag}{text}</v>"
+            return f"{voice_tag}{result_text}</v>"
         
-        return text
+        return result_text

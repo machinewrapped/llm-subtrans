@@ -103,7 +103,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         project = SubtitleProject()
         project.InitialiseProject(path)
         
-        log_input_expected_result("initial format", ".srt", project.subtitles.format)
+        log_input_expected_result("project.subtitles.format", ".srt", project.subtitles.format)
         self.assertEqual(project.subtitles.format, ".srt")
         
         # Set outputpath so file handler can be restored on load
@@ -116,9 +116,9 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         reopened_project = SubtitleProject()
         reopened_project.ReadProjectFile(project_path)
         
-        log_input_expected_result("reopened subtitles not None", True, reopened_project.subtitles is not None)
+        log_input_expected_result("reopened_project.subtitles", True, reopened_project.subtitles is not None)
         self.assertIsNotNone(reopened_project.subtitles)
-        log_input_expected_result("reopened format", ".srt", reopened_project.subtitles.format)
+        log_input_expected_result("reopened_project.subtitles.format", ".srt", reopened_project.subtitles.format)
         self.assertEqual(reopened_project.subtitles.format, ".srt")
 
     def test_SrtHandlerBasicFunctionality(self):
@@ -137,11 +137,11 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         self.assertGreater(len(subtitles.originals), 0)
         line = subtitles.originals[0]
         assert line.text is not None
-        log_input_expected_result("line text", "Hello <b>World</b>!", line.text)
+        log_input_expected_result("line.text", "Hello <b>World</b>!", line.text)
         self.assertEqual(line.text, "Hello <b>World</b>!")
-        log_input_expected_result("line start seconds", 1.0, line.start.total_seconds())
+        log_input_expected_result("line.start", 1.0, line.start.total_seconds())
         self.assertEqual(line.start.total_seconds(), 1.0)
-        log_input_expected_result("line end seconds", 3.0, line.end.total_seconds())
+        log_input_expected_result("line.end", 3.0, line.end.total_seconds())
         self.assertEqual(line.end.total_seconds(), 3.0)
 
     def test_AssHandlerBasicFunctionality(self):
@@ -164,11 +164,11 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\b1}Hello{\\b0} World!
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, handler)
         
-        log_input_expected_result("line count", 1, subtitles.linecount)
+        log_input_expected_result("subtitles.linecount", 1, subtitles.linecount)
         self.assertEqual(subtitles.linecount, 1)
-        log_input_expected_result("pysubs2_format in metadata keys", True, 'pysubs2_format' in subtitles.metadata.keys())
+        log_input_expected_result("subtitles.metadata.keys", True, 'pysubs2_format' in subtitles.metadata.keys())
         self.assertIn('pysubs2_format', subtitles.metadata)
-        log_input_expected_result("styles in metadata keys", True, 'styles' in subtitles.metadata.keys())
+        log_input_expected_result("subtitles.metadata.keys", True, 'styles' in subtitles.metadata.keys())
         self.assertIn('styles', subtitles.metadata)
         
         assert subtitles.originals is not None
@@ -177,7 +177,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\b1}Hello{\\b0} World!
         assert line.text is not None
         log_input_expected_result("line text converted to HTML", "<b>Hello</b> World!", line.text)
         self.assertEqual(line.text, "<b>Hello</b> World!")
-        log_input_expected_result("line start seconds", 1.0, line.start.total_seconds())
+        log_input_expected_result("line.start.total_seconds", 1.0, line.start.total_seconds())
         self.assertEqual(line.start.total_seconds(), 1.0)
 
     def test_AssColorHandling(self):
@@ -205,17 +205,17 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test line
         default_style = subtitles.metadata['styles'].get('Default', {})
         primary_color = default_style.get('primarycolor')
         
-        log_input_expected_result("primary color found", True, primary_color is not None)
+        log_input_expected_result(primary_color, True, primary_color is not None)
         self.assertIsNotNone(primary_color)
         
-        log_input_expected_result("primary color type", True, isinstance(primary_color, Color))
+        log_input_expected_result(primary_color, True, isinstance(primary_color, Color))
         self.assertIsInstance(primary_color, Color)
         
-        log_input_expected_result("primary color red component", 0, primary_color.r)
+        log_input_expected_result(primary_color, 0, primary_color.r)
         self.assertEqual(primary_color.r, 0)
-        log_input_expected_result("primary color green component", 0, primary_color.g)
+        log_input_expected_result(primary_color, 0, primary_color.g)
         self.assertEqual(primary_color.g, 0)
-        log_input_expected_result("primary color blue component", 255, primary_color.b)
+        log_input_expected_result(primary_color, 255, primary_color.b)
         self.assertEqual(primary_color.b, 255)
 
     def test_AssInlineFormatting(self):
@@ -267,11 +267,11 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Bold text 
         self.assertGreater(len(subtitles.originals), 0)
         line = subtitles.originals[0]
         assert line.text is not None
-        log_input_expected_result("override_tags_start in line metadata", True, 'override_tags_start' in line.metadata)
+        log_input_expected_result("line.metadata", True, 'override_tags_start' in line.metadata)
         self.assertIn('override_tags_start', line.metadata)
-        log_input_expected_result("positioning tag in override tags", True, '\\\\pos(100,200)' in line.metadata['override_tags_start'])
+        log_input_expected_result("line.metadata", True, '\\\\pos(100,200)' in line.metadata['override_tags_start'])
         self.assertIn('\\pos(100,200)', line.metadata['override_tags_start'])
-        log_input_expected_result("basic formatting converted to HTML", "<b>Bold text with positioning</b>", line.text)
+        log_input_expected_result("line.text", "<b>Bold text with positioning</b>", line.text)
         self.assertEqual(line.text, "<b>Bold text with positioning</b>")
 
     def test_AssRoundtripPreservation(self):
@@ -294,11 +294,11 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Test{\\b0}
         data = handler.parse_string(ass_content)
         recomposed = handler.compose(data)
         
-        log_input_expected_result("title in recomposed content", True, "Title: Test Script" in recomposed)
+        log_input_expected_result("title", True, "Title: Test Script" in recomposed)
         self.assertIn("Title: Test Script", recomposed)
-        log_input_expected_result("positioning tag in recomposed", True, "\\pos(100,200)" in recomposed)
+        log_input_expected_result("position", True, "\\pos(100,200)" in recomposed)
         self.assertIn("\\pos(100,200)", recomposed)
-        log_input_expected_result("bold tags in recomposed", True, "\\b1" in recomposed and "\\b0" in recomposed)
+        log_input_expected_result("bold tags", True, "\\b1" in recomposed and "\\b0" in recomposed)
         self.assertIn("\\b1", recomposed)
         self.assertIn("\\b0", recomposed)
 
@@ -321,7 +321,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test serialization
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, handler)
         
-        log_input_expected_result("original line count", 1, subtitles.linecount)
+        log_input_expected_result("subtitles.linecount", 1, subtitles.linecount)
         self.assertEqual(subtitles.linecount, 1)
         
         # Test JSON serialization roundtrip
@@ -330,7 +330,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test serialization
         
         # The JSON serialization may not preserve all subtitle data perfectly
         # Focus on testing that metadata is preserved correctly
-        log_input_expected_result("format preserved", subtitles.metadata.get('pysubs2_format'), subtitles_restored.metadata.get('pysubs2_format'))
+        log_input_expected_result("pysubs2_format", subtitles.metadata.get('pysubs2_format'), subtitles_restored.metadata.get('pysubs2_format'))
         self.assertEqual(subtitles_restored.metadata.get('pysubs2_format'), subtitles.metadata.get('pysubs2_format'))
         
         # Verify colors survived serialization
@@ -340,9 +340,9 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test serialization
         restored_color = restored_style.get('primarycolor')
         
         if original_color and restored_color:
-            log_input_expected_result("restored color type", type(original_color), type(restored_color))
+            log_input_expected_result("restored_color", type(original_color), type(restored_color))
             self.assertEqual(type(restored_color), type(original_color))
-            log_input_expected_result("restored color values", (original_color.r, original_color.g, original_color.b, original_color.a), (restored_color.r, restored_color.g, restored_color.b, restored_color.a))
+            log_input_expected_result("restored_color values", (original_color.r, original_color.g, original_color.b, original_color.a), (restored_color.r, restored_color.g, restored_color.b, restored_color.a))
             self.assertEqual((restored_color.r, restored_color.g, restored_color.b, restored_color.a), (original_color.r, original_color.g, original_color.b, original_color.a))
         else:
             self.skipTest("Colors not found in metadata, cannot test serialization")
@@ -373,11 +373,11 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hard\\Nbreak and\\nsoft break
         self.assertGreater(len(subtitles.originals), 0)
         line = subtitles.originals[0]
         assert line.text is not None
-        log_input_expected_result("newline in line text", True, "\\n" in line.text)
+        log_input_expected_result(line.text, True, "\\n" in line.text)
         self.assertIn("\n", line.text)
-        log_input_expected_result("wbr tag in line text", True, "<wbr>" in line.text)
+        log_input_expected_result(line.text, True, "<wbr>" in line.text)
         self.assertIn("<wbr>", line.text)
-        log_input_expected_result("complete conversion", "Hard\nbreak and<wbr>soft break", line.text)
+        log_input_expected_result("line.text", "Hard\nbreak and<wbr>soft break", line.text)
         self.assertEqual(line.text, "Hard\nbreak and<wbr>soft break")
 
 

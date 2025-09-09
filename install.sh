@@ -10,7 +10,7 @@ function install_provider() {
     local set_as_default=$5
 
     read -p "Enter your $provider API Key (optional): " api_key
-    
+
     # Only update .env if user entered a new API key
     if [ -n "$api_key" ]; then
         if [ -f ".env" ]; then
@@ -19,7 +19,7 @@ function install_provider() {
         fi
         echo "${api_key_var_name}_API_KEY=$api_key" >> .env
     fi
-    
+
     # Set as default provider if requested
     if [ "$set_as_default" = "set_default" ]; then
         if [ -f ".env" ]; then
@@ -28,13 +28,11 @@ function install_provider() {
         fi
         echo "PROVIDER=$provider" >> .env
     fi
+
     if [ -n "$extra_name" ]; then
-        echo "Installing $provider dependencies..."
-        pip install --upgrade ".[${extra_name}]"
-    else
-        echo "$provider has no additional dependencies to install."
+        extras+=("$extra_name")
     fi
-    scripts/generate-cmd.sh $script_name
+    scripts_to_generate+=("$script_name")
 }
 
 function install_bedrock() {
@@ -61,9 +59,8 @@ function install_bedrock() {
     echo "AWS_SECRET_ACCESS_KEY=$secret_key" >> .env
     echo "AWS_REGION=$region" >> .env
 
-    echo "Installing AWS SDK for Python (boto3)..."
-    pip install --upgrade ".[bedrock]"
-    scripts/generate-cmd.sh bedrock-subtrans
+    extras+=("bedrock")
+    scripts_to_generate+=("bedrock-subtrans")
 
     echo "Bedrock setup complete. Default provider set to Bedrock."
 }
@@ -106,6 +103,9 @@ fi
 python3 -m venv envsubtrans
 source envsubtrans/bin/activate
 
+extras=()
+scripts_to_generate=("llm-subtrans")
+
 echo "Select installation type:"
 echo "1 = Install with GUI [default]"
 echo "2 = Install command line only"
@@ -113,18 +113,11 @@ read -p "Enter your choice (1/2): " install_choice
 
 if [ "$install_choice" = "2" ]; then
     echo "Installing command line modules..."
-    pip install --upgrade .
-    INSTALL_GUI=false
 else
-    echo "Installing GUI and command line modules..."
-    pip install --upgrade ".[gui]"
-    INSTALL_GUI=true
+    echo "Including GUI modules..."
+    extras+=("gui")
+    scripts_to_generate+=("gui-subtrans")
 fi
-
-if [ "$INSTALL_GUI" = true ]; then
-    scripts/generate-cmd.sh gui-subtrans
-fi
-scripts/generate-cmd.sh llm-subtrans
 
 # Optional: configure OpenRouter API key
 echo "Optional: Configure OpenRouter API key (default provider)"
@@ -183,6 +176,19 @@ case $provider_choice in
         exit 1
         ;;
 esac
+
+if [ ${#extras[@]} -gt 0 ]; then
+    IFS=','; extra_str="${extras[*]}"; unset IFS
+    echo "Installing dependencies: $extra_str"
+    pip install --upgrade ".[${extra_str}]"
+else
+    echo "Installing dependencies..."
+    pip install --upgrade .
+fi
+
+for script in "${scripts_to_generate[@]}"; do
+    scripts/generate-cmd.sh "$script"
+done
 
 echo "Setup completed successfully. To uninstall just delete the directory"
 

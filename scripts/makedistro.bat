@@ -1,4 +1,5 @@
 call envsubtrans/scripts/activate
+python scripts/sync_version.py
 python.exe -m pip install --upgrade pip
 pip install pywin32-ctypes
 pip install --upgrade pyinstaller

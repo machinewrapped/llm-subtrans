@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source envsubtrans/bin/activate
+python scripts/sync_version.py
 pip install --upgrade ".[gui,openai,gemini,claude,mistral,bedrock]"
 
 python scripts/update_translations.py

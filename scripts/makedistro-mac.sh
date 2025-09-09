@@ -1,6 +1,7 @@
 #!/bin/bash
 
 source ./envsubtrans/bin/activate
+python scripts/sync_version.py
 pip3 install --upgrade pip
 pip install --upgrade pyinstaller
 pip install --upgrade PyInstaller pyinstaller-hooks-contrib

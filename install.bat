@@ -54,16 +54,6 @@ if exist "envsubtrans" (
     )
 )
 
-echo Creating virtual environment...
-python -m venv envsubtrans
-if errorlevel 1 (
-    echo Failed to create virtual environment.
-    pause
-    exit /b 1
-)
-
-call envsubtrans\Scripts\activate.bat
-
 set "EXTRAS="
 set "SCRIPTS=llm-subtrans"
 
@@ -131,6 +121,19 @@ if "!provider_choice!"=="0" (
     exit /b 1
 )
 
+REM Create the virtual environment
+echo.
+echo Creating virtual environment...
+python -m venv envsubtrans
+if errorlevel 1 (
+    echo Failed to create virtual environment.
+    pause
+    exit /b 1
+)
+
+call envsubtrans\Scripts\activate.bat
+
+REM Install dependencies
 if "!EXTRAS!"=="" (
     echo Installing dependencies...
     pip install --upgrade .
@@ -144,6 +147,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
+REM Generate command scripts
 for %%s in (!SCRIPTS!) do (
     call scripts\generate-cmd.bat %%s
 )

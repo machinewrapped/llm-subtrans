@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "llm-subtrans"
+version = "1.3.2"
+description = "Subtitle translation tools using large language models"
+readme = "readme.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+dependencies = [
+    "python-dotenv",
+    "srt",
+    "regex",
+    "babel",
+    "appdirs",
+    "events",
+    "requests",
+    "setuptools",
+    "httpx",
+    "httpx[socks]"
+]
+
+[project.optional-dependencies]
+gui = [
+    "darkdetect",
+    "pyside6"
+]
+openai = ["openai"]
+azure = ["openai"]
+gemini = ["google-genai", "google-api-core"]
+claude = ["anthropic"]
+mistral = ["mistralai"]
+bedrock = ["boto3"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["PySubtitle*", "GUI*", "scripts*"]
+namespaces = true

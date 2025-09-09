@@ -34,9 +34,7 @@ except ImportError:
 free_translation_model = os.getenv('FREE_TRANSLATION_MODEL', 'moonshotai/kimi-k2:free')     # Free but may be rate-limited
 paid_translation_model = os.getenv('PAID_TRANSLATION_MODEL', 'google/gemini-2.5-flash')              # Fast and reliable but not free
 
-# Add the parent directory to sys.path so we can import PySubtitle modules
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.insert(0, base_path)
 
 from PySubtitle.Helpers.Localization import get_available_locales
 

@@ -126,9 +126,8 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         
         srt_content = "1\n00:00:01,000 --> 00:00:03,000\nHello <b>World</b>!\n"
         
-        handler = SrtFileHandler()
         subtitles = Subtitles()
-        subtitles.LoadSubtitlesFromString(srt_content, handler)
+        subtitles.LoadSubtitlesFromString(srt_content, SrtFileHandler())
         
         log_input_expected_result("line count", 1, subtitles.linecount)
         self.assertEqual(subtitles.linecount, 1)
@@ -160,9 +159,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\b1}Hello{\\b0} World!
 """
         
-        handler = SSAFileHandler()
         subtitles = Subtitles()
-        subtitles.LoadSubtitlesFromString(ass_content, handler)
+        subtitles.LoadSubtitlesFromString(ass_content, SSAFileHandler())
         
         log_input_expected_result("subtitles.linecount", 1, subtitles.linecount)
         self.assertEqual(subtitles.linecount, 1)
@@ -195,9 +193,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test line
 """
         
-        handler = SSAFileHandler()
         subtitles = Subtitles()
-        subtitles.LoadSubtitlesFromString(ass_content, handler)
+        subtitles.LoadSubtitlesFromString(ass_content, SSAFileHandler())
         
         log_input_expected_result("styles in metadata keys", True, 'styles' in subtitles.metadata.keys())
         self.assertIn('styles', subtitles.metadata)
@@ -233,9 +230,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\i1}Italic{\\i0} and {\\b1}bold{\\b0} text
 """
         
-        handler = SSAFileHandler()
         subtitles = Subtitles()
-        subtitles.LoadSubtitlesFromString(ass_content, handler)
+        subtitles.LoadSubtitlesFromString(ass_content, SSAFileHandler())
         
         assert subtitles.originals is not None
         self.assertGreater(len(subtitles.originals), 0)
@@ -259,9 +255,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Bold text with positioning{\\b0}
 """
         
-        handler = SSAFileHandler()
         subtitles = Subtitles()
-        subtitles.LoadSubtitlesFromString(ass_content, handler)
+        subtitles.LoadSubtitlesFromString(ass_content, SSAFileHandler())
         
         assert subtitles.originals is not None
         self.assertGreater(len(subtitles.originals), 0)
@@ -317,9 +312,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test serialization
 """
         
-        handler = SSAFileHandler()
         subtitles = Subtitles()
-        subtitles.LoadSubtitlesFromString(ass_content, handler)
+        subtitles.LoadSubtitlesFromString(ass_content, SSAFileHandler())
         
         log_input_expected_result("subtitles.linecount", 1, subtitles.linecount)
         self.assertEqual(subtitles.linecount, 1)
@@ -365,9 +359,8 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hard\\Nbreak and\\nsoft break
 """
         
-        handler = SSAFileHandler()
         subtitles = Subtitles()
-        subtitles.LoadSubtitlesFromString(ass_content, handler)
+        subtitles.LoadSubtitlesFromString(ass_content, SSAFileHandler())
         
         assert subtitles.originals is not None
         self.assertGreater(len(subtitles.originals), 0)

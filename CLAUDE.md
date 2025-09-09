@@ -29,22 +29,18 @@ Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Window
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()
 - **Threading safety**: Use locks (RLock/QRecursiveMutex) for thread-safe operations
-- **Unit Tests**: Tests should adhere to the project test structure - see `GUI\UnitTests\test_BatchCommands.py` for an example.
-  - Use functions like `log_input_expected_result` (logs input value, expected result and actual result or suitable proxies) defined in `Helpers\Test.py`.
-  - Always call `log_input_expected_result()` BEFORE the corresponding assertion so that if the assertion fails the log will show the reason.
-  - Use actual input values or reasonable proxies, NOT generic descriptions:
-    - ✅ `log_input_expected_result(text, expected, result)` - actual input
-    - ✅ `log_input_expected_result((text, max_length, min_length), expected, result)` - tuple of inputs  
-    - ✅ `log_input_expected_result(f"len(data.lines)={len(data.lines)}", True, len(data.lines) > 0)` - computed proxy
-    - ❌ `log_input_expected_result("has subtitle lines", True, len(data.lines) > 0)` - generic description
-  - **Exception Tests**: Tests that expect exceptions must use `skip_if_debugger_attached("TestName")` guard to allow debugging:
-    ```python
-    def test_ExceptionCase(self):
-        if skip_if_debugger_attached("ExceptionCase"):
-            return
-        # ... test code that expects exceptions
-    ```
-  - **Pattern**: `log_input_expected_result(input_proxy, expected, actual)` then `self.assertEqual(expected, actual)`
+- **Unit Tests**: Follow project test structure and use proper logging for debugging.
+  - **Key Principles**:
+    - Use semantic assertions (`assertIsNotNone`, `assertIn`, `assertEqual`) over generic `assertTrue` 
+    - Call `log_input_expected_result(input, expected, actual)` BEFORE the assertion to log useful diagnostic data
+    - Log informative input values (actual input value for the test case, field names being compared)
+  - **Common Patterns**:
+    - **Equality**: `log_input_expected_result("field_name", expected, obj.field); self.assertEqual(obj.field, expected)`
+    - **Type checks**: `log_input_expected_result(obj, ExpectedClass, type(obj)); self.assertEqual(type(obj), ExpectedClass)`
+    - **None checks**: `log_input_expected_result(obj, True, obj is not None); self.assertIsNotNone(obj)`
+    - **Membership**: `log_input_expected_result("key_name", True, "key" in data); self.assertIn("key", data)`
+  - **Exception Tests**: Guard with `skip_if_debugger_attached("TestName")` for debugging compatibility
+    - Use `log_input_expected_error(input, ExpectedException, actual_exception)` for exception logging
   - **None Safety**: Use `.get(key, default)` with appropriate default values to avoid Pylance warnings, or assert then test for None values.
   - **Regular Expressions**: The project uses the `regex` module for regular expression handling, rather than the standard `re`.
 

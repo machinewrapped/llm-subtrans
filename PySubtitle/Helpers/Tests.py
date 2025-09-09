@@ -37,7 +37,7 @@ def log_test_name(test_name: str):
 
 def log_input_expected_result(input : Any, expected : Any, result : Any):
     """
-    Logs the input text, the expected result and the actual result.
+    Logs the input value, the expected result and the actual result.
     """
     log_info(str(input), prefix="".ljust(10))
     log_info(str(expected), prefix="===".ljust(10))
@@ -48,7 +48,7 @@ def log_input_expected_result(input : Any, expected : Any, result : Any):
 
 def log_input_expected_error(input : Any, expected_error : type[Exception], result : Any):
     """
-    Logs the input text, the expected error and the actual error.
+    Logs the input value, the expected error and the actual error.
     """
     log_info(str(input), prefix="".ljust(10))
     log_info(expected_error.__name__, prefix="===".ljust(10))

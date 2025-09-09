@@ -13,6 +13,8 @@ from PySubtitle.Formats.SSAFileHandler import SSAFileHandler
 from PySubtitle.SubtitleSerialisation import SubtitleEncoder, SubtitleDecoder
 from PySubtitle.Subtitles import Subtitles
 from PySubtitle.Helpers.Color import Color
+from PySubtitle.Options import Options
+from PySubtitle.SubtitleBatcher import SubtitleBatcher
 from PySubtitle.Helpers.Tests import (
     log_input_expected_result,
     log_test_name,
@@ -164,10 +166,14 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\b1}Hello{\\b0} World!
         
         log_input_expected_result("subtitles.linecount", 1, subtitles.linecount)
         self.assertEqual(subtitles.linecount, 1)
-        log_input_expected_result("subtitles.metadata.keys", True, 'pysubs2_format' in subtitles.metadata.keys())
-        self.assertIn('pysubs2_format', subtitles.metadata)
-        log_input_expected_result("subtitles.metadata.keys", True, 'styles' in subtitles.metadata.keys())
-        self.assertIn('styles', subtitles.metadata)
+        
+        has_pysubs2_format = 'pysubs2_format' in subtitles.metadata
+        log_input_expected_result(subtitles.metadata.keys(), True, has_pysubs2_format)
+        self.assertTrue(has_pysubs2_format)
+        
+        has_styles = 'styles' in subtitles.metadata
+        log_input_expected_result(subtitles.metadata.keys(), True, has_styles)
+        self.assertTrue(has_styles)
         
         assert subtitles.originals is not None
         self.assertGreater(len(subtitles.originals), 0)
@@ -196,17 +202,19 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test line
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(ass_content, SSAFileHandler())
         
-        log_input_expected_result("styles in metadata keys", True, 'styles' in subtitles.metadata.keys())
-        self.assertIn('styles', subtitles.metadata)
+        has_styles = 'styles' in subtitles.metadata
+        log_input_expected_result("has styles in metadata", True, has_styles)
+        self.assertTrue(has_styles)
         
         default_style = subtitles.metadata['styles'].get('Default', {})
         primary_color = default_style.get('primarycolor')
         
-        log_input_expected_result(primary_color, True, primary_color is not None)
+        color_exists = primary_color is not None
+        log_input_expected_result(primary_color, True, color_exists)
         self.assertIsNotNone(primary_color)
         
-        log_input_expected_result(primary_color, True, isinstance(primary_color, Color))
-        self.assertIsInstance(primary_color, Color)
+        log_input_expected_result(primary_color, Color, type(primary_color))
+        self.assertEqual(type(primary_color), Color)
         
         log_input_expected_result(primary_color, 0, primary_color.r)
         self.assertEqual(primary_color.r, 0)
@@ -262,12 +270,20 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Bold text 
         self.assertGreater(len(subtitles.originals), 0)
         line = subtitles.originals[0]
         assert line.text is not None
-        log_input_expected_result("line.metadata", True, 'override_tags_start' in line.metadata)
-        self.assertIn('override_tags_start', line.metadata)
-        log_input_expected_result("line.metadata", True, '\\\\pos(100,200)' in line.metadata['override_tags_start'])
-        self.assertIn('\\pos(100,200)', line.metadata['override_tags_start'])
-        log_input_expected_result("line.text", "<b>Bold text with positioning</b>", line.text)
-        self.assertEqual(line.text, "<b>Bold text with positioning</b>")
+        
+        # Test metadata extraction
+        has_override_tags = 'override_tags_start' in line.metadata
+        log_input_expected_result("line.metadata has override_tags_start", True, has_override_tags)
+        self.assertTrue(has_override_tags)
+        
+        expected_pos_tag = '\\pos(100,200)'
+        has_pos_tag = expected_pos_tag in line.metadata.get('override_tags_start', '')
+        log_input_expected_result(f"metadata contains '{expected_pos_tag}'", True, has_pos_tag)
+        self.assertTrue(has_pos_tag)
+        
+        expected_text = "<b>Bold text with positioning</b>"
+        log_input_expected_result("line.text", expected_text, line.text)
+        self.assertEqual(line.text, expected_text)
 
     def test_AssRoundtripPreservation(self):
         log_test_name("AssRoundtripPreservation")
@@ -289,13 +305,19 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Test{\\b0}
         data = handler.parse_string(ass_content)
         recomposed = handler.compose(data)
         
-        log_input_expected_result("title", True, "Title: Test Script" in recomposed)
-        self.assertIn("Title: Test Script", recomposed)
-        log_input_expected_result("position", True, "\\pos(100,200)" in recomposed)
-        self.assertIn("\\pos(100,200)", recomposed)
-        log_input_expected_result("bold tags", True, "\\b1" in recomposed and "\\b0" in recomposed)
-        self.assertIn("\\b1", recomposed)
-        self.assertIn("\\b0", recomposed)
+        has_title = "Title: Test Script" in recomposed
+        log_input_expected_result("contains title", True, has_title)
+        self.assertTrue(has_title)
+        
+        has_position = "\\pos(100,200)" in recomposed
+        log_input_expected_result("contains position tag", True, has_position)
+        self.assertTrue(has_position)
+        
+        has_bold_start = "\\b1" in recomposed
+        has_bold_end = "\\b0" in recomposed
+        has_bold_tags = has_bold_start and has_bold_end
+        log_input_expected_result("contains bold tags", True, has_bold_tags)
+        self.assertTrue(has_bold_tags)
 
     def test_JsonSerializationRoundtrip(self):
         log_test_name("JsonSerializationRoundtrip")
@@ -366,12 +388,149 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hard\\Nbreak and\\nsoft break
         self.assertGreater(len(subtitles.originals), 0)
         line = subtitles.originals[0]
         assert line.text is not None
-        log_input_expected_result(line.text, True, "\\n" in line.text)
-        self.assertIn("\n", line.text)
-        log_input_expected_result(line.text, True, "<wbr>" in line.text)
-        self.assertIn("<wbr>", line.text)
-        log_input_expected_result("line.text", "Hard\nbreak and<wbr>soft break", line.text)
-        self.assertEqual(line.text, "Hard\nbreak and<wbr>soft break")
+        
+        # Test line break conversion
+        has_newline = "\n" in line.text
+        log_input_expected_result("contains newline", True, has_newline)
+        self.assertTrue(has_newline)
+        
+        has_wbr = "<wbr>" in line.text
+        log_input_expected_result("contains <wbr>", True, has_wbr)
+        self.assertTrue(has_wbr)
+        
+        expected_text = "Hard\nbreak and<wbr>soft break"
+        log_input_expected_result("line.text", expected_text, line.text)
+        self.assertEqual(line.text, expected_text)
+
+    def test_AssToSrtConversion(self):
+        log_test_name("AssToSrtConversion")
+        
+        ass_content = """[Script Info]
+Title: Sample ASS
+ScriptType: v4.00+
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Default,Arial,20,&H00FFFFFF,&H000000FF,&H00000000,&H80000000,0,0,0,0,100,100,0,0,1,2,0,2,0,0,0,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
+"""
+        
+        ass_path = self._create_temp_file(ass_content, ".ass")
+        out_path = ass_path + ".srt"
+        
+        options = Options()
+        project = SubtitleProject()
+        project.InitialiseProject(filepath=ass_path, outputpath=out_path)
+        
+        log_input_expected_result("project.subtitles not None", True, project.subtitles is not None)
+        self.assertIsNotNone(project.subtitles)
+        log_input_expected_result("format after setting output path", ".srt", project.subtitles.format)
+        self.assertEqual(project.subtitles.format, ".srt")
+        
+        project.subtitles.AutoBatch(SubtitleBatcher(options))
+        project.subtitles._duplicate_originals_as_translations()
+        project.needs_writing = True
+        project.SaveTranslation()
+        
+        log_input_expected_result("output file exists", True, os.path.exists(out_path))
+        self.assertTrue(os.path.exists(out_path))
+        
+        # Verify the converted file can be loaded as SRT
+        converted_project = SubtitleProject()
+        converted_project.LoadSubtitleFile(out_path)
+        
+        log_input_expected_result("converted format", ".srt", converted_project.subtitles.format)
+        self.assertEqual(converted_project.subtitles.format, ".srt")
+        log_input_expected_result("content preserved", 1, converted_project.subtitles.linecount)
+        self.assertEqual(converted_project.subtitles.linecount, 1)
+        
+        if converted_project.subtitles.originals:
+            first_line = converted_project.subtitles.originals[0]
+            log_input_expected_result("converted text", "Hello ASS!", first_line.text)
+            self.assertEqual(first_line.text, "Hello ASS!")
+        
+        self.addCleanup(os.remove, out_path)
+
+    def test_SrtToAssConversion(self):
+        log_test_name("SrtToAssConversion")
+        
+        srt_content = "1\n00:00:01,000 --> 00:00:02,000\nHello SRT!\n"
+        
+        srt_path = self._create_temp_file(srt_content, ".srt")
+        out_path = srt_path + ".ass"
+        
+        options = Options()
+        project = SubtitleProject()
+        project.InitialiseProject(filepath=srt_path, outputpath=out_path)
+        
+        log_input_expected_result("project.subtitles not None", True, project.subtitles is not None)
+        self.assertIsNotNone(project.subtitles)
+        log_input_expected_result("format after setting output path", ".ass", project.subtitles.format)
+        self.assertEqual(project.subtitles.format, ".ass")
+        
+        project.subtitles.AutoBatch(SubtitleBatcher(options))
+        project.subtitles._duplicate_originals_as_translations()
+        project.needs_writing = True
+        project.SaveTranslation()
+        
+        log_input_expected_result("output file exists", True, os.path.exists(out_path))
+        self.assertTrue(os.path.exists(out_path))
+        
+        # Verify the converted file can be loaded as ASS
+        converted_project = SubtitleProject()
+        converted_project.LoadSubtitleFile(out_path)
+        
+        log_input_expected_result("converted format", ".ass", converted_project.subtitles.format)
+        self.assertEqual(converted_project.subtitles.format, ".ass")
+        log_input_expected_result("content preserved", 1, converted_project.subtitles.linecount)
+        self.assertEqual(converted_project.subtitles.linecount, 1)
+        
+        if converted_project.subtitles.originals:
+            first_line = converted_project.subtitles.originals[0]
+            log_input_expected_result("converted text", "Hello SRT!", first_line.text)
+            self.assertEqual(first_line.text, "Hello SRT!")
+        
+        self.addCleanup(os.remove, out_path)
+
+    def test_ConversionWithProjectSerialization(self):
+        log_test_name("ConversionWithProjectSerialization")
+        
+        srt_content = "1\n00:00:01,000 --> 00:00:02,000\nHello SRT!\n"
+        
+        srt_path = self._create_temp_file(srt_content, ".srt")
+        out_path = srt_path + ".ass"
+        
+        options = Options()
+        project = SubtitleProject()
+        project.InitialiseProject(filepath=srt_path, outputpath=out_path)
+        
+        log_input_expected_result("project.subtitles not None", True, project.subtitles is not None)
+        self.assertIsNotNone(project.subtitles)
+        
+        project.subtitles.AutoBatch(SubtitleBatcher(options))
+        project.subtitles._duplicate_originals_as_translations()
+        project.needs_writing = True
+        
+        # Create and write project file
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".subtrans") as tmp_project:
+            tmp_project_path = tmp_project.name
+        
+        project.WriteProjectToFile(tmp_project_path, encoder_class=SubtitleEncoder)
+        self.addCleanup(os.remove, tmp_project_path)
+        
+        # Load project file and verify format preservation
+        project2 = SubtitleProject()
+        project2.ReadProjectFile(tmp_project_path)
+        
+        log_input_expected_result("project2.subtitles not None", True, project2.subtitles is not None)
+        self.assertIsNotNone(project2.subtitles)
+        log_input_expected_result("format preserved through serialization", ".ass", project2.subtitles.format)
+        self.assertEqual(project2.subtitles.format, ".ass")
+        log_input_expected_result("content preserved", 1, project2.subtitles.linecount)
+        self.assertEqual(project2.subtitles.linecount, 1)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,7 @@
 #!/bin/bash
 
 source envsubtrans/bin/activate
-pip install -r requirements.txt
-pip install --upgrade openai
-pip install --upgrade google-genai
-pip install --upgrade anthropic
-pip install --upgrade mistralai
-pip install --upgrade boto3
+pip install --upgrade ".[gui,openai,gemini,claude,mistral,bedrock]"
 
 python scripts/update_translations.py
 

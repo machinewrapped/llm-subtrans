@@ -7,9 +7,7 @@ from datetime import datetime
 from types import ModuleType
 import unittest
 
-# Add the parent directory to the sys path so that modules can be found
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(base_path)
 
 from PySubtitle.Helpers.Tests import create_logfile, end_logfile, separator
 from Tests.unit_tests import discover_tests

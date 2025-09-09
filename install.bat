@@ -64,15 +64,34 @@ if errorlevel 1 (
 
 call envsubtrans\Scripts\activate.bat
 
-echo Installing required modules...
-pip install --upgrade -r requirements.txt
-if errorlevel 1 (
-    echo Failed to install required modules.
-    pause
-    exit /b 1
+echo Select installation type:
+echo 1 = Install with GUI [default]
+echo 2 = Install command line only
+set /p install_choice="Enter your choice (1/2): "
+
+if "%install_choice%"=="2" (
+    echo Installing command line modules...
+    pip install --upgrade .
+    if errorlevel 1 (
+        echo Failed to install required modules.
+        pause
+        exit /b 1
+    )
+    set INSTALL_GUI=false
+) else (
+    echo Installing GUI and command line modules...
+    pip install --upgrade ".[gui]"
+    if errorlevel 1 (
+        echo Failed to install required modules.
+        pause
+        exit /b 1
+    )
+    set INSTALL_GUI=true
 )
 
-call scripts\generate-cmd.bat gui-subtrans
+if "%INSTALL_GUI%"=="true" (
+    call scripts\generate-cmd.bat gui-subtrans
+)
 call scripts\generate-cmd.bat llm-subtrans
 
 REM Optional: configure OpenRouter API key
@@ -111,12 +130,12 @@ if "!provider_choice!"=="1" (
 )
 
 if "!provider_choice!"=="2" (
-    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" "set_default"
+    call :install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" "set_default"
     goto setup_complete
 )
 
 if "!provider_choice!"=="3" (
-    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" "set_default"
+    call :install_provider "Claude" "CLAUDE" "claude" "claude-subtrans" "set_default"
     goto setup_complete
 )
 
@@ -126,7 +145,7 @@ if "!provider_choice!"=="4" (
 )
 
 if "!provider_choice!"=="5" (
-    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" "set_default"
+    call :install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" "set_default"
     goto setup_complete
 )
 
@@ -136,10 +155,10 @@ if "!provider_choice!"=="6" (
 )
 
 if /i "!provider_choice!"=="a" (
-    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
+    call :install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" ""
     call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
-    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
-    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
+    call :install_provider "Claude" "CLAUDE" "claude" "claude-subtrans" ""
+    call :install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" ""
     call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
     goto setup_complete
 )
@@ -151,7 +170,7 @@ exit /b 1
 :install_provider
 set provider_name=%~1
 set api_key_var_name=%~2
-set pip_package=%~3
+set extra_name=%~3
 set script_name=%~4
 set set_as_default=%~5
 
@@ -174,11 +193,11 @@ if "%set_as_default%"=="set_default" (
     )
     echo PROVIDER=%provider_name%>> .env
 )
-if not "%pip_package%"=="" (
-    echo Installing %provider_name% module...
-    pip install %pip_package%
+if not "%extra_name%"=="" (
+    echo Installing %provider_name% dependencies...
+    pip install --upgrade ".[!extra_name!]"
     if errorlevel 1 (
-        echo Failed to install %provider_name% module.
+        echo Failed to install %provider_name% dependencies.
         pause
         exit /b 1
     )
@@ -214,7 +233,7 @@ echo AWS_SECRET_ACCESS_KEY=%secret_key%>> .env
 echo AWS_REGION=%region%>> .env
 
 echo Installing AWS SDK for Python (boto3)...
-pip install -U boto3
+pip install --upgrade ".[bedrock]"
 if errorlevel 1 (
     echo Failed to install boto3.
     pause

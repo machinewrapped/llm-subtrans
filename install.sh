@@ -5,7 +5,7 @@ set -e
 function install_provider() {
     local provider=$1
     local api_key_var_name=$2
-    local pip_package=$3
+    local extra_name=$3
     local script_name=$4
     local set_as_default=$5
 
@@ -28,9 +28,9 @@ function install_provider() {
         fi
         echo "PROVIDER=$provider" >> .env
     fi
-    if [ -n "$pip_package" ]; then
-        echo "Installing $provider module..."
-        pip install $pip_package
+    if [ -n "$extra_name" ]; then
+        echo "Installing $provider dependencies..."
+        pip install --upgrade ".[${extra_name}]"
     else
         echo "$provider has no additional dependencies to install."
     fi
@@ -62,7 +62,7 @@ function install_bedrock() {
     echo "AWS_REGION=$region" >> .env
 
     echo "Installing AWS SDK for Python (boto3)..."
-    pip install -U boto3
+    pip install --upgrade ".[bedrock]"
     scripts/generate-cmd.sh bedrock-subtrans
 
     echo "Bedrock setup complete. Default provider set to Bedrock."
@@ -106,10 +106,24 @@ fi
 python3 -m venv envsubtrans
 source envsubtrans/bin/activate
 
-echo "Installing required modules..."
-pip install --upgrade -r requirements.txt
+echo "Select installation type:"
+echo "1 = Install with GUI [default]"
+echo "2 = Install command line only"
+read -p "Enter your choice (1/2): " install_choice
 
-scripts/generate-cmd.sh gui-subtrans
+if [ "$install_choice" = "2" ]; then
+    echo "Installing command line modules..."
+    pip install --upgrade .
+    INSTALL_GUI=false
+else
+    echo "Installing GUI and command line modules..."
+    pip install --upgrade ".[gui]"
+    INSTALL_GUI=true
+fi
+
+if [ "$INSTALL_GUI" = true ]; then
+    scripts/generate-cmd.sh gui-subtrans
+fi
 scripts/generate-cmd.sh llm-subtrans
 
 # Optional: configure OpenRouter API key
@@ -143,26 +157,26 @@ case $provider_choice in
         install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" "set_default"
         ;;
     2)
-        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" "set_default"
+        install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" "set_default"
         ;;
     3)
-        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" "set_default"
+        install_provider "Claude" "CLAUDE" "claude" "claude-subtrans" "set_default"
         ;;
     4)
         install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" "set_default"
         ;;
     5)
-        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" "set_default"
+        install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" "set_default"
         ;;
     6)
         install_bedrock
         ;;
     a)
-        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
+        install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" ""
         install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
-        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
+        install_provider "Claude" "CLAUDE" "claude" "claude-subtrans" ""
         install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
-        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
+        install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" ""
         ;;
     *)
         echo "Invalid choice. Exiting installation."

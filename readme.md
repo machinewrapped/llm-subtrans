@@ -106,7 +106,7 @@ The easiest setup method is to run the unified installation script:
 - **Windows**: Run `install.bat`
 - **MacOS/Linux**: Run `install.sh`
 
-These scripts will create a virtual environment and guide you through selecting and installing your preferred provider(s). They will also generate appropriate command scripts to launch the applications.
+These scripts will create a virtual environment and let you choose to **install with GUI** (default) or **install command line only**. They will guide you through selecting and installing your preferred provider(s) and generate command scripts to launch the applications.
 
 During the installing process, you can choose to input an API key for each selected provider when prompted. It will be saved in a .env file so that you don't need to provide it every time you run the program.
 
@@ -154,19 +154,26 @@ During the installing process, you can choose to input an API key for each selec
     source ./envsubtrans/bin/activate   # Mac/Linux
     ```
 
-5. Install the required libraries using pip by running the following command in your terminal to install the project dependencies (listed in the requirements.txt file):
+5. Install the project (GUI included by default):
 
     ```sh
-    pip install -r requirements.txt
+    pip install ".[gui]"
+    ```
+
+    If you only need the command‑line tools, omit the optional GUI dependencies:
+
+    ```sh
+    pip install .
     ```
 
 6. Install any additional SDKs required for the provider(s) you intend to use:
 
     ```sh
-    pip install openai
-    pip install google-genai google-api-core
-    pip install anthropic
-    pip install mistral
+    pip install ".[openai]"   # OpenAI or Azure OpenAI
+    pip install ".[gemini]"   # Google Gemini
+    pip install ".[claude]"   # Anthropic Claude
+    pip install ".[mistral]"  # Mistral
+    pip install ".[bedrock]"  # Amazon Bedrock (installs boto3)
     ```
 
 Note that steps 3 and 4 are optional but recommended, as they help prevent conflicts with other Python applications.

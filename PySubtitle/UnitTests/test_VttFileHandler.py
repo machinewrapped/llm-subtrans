@@ -101,69 +101,95 @@ Third subtitle line with <i>formatting</i>
         self.assertEqual(len(lines), 3)
         self.assertEqual(lines[0].text, "First subtitle line")
 
-    def test_compose_lines_basic(self):
-        """Test basic line composition to WebVTT format."""
-        log_test_name("VttFileHandler.compose_lines - basic")
+    def test_composition_variations(self):
+        """Test composition of various WebVTT scenarios."""
+        log_test_name("VttFileHandler composition variations")
         
-        lines = [
-            SubtitleLine.Construct(
-                number=1,
-                start=timedelta(seconds=1, milliseconds=500),
-                end=timedelta(seconds=3),
-                text="Test subtitle",
-                metadata={}
-            )
+        test_cases = [
+            {
+                "lines": [
+                    SubtitleLine.Construct(
+                        number=1,
+                        start=timedelta(seconds=1, milliseconds=500),
+                        end=timedelta(seconds=3),
+                        text="Test subtitle",
+                        metadata={}
+                    )
+                ],
+                "metadata": {},
+                "should_contain": ["WEBVTT", "00:00:01.500 --> 00:00:03.000", "Test subtitle"]
+            },
+            {
+                "lines": [
+                    SubtitleLine.Construct(
+                        number=1,
+                        start=timedelta(seconds=1),
+                        end=timedelta(seconds=3),
+                        text="Text with <i>italic</i> and <b>bold</b>",
+                        metadata={}
+                    )
+                ],
+                "metadata": {},
+                "should_contain": ["Text with <i>italic</i> and <b>bold</b>"]
+            },
+            {
+                "lines": [
+                    SubtitleLine.Construct(
+                        number=1,
+                        start=timedelta(seconds=1),
+                        end=timedelta(seconds=3),
+                        text="First line",
+                        metadata={"cue_id": "cue1"}
+                    )
+                ],
+                "metadata": {},
+                "should_contain": ["cue1", "First line"]
+            },
+            {
+                "lines": [
+                    SubtitleLine.Construct(
+                        number=1,
+                        start=timedelta(seconds=1),
+                        end=timedelta(seconds=3),
+                        text="Where did he go?",
+                        metadata={"vtt_settings": "position:10% align:left size:35%"}
+                    )
+                ],
+                "metadata": {},
+                "should_contain": ["position:10% align:left size:35%", "Where did he go?"]
+            },
+            {
+                "lines": [
+                    SubtitleLine.Construct(
+                        number=1,
+                        start=timedelta(seconds=1),
+                        end=timedelta(seconds=3),
+                        text="Hello world",
+                        metadata={"speaker": "Mary", "voice_classes": ["loud"]}
+                    )
+                ],
+                "metadata": {},
+                "should_contain": ["<v.loud Mary>Hello world</v>"]
+            },
+            {
+                "lines": [],
+                "metadata": {
+                    "vtt_styles": ["::cue {\n  color: red;\n}"],
+                    "vtt_notes": ["This is a test note"]
+                },
+                "should_contain": ["WEBVTT", "STYLE", "::cue", "color: red", "NOTE", "This is a test note"]
+            }
         ]
         
-        data = SubtitleData(lines=lines, metadata={})
-        result = self.handler.compose(data)
-        
-        # Log before assertions
-        expected_sections = ["WEBVTT", "00:00:01.500 --> 00:00:03.000", "Test subtitle"]
-        has_all_sections = all(section in result for section in expected_sections)
-        log_input_expected_result("1 line", True, has_all_sections)
-        
-        # Check that the result contains key WebVTT sections
-        self.assertIn("WEBVTT", result)
-        self.assertIn("00:00:01.500 --> 00:00:03.000", result)
-        self.assertIn("Test subtitle", result)
-    
-    def test_compose_lines_with_html_formatting(self):
-        """Test composition with HTML formatting preservation."""
-        log_test_name("VttFileHandler.compose_lines - HTML formatting")
-        
-        lines = [
-            SubtitleLine.Construct(
-                number=1,
-                start=timedelta(seconds=1),
-                end=timedelta(seconds=3),
-                text="Text with <i>italic</i> and <b>bold</b>",
-                metadata={}
-            )
-        ]
-        
-        data = SubtitleData(lines=lines, metadata={})
-        result = self.handler.compose(data)
-        
-        # WebVTT should preserve HTML formatting tags
-        expected_text = "Text with <i>italic</i> and <b>bold</b>"
-        contains_expected = expected_text in result
-        log_input_expected_result("Contains HTML formatting", True, contains_expected)
-        self.assertIn(expected_text, result)
-    
-    def test_parse_empty_vtt(self):
-        """Test parsing WebVTT file with no cues."""
-        log_test_name("VttFileHandler.parse_string - no cues")
-        
-        content_no_cues = """WEBVTT
-
-"""
-        
-        data = self.handler.parse_string(content_no_cues)
-        lines = data.lines
-        
-        log_input_expected_result("WebVTT with no cues", 0, len(lines))
-        self.assertEqual(len(lines), 0)
+        for i, case in enumerate(test_cases):
+            with self.subTest(case=i):
+                data = SubtitleData(lines=case["lines"], metadata=case["metadata"])
+                result = self.handler.compose(data)
+                
+                for expected_content in case["should_contain"]:
+                    contains_content = expected_content in result
+                    log_input_expected_result(expected_content, True, contains_content)
+                    self.assertIn(expected_content, result)
     
     def test_parse_invalid_vtt_content(self):
         """Test error handling for invalid WebVTT content."""
@@ -228,19 +254,23 @@ Third subtitle line with <i>formatting</i>
         
         # Test various time formats with precise timedelta values
         test_cases = [
-            # (timedelta, expected_string)
             (timedelta(seconds=1, milliseconds=500), "00:00:01.500"),
             (timedelta(seconds=30), "00:00:30.000"),
             (timedelta(minutes=1, seconds=30, milliseconds=250), "00:01:30.250"),
             (timedelta(hours=1, minutes=23, seconds=45, milliseconds=678), "01:23:45.678"),
-            (timedelta(microseconds=500000), "00:00:00.500"),  # 0.5 seconds
+            (timedelta(microseconds=500000), "00:00:00.500"),
+            (timedelta(0), "00:00:00.000"),
+            (timedelta(milliseconds=1), "00:00:00.001"),
+            (timedelta(milliseconds=999), "00:00:00.999"),
+            (timedelta(seconds=59, milliseconds=999), "00:00:59.999"),
+            (timedelta(hours=23, minutes=59, seconds=59, milliseconds=999), "23:59:59.999"),
         ]
         
         for i, (test_timedelta, expected_string) in enumerate(test_cases):
             with self.subTest(case=i):
                 result = self.handler._format_timestamp(test_timedelta)
                 
-                log_input_expected_result(f"Timedelta {test_timedelta}", expected_string, result)
+                log_input_expected_result(test_timedelta, expected_string, result)
                 self.assertEqual(result, expected_string)
     
     def test_vtt_cue_id_preservation(self):
@@ -280,11 +310,31 @@ Third subtitle with ID
             log_input_expected_result("Third cue ID", "cue3", lines[2].metadata['cue_id'])
             self.assertEqual(lines[2].metadata['cue_id'], "cue3")
     
-    def test_vtt_multiline_cues(self):
-        """Test parsing of multi-line WebVTT cues."""
-        log_test_name("VttFileHandler multi-line cues")
+
+    def test_vtt_parsing_variations(self):
+        """Test parsing of various WebVTT content formats."""
+        log_test_name("VttFileHandler parsing variations")
         
-        multiline_vtt = """WEBVTT
+        test_cases = [
+            {
+                "content": """WEBVTT
+
+""",
+                "expected_lines": 0,
+                "check_format": True
+            },
+            {
+                "content": """WEBVTT
+
+00:01.500 --> 00:03.000
+No hour field
+""",
+                "expected_lines": 1,
+                "first_start": timedelta(seconds=1, milliseconds=500),
+                "first_text": "No hour field"
+            },
+            {
+                "content": """WEBVTT
 
 00:00:01.000 --> 00:00:05.000
 This is a multi-line subtitle
@@ -293,40 +343,76 @@ and should be preserved
 
 00:00:06.000 --> 00:00:08.000
 Single line subtitle
-"""
-        
-        data = self.handler.parse_string(multiline_vtt)
-        lines = data.lines
-        
-        self.assertEqual(len(lines), 2)
-        
-        # Check multi-line text preservation
-        first_line_text = lines[0].text
-        expected_multiline = "This is a multi-line subtitle\nthat spans several lines\nand should be preserved"
-        log_input_expected_result("Multi-line text", expected_multiline, first_line_text)
-        self.assertEqual(first_line_text, expected_multiline)
-        
-        # Check single line
-        second_line_text = lines[1].text
-        log_input_expected_result("Single line text", "Single line subtitle", second_line_text)
-        self.assertEqual(second_line_text, "Single line subtitle")
+""",
+                "expected_lines": 2,
+                "first_text": "This is a multi-line subtitle\nthat spans several lines\nand should be preserved",
+                "second_text": "Single line subtitle"
+            },
+            {
+                "content": """WEBVTT
 
-    def test_parse_without_hour_timestamps(self):
-        """Ensure cues without hour field parse correctly."""
-        log_test_name("VttFileHandler without hour timestamps")
+cue1
+00:00:01.000 --> 00:00:03.000
+First subtitle with ID
 
-        vtt_content = """WEBVTT
+00:00:04.000 --> 00:00:06.000
+Second subtitle without ID
+""",
+                "expected_lines": 2,
+                "first_cue_id": "cue1",
+                "second_no_cue_id": True
+            },
+            {
+                "content": """WEBVTT
 
-00:01.500 --> 00:03.000
-No hour field
-"""
-
-        data = self.handler.parse_string(vtt_content)
-        log_input_expected_result("Line count", 1, len(data.lines))
-        self.assertEqual(len(data.lines), 1)
-        expected_start = timedelta(seconds=1, milliseconds=500)
-        log_input_expected_result("Start time", expected_start, data.lines[0].start)
-        self.assertEqual(data.lines[0].start, expected_start)
+00:00:01.000 --> 00:00:03.000 position:10% align:left size:35%
+Where did he go?
+""",
+                "expected_lines": 1,
+                "first_settings": "position:10% align:left size:35%"
+            }
+        ]
+        
+        for i, case in enumerate(test_cases):
+            with self.subTest(case=i):
+                data = self.handler.parse_string(case["content"])
+                lines = data.lines
+                
+                log_input_expected_result(f'case_{i}_line_count', case["expected_lines"], len(lines))
+                self.assertEqual(len(lines), case["expected_lines"])
+                
+                if case.get("check_format"):
+                    log_input_expected_result(f'case_{i}_format', ".vtt", data.detected_format)
+                    self.assertEqual(data.detected_format, ".vtt")
+                
+                if case["expected_lines"] > 0:
+                    if "first_start" in case:
+                        log_input_expected_result(case["first_start"], case["first_start"], lines[0].start)
+                        self.assertEqual(lines[0].start, case["first_start"])
+                    
+                    if "first_text" in case:
+                        log_input_expected_result(case["first_text"], case["first_text"], lines[0].text)
+                        self.assertEqual(lines[0].text, case["first_text"])
+                    
+                    if "first_cue_id" in case:
+                        cue_id = lines[0].metadata.get('cue_id')
+                        log_input_expected_result(case["first_cue_id"], case["first_cue_id"], cue_id)
+                        self.assertEqual(cue_id, case["first_cue_id"])
+                    
+                    if "first_settings" in case:
+                        settings = lines[0].metadata.get('vtt_settings')
+                        log_input_expected_result(case["first_settings"], case["first_settings"], settings)
+                        self.assertEqual(settings, case["first_settings"])
+                
+                if case["expected_lines"] > 1:
+                    if "second_text" in case:
+                        log_input_expected_result(case["second_text"], case["second_text"], lines[1].text)
+                        self.assertEqual(lines[1].text, case["second_text"])
+                    
+                    if case.get("second_no_cue_id"):
+                        has_no_cue_id = 'cue_id' not in lines[1].metadata
+                        log_input_expected_result(True, True, has_no_cue_id)
+                        self.assertTrue(has_no_cue_id)
 
     def test_note_block_without_inline_text(self):
         """Ensure NOTE blocks starting with just 'NOTE' are preserved."""

@@ -67,6 +67,8 @@ class SSAFileHandler(SubtitleFileHandler):
         except UnicodeDecodeError:
             subs: pysubs2.SSAFile = pysubs2.SSAFile.load(path, encoding=fallback_encoding, format_=format_hint, newline='')
             return self._parse_subs(subs)
+        except Exception as e:
+            raise e if isinstance(e, SubtitleParseError) else SubtitleParseError(_("Failed to parse subtitles: {}" ).format(str(e)), e)
     
     def parse_file(self, file_obj: TextIO) -> SubtitleData:
         """
@@ -122,18 +124,22 @@ class SSAFileHandler(SubtitleFileHandler):
         """
         Convert pysubs2 subtitles to SubtitleLines, adding an index
         """
-        format : str = getattr(subs, "format", "ass")
+        try:
+            format : str = getattr(subs, "format", "ass")
 
-        lines : list[SubtitleLine] = []
-        for index, line in enumerate(subs, 1):
-            lines.append(self._pysubs2_to_subtitle_line(line, index))
+            lines : list[SubtitleLine] = []
+            for index, line in enumerate(subs, 1):
+                lines.append(self._pysubs2_to_subtitle_line(line, index))
 
-        # Extract serializable metadata
-        metadata = self._parse_metadata(subs, format)
+            # Extract serializable metadata
+            metadata = self._parse_metadata(subs, format)
 
-        detected_format : str = pysubs2.formats.get_file_extension(format)
+            detected_format : str = pysubs2.formats.get_file_extension(format)
 
-        return SubtitleData(lines=lines, metadata=metadata, detected_format=detected_format)
+            return SubtitleData(lines=lines, metadata=metadata, detected_format=detected_format)
+
+        except Exception as e:
+            raise SubtitleParseError(_("Failed to parse subtitles: {}" ).format(str(e)), e)
         
     def _pysubs2_to_subtitle_line(self, pysubs2_line: pysubs2.SSAEvent, index: int) -> SubtitleLine:
         """Convert pysubs2 SSAEvent to SubtitleLine with metadata preservation."""

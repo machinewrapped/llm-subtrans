@@ -1,5 +1,6 @@
 import importlib
 import inspect
+import logging
 import os
 import pkgutil
 from pathlib import Path
@@ -140,7 +141,16 @@ class SubtitleFormatRegistry:
         except Exception as e:
             raise SubtitleParseError(_("Failed to detect subtitle format: {}" ).format(str(e)), e)
 
-        detected_extension = pysubs2.formats.get_file_extension(subs.format or "srt")
+        if not subs.format:
+            raise SubtitleParseError(_("Could not detect subtitle format for file: {}" ).format(path))
+
+        detected_extension = pysubs2.formats.get_file_extension(subs.format)
+
+        logging.info(_("Detected subtitle format '{format}'").format(format=detected_extension))
+
+        if detected_extension not in cls._handlers:
+            raise SubtitleParseError(_("Detected subtitle format '{format}' is not supported.").format(format=detected_extension))
+
         handler = cls.create_handler(detected_extension)
         
         data = handler.load_file(path)

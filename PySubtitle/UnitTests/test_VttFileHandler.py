@@ -107,6 +107,7 @@ Third subtitle line with <i>formatting</i>
         
         test_cases = [
             {
+                "test_name": "basic_composition",
                 "lines": [
                     SubtitleLine.Construct(
                         number=1,
@@ -120,6 +121,7 @@ Third subtitle line with <i>formatting</i>
                 "should_contain": ["WEBVTT", "00:00:01.500 --> 00:00:03.000", "Test subtitle"]
             },
             {
+                "test_name": "html_formatting",
                 "lines": [
                     SubtitleLine.Construct(
                         number=1,
@@ -133,6 +135,7 @@ Third subtitle line with <i>formatting</i>
                 "should_contain": ["Text with <i>italic</i> and <b>bold</b>"]
             },
             {
+                "test_name": "cue_id",
                 "lines": [
                     SubtitleLine.Construct(
                         number=1,
@@ -146,6 +149,7 @@ Third subtitle line with <i>formatting</i>
                 "should_contain": ["cue1", "First line"]
             },
             {
+                "test_name": "cue_settings",
                 "lines": [
                     SubtitleLine.Construct(
                         number=1,
@@ -159,6 +163,7 @@ Third subtitle line with <i>formatting</i>
                 "should_contain": ["position:10% align:left size:35%", "Where did he go?"]
             },
             {
+                "test_name": "voice_tags",
                 "lines": [
                     SubtitleLine.Construct(
                         number=1,
@@ -172,6 +177,7 @@ Third subtitle line with <i>formatting</i>
                 "should_contain": ["<v.loud Mary>Hello world</v>"]
             },
             {
+                "test_name": "metadata_blocks",
                 "lines": [],
                 "metadata": {
                     "vtt_styles": ["::cue {\n  color: red;\n}"],
@@ -181,8 +187,9 @@ Third subtitle line with <i>formatting</i>
             }
         ]
         
-        for i, case in enumerate(test_cases):
-            with self.subTest(case=i):
+        for case in test_cases:
+            with self.subTest(test_name=case["test_name"]):
+                log_test_name(f'VttFileHandler composition - {case["test_name"]}')
                 data = SubtitleData(lines=case["lines"], metadata=case["metadata"])
                 result = self.handler.compose(data)
                 
@@ -313,10 +320,9 @@ Third subtitle with ID
 
     def test_vtt_parsing_variations(self):
         """Test parsing of various WebVTT content formats."""
-        log_test_name("VttFileHandler parsing variations")
-        
         test_cases = [
             {
+                "test_name": "empty_vtt",
                 "content": """WEBVTT
 
 """,
@@ -324,6 +330,7 @@ Third subtitle with ID
                 "check_format": True
             },
             {
+                "test_name": "no_hour_timestamp",
                 "content": """WEBVTT
 
 00:01.500 --> 00:03.000
@@ -334,6 +341,7 @@ No hour field
                 "first_text": "No hour field"
             },
             {
+                "test_name": "multiline_cues",
                 "content": """WEBVTT
 
 00:00:01.000 --> 00:00:05.000
@@ -349,6 +357,7 @@ Single line subtitle
                 "second_text": "Single line subtitle"
             },
             {
+                "test_name": "cue_ids",
                 "content": """WEBVTT
 
 cue1
@@ -363,6 +372,7 @@ Second subtitle without ID
                 "second_no_cue_id": True
             },
             {
+                "test_name": "cue_settings",
                 "content": """WEBVTT
 
 00:00:01.000 --> 00:00:03.000 position:10% align:left size:35%
@@ -373,16 +383,18 @@ Where did he go?
             }
         ]
         
-        for i, case in enumerate(test_cases):
-            with self.subTest(case=i):
+        for case in test_cases:
+            with self.subTest(test_name=case["test_name"]):
+                log_test_name(f'VttFileHandler parsing - {case["test_name"]}')
+        
                 data = self.handler.parse_string(case["content"])
                 lines = data.lines
                 
-                log_input_expected_result(f'case_{i}_line_count', case["expected_lines"], len(lines))
+                log_input_expected_result(f'{case["test_name"]}_line_count', case["expected_lines"], len(lines))
                 self.assertEqual(len(lines), case["expected_lines"])
                 
                 if case.get("check_format"):
-                    log_input_expected_result(f'case_{i}_format', ".vtt", data.detected_format)
+                    log_input_expected_result(f'{case["test_name"]}_format', ".vtt", data.detected_format)
                     self.assertEqual(data.detected_format, ".vtt")
                 
                 if case["expected_lines"] > 0:

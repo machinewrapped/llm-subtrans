@@ -85,7 +85,11 @@ class VttFileHandler(SubtitleFileHandler):
         
         vtt_notes = data.metadata.get('vtt_notes', [])
         for note_block in vtt_notes:
-            output_lines.append(note_block)
+            if not note_block.strip().startswith('NOTE'):
+                output_lines.append('NOTE')
+                output_lines.append(note_block)
+            else:
+                output_lines.append(note_block)
             output_lines.append('')
         
         vtt_styles = data.metadata.get('vtt_styles', [])

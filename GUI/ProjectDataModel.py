@@ -103,22 +103,23 @@ class ProjectDataModel:
         self._update_translation_provider()
 
     def UpdateProjectSettings(self, settings : SettingsType|Mapping[str, SettingType]):
-        """ Update the project settings """
+        """ 
+        Update the project settings, and adjust the output path if needed.
+        """
         if self.project:
             settings = SettingsType(settings)
             self.project_options.update(settings)
             self._update_translation_provider()
+
             self.project.UpdateProjectSettings(settings)
 
-    def SaveProject(self):
-        """ Save the project file or translation file as needed """
-        with QMutexLocker(self.mutex):
-            if self.project is not None and self.project.needs_writing:
-                if self.use_project_file:
-                    self.project.UpdateProjectFile()
-                if self.project.any_translated:
-                    self.project.SaveTranslation()
-                self.project.needs_writing = False
+            # Update the output path with optional format change
+            previous_output_path : str|None = self.project.subtitles.outputpath
+
+            self.project.subtitles.UpdateOutputPath(path=self.project.projectfile)
+
+            if self.project.subtitles.outputpath != previous_output_path:
+                logging.info(_("Setting output path to {}").format(self.project.subtitles.outputpath))
 
     def CreateTranslationProvider(self) -> TranslationProvider|None:
         """ Create a translation provider for the current settings """

@@ -1,15 +1,15 @@
 from copy import deepcopy
 
-from GUI.Commands.SaveTranslationFile import SaveTranslationFile
 from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_info, log_input_expected_result, log_test_name
 
 from GUI.Command import Command
-from GUI.UnitTests.DataModelHelpers import CreateTestDataModelBatched
 from GUI.Commands.SaveProjectFile import SaveProjectFile
+from GUI.Commands.SaveTranslationFile import SaveTranslationFile
+from GUI.Commands.StartTranslationCommand import StartTranslationCommand
 from GUI.Commands.TranslateSceneCommand import TranslateSceneCommand
 from GUI.ProjectDataModel import ProjectDataModel
-from GUI.Commands.StartTranslationCommand import StartTranslationCommand
+from GUI.UnitTests.DataModelHelpers import CreateTestDataModelBatched
 
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.Subtitles import Subtitles
@@ -25,6 +25,7 @@ test_cases = [
                     "resume" : False,
                     "multithreaded" : False,
                     "autosave" : False,
+                    "preview" : True,
                     "scenes" : {
                         1 : {}
                     }
@@ -37,6 +38,7 @@ test_cases = [
             {
                 "command" : "StartTranslationCommand",
                 "options" : {
+                    "preview" : True,
                     "resume" : False,
                     "autosave" : True,
                     "scenes" : {
@@ -51,6 +53,7 @@ test_cases = [
             {
                 "command" : "StartTranslationCommand",
                 "options" : {
+                    "preview" : True,
                     "resume" : True,
                     "scenes" : {
                         1 : {},
@@ -65,6 +68,7 @@ test_cases = [
             {
                 "command" : "StartTranslationCommand",
                 "options" : {
+                    "preview" : True,
                     "resume" : True,
                     "scenes" : {
                         1 : {},
@@ -80,6 +84,7 @@ test_cases = [
             {
                 "command" : "StartTranslationCommand",
                 "options" : {
+                    "preview" : True,
                     "resume" : True,
                     "autosave" : True,
                 },

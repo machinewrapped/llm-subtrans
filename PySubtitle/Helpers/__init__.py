@@ -44,26 +44,58 @@ def UpdateFields(item : dict[str,Any], update : dict[str,Any], fields : list[str
     item.update({field: update[field] for field in update.keys() if field in fields})
 
 def GetInputPath(filepath : str|None) -> str|None:
+    """
+    Normalize the input file path for cross-platform compatibility.
+    
+    Args:
+        filepath: Input file path
+        
+    Returns:
+        str: Normalized path preserving original extension
+        None: If filepath is None
+    """
+    if not filepath:
+        return None
+    return os.path.normpath(filepath)
+
+def GetOutputPath(filepath : str|None, language : str|None = None, format_extension : str|None = None) -> str|None:
+    """
+    Generate output path for subtitle files with proper language suffix and format extension.
+    
+    Args:
+        filepath: Input file path to base output path on
+        language: Optional language code to add as suffix
+        format_extension: Target format extension (e.g., '.ass', '.srt'). If None, infers from input filepath.
+        
+    Returns:
+        str: Output path with format: "basename.language.extension"
+        None: If filepath is None
+    """
     if not filepath:
         return None
 
-    basename, dummy = os.path.splitext(os.path.basename(filepath)) # type: ignore[unused-ignore]
-    path = os.path.join(os.path.dirname(filepath), f"{basename}.srt")
-    return os.path.normpath(path)
+    # Get directory and basename without extension
+    directory = os.path.dirname(filepath)
+    basename, current_extension = os.path.splitext(os.path.basename(filepath))
 
-def GetOutputPath(filepath : str|None, language : str|None = None) -> str|None:
-    if not filepath:
-        return None
+    # Add language suffix
+    if language:
+        language_suffix = f".{language.lower()}"
+        if not basename.endswith(language_suffix):
+            basename = basename + language_suffix
 
-    basename, dummy = os.path.splitext(os.path.basename(filepath)) # type: ignore[unused-ignore]
+    # Determine extension
+    if not format_extension:
+        if current_extension == ".subtrans":
+            raise ValueError("Extension must be provided to deduce output path from project file")
+        format_extension = current_extension
 
-    language = language or "translated"
+    if not format_extension.startswith('.'):
+        format_extension = f".{format_extension}"
 
-    language_suffix = f".{language}"
-    if not basename.endswith(language_suffix):
-        basename = basename + language_suffix
-
-    return os.path.join(os.path.dirname(filepath), f"{basename}.srt")
+    # Construct final path with proper normalization
+    output_path = os.path.join(directory, f"{basename}{format_extension}")
+    return os.path.normpath(output_path)
 
 def FormatMessages(messages : list[dict[str,Any]]) -> str:
     lines : list[str] = []

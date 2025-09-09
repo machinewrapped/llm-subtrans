@@ -5,8 +5,8 @@ from unittest.mock import patch, mock_open
 from collections.abc import MutableMapping
 from PySubtitle.Options import Options, default_settings, standard_filler_words
 from PySubtitle.Instructions import Instructions
-from PySubtitle.Helpers.Tests import log_input_expected_error, log_input_expected_result, log_test_name
-from PySubtitle.Helpers.Settings import (
+from PySubtitle.Helpers.Tests import log_input_expected_error, log_input_expected_result, log_test_name, skip_if_debugger_attached
+from PySubtitle.Helpers.SettingsHelpers import (
     GetBoolSetting, GetIntSetting, GetFloatSetting, GetStrSetting,
     GetListSetting, GetStringListSetting, GetTimeDeltaSetting,
     get_optional_setting, validate_setting_type, SettingsError
@@ -910,6 +910,9 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_bool_setting_errors(self):
         """Test GetBoolSetting error cases"""
+        if skip_if_debugger_attached("test_get_bool_setting_errors"):
+            return
+
         log_test_name("GetBoolSetting Expected Failures")
         
         error_case_keys = ['bool_str_invalid', 'int_value']
@@ -944,6 +947,9 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_int_setting_errors(self):
         """Test GetIntSetting error cases"""
+        if skip_if_debugger_attached("test_get_int_setting_errors"):
+            return
+
         log_test_name("GetIntSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
@@ -973,6 +979,9 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_float_setting_errors(self):
         """Test GetFloatSetting error cases"""
+        if skip_if_debugger_attached("test_get_float_setting_errors"):
+            return
+        
         log_test_name("GetFloatSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
@@ -1024,6 +1033,9 @@ class TestSettingsHelpers(unittest.TestCase):
         
     def test_get_list_setting_errors(self):
         """Test GetListSetting error cases"""
+        if skip_if_debugger_attached("test_get_list_setting_errors"):
+            return
+
         log_test_name("GetListSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
@@ -1071,6 +1083,9 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_timedelta_setting_errors(self):
         """Test GetTimeDeltaSetting error cases"""
+        if skip_if_debugger_attached("test_get_timedelta_setting_errors"):
+            return
+
         log_test_name("GetTimeDeltaSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
@@ -1107,6 +1122,9 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_optional_setting_errors(self):
         """Test get_optional_setting error cases"""
+        if skip_if_debugger_attached("test_get_optional_setting_errors"):
+            return
+
         log_test_name("get_optional_setting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
@@ -1129,6 +1147,13 @@ class TestSettingsHelpers(unittest.TestCase):
                 log_input_expected_result(f"'{key}' as {setting_type.__name__}", expected, result)
                 self.assertEqual(result, expected)
         
+    def test_validate_setting_type_errors(self):
+        """Test validate_setting_type error cases"""
+        if skip_if_debugger_attached("test_validate_setting_type_errors"):
+            return
+
+        log_test_name("validate_setting_type Expected Failures")
+        
         # Test missing optional setting
         result = validate_setting_type(self.test_dict_settings, 'missing_key', str, required=False)
         log_input_expected_result("missing optional setting", True, result)
@@ -1139,10 +1164,6 @@ class TestSettingsHelpers(unittest.TestCase):
         log_input_expected_result("invalid type conversion", False, result)
         self.assertFalse(result)
 
-    def test_validate_setting_type_errors(self):
-        """Test validate_setting_type error cases"""
-        log_test_name("validate_setting_type Expected Failures")
-        
         # Test required missing setting
         with self.assertRaises(SettingsError) as cm:
             validate_setting_type(self.test_dict_settings, 'missing_key', str, required=True)

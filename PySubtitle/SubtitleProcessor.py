@@ -3,7 +3,7 @@ from typing import Any
 import regex
 from datetime import timedelta
 
-from PySubtitle.Helpers.Subtitles import FindSplitPoint, GetProportionalDuration
+from PySubtitle.Helpers.SubtitleHelpers import FindSplitPoint, GetProportionalDuration
 from PySubtitle.Helpers.Text import (
     dialog_marker,
     split_sequences,
@@ -201,7 +201,7 @@ class SubtitleProcessor:
             return line
 
         logging.debug(f"Postprocessed line {line.number}:\n{line.text}\n-->\n{text}")
-        processed_line = SubtitleLine.Construct(line.number, line.start, line.end, text)
+        processed_line = SubtitleLine.Construct(line.number, line.start, line.end, text, line.metadata)
         return processed_line
 
     def _break_long_lines(self, text : str) -> str:
@@ -254,8 +254,8 @@ class SubtitleProcessor:
             split_start : timedelta = current_line.end - split_duration
             split_end : timedelta = current_line.end
 
-            new_line = SubtitleLine.Construct(current_line.number, current_line.start, split_start - self.min_gap, current_line.text[:split_point])
-            split_line = SubtitleLine.Construct(current_line.number, split_start, split_end, split_text)
+            new_line = SubtitleLine.Construct(current_line.number, current_line.start, split_start - self.min_gap, current_line.text[:split_point], current_line.metadata)
+            split_line = SubtitleLine.Construct(current_line.number, split_start, split_end, split_text, current_line.metadata)
 
             stack.extend([split_line, new_line])
 

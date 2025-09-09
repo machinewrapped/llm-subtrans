@@ -26,6 +26,7 @@ from GUI.ProjectDataModel import ProjectDataModel
 from GUI.ProjectSelection import ProjectSelection
 
 from PySubtitle.Options import Options
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.Helpers.Localization import _
 
@@ -127,7 +128,9 @@ class ProjectActions(QObject):
         initial_path = self.last_used_path or os.getcwd()
         shift_pressed = self._is_shift_pressed()
 
-        filters = f"{_('Subtitle files')} (*.srt *.subtrans);;{_('All Files')} (*)"
+        extensions = sorted(set(SubtitleFormatRegistry.enumerate_formats()).union(['.subtrans']))
+        extension_wildcards = ' '.join(f'*{ext}' for ext in extensions)
+        filters = f"{_('Subtitle files')} ({extension_wildcards});;{_('All Files')} (*)"
         filepath, dummy = QFileDialog.getOpenFileName(parent=self._mainwindow, caption=_("Open File"), dir=initial_path, filter=filters) # type: ignore[unused-ignore]
 
         if filepath:
@@ -147,6 +150,8 @@ class ProjectActions(QObject):
 
         filepath = project.projectfile
         show_dialog = self._is_shift_pressed()
+
+        # TODO: if the shift key is pressed, should we give the user the option to change the output format for the translation?
 
         if show_dialog or not filepath or not os.path.exists(filepath):
             base_path = self.last_used_path or os.getcwd()
@@ -186,8 +191,8 @@ class ProjectActions(QObject):
 
     def ShowProjectSettings(self, show : bool = True):
         self._validate_datamodel()
-        if self.datamodel and not show:
-            self.datamodel.SaveProject()
+        if self.datamodel and self.datamodel.project and not show:
+            self.datamodel.project.SaveProject()
 
         self.showProjectSettings.emit(show)
 

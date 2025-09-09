@@ -1,7 +1,7 @@
 import os
 from PySubtitle.SubtitleBatcher import SubtitleBatcher
 from PySubtitle.Subtitles import Subtitles
-from PySubtitle.Helpers.Tests import RunTestOnAllSrtFiles, separator
+from PySubtitle.Helpers.Tests import RunTestOnAllSubtitleFiles, separator
 
 def analyze_scenes(scenes):
     num_scenes = len(scenes)
@@ -59,7 +59,7 @@ def run_tests(directory_path, results_path):
         { 'min_batch_size': 16, 'max_batch_size': 80, 'scene_threshold': 40 },
     ]
 
-    RunTestOnAllSrtFiles(batcher_test, test_options, directory_path, results_path)
+    RunTestOnAllSubtitleFiles(batcher_test, test_options, directory_path, results_path)
 
 if __name__ == "__main__":
     directory_path = os.path.join(os.getcwd(), "test_subtitles")

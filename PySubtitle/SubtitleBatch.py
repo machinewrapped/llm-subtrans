@@ -4,7 +4,7 @@ from typing import Any
 from PySubtitle.Substitutions import Substitutions
 from PySubtitle.TranslationPrompt import TranslationPrompt
 from PySubtitle.SubtitleError import SubtitleError
-from PySubtitle.Helpers.Subtitles import AddOrUpdateLine, MergeSubtitles
+from PySubtitle.Helpers.SubtitleHelpers import AddOrUpdateLine, MergeSubtitles
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.Translation import Translation
 

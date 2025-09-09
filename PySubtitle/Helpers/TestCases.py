@@ -8,7 +8,10 @@ from PySubtitle.Options import Options, SettingsType
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleError import TranslationError
+from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
+from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Subtitles import Subtitles
+from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleScene import SubtitleScene
 from PySubtitle.Translation import Translation
@@ -88,12 +91,14 @@ class SubtitleTestCase(unittest.TestCase):
         self.assertSequenceEqual([ line.end for line in batch.originals ], [ line.end for line in reference_batch.originals ])
 
 
-def PrepareSubtitles(subtitle_data : dict, key : str = 'original') -> Subtitles:
+def PrepareSubtitles(subtitle_data : dict, key : str = 'original', file_handler: SubtitleFileHandler|None = None) -> Subtitles:
     """
     Prepares a SubtitleFile object from subtitle data.
     """
-    subtitles : Subtitles = Subtitles()
-    subtitles.LoadSubtitlesFromString(subtitle_data[key])
+    filename = subtitle_data['filename']
+    handler = file_handler or SubtitleFormatRegistry.create_handler(filename=filename)
+    subtitles: Subtitles = Subtitles()
+    subtitles.LoadSubtitlesFromString(subtitle_data[key], file_handler=handler)
     subtitles.UpdateProjectSettings(SettingsType(subtitle_data))
     return subtitles
 

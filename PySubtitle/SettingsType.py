@@ -18,37 +18,37 @@ class SettingsType(dict[str, SettingType]):
 
     def get_bool(self, key: str, default: bool|None = False) -> bool:
         """Get a boolean setting with type safety"""
-        from .Helpers.Settings import GetBoolSetting
+        from .Helpers.SettingsHelpers import GetBoolSetting
         return GetBoolSetting(self, key, default)
 
     def get_int(self, key: str, default: int|None = None) -> int|None:
         """Get an integer setting with type safety"""
-        from .Helpers.Settings import GetIntSetting
+        from .Helpers.SettingsHelpers import GetIntSetting
         return GetIntSetting(self, key, default)
 
     def get_float(self, key: str, default: float|None = None) -> float|None:
         """Get a float setting with type safety"""
-        from .Helpers.Settings import GetFloatSetting
+        from .Helpers.SettingsHelpers import GetFloatSetting
         return GetFloatSetting(self, key, default)
 
     def get_str(self, key: str, default: str|None = None) -> str|None:
         """Get a string setting with type safety"""
-        from .Helpers.Settings import GetStrSetting
+        from .Helpers.SettingsHelpers import GetStrSetting
         return GetStrSetting(self, key, default)
 
     def get_timedelta(self, key: str, default: timedelta) -> timedelta:
         """Get a timedelta setting with type safety"""
-        from .Helpers.Settings import GetTimeDeltaSetting
+        from .Helpers.SettingsHelpers import GetTimeDeltaSetting
         return GetTimeDeltaSetting(self, key, default)
 
     def get_str_list(self, key: str, default: list[str]|None = None) -> list[str]:
         """Get a list of strings setting with type safety"""
-        from .Helpers.Settings import GetStringListSetting
+        from .Helpers.SettingsHelpers import GetStringListSetting
         return GetStringListSetting(self, key, default or [])
 
     def get_list(self, key: str, default: list[Any]|None = None) -> list[Any]:
         """Get a list setting with type safety"""
-        from .Helpers.Settings import GetListSetting
+        from .Helpers.SettingsHelpers import GetListSetting
         return GetListSetting(self, key, default or [])
 
     def get_dict(self, key: str, default: SettingsType|None = None) -> SettingsType:

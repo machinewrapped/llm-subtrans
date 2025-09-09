@@ -4,6 +4,7 @@ from PySubtitle.Helpers.TestCases import SubtitleTestCase
 from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
 from PySubtitle.Options import Options, SettingsType
 from PySubtitle.Subtitles import Subtitles
+from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.SubtitleProject import SubtitleProject
 from GUI.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
@@ -25,16 +26,16 @@ class DataModelTests(SubtitleTestCase):
         project = SubtitleProject()
         
         # Simulate loading a subtitle file with project settings
-        project_file = Subtitles()
+        subtitles = Subtitles()
         original_subtitles = chinese_dinner_data.get_str('original')
         if original_subtitles is None:
             self.fail("Couldn't load subtitles")
             return
 
-        project_file.LoadSubtitlesFromString(original_subtitles)
+        subtitles.LoadSubtitlesFromString(original_subtitles, SrtFileHandler())
         
         # Set the project's subtitle file and apply test-specific project settings
-        project.subtitles = project_file
+        project.subtitles = subtitles
         # Apply the project-specific settings that were set on the SubtitleFile
         project.UpdateProjectSettings(SettingsType({
             'provider': 'Dummy Claude',
@@ -145,7 +146,7 @@ class DataModelTests(SubtitleTestCase):
         if original_subtitles1 is None:
             self.fail("Couldn't load subtitles")
             return
-        project1_file.LoadSubtitlesFromString(original_subtitles1)
+        project1_file.LoadSubtitlesFromString(original_subtitles1, SrtFileHandler())
         project1.subtitles = project1_file
         project1.UpdateProjectSettings(SettingsType({
             'target_language': 'Spanish',
@@ -161,7 +162,7 @@ class DataModelTests(SubtitleTestCase):
             self.fail("Couldn't load subtitles")
             return
 
-        project2_file.LoadSubtitlesFromString(original_subtitles2)
+        project2_file.LoadSubtitlesFromString(original_subtitles2, SrtFileHandler())
         project2.subtitles = project2_file
         project2.UpdateProjectSettings(SettingsType({
             'target_language': 'French',
@@ -235,13 +236,13 @@ class DataModelTests(SubtitleTestCase):
         
         # Create project with different provider settings
         project = SubtitleProject()
-        project_file = Subtitles()
+        subtitles = Subtitles()
         original_subtitles3 = chinese_dinner_data.get_str('original')
         if original_subtitles3 is None:
             self.fail("Couldn't load subtitles")
             return
-        project_file.LoadSubtitlesFromString(original_subtitles3)
-        project.subtitles = project_file
+        subtitles.LoadSubtitlesFromString(original_subtitles3, SrtFileHandler())
+        project.subtitles = subtitles
         project.UpdateProjectSettings(SettingsType({
             'provider': 'Dummy GPT',
             'model': 'gpt-4'

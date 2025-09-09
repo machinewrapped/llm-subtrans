@@ -3,8 +3,8 @@ import logging
 import threading
 from typing import Any
 
-from PySubtitle.Helpers.Settings import GetStrSetting
-from PySubtitle.Helpers.Subtitles import MergeTranslations
+from PySubtitle.Helpers.SettingsHelpers import GetStrSetting
+from PySubtitle.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtitle.Helpers.Localization import _, tr
 from PySubtitle.Helpers.Text import Linearise, SanitiseSummary
 from PySubtitle.Instructions import DEFAULT_TASK_TYPE, Instructions
@@ -31,7 +31,7 @@ class SubtitleTranslator:
     """
     Processes subtitles into scenes and batches and sends them for translation
     """
-    def __init__(self, settings: Options, translation_provider: TranslationProvider, resume = False):
+    def __init__(self, settings: Options, translation_provider: TranslationProvider, resume: bool = False):
         """
         Initialise a SubtitleTranslator with translation options
         """

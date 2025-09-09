@@ -3,7 +3,7 @@ import logging
 from typing import Any
 
 from PySubtitle.SubtitleBatch import SubtitleBatch
-from PySubtitle.Helpers.Subtitles import ResyncTranslatedLines
+from PySubtitle.Helpers.SubtitleHelpers import ResyncTranslatedLines
 from PySubtitle.SubtitleLine import SubtitleLine
 
 class SubtitleScene:

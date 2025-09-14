@@ -107,8 +107,8 @@ extras=()
 scripts_to_generate=("llm-subtrans")
 
 echo "Select installation type:"
-echo "1 = Install with GUI [default]"
-echo "2 = Install command line only"
+echo "1 = Install with GUI"
+echo "2 = Install command line tools only"
 read -p "Enter your choice (1/2): " install_choice
 
 if [ "$install_choice" = "2" ]; then

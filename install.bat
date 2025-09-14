@@ -58,8 +58,8 @@ set "EXTRAS="
 set "SCRIPTS=llm-subtrans"
 
 echo Select installation type:
-echo 1 = Install with GUI [default]
-echo 2 = Install command line only
+echo 1 = Install with GUI
+echo 2 = Install command line tools only
 set /p install_choice="Enter your choice (1/2): "
 
 if "%install_choice%"=="2" (

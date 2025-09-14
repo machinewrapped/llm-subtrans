@@ -6,16 +6,16 @@ Note: LLM-Subtrans requires an active internet connection. Subtitles are sent to
 ## Installation
 For most users the packaged release is the easiest way to use the program. Download a package from [the releases page](https://github.com/machinewrapped/llm-subtrans/releases), unzip to a folder and run `gui-subtrans`. You will be prompted for some basic settings on first run.
 
+If you want to use the command line tools, modify the code or just prefer to have more control over the setup you will need to [install from source](#installing-from-source).
+
 ### Windows
 Every release is packaged for Windows as (**gui-subtrans-x.x.x.zip**).
 
 ### MacOS
-Packaged builds are usually provided for MacOS with Apple Silicon (**gui-subtrans-x.x.x.macos-arm64.zip**). If the latest release does not have a macos-arm64 package you can download an earlier release or [install from source](#installing-from-source).
-
-If you have an Intel Mac you will need to install from source. If anybody would like to volunteer to maintain Intel releases, please get in touch.
+Packaged builds are (usually) provided for MacOS with Apple Silicon (**gui-subtrans-x.x.x.macos-arm64.zip**). If you have an Intel Mac you will need to [install from source](#installing-from-source).
 
 ### Linux
-Prebuilt Linux packages are not provided so you will need to install from source.
+Prebuilt Linux packages are not provided so you will need to [install from source](#installing-from-source).
 
 ## Translation Providers
 
@@ -26,23 +26,23 @@ https://openrouter.ai/privacy
 
 You can choose to let OpenRouter select the model automatically (the "Use Default Model" setting in the GUI or `--auto` on the command line) or you can specify a specific model. Model preferences can also be specified in the OpenRouter dashboard.
 
-Since hundreds of models are available they are grouped by model family. By default the list of available models is pulled from the "Translation" category - though this excludes many other models that are perfectly capable of translation.
+Since hundreds of models are available they are grouped by model family. By default the list of available models is pulled from the "Translation" category, though this excludes many models that are perfectly capable of translation (including most free options).
 
 ### Google Gemini
 https://ai.google.dev/terms
 
 **Please note that regions restrictions may apply: https://ai.google.dev/available_regions**
 
-Gemini 2.5 Flash is perhaps the leading model for translation speed and fluency at time of writing, and Preview models are sometims free to use.
+Gemini 2.5 Flash is perhaps the leading model for translation speed and fluency at time of writing, despite some censorship, and Preview models are often free to use.
 
 You will need a Google Gemini API key from https://ai.google.dev/ or from a project created on https://console.cloud.google.com/. You must ensure that Generative AI is enabled for the api key and project.
 
 ### OpenAI
 https://openai.com/policies/privacy-policy
 
-You will need an OpenAI API key from https://platform.openai.com/account/api-keys to use OpenAI's GPT models as a translator. If the API key is associated with a free trial account the translation speed will be severely restricted.
+You will need an OpenAI API key from https://platform.openai.com/account/api-keys to use OpenAI's GPT models. If the API key is associated with a free trial the translation speed will be *severely* restricted.
 
-You can use the custom api_base parameter to access a custom OpenAI instance (or any other OpenAI-compatible endpoint, though the Custom Server option gives you more flexibility).
+You can use the custom api_base parameter to access a custom OpenAI instance (or any other OpenAI-compatible endpoint, though the Custom Server option gives you more control).
 
 You can use an **OpenAI Azure** installation as a translation provider, but this is only advisable if you know what you're doing - in which case hopefully it will be clear how to configure the Azure provider settings.
 
@@ -57,14 +57,14 @@ You will need a DeepSeek API key from https://platform.deepseek.com/api_keys to 
 
 DeepSeek is quite simple to set up and offers reasonable performance at a very low price, though translation does not seem to be its strongest point.
 
-### Anthropic Claude
+### Anthropic
 https://support.anthropic.com/en/collections/4078534-privacy-legal
 
 You will need an Anthropic API key from https://console.anthropic.com/settings/keys to use Claude as a provider. Translation is not Claude's strongest suit, and the API is expensive compared to others.
 
 The API has strict [rate limits](https://docs.anthropic.com/claude/reference/rate-limits) based on your credit tier, both on requests per minutes and tokens per day.
 
-### Mistral AI
+### Mistral
 https://mistral.ai/terms/
 
 You will need a Mistral API key from https://console.mistral.ai/api-keys/ to use this provider.
@@ -85,35 +85,35 @@ Chat and completion endpoints are supported - you should configure the settings 
 ### Amazon Bedrock
 https://aws.amazon.com/service-terms/
 
-**Bedrock is not recommended for most users**: The setup process is complex, requiring AWS credentials, proper IAM permissions, and region configuration. Additionally, not all models on Bedrock support translation tasks or offer reliable results. Bedrock support will not be included in pre-packaged versions - if you can handle setting up AWS, you can handle installing llm-subtrans from source!
+**Bedrock is not recommended for most users**: The setup process is complex, requiring AWS credentials, proper IAM permissions, and region configuration. Additionally, not all models on Bedrock support translation tasks or offer reliable results. Bedrock support will not be included in pre-packaged versions - if you can handle setting up AWS, you can handle installing llm-subtrans [from source](#installing-from-source).
 
 To use Bedrock, you must:
   1. Create an **IAM user** or **role** with appropriate permissions (e.g., `bedrock:InvokeModel`, `bedrock:ListFoundationModels`).
   2. Ensure the model you wish to use is accessible in your selected AWS region and [enabled for the IAM user](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html).
 
 ## Installing from source
-For other platforms, or if you want to modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.
+If you want to use the command line tools or modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.
 
-1. Clone the LLM-Subtrans repository onto your local machine using the following command:
+Clone the LLM-Subtrans repository to your local machine using the following command or your preferred tool:
 
     ```sh
     git clone https://github.com/machinewrapped/llm-subtrans.git
     ```
 
-### Installation scripts
+### Setup scripts
 
 The easiest setup method is to run the unified installation script:
 - **Windows**: Run `install.bat`
 - **MacOS/Linux**: Run `install.sh`
 
-These scripts will create a virtual environment and let you choose to **install with GUI** (default) or **install command line only**. They will guide you through selecting and installing your preferred provider(s) and generate command scripts to launch the applications.
+These scripts will create a virtual environment and offer **install with GUI** or **install command line only** options, with additional options to add support for specific providers. The script will guide you through the setup and generate command scripts to launch the application.
 
-During the installing process, you can choose to input an API key for each selected provider when prompted. It will be saved in a .env file so that you don't need to provide it every time you run the program.
+During the installing process, you can choose to input an API key for each selected provider when prompted, which will be saved in a .env file so that you don't need to provide it every time you run the program. This is largely redundant if you only plan to use the GUI, as keys can be saved in the app settings.
 
-#### Manual configuration
+### Manual configuration
 **If you ran an install script you can skip the remaining steps. Continue reading _only_ if you want to configure the environment manually instead.**
 
-2. Create a new file named .env in the root directory of the project. Add any required settings for your chosen provider to the .env file like this:
+1. Create a new file named .env in the root directory of the project. Add any required settings for your chosen provider to the .env file like this:
     ```sh
     OPENROUTER_API_KEY=<your_openrouter_api_key>
     OPENAI_API_KEY=<your_openai_api_key>
@@ -141,49 +141,31 @@ During the installing process, you can choose to input an API key for each selec
     OPENAI_REASONING_EFFORT=low/medium/high
     ```
 
-3. Create a virtual environment for the project by running the following command in the root folder to create a local environment for the Python interpreter.:
+2. Create a virtual environment for the project by running the following command in the root folder to create a local environment for the Python interpreter (optional, but highly recommended to avoid dependency conflicts with other Python applications):
 
     ```sh
     python -m venv envsubtrans
     ```
 
-4. Activate the virtual environment by running the appropriate command for your operating system:
+3. Activate the virtual environment by running the appropriate command for your operating system. You will need to do this each time before running the app.
 
     ```sh
     .\envsubtrans\Scripts\activate      # Windows
     source ./envsubtrans/bin/activate   # Mac/Linux
     ```
 
-5. Install the project (GUI included by default):
+4. Install the project with :
 
     ```sh
-    pip install ".[gui]"
+    pip install .                   # Minimal install of command line tools with support for OpenRouter or Custom Server
+    pip install ".[gui]"            # Core module and default provider with GUI module
+    pip install ".[gui,openai,gemini,claude,mistral,bedrock]"   # Full install with optional providers (delete to taste)
     ```
-
-    If you only need the command‑line tools, omit the optional GUI dependencies:
-
-    ```sh
-    pip install .
-    ```
-
-6. Install any additional SDKs required for the provider(s) you intend to use:
-
-    ```sh
-    pip install ".[openai]"   # OpenAI or Azure OpenAI
-    pip install ".[gemini]"   # Google Gemini
-    pip install ".[claude]"   # Anthropic Claude
-    pip install ".[mistral]"  # Mistral
-    pip install ".[bedrock]"  # Amazon Bedrock (installs boto3)
-    ```
-
-Note that steps 3 and 4 are optional but recommended, as they help prevent conflicts with other Python applications.
 
 ## Usage
 The program works by dividing the subtitles up into small batches and sending each one to the translation service in turn. It is likely to take time to complete, and can potentially make many API calls for each subtitle file.
 
 By default The translated subtitles will be written to a new file in the same directory with the target langugage appended to the original filename.
-
-Subtitle Edit's (https://www.nikse.dk/subtitleedit) "Fix Common Errors" can help to clean up the translated subtitles, though some of its functionality is now covered by the post-process option (`--postprocess`) in LLM-Subtrans.
 
 ### GUI
 The [Subtrans GUI](https://github.com/machinewrapped/llm-subtrans/wiki/GUI#gui-subtrans) is the best and easiest way to use the program. After installation, launch the GUI with the `gui-subtrans` command or shell script, and hopefully the rest should be self-explanatory.

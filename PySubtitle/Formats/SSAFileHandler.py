@@ -196,10 +196,8 @@ class SSAFileHandler(SubtitleFileHandler):
         # Convert HTML tags back to SSA tags, then set text directly
         ssa_text = self._html_to_ass(line.text or "")
         
-        # Restore whole-line SSA tags from metadata
         ssa_text = self._restore_whole_line_tags(ssa_text, line.metadata or {})
         
-        # Use .text property instead of .plaintext to preserve formatting
         event.text = ssa_text
         
         # Restore metadata if available, otherwise use pysubs2 defaults
@@ -228,12 +226,10 @@ class SSAFileHandler(SubtitleFileHandler):
             'aegisub_project': dict(subs.aegisub_project) if hasattr(subs, 'aegisub_project') else {}
         }
         
-        # Convert styles, handling Color objects
         styles = {}
         for name, style in subs.styles.items():
             style_dict = style.as_dict()
             
-            # Convert any pysubs2.Color objects to hex strings
             for field, value in style_dict.items():
                 if isinstance(value, pysubs2.Color):
                     style_dict[field] = Color(value.r, value.g, value.b, value.a)
@@ -299,11 +295,10 @@ class SSAFileHandler(SubtitleFileHandler):
                 
                 # For composite tags, remove basic formatting but keep the rest
                 cleaned_tag = _BASIC_TAG_PATTERN.sub('', tag)
-                # Only keep non-empty complex tags
+
                 if cleaned_tag != '{}':
                     complex_tags.append(cleaned_tag)
             
-            # Only store if we found complex tags
             if complex_tags:
                 metadata['override_tags_start'] = ''.join(complex_tags)
         
@@ -369,7 +364,6 @@ class SSAFileHandler(SubtitleFileHandler):
         text = text.replace('\\N', '\n')
         text = text.replace('\\n', '<wbr>')
         
-        # Convert basic formatting tags to HTML using precompiled patterns
         for pattern, replacement in _SSA_TO_HTML_PATTERNS:
             text = pattern.sub(replacement, text)
         
@@ -392,7 +386,6 @@ class SSAFileHandler(SubtitleFileHandler):
         text = text.replace('<wbr>', '\\n')
         text = text.replace('\n', '\\N')
         
-        # Convert HTML tags back to SSA tags using precompiled patterns
         for pattern, replacement in _HTML_TO_SSA_PATTERNS:
             text = pattern.sub(replacement, text)
         

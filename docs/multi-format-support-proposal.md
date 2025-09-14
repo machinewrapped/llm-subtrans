@@ -6,26 +6,17 @@
 
 This document captures the architecture and decisions behind LLM-Subtrans's multi-format subtitle support through Phase 7 and outlines the remaining work. The system now uses a format-agnostic approach with pluggable file handlers that auto-register based on file extensions.
 
-## Current State After Phase 7
+## Architecture Overview
 
-### Existing Architecture
 - **Core Internal Representation**: `SubtitleLine` objects with timing, text, and metadata
 - **File Format Handling**: `SubtitleFormatRegistry` discovers handlers such as `SrtFileHandler` and `SSAFileHandler`
 - **Integration Points**: `SubtitleProject` reads and writes `Subtitles` files by extension
 - **Serialization**: `SubtitleSerialisation.py` handles project file persistence
 - **Interface**: Abstract `SubtitleFileHandler` defines parsing and composing operations
 
-### Current Limitations
-- SRT, SSA/ASS, and WebVTT formats implemented
-- Content-based format detection now implemented via `pysubs2`
-
-## Architecture Overview
-
 ### Responsibility Separation
 **SubtitleProject** becomes responsible for:
 - Format detection and handler selection via `SubtitleFormatRegistry`
-- Orchestrating format conversions by creating new `Subtitles` instances
-- Coordinating file I/O operations with appropriate handlers
 
 **Subtitles** becomes format-agnostic by:
 - Determining the appropriate `file_handler` to use based on filename
@@ -34,15 +25,11 @@ This document captures the architecture and decisions behind LLM-Subtrans's mult
 
 ### Format Detection & Routing System
 The `SubtitleFormatRegistry`:
-- Auto-discovers handlers in `PySubtitle/Formats/` directory
+- Handler classes in `PySubtitle/Formats/*.py` that inherit from `SubtitleFileHandler` are automatically registered
+- Registration is driven by each handler's `SUPPORTED_EXTENSIONS` class variable
 - Maps file extensions to appropriate handlers using priority values
 - Can auto-detect format based on content
 - Supports disabling auto-discovery for controlled test environments
-
-### Handler Auto-Discovery
-- Handler classes in `PySubtitle/Formats/*.py` that inherit from `SubtitleFileHandler` are automatically registered
-- Registration is driven by each handler's `SUPPORTED_EXTENSIONS` class variable
-- Higher priority handlers override lower priority ones
 
 ### Core Use Case Focus
 The implementation prioritizes **subtitle translation** over format conversion:
@@ -126,7 +113,6 @@ After implementation comparison, `pysubs2` was identified as the superior approa
 - **Future-proof**: Automatic updates as library evolves
 
 ### Phase 4: Format conversion
-
 We provide the option to read from one format and write to another as a convenience, but the focus of the application is translation of existing subtitles, format conversion is not a core feature (it is best handled by dedicated tools).
 
 ### Conversion process
@@ -184,8 +170,6 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 
 ### Phase 6: Enhanced Format Detection
 
-**IMPORTANT NOTE:** `pysubs2` supports format detection from content. We should aim to leverage that rather than implement our own detection logic.
-
 **Requirements**:
 - [x] Support format detection when file extension is missing/incorrect
 - [x] Report detected_format via `SubtitleData` and automatically update the project output format
@@ -208,7 +192,7 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 - `PySubtitle/SubtitleFormatRegistry.py`: Add format detection hooks
 - `PySubtitle/SubtitleFileHandler.py` and subclasses: Add detection methods if necessary
 
-### Phase 7: WebVTT Format Support [X] COMPLETED
+### Phase 7: WebVTT Format Support
 Universal web standard, supported by all major platforms, proof of concept for native handlers
 
 **Requirements**:
@@ -255,6 +239,50 @@ Native `VttFileHandler` successfully demonstrates the "keep it simple" approach 
 **Files to Modify**:
 - SettingsDialog for format-specific options
 - SubtitleFileHandler for format-specific options
+
+## Future Development considerations
+
+### Audio Transcription Integration
+**Vision**: Extend LLM-Subtrans to support audio-to-subtitle-to-translation workflows, leveraging the format-agnostic architecture to handle diverse transcription outputs.
+
+#### Phase A: OpenAI Whisper Integration
+- Add audio file support (mp3, mp4, wav, webm, m4a)
+- Integrate OpenAI Whisper API or local Whisper models
+- Support timestamp-accurate transcription output
+- Handle multiple languages with automatic detection
+
+#### Phase B: Speaker Diarization Support
+- Integrate WhisperX or Whisper+PyAnnote for speaker identification
+- Store speaker information in `SubtitleLine.metadata`
+- Support multi-speaker subtitle generation
+- Enable speaker-based translation customization
+
+#### Phase C: Advanced Transcription Features
+- **Gemini Audio Processing**: Support for Google Gemini's multimodal audio transcription
+- **Batch Audio Processing**: Process multiple audio files with consistent speaker identification
+
+### Format-Specific Transcription Outputs
+The multi-format architecture naturally supports transcription service outputs:
+- **Whisper → SRT/VTT**: Standard timestamped transcription
+- **Diarized Output → ASS**: Speaker-based styling and positioning  
+- **Broadcast Content → SCC**: CEA-608/708 compliant captions
+- **Streaming Services → TTML**: Advanced styling for platform requirements
+
+### Integration Benefits
+- **Single Tool Workflow**: Audio → Transcription → Translation → Formatted Output
+- **Format Flexibility**: Choose optimal format for target platform (broadcast, web, mobile)
+- **Speaker Context**: Leverage speaker information for more accurate translation
+- **Quality Control**: Maintain transcription metadata for review and correction
+
+### Additional Format Support (Lower Priority)
+- YouTube SBV (simple timestamped format)
+- MicroDVD (SUB) (frame-based timing)
+- Whisper captions
+
+### Advanced Features
+- **Format-specific editing**: Maintain format integrity during translation
+- **Quality validation**: Format compliance checking and repair
+
 
 ## Technical Specifications
 
@@ -311,49 +339,6 @@ class ExampleFileHandler(SubtitleFileHandler):
 - **10+**: Primary/specialist handlers (e.g., `SrtFileHandler` for `.srt` = 10)
 - **1-9**: Generic/multi-format handlers with lower precedence
 - **0**: Fallback handlers used when no specialist implementation exists
-
-### Extended SubtitleLine Metadata Schema
-```python
-# SSA Format Metadata
-{
-    "style": "Default",
-    "layer": 0,
-    "margin_l": 0,
-    "margin_r": 0,
-    "margin_v": 0,
-    "effect": "",
-    "override_codes": "{\\i1}italic text{\\i0}"
-}
-
-# WebVTT Format Metadata (Line-level)
-{
-    "cue_id": "subtitle-001",
-    "vtt_settings": "position:10%,line-left align:left size:35%",
-    "speaker": "Mary"
-}
-```
-
-#### File-Level Metadata Storage
-File handlers must capture and preserve format-specific file context, e.g.
-
-```python
-# SSA File Metadata
-{
-    "format": "ass",
-    "script_info": {"Title": "Movie", "ScriptType": "v4.00+", ...},
-    "styles": {"Default": {...}, "Italics": {...}},
-    "original_pysubs2_file": SSAFile  # For perfect round-trip
-}
-
-# WebVTT File Metadata  
-{
-    "header_text": "WEBVTT", 
-    "vtt_styles": [
-        "::cue {\n  background-image: linear-gradient(to bottom, dimgray, lightgray);\n  color: papayawhip;\n}",
-        "::cue(b) {\n  color: peachpuff;\n}"
-    ]
-}
-```
 
 ### File Handler Requirements
 All format handlers must:
@@ -466,56 +451,3 @@ All pysubs2-based handlers follow the pattern from `SSAFileHandler` (TODO: extra
 - **Round-Trip Preservation**: Store original pysubs2 object data in `_pysubs2_original`
 - **Translation-Friendly**: Basic inline formatting (bold, italic) accessible to translators as SRT/HTML style tags
 
-## Future Development considerations: Transcription + Translation Workflow
-
-### Audio Transcription Integration
-**Vision**: Extend LLM-Subtrans to support audio-to-subtitle-to-translation workflows, leveraging the format-agnostic architecture to handle diverse transcription outputs.
-
-#### Phase A: OpenAI Whisper Integration
-- Add audio file support (mp3, mp4, wav, webm, m4a)
-- Integrate OpenAI Whisper API or local Whisper models
-- Support timestamp-accurate transcription output
-- Handle multiple languages with automatic detection
-
-#### Phase B: Speaker Diarization Support
-- Integrate WhisperX or Whisper+PyAnnote for speaker identification
-- Store speaker information in `SubtitleLine.metadata`
-- Support multi-speaker subtitle generation
-- Enable speaker-based translation customization
-
-#### Phase C: Advanced Transcription Features
-- **Gemini Audio Processing**: Support for Google Gemini's multimodal audio transcription
-- **Batch Audio Processing**: Process multiple audio files with consistent speaker identification
-
-### Format-Specific Transcription Outputs
-The multi-format architecture naturally supports transcription service outputs:
-- **Whisper → SRT/VTT**: Standard timestamped transcription
-- **Diarized Output → ASS**: Speaker-based styling and positioning  
-- **Broadcast Content → SCC**: CEA-608/708 compliant captions
-- **Streaming Services → TTML**: Advanced styling for platform requirements
-
-### Enhanced Metadata Schema for Transcription
-```python
-# Speaker Diarization Metadata
-{
-    "transcription_source": "whisper_diarized",
-    "speaker_id": "SPEAKER_00",
-    "confidence_score": 0.95,
-    "audio_segment": {"start": 12.34, "end": 18.67},
-    "language_detected": "en",
-}
-```
-### Integration Benefits
-- **Single Tool Workflow**: Audio → Transcription → Translation → Formatted Output
-- **Format Flexibility**: Choose optimal format for target platform (broadcast, web, mobile)
-- **Speaker Context**: Leverage speaker information for more accurate translation
-- **Quality Control**: Maintain transcription metadata for review and correction
-
-### Additional Format Support (Lower Priority)
-- YouTube SBV (simple timestamped format)
-- MicroDVD (SUB) (frame-based timing)
-- Whisper captions
-
-### Advanced Features
-- **Format-specific editing**: Maintain format integrity during translation
-- **Quality validation**: Format compliance checking and repair

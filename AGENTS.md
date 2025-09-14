@@ -6,11 +6,15 @@ GUI framework is PySide6, be sure to use the correct syntax (e.g. scoped enum va
 
 Secrets are stored in a .env file - NEVER read the contents of the file.
 
+Always run the unit_tests at the end of a task to validate the change.
+
+## Console Output
+Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Windows console errors
 ## Commands
 - Run all unit tests: `python tests/unit_tests.py` 
 - Run single test: `python -m unittest PySubtitle.UnitTests.test_MODULE` or `python -m unittest GUI.UnitTests.test_MODULE`
 - Build distribution: `./scripts/makedistro.sh` (Linux/Mac) or `scripts\makedistro.bat` (Windows)
-- Create virtual environment and install dependencies: `./install.sh` (Linux/Mac) or `install.bat` (Windows)
+- Create virtual environment, install dependencies and configure project: `./install.sh` (Linux/Mac) or `install.bat` (Windows)
 
 ## Code Style
 - **Naming**: PascalCase for classes and methods, snake_case for variables
@@ -19,18 +23,27 @@ Secrets are stored in a .env file - NEVER read the contents of the file.
 - **Type Hints**: Use type hints for parameters, return values, and class variables
   - NEVER put spaces around the `|` in type unions. Use `str|None`, never `str | None`
   - ALWAYS put spaces around the colon introducing a type hint:
-  - Examples: `def func(self, param : str) -> str|None:` ✅ `def func(self, param: str) -> str | None:` ❌
+  - Examples: 
+    `def func(self, param : str) -> str|None:` ✅ 
+    `def func(self, param: str) -> str | None:` ❌
 - **Docstrings**: Triple-quoted concise descriptions for classes and methods
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()
 - **Threading safety**: Use locks (RLock/QRecursiveMutex) for thread-safe operations
-- **Unit Tests**: New tests must be registered in `PySubtitle.UnitTests.__init__` or `GUI.UnitTests.__init__`
-  - Tests should adhere to the project test structure - see `GUI\UnitTests\test_BatchCommands.py` for an example.
-  - Use functions like `log_input_expected_result` (logs input value, expected result and actual result or suitable proxies) defined in `Helpers\Test.py`.
-  - **CRITICAL**: Always call `log_input_expected_result()` BEFORE the corresponding assertion so that if the assertion fails the log will show the reason.
-  - **Pattern**: `log_input_expected_result("desc", expected, actual)` then `self.assertEqual(expected, actual)`
+- **Unit Tests**: Follow project test structure and use proper logging for debugging.
+  - **Key Principles**:
+    - Use semantic assertions (`assertIsNotNone`, `assertIn`, `assertEqual`) over generic `assertTrue` 
+    - Call `log_input_expected_result(input, expected, actual)` BEFORE the assertion to log useful diagnostic data
+    - Log informative input values (actual input value for the test case, field names being compared)
+  - **Common Patterns**:
+    - **Equality**: `log_input_expected_result("field_name", expected, obj.field); self.assertEqual(obj.field, expected)`
+    - **Type checks**: `log_input_expected_result(obj, ExpectedClass, type(obj)); self.assertEqual(type(obj), ExpectedClass)`
+    - **None checks**: `log_input_expected_result(obj, True, obj is not None); self.assertIsNotNone(obj)`
+    - **Membership**: `log_input_expected_result("key_name", True, "key" in data); self.assertIn("key", data)`
+  - **Exception Tests**: Guard with `skip_if_debugger_attached("TestName")` for debugging compatibility
+    - Use `log_input_expected_error(input, ExpectedException, actual_exception)` for exception logging
   - **None Safety**: Use `.get(key, default)` with appropriate default values to avoid Pylance warnings, or assert then test for None values.
-- **Console Output**: Avoid Unicode characters (✓ ✗) in print/log messages - Windows console encoding issues
+  - **Regular Expressions**: The project uses the `regex` module for regular expression handling, rather than the standard `re`.
 
 ## Information
 Consult `docs/architecture.md` for detailed information on the project architecture and components.

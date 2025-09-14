@@ -3,7 +3,7 @@ python scripts/sync_version.py
 python.exe -m pip install --upgrade pip
 pip install pywin32-ctypes
 pip install --upgrade pyinstaller
-pip install --upgrade ".[gui,openai,gemini,claude,mistral]"
+pip install --upgrade -e ".[gui,openai,gemini,claude,mistral]"
 rem pip install --upgrade "boto3"  REM Bedrock dependencies excluded
 
 rem Update and compile localization files before tests/build

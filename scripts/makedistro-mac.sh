@@ -8,7 +8,7 @@ pip install --upgrade PyInstaller pyinstaller-hooks-contrib
 pip install --upgrade setuptools
 pip install --upgrade jaraco.text
 pip install --upgrade charset_normalizer
-pip install --upgrade ".[gui,openai,gemini,claude,mistral]"
+pip install --upgrade -e ".[gui,openai,gemini,claude,mistral]"
 
 # Remove boto3 from packaged version
 pip uninstall boto3

@@ -187,7 +187,7 @@ else
     echo "Installing dependencies..."
 fi
 
-pip install --upgrade "$install_target"
+pip install --upgrade -e "$install_target"
 
 for script in "${scripts_to_generate[@]}"; do
     scripts/generate-cmd.sh "$script"

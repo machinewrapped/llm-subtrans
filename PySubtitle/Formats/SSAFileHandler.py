@@ -194,13 +194,13 @@ class SSAFileHandler(SubtitleFileHandler):
             event.end = 0
         
         # Convert HTML tags back to SSA tags, then set text directly
-        ass_text = self._html_to_ass(line.text or "")
+        ssa_text = self._html_to_ass(line.text or "")
         
         # Restore whole-line SSA tags from metadata
-        ass_text = self._restore_whole_line_tags(ass_text, line.metadata or {})
+        ssa_text = self._restore_whole_line_tags(ssa_text, line.metadata or {})
         
         # Use .text property instead of .plaintext to preserve formatting
-        event.text = ass_text
+        event.text = ssa_text
         
         # Restore metadata if available, otherwise use pysubs2 defaults
         if line.metadata:
@@ -277,15 +277,15 @@ class SSAFileHandler(SubtitleFileHandler):
         if 'aegisub_project' in metadata and hasattr(subs, 'aegisub_project'):
             subs.aegisub_project.update(metadata['aegisub_project'])
     
-    def _extract_whole_line_tags(self, ass_text: str) -> dict:
+    def _extract_whole_line_tags(self, ssa_text: str) -> dict:
         """Extract whole-line SSA override tags from start of line and return as metadata."""
-        if not ass_text:
+        if not ssa_text:
             return {}
             
         metadata = {}
         
         # Match consecutive SSA tags at the start of the line
-        start_tags_match = _START_TAGS_PATTERN.match(ass_text)
+        start_tags_match = _START_TAGS_PATTERN.match(ssa_text)
         if start_tags_match:
             tags_section = start_tags_match.group(0)
             
@@ -315,12 +315,12 @@ class SSAFileHandler(SubtitleFileHandler):
             return f"{metadata['override_tags_start']}{text}"
         return text
     
-    def _ssa_to_html(self, ass_text: str) -> str:
+    def _ssa_to_html(self, ssa_text: str) -> str:
         """Convert SSA inline formatting tags to HTML tags for GUI display."""
-        if not ass_text:
+        if not ssa_text:
             return ""
             
-        text = ass_text
+        text = ssa_text
         
         # Remove complex whole-line tags at the start (they'll be stored in metadata)
         # But preserve basic formatting tags for HTML conversion

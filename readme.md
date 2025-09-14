@@ -1,7 +1,7 @@
 # LLM-Subtrans
 LLM-Subtrans is an open source subtitle translator that uses LLMs as a translation service. It can translate subtitles between any language pairs supported by the language model.
 
-The application supports multiple subtitle formats through a pluggable system. Currently `.srt` and `.ass`/`.ssa` files are supported.
+The application supports multiple subtitle formats through a pluggable system. Currently `.srt`, `.ssa`/`.ass` and `.vtt` files are supported.
 
 Note: LLM-Subtrans requires an active internet connection. Subtitles are sent to the provider's servers for translation, so their privacy policy applies.
 

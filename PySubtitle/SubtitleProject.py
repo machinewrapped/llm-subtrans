@@ -67,7 +67,7 @@ class SubtitleProject:
         with self.lock:
             return bool(self.subtitles and self.subtitles.all_translated)
 
-    def InitialiseProject(self, filepath: str, outputpath: str|None = None, reload_subtitles: bool = False):
+    def InitialiseProject(self, filepath : str, outputpath : str|None = None, reload_subtitles : bool = False):
         """
         Initialize the project by either loading an existing project file or creating a new one.
         Load the subtitles to be translated, either from the project file or the source file.

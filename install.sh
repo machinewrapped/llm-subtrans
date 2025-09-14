@@ -177,14 +177,17 @@ case $provider_choice in
         ;;
 esac
 
+
+install_target="."
 if [ ${#extras[@]} -gt 0 ]; then
     IFS=','; extra_str="${extras[*]}"; unset IFS
     echo "Installing dependencies: $extra_str"
-    pip install --upgrade ".[${extra_str}]"
+    install_target=".[${extra_str}]"
 else
     echo "Installing dependencies..."
-    pip install --upgrade .
 fi
+
+pip install --upgrade "$install_target"
 
 for script in "${scripts_to_generate[@]}"; do
     scripts/generate-cmd.sh "$script"

@@ -133,14 +133,17 @@ if errorlevel 1 (
 
 call envsubtrans\Scripts\activate.bat
 
-REM Install dependencies
-if "!EXTRAS!"=="" (
-    echo Installing dependencies...
-    pip install --upgrade .
-) else (
+REM Determine install target
+set "INSTALL_TARGET=."
+if not "!EXTRAS!"=="" (
     echo Installing dependencies: !EXTRAS!
-    pip install --upgrade ".[!EXTRAS!]"
+    set "INSTALL_TARGET=.[!EXTRAS!]"
+) else (
+    echo Installing dependencies...
 )
+
+REM Install dependencies
+pip install --upgrade "!INSTALL_TARGET!"
 if errorlevel 1 (
     echo Failed to install required modules.
     pause

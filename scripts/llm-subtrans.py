@@ -1,4 +1,3 @@
-import os
 import logging
 
 from check_imports import check_required_imports

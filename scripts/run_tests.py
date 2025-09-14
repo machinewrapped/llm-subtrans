@@ -9,6 +9,7 @@ from types import ModuleType
 import unittest
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, base_path)
 
 from PySubtitle.Helpers.Tests import create_logfile, end_logfile, separator
 from Tests.unit_tests import discover_tests

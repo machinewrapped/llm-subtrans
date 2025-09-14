@@ -316,7 +316,7 @@ class Subtitles:
             else:
                 logging.warning(_("No original subtitles to save to {}").format(str(path)))
 
-    def SaveTranslation(self, outputpath: str|None = None, file_handler: SubtitleFileHandler|None = None) -> None:
+    def SaveTranslation(self, outputpath: str|None = None) -> None:
         """
         Write translated subtitles to a file
         """
@@ -329,8 +329,7 @@ class Subtitles:
 
         outputpath = os.path.normpath(outputpath)
 
-        if not file_handler:
-            file_handler = SubtitleFormatRegistry.create_handler(filename=outputpath)
+        file_handler = SubtitleFormatRegistry.create_handler(filename=outputpath)
             
         with self.lock:
             if not self.scenes:

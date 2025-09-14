@@ -24,7 +24,9 @@ Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Window
 - **Type Hints**: Use type hints for parameters, return values, and class variables
   - NEVER put spaces around the `|` in type unions. Use `str|None`, never `str | None`
   - ALWAYS put spaces around the colon introducing a type hint:
-  - Examples: `def func(self, param : str) -> str|None:` ✅ `def func(self, param: str) -> str | None:` ❌
+  - Examples: 
+    `def func(self, param : str) -> str|None:` ✅ 
+    `def func(self, param: str) -> str | None:` ❌
 - **Docstrings**: Triple-quoted concise descriptions for classes and methods
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()

@@ -15,12 +15,9 @@ Only constant string literals are extracted from source code.
 import ast
 import os
 import re
-import sys
 from datetime import datetime, timezone
 
-# Add the parent directory to sys.path so we can import PySubtitle modules
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(base_path)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 REPO_ROOT = base_path

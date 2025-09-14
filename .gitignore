@@ -40,5 +40,6 @@ untranslated_msgids_*.txt
 /.claude
 /test_projects
 git-cleanup-gone.ps1
+/llm_subtrans.egg-info
 *.ssa
 *.vtt

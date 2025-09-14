@@ -1,5 +1,5 @@
 from typing import Any
-from openai.types.chat import ChatCompletion
+from openai.types.chat import ChatCompletion    # type: ignore
 
 from PySubtitle.Helpers.Localization import _
 from PySubtitle.Options import SettingsType

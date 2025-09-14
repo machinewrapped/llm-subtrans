@@ -3,10 +3,6 @@ import os
 import sys
 import unittest
 
-# Add the parent directory to the sys path so that modules can be found
-base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(base_path)
-
 from PySubtitle.Helpers.Tests import create_logfile
 
 def discover_tests_in_directory(loader : unittest.TestLoader, test_dir : str, base_dir : str, handle_import_errors : bool = False) -> unittest.TestSuite:

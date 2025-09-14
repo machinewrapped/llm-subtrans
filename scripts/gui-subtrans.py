@@ -5,17 +5,15 @@ import sys
 import cProfile
 from pstats import Stats
 
-# Add the parent directory to the sys path so that modules can be found
-base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-sys.path.append(base_path)
+if not hasattr(sys, "_MEIPASS"):
+    from check_imports import check_required_imports
+    check_required_imports(['PySubtitle', 'GUI', 'PySide6', 'scripts'], 'gui')
 
 from scripts.subtrans_common import InitLogger
-
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from PySubtitle.Options import Options, settings_path, config_dir
 from PySubtitle.Helpers.Localization import initialize_localization, _
-
 from GUI.MainWindow import MainWindow
 
 def parse_arguments():

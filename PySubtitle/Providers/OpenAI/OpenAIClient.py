@@ -9,7 +9,7 @@ from PySubtitle.Options import SettingsType
 from PySubtitle.SubtitleError import TranslationResponseError
 
 try:
-    import openai
+    import openai   # type: ignore
     import httpx
 
     from PySubtitle.Helpers import FormatMessages

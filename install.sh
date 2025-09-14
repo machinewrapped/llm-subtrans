@@ -5,12 +5,12 @@ set -e
 function install_provider() {
     local provider=$1
     local api_key_var_name=$2
-    local pip_package=$3
+    local extra_name=$3
     local script_name=$4
     local set_as_default=$5
 
     read -p "Enter your $provider API Key (optional): " api_key
-    
+
     # Only update .env if user entered a new API key
     if [ -n "$api_key" ]; then
         if [ -f ".env" ]; then
@@ -19,7 +19,7 @@ function install_provider() {
         fi
         echo "${api_key_var_name}_API_KEY=$api_key" >> .env
     fi
-    
+
     # Set as default provider if requested
     if [ "$set_as_default" = "set_default" ]; then
         if [ -f ".env" ]; then
@@ -28,13 +28,11 @@ function install_provider() {
         fi
         echo "PROVIDER=$provider" >> .env
     fi
-    if [ -n "$pip_package" ]; then
-        echo "Installing $provider module..."
-        pip install $pip_package
-    else
-        echo "$provider has no additional dependencies to install."
+
+    if [ -n "$extra_name" ]; then
+        extras+=("$extra_name")
     fi
-    scripts/generate-cmd.sh $script_name
+    scripts_to_generate+=("$script_name")
 }
 
 function install_bedrock() {
@@ -61,9 +59,8 @@ function install_bedrock() {
     echo "AWS_SECRET_ACCESS_KEY=$secret_key" >> .env
     echo "AWS_REGION=$region" >> .env
 
-    echo "Installing AWS SDK for Python (boto3)..."
-    pip install -U boto3
-    scripts/generate-cmd.sh bedrock-subtrans
+    extras+=("bedrock")
+    scripts_to_generate+=("bedrock-subtrans")
 
     echo "Bedrock setup complete. Default provider set to Bedrock."
 }
@@ -106,11 +103,21 @@ fi
 python3 -m venv envsubtrans
 source envsubtrans/bin/activate
 
-echo "Installing required modules..."
-pip install --upgrade -r requirements.txt
+extras=()
+scripts_to_generate=("llm-subtrans")
 
-scripts/generate-cmd.sh gui-subtrans
-scripts/generate-cmd.sh llm-subtrans
+echo "Select installation type:"
+echo "1 = Install with GUI"
+echo "2 = Install command line tools only"
+read -p "Enter your choice (1/2): " install_choice
+
+if [ "$install_choice" = "2" ]; then
+    echo "Installing command line modules..."
+else
+    echo "Including GUI modules..."
+    extras+=("gui")
+    scripts_to_generate+=("gui-subtrans")
+fi
 
 # Optional: configure OpenRouter API key
 echo "Optional: Configure OpenRouter API key (default provider)"
@@ -143,32 +150,48 @@ case $provider_choice in
         install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" "set_default"
         ;;
     2)
-        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" "set_default"
+        install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" "set_default"
         ;;
     3)
-        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" "set_default"
+        install_provider "Claude" "CLAUDE" "claude" "claude-subtrans" "set_default"
         ;;
     4)
         install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" "set_default"
         ;;
     5)
-        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" "set_default"
+        install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" "set_default"
         ;;
     6)
         install_bedrock
         ;;
     a)
-        install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
+        install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" ""
         install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
-        install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
+        install_provider "Claude" "CLAUDE" "claude" "claude-subtrans" ""
         install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
-        install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
+        install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" ""
         ;;
     *)
         echo "Invalid choice. Exiting installation."
         exit 1
         ;;
 esac
+
+
+install_target="."
+if [ ${#extras[@]} -gt 0 ]; then
+    IFS=','; extra_str="${extras[*]}"; unset IFS
+    echo "Installing dependencies: $extra_str"
+    install_target=".[${extra_str}]"
+else
+    echo "Installing dependencies..."
+fi
+
+pip install --upgrade -e "$install_target"
+
+for script in "${scripts_to_generate[@]}"; do
+    scripts/generate-cmd.sh "$script"
+done
 
 echo "Setup completed successfully. To uninstall just delete the directory"
 

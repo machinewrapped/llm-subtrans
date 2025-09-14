@@ -54,26 +54,21 @@ if exist "envsubtrans" (
     )
 )
 
-echo Creating virtual environment...
-python -m venv envsubtrans
-if errorlevel 1 (
-    echo Failed to create virtual environment.
-    pause
-    exit /b 1
+set "EXTRAS="
+set "SCRIPTS=llm-subtrans"
+
+echo Select installation type:
+echo 1 = Install with GUI
+echo 2 = Install command line tools only
+set /p install_choice="Enter your choice (1/2): "
+
+if "%install_choice%"=="2" (
+    echo Installing command line modules...
+) else (
+    echo Including GUI modules...
+    if "!EXTRAS!"=="" (set "EXTRAS=gui") else (set "EXTRAS=!EXTRAS!,gui")
+    set "SCRIPTS=!SCRIPTS! gui-subtrans"
 )
-
-call envsubtrans\Scripts\activate.bat
-
-echo Installing required modules...
-pip install --upgrade -r requirements.txt
-if errorlevel 1 (
-    echo Failed to install required modules.
-    pause
-    exit /b 1
-)
-
-call scripts\generate-cmd.bat gui-subtrans
-call scripts\generate-cmd.bat llm-subtrans
 
 REM Optional: configure OpenRouter API key
 echo.
@@ -102,56 +97,70 @@ set /p provider_choice="Enter your choice (0/1/2/3/4/5/6/a): "
 
 if "!provider_choice!"=="0" (
     echo No additional provider selected.
-    goto setup_complete
-)
-
-if "!provider_choice!"=="1" (
+) else if "!provider_choice!"=="1" (
     call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" "set_default"
-    goto setup_complete
-)
-
-if "!provider_choice!"=="2" (
-    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" "set_default"
-    goto setup_complete
-)
-
-if "!provider_choice!"=="3" (
-    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" "set_default"
-    goto setup_complete
-)
-
-if "!provider_choice!"=="4" (
+) else if "!provider_choice!"=="2" (
+    call :install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" "set_default"
+) else if "!provider_choice!"=="3" (
+    call :install_provider "Claude" "CLAUDE" "claude" "claude-subtrans" "set_default"
+) else if "!provider_choice!"=="4" (
     call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" "set_default"
-    goto setup_complete
-)
-
-if "!provider_choice!"=="5" (
-    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" "set_default"
-    goto setup_complete
-)
-
-if "!provider_choice!"=="6" (
+) else if "!provider_choice!"=="5" (
+    call :install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" "set_default"
+) else if "!provider_choice!"=="6" (
     call :install_bedrock
-    goto setup_complete
-)
-
-if /i "!provider_choice!"=="a" (
-    call :install_provider "Google Gemini" "GEMINI" "google-genai google-api-core" "gemini-subtrans" ""
+) else if /i "!provider_choice!"=="a" (
+    call :install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" ""
     call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
-    call :install_provider "Claude" "CLAUDE" "anthropic" "claude-subtrans" ""
-    call :install_provider "Mistral" "MISTRAL" "mistralai" "mistral-subtrans" ""
+    call :install_provider "Claude" "CLAUDE" "claude" "claude-subtrans" ""
+    call :install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" ""
     call :install_provider "DeepSeek" "DEEPSEEK" "" "deepseek-subtrans" ""
-    goto setup_complete
+) else (
+    echo Invalid choice. Exiting installation.
+    pause
+    exit /b 1
 )
 
-echo Invalid choice. Exiting installation.
-pause
-exit /b 1
+REM Create the virtual environment
+echo.
+echo Creating virtual environment...
+python -m venv envsubtrans
+if errorlevel 1 (
+    echo Failed to create virtual environment.
+    pause
+    exit /b 1
+)
+
+call envsubtrans\Scripts\activate.bat
+
+REM Determine install target
+set "INSTALL_TARGET=."
+if not "!EXTRAS!"=="" (
+    echo Installing dependencies: !EXTRAS!
+    set "INSTALL_TARGET=.[!EXTRAS!]"
+) else (
+    echo Installing dependencies...
+)
+
+REM Install dependencies
+pip install --upgrade -e "!INSTALL_TARGET!"
+if errorlevel 1 (
+    echo Failed to install required modules.
+    pause
+    exit /b 1
+)
+
+REM Generate command scripts
+for %%s in (!SCRIPTS!) do (
+    call scripts\generate-cmd.bat %%s
+)
+
+goto setup_complete
 
 :install_provider
 set provider_name=%~1
 set api_key_var_name=%~2
-set pip_package=%~3
+set extra_name=%~3
 set script_name=%~4
 set set_as_default=%~5
 
@@ -174,18 +183,10 @@ if "%set_as_default%"=="set_default" (
     )
     echo PROVIDER=%provider_name%>> .env
 )
-if not "%pip_package%"=="" (
-    echo Installing %provider_name% module...
-    pip install %pip_package%
-    if errorlevel 1 (
-        echo Failed to install %provider_name% module.
-        pause
-        exit /b 1
-    )
-) else (
-    echo %provider_name% has no additional dependencies to install.
+if not "%extra_name%"=="" (
+    if "!EXTRAS!"=="" (set "EXTRAS=%extra_name%") else (set "EXTRAS=!EXTRAS!,%extra_name%")
 )
-call scripts\generate-cmd.bat %script_name%
+set "SCRIPTS=!SCRIPTS! %script_name%"
 goto :eof
 
 :install_bedrock
@@ -213,14 +214,8 @@ echo AWS_ACCESS_KEY_ID=%access_key%>> .env
 echo AWS_SECRET_ACCESS_KEY=%secret_key%>> .env
 echo AWS_REGION=%region%>> .env
 
-echo Installing AWS SDK for Python (boto3)...
-pip install -U boto3
-if errorlevel 1 (
-    echo Failed to install boto3.
-    pause
-    exit /b 1
-)
-call scripts\generate-cmd.bat bedrock-subtrans
+if "!EXTRAS!"=="" (set "EXTRAS=bedrock") else (set "EXTRAS=!EXTRAS!,bedrock")
+set "SCRIPTS=!SCRIPTS! bedrock-subtrans"
 
 echo Bedrock setup complete. Default provider set to Bedrock.
 goto :eof

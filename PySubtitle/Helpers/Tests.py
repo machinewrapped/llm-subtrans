@@ -8,7 +8,6 @@ from typing import Any
 from PySubtitle.SettingsType import SettingsType
 from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Subtitles import Subtitles
-from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 
 separator = "".center(60, "-")
 wide_separator = "".center(120, "-")

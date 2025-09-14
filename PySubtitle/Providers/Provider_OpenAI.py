@@ -10,7 +10,7 @@ if not importlib.util.find_spec("openai"):
     logging.info(_("OpenAI SDK is not installed. OpenAI provider will not be available"))
 else:
     try:
-        import openai
+        import openai   # type: ignore
 
         from PySubtitle.Helpers.Localization import _
         from PySubtitle.Providers.OpenAI.ChatGPTClient import ChatGPTClient

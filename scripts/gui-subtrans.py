@@ -5,13 +5,14 @@ import sys
 import cProfile
 from pstats import Stats
 
-from scripts.subtrans_common import InitLogger
+from check_imports import check_required_imports
+check_required_imports(['PySubtitle', 'GUI', 'PySide6'], 'gui')
 
+from subtrans_common import InitLogger
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from PySubtitle.Options import Options, settings_path, config_dir
 from PySubtitle.Helpers.Localization import initialize_localization, _
-
 from GUI.MainWindow import MainWindow
 
 def parse_arguments():

@@ -1,10 +1,8 @@
 import logging
-import openai
 import time
-from typing import Any
 
 try:
-    import openai
+    import openai       # type: ignore
 
     from PySubtitle.Helpers.Localization import _
     from PySubtitle.Helpers.Parse import ParseDelayFromHeader

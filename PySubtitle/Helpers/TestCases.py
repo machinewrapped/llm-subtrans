@@ -11,7 +11,6 @@ from PySubtitle.SubtitleError import TranslationError
 from PySubtitle.SubtitleFileHandler import SubtitleFileHandler
 from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtitle.Subtitles import Subtitles
-from PySubtitle.Formats.SrtFileHandler import SrtFileHandler
 from PySubtitle.SubtitleLine import SubtitleLine
 from PySubtitle.SubtitleScene import SubtitleScene
 from PySubtitle.Translation import Translation

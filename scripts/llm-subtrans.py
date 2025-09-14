@@ -3,7 +3,7 @@ import logging
 from check_imports import check_required_imports
 check_required_imports(['PySubtitle'])
 
-from subtrans_common import InitLogger, CreateArgParser, CreateOptions, CreateTranslator, CreateProject
+from scripts.subtrans_common import InitLogger, CreateArgParser, CreateOptions, CreateTranslator, CreateProject
 from PySubtitle.Options import Options
 from PySubtitle.SubtitleProject import SubtitleProject
 from PySubtitle.SubtitleTranslator import SubtitleTranslator

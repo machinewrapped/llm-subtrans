@@ -5,10 +5,11 @@ import sys
 import cProfile
 from pstats import Stats
 
-from check_imports import check_required_imports
-check_required_imports(['PySubtitle', 'GUI', 'PySide6'], 'gui')
+if not hasattr(sys, "_MEIPASS"):
+    from check_imports import check_required_imports
+    check_required_imports(['PySubtitle', 'GUI', 'PySide6', 'scripts'], 'gui')
 
-from subtrans_common import InitLogger
+from scripts.subtrans_common import InitLogger
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 from PySubtitle.Options import Options, settings_path, config_dir

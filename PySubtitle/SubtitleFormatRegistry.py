@@ -1,9 +1,8 @@
 import importlib
-import inspect
+import importlib.util
 import logging
 import os
 import pkgutil
-from pathlib import Path
 
 import pysubs2
 
@@ -100,15 +99,18 @@ class SubtitleFormatRegistry:
     @classmethod
     def discover(cls) -> None:
         """
-        Discover and register all subtitle file handlers in the Formats package.
+        Discover and register all subtitle file handlers using reflection.
         """
-        package_path = Path(__file__).parent / "Formats"
-        for _, module_name, _ in pkgutil.iter_modules([str(package_path)]):
-            module = importlib.import_module(f"PySubtitle.Formats.{module_name}")
-            for _, obj in inspect.getmembers(module, inspect.isclass):
-                if issubclass(obj, SubtitleFileHandler) and obj is not SubtitleFileHandler:
-                    cls.register_handler(obj)
+        package = importlib.import_module('PySubtitle.Formats')
+        for loader, module_name, is_pkg in pkgutil.iter_modules(package.__path__, package.__name__ + '.'): # type: ignore[ignore-unused]
+            logging.debug(f"Importing format handler: {module_name}")
+            importlib.import_module(module_name)
+
+        for handler_class in SubtitleFileHandler.__subclasses__():
+            cls.register_handler(handler_class)
+
         cls._discovered = True
+        logging.info(f"Supported formats: {sorted(cls._handlers.keys())}")
 
     @classmethod
     def clear(cls) -> None:

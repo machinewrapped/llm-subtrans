@@ -5,6 +5,7 @@ try:
 
     hiddenimports = collect_submodules('scripts')
     hiddenimports += collect_submodules('PySubtitle.Providers')
+    hiddenimports += collect_submodules('PySubtitle.Formats')
 
 except ImportError:
     logging.info("PyInstaller not found, skipping hook")

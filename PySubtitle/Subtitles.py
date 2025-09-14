@@ -264,10 +264,11 @@ class Subtitles:
         if not self.sourcepath:
             raise ValueError("No source path set for subtitles")
 
-        file_handler: SubtitleFileHandler = SubtitleFormatRegistry.create_handler(filename=self.sourcepath)
-
         try:
+            file_handler: SubtitleFileHandler = SubtitleFormatRegistry.create_handler(filename=self.sourcepath)
+
             data = file_handler.load_file(self.sourcepath)
+
         except SubtitleParseError as e:
             logging.debug(f"Error parsing file: {e}")
             logging.warning(_("Error parsing file... attempting format detection"))

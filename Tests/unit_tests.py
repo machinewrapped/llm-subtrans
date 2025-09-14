@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import unittest
 
 from PySubtitle.Helpers.Tests import create_logfile

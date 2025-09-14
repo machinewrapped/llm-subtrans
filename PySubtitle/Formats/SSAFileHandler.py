@@ -125,16 +125,16 @@ class SSAFileHandler(SubtitleFileHandler):
         Convert pysubs2 subtitles to SubtitleLines, adding an index
         """
         try:
-            format : str = getattr(subs, "format", "ass")
+            file_format : str = getattr(subs, "format", "ass")
 
             lines : list[SubtitleLine] = []
             for index, line in enumerate(subs, 1):
                 lines.append(self._pysubs2_to_subtitle_line(line, index))
 
             # Extract serializable metadata
-            metadata = self._parse_metadata(subs, format)
+            metadata = self._parse_metadata(subs, file_format)
 
-            detected_format : str = pysubs2.formats.get_file_extension(format)
+            detected_format : str = pysubs2.formats.get_file_extension(file_format)
 
             return SubtitleData(lines=lines, metadata=metadata, detected_format=detected_format)
 

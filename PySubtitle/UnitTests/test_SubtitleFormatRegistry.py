@@ -178,10 +178,13 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
 
     @patch('pysubs2.load')
     def test_DetectFormatAndLoadFileUnicodeError(self, mock_load):
+        if skip_if_debugger_attached("DetectFormatAndLoadFileUnicodeError"):
+            return
+
         log_test_name("DetectFormatAndLoadFileUnicodeError")
         
         mock_subs = MagicMock()
-        mock_subs.format = "srt"
+        mock_subs.file_format = "srt"
         
         mock_load.side_effect = [UnicodeDecodeError('utf-8', b'', 0, 1, 'invalid'), mock_subs]
         
@@ -533,6 +536,9 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
         log_input_expected_error(f"filename={filename}", SubtitleParseError, e.exception)
 
     def test_FormatDetectionWithNonUtf8SrtFile(self):
+        if skip_if_debugger_attached("FormatDetectionWithNonUtf8SrtFile"):
+            return
+
         log_test_name("FormatDetectionWithNonUtf8SrtFile")
         
         # SRT content with non-ASCII characters (French accents)
@@ -558,6 +564,9 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
             os.unlink(temp_path)
 
     def test_FormatDetectionWithNonUtf8AssFile(self):
+        if skip_if_debugger_attached("FormatDetectionWithNonUtf8AssFile"):
+            return
+
         log_test_name("FormatDetectionWithNonUtf8AssFile")
         
         # ASS content with non-ASCII characters

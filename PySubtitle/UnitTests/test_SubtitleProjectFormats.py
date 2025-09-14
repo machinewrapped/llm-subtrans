@@ -64,8 +64,8 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         
         log_input_expected_result("subtitles not None", True, project.subtitles is not None)
         self.assertIsNotNone(project.subtitles)
-        log_input_expected_result("format", ".srt", project.subtitles.format)
-        self.assertEqual(project.subtitles.format, ".srt")
+        log_input_expected_result("format", ".srt", project.subtitles.file_format)
+        self.assertEqual(project.subtitles.file_format, ".srt")
         log_input_expected_result("line count", 1, project.subtitles.linecount)
         self.assertEqual(project.subtitles.linecount, 1)
 
@@ -91,8 +91,8 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         
         log_input_expected_result("subtitles not None", True, project.subtitles is not None)
         self.assertIsNotNone(project.subtitles)
-        log_input_expected_result("format", ".ass", project.subtitles.format)
-        self.assertEqual(project.subtitles.format, ".ass")
+        log_input_expected_result("format", ".ass", project.subtitles.file_format)
+        self.assertEqual(project.subtitles.file_format, ".ass")
         log_input_expected_result("line count", 1, project.subtitles.linecount)
         self.assertEqual(project.subtitles.linecount, 1)
 
@@ -105,8 +105,8 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         project = SubtitleProject()
         project.InitialiseProject(path)
         
-        log_input_expected_result("project.subtitles.format", ".srt", project.subtitles.format)
-        self.assertEqual(project.subtitles.format, ".srt")
+        log_input_expected_result("project.subtitles.format", ".srt", project.subtitles.file_format)
+        self.assertEqual(project.subtitles.file_format, ".srt")
         
         # Set outputpath so file handler can be restored on load
         project_path = path.replace('.srt', '.subtrans')
@@ -120,8 +120,8 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         
         log_input_expected_result("reopened_project.subtitles", True, reopened_project.subtitles is not None)
         self.assertIsNotNone(reopened_project.subtitles)
-        log_input_expected_result("reopened_project.subtitles.format", ".srt", reopened_project.subtitles.format)
-        self.assertEqual(reopened_project.subtitles.format, ".srt")
+        log_input_expected_result("reopened_project.subtitles.format", ".srt", reopened_project.subtitles.file_format)
+        self.assertEqual(reopened_project.subtitles.file_format, ".srt")
 
     def test_SrtHandlerBasicFunctionality(self):
         log_test_name("SrtHandlerBasicFunctionality")
@@ -427,8 +427,8 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         
         log_input_expected_result("project.subtitles not None", True, project.subtitles is not None)
         self.assertIsNotNone(project.subtitles)
-        log_input_expected_result("format after setting output path", ".srt", project.subtitles.format)
-        self.assertEqual(project.subtitles.format, ".srt")
+        log_input_expected_result("format after setting output path", ".srt", project.subtitles.file_format)
+        self.assertEqual(project.subtitles.file_format, ".srt")
         
         project.subtitles.AutoBatch(SubtitleBatcher(options))
         project.subtitles._duplicate_originals_as_translations()
@@ -442,8 +442,8 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         converted_project = SubtitleProject()
         converted_project.LoadSubtitleFile(out_path)
         
-        log_input_expected_result("converted format", ".srt", converted_project.subtitles.format)
-        self.assertEqual(converted_project.subtitles.format, ".srt")
+        log_input_expected_result("converted format", ".srt", converted_project.subtitles.file_format)
+        self.assertEqual(converted_project.subtitles.file_format, ".srt")
         log_input_expected_result("content preserved", 1, converted_project.subtitles.linecount)
         self.assertEqual(converted_project.subtitles.linecount, 1)
         
@@ -468,8 +468,8 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         
         log_input_expected_result("project.subtitles not None", True, project.subtitles is not None)
         self.assertIsNotNone(project.subtitles)
-        log_input_expected_result("format after setting output path", ".ass", project.subtitles.format)
-        self.assertEqual(project.subtitles.format, ".ass")
+        log_input_expected_result("format after setting output path", ".ass", project.subtitles.file_format)
+        self.assertEqual(project.subtitles.file_format, ".ass")
         
         project.subtitles.AutoBatch(SubtitleBatcher(options))
         project.subtitles._duplicate_originals_as_translations()
@@ -483,8 +483,8 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         converted_project = SubtitleProject()
         converted_project.LoadSubtitleFile(out_path)
         
-        log_input_expected_result("converted format", ".ass", converted_project.subtitles.format)
-        self.assertEqual(converted_project.subtitles.format, ".ass")
+        log_input_expected_result("converted format", ".ass", converted_project.subtitles.file_format)
+        self.assertEqual(converted_project.subtitles.file_format, ".ass")
         log_input_expected_result("content preserved", 1, converted_project.subtitles.linecount)
         self.assertEqual(converted_project.subtitles.linecount, 1)
         
@@ -527,8 +527,8 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         
         log_input_expected_result("project2.subtitles not None", True, project2.subtitles is not None)
         self.assertIsNotNone(project2.subtitles)
-        log_input_expected_result("format preserved through serialization", ".ass", project2.subtitles.format)
-        self.assertEqual(project2.subtitles.format, ".ass")
+        log_input_expected_result("format preserved through serialization", ".ass", project2.subtitles.file_format)
+        self.assertEqual(project2.subtitles.file_format, ".ass")
         log_input_expected_result("content preserved", 1, project2.subtitles.linecount)
         self.assertEqual(project2.subtitles.linecount, 1)
 

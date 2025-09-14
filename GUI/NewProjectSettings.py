@@ -61,7 +61,7 @@ class NewProjectSettings(QDialog):
         if self.project and self.project.subtitles:
             formats = SubtitleFormatRegistry.enumerate_formats()
             self.OPTIONS['format'] = (formats, _("Output subtitle format"))
-            self.settings['format'] = self.project.subtitles.format
+            self.settings['format'] = self.project.subtitles.file_format
 
         instruction_files = GetInstructionsFiles()
         if instruction_files:

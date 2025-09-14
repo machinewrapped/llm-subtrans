@@ -107,7 +107,7 @@ class SubtitleProject:
 
             if subtitles:
                 subtitles.UpdateOutputPath()
-                outputpath = outputpath or GetOutputPath(self.projectfile, subtitles.target_language, subtitles.format)
+                outputpath = outputpath or GetOutputPath(self.projectfile, subtitles.target_language, subtitles.file_format)
                 sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath               
                 logging.info(_("Project file loaded"))
 
@@ -140,7 +140,7 @@ class SubtitleProject:
 
         if outputpath:
             subtitles.outputpath = outputpath
-            subtitles.format = SubtitleFormatRegistry.get_format_from_filename(outputpath)
+            subtitles.file_format = SubtitleFormatRegistry.get_format_from_filename(outputpath)
             self.needs_writing = self.use_project_file
 
         self.subtitles = subtitles
@@ -151,7 +151,7 @@ class SubtitleProject:
         """
         try:
             with self.lock:
-                outputpath = outputpath or GetOutputPath(self.subtitles.sourcepath, None, self.subtitles.format)
+                outputpath = outputpath or GetOutputPath(self.subtitles.sourcepath, None, self.subtitles.file_format)
                 self.subtitles.SaveOriginal(outputpath)
 
         except Exception as e:

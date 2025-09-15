@@ -138,13 +138,17 @@ class SubtitleListModel(QAbstractProxyModel):
         """
         Fetch the data for an index in the proxy model from the source model
         """
+        item : LineItem|None = None
         if index.isValid():
             source_index = self.mapToSource(index)
-            item = self.viewmodel.itemFromIndex(source_index)
+            qItem = self.viewmodel.itemFromIndex(source_index)
+            item = qItem if isinstance(qItem, LineItem) else None
+
             if not item:
-                logging.debug(f"No item in source model found for index {index.row()}, {index.column()}")
-        else:
-            item = None
+                if qItem is not None:
+                    logging.debug(f"Invalid item in source model found for index {index.row()}, {index.column()}: {type(qItem).__name__}")
+                else:
+                    logging.debug(f"No item in source model found for index {index.row()}, {index.column()}")
 
         if not item:
             item = LineItem(-1, { 'start' : "0:00:00,000", 'end' : "0:00:00,000",  'text' : "Invalid index" })

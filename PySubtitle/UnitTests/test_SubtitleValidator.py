@@ -38,10 +38,11 @@ class TestSubtitleValidator(unittest.TestCase):
         expected_types = [UnmatchedLinesError, EmptyLinesError, LineTooLongError, TooManyNewlinesError]
         log_input_expected_result("error_count", len(expected_types), len(errors))
         self.assertEqual(len(errors), len(expected_types))
-        for error_cls in expected_types:
-            err = next((e for e in errors if isinstance(e, error_cls)), None)
-            log_input_expected_result(error_cls.__name__, True, err is not None)
-            self.assertIsNotNone(err)
+
+        actual_error_types = {type(e) for e in errors}
+        expected_error_types = set(expected_types)
+        log_input_expected_result("error types", expected_error_types, actual_error_types)
+        self.assertEqual(actual_error_types, expected_error_types)
 
     def test_ValidateBatch_adds_untranslated_error(self):
         log_test_name("ValidateBatchAddsUntranslatedError")
@@ -57,3 +58,21 @@ class TestSubtitleValidator(unittest.TestCase):
         self.assertEqual(len(batch.errors), 1)
         log_input_expected_error(batch.errors[0], UntranslatedLinesError, batch.errors[0])
         self.assertEqual(type(batch.errors[0]), UntranslatedLinesError)
+
+    def test_ValidateBatch_includes_translation_errors(self):
+        log_test_name("ValidateBatchIncludesTranslationErrors")
+        options = Options({'max_characters': 10})
+        validator = SubtitleValidator(options)
+
+        orig1 = SubtitleLine({'number': 1, 'start': '00:00:00,000', 'end': '00:00:01,000', 'text': 'original1'})
+        orig2 = SubtitleLine({'number': 2, 'start': '00:00:01,000', 'end': '00:00:02,000', 'text': 'original2'})
+        # This translated line is too long
+        trans1 = SubtitleLine({'number': 1, 'start': '00:00:00,000', 'end': '00:00:01,000', 'text': 'this is a very long translated line'})
+        batch = SubtitleBatch({'originals': [orig1, orig2], 'translated': [trans1]})
+
+        validator.ValidateBatch(batch)
+
+        error_types = {type(e) for e in batch.errors}
+        log_input_expected_result("batch error types", {LineTooLongError, UntranslatedLinesError}, error_types)
+        self.assertIn(LineTooLongError, error_types)
+        self.assertIn(UntranslatedLinesError, error_types)

@@ -14,7 +14,9 @@ class SubtitleValidator:
         self.errors = []
 
         if batch.translated:
-            self.ValidateTranslations(batch.translated)
+            errors = self.ValidateTranslations(batch.translated)
+            if errors:
+                self.errors.extend(errors)
 
         if batch.any_translated and not batch.all_translated:
             self.errors.append(UntranslatedLinesError(f"No translation found for {len(batch.originals) - len(batch.translated)} lines", translation=batch.translation))

@@ -20,7 +20,7 @@ class LineItem(QStandardItem):
         self.line_model : dict[str, str|int|float] = model
         self.height = max(GetLineHeight(self.line_text), GetLineHeight(self.translation)) if self.translation else GetLineHeight(self.line_text)
 
-        self.setData(self.line_model, Qt.ItemDataRole.UserRole)
+        self._format_and_set_data()
 
     def Update(self, line_update : dict[str, str|int|float]) -> None:
         if not isinstance(line_update, dict):
@@ -36,7 +36,7 @@ class LineItem(QStandardItem):
 
         self.height = max(GetLineHeight(self.line_text), GetLineHeight(self.translation)) if self.translation else GetLineHeight(self.line_text)
 
-        self.setData(self.line_model, Qt.ItemDataRole.UserRole)
+        self._format_and_set_data()
 
     def __str__(self) -> str:
         return f"{self.number}: {self.start} --> {self.end} | {Linearise(self.line_text)}"
@@ -112,6 +112,14 @@ class LineItem(QStandardItem):
         return text
 
     @property
+    def formatted_text(self) -> str:
+        text = self.line_model.get('formatted_text', self.line_model.get('text', ''))
+        if not isinstance(text, str):
+            raise ViewModelError(f"Model field {'text'} is not a string: {self.line_model}")
+        
+        return text
+
+    @property
     def translation(self) -> str|None:
         translation = self.line_model.get('translation', None)
         if translation is None or not isinstance(translation, str):
@@ -120,7 +128,7 @@ class LineItem(QStandardItem):
 
     @property
     def translation_text(self) -> str:
-        translation = self.line_model.get('translation', None)
+        translation = self.line_model.get('formatted_translation', self.line_model.get('translation'))
         if translation is None or not isinstance(translation, str):
             return blank_line
         return translation
@@ -146,3 +154,23 @@ class LineItem(QStandardItem):
             raise ViewModelError(f"Model field {'batch'} is not an integer: {self.line_model}")
 
         return batch
+
+    def _format_and_set_data(self) -> None:
+        """
+        Format text for GUI display and set the data on the model.
+        """
+        if 'text' in self.line_model and isinstance(self.line_model['text'], str):
+            self.line_model['formatted_text'] = self._format_text_for_display(self.line_model['text'])
+
+        if 'translation' in self.line_model and isinstance(self.line_model['translation'], str):
+            self.line_model['formatted_translation'] = self._format_text_for_display(self.line_model['translation'])
+
+        self.setData(self.line_model, Qt.ItemDataRole.UserRole)
+
+    def _format_text_for_display(self, text : str) -> str:
+        """
+        Format text for GUI display by converting soft line breaks to spaces.
+        """
+        if not text:
+            return text
+        return text.replace('<wbr>', ' ')

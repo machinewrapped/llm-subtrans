@@ -152,8 +152,8 @@ class EditSubtitleDialog(EditDialog):
         self.line = line
         self.model = {
             'original' : self.line.line_text if line else "",
-            'translated'  : self.line.translation_text if line else "",
-            'was_translated' : bool(self.line.translation_text)
+            'translated'  : self.line.translation if line else "",
+            'was_translated' : bool(self.line.translation)
         }
         super().__init__(self.model, parent, title=_("Line {line}: {start} --> {end}").format(line=self.line.number, start=self.line.start, end=self.line.end))
 

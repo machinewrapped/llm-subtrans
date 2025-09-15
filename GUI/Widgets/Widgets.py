@@ -89,7 +89,7 @@ class WidgetBody(QLabel):
         self.setWordWrap(True)
 
 class LineItemView(QWidget):
-    def __init__(self, line, parent=None):
+    def __init__(self, line : LineItem, parent=None):
         super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
@@ -98,8 +98,8 @@ class LineItemView(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         layout.addWidget(LineItemHeader(line, parent=self))
         h_layout = QHBoxLayout()
-        h_layout.addWidget(LineItemBody(line.line_text, parent=self))
-        h_layout.addWidget(LineItemBody(line.translation or "", parent=self))
+        h_layout.addWidget(LineItemBody(line.formatted_text, parent=self))
+        h_layout.addWidget(LineItemBody(line.translation_text or "", parent=self))
         layout.addLayout(h_layout)
 
         self.setLayout(layout)

@@ -1,6 +1,6 @@
 import unittest
 
-from PySubtitle.Helpers.Tests import log_input_expected_result, log_test_name
+from PySubtitle.Helpers.Tests import log_input_expected_error, log_input_expected_result, log_test_name
 from PySubtitle.Options import Options
 from PySubtitle.SubtitleBatch import SubtitleBatch
 from PySubtitle.SubtitleLine import SubtitleLine
@@ -21,7 +21,7 @@ class TestSubtitleValidator(unittest.TestCase):
         errors = validator.ValidateTranslations([])
         log_input_expected_result("error_count", 1, len(errors))
         self.assertEqual(len(errors), 1)
-        log_input_expected_result(errors[0], UntranslatedLinesError, type(errors[0]))
+        log_input_expected_error(errors[0], UntranslatedLinesError, errors[0])
         self.assertEqual(type(errors[0]), UntranslatedLinesError)
 
     def test_ValidateTranslations_detects_errors(self):
@@ -55,5 +55,5 @@ class TestSubtitleValidator(unittest.TestCase):
         validator.ValidateBatch(batch)
         log_input_expected_result("error_count", 1, len(batch.errors))
         self.assertEqual(len(batch.errors), 1)
-        log_input_expected_result(batch.errors[0], UntranslatedLinesError, type(batch.errors[0]))
+        log_input_expected_error(batch.errors[0], UntranslatedLinesError, batch.errors[0])
         self.assertEqual(type(batch.errors[0]), UntranslatedLinesError)

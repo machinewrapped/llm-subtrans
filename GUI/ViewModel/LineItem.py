@@ -161,9 +161,13 @@ class LineItem(QStandardItem):
         """
         if 'text' in self.line_model and isinstance(self.line_model['text'], str):
             self.line_model['formatted_text'] = self._format_text_for_display(self.line_model['text'])
+        else:
+            self.line_model['formatted_text'] = blank_line
 
         if 'translation' in self.line_model and isinstance(self.line_model['translation'], str):
             self.line_model['formatted_translation'] = self._format_text_for_display(self.line_model['translation'])
+        else:
+            self.line_model['formatted_translation'] = blank_line
 
         self.setData(self.line_model, Qt.ItemDataRole.UserRole)
 

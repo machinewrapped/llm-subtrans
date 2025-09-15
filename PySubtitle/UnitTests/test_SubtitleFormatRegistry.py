@@ -184,7 +184,7 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         log_test_name("DetectFormatAndLoadFileUnicodeError")
         
         mock_subs = MagicMock()
-        mock_subs.file_format = "srt"
+        mock_subs.format = "srt"
         
         mock_load.side_effect = [UnicodeDecodeError('utf-8', b'', 0, 1, 'invalid'), mock_subs]
         

@@ -13,9 +13,9 @@ pip install --upgrade -e ".[gui,openai,gemini,claude,mistral]"
 # Remove boto3 from packaged version
 pip uninstall boto3
 
-python scripts/update_translations.py
+./envsubtrans/bin/python scripts/update_translations.py
 
-python tests/unit_tests.py
+./envsubtrans/bin/python tests/unit_tests.py
 if [ $? -ne 0 ]; then
     echo "Unit tests failed. Exiting..."
     exit $?

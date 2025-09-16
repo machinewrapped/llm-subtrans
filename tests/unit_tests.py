@@ -5,6 +5,26 @@ import unittest
 
 from PySubtitle.Helpers.Tests import create_logfile
 
+def _check_gui_dependencies() -> tuple[bool, str]:
+    """Check whether PySide6 dependencies required for GUI tests are available."""
+    try:
+        from PySide6 import QtGui
+        _ = QtGui.QGuiApplication
+    except (ImportError, ModuleNotFoundError, OSError) as import_error:
+        return False, str(import_error)
+    return True, ""
+
+def _create_gui_skip_suite(reason : str) -> unittest.TestSuite:
+    """Create a unittest suite that is skipped when GUI dependencies are missing."""
+    class GuiDependencyMissingTest(unittest.TestCase):
+        """Placeholder test skipped because PySide6 dependencies are unavailable."""
+        def runTest(self):
+            """Skip execution to denote missing GUI dependencies."""
+            self.skipTest(reason)
+    suite = unittest.TestSuite()
+    suite.addTest(GuiDependencyMissingTest())
+    return suite
+
 def discover_tests_in_directory(loader : unittest.TestLoader, test_dir : str, base_dir : str, handle_import_errors : bool = False) -> unittest.TestSuite:
     """Discover tests in a specific directory with optional error handling."""
     if not os.path.exists(test_dir):
@@ -38,7 +58,13 @@ def discover_tests(base_dir=None, separate_suites=False):
         pysubtitle_tests = discover_tests_in_directory(loader, pysubtitle_dir, base_dir)
         
         gui_dir = os.path.join(base_dir, 'GUI', 'UnitTests')
-        gui_tests = discover_tests_in_directory(loader, gui_dir, base_dir, handle_import_errors=True)
+        gui_available, gui_dependency_error = _check_gui_dependencies()
+        if gui_available:
+            gui_tests = discover_tests_in_directory(loader, gui_dir, base_dir, handle_import_errors=True)
+        else:
+            skip_reason = f"PySide6 unavailable: {gui_dependency_error}"
+            logging.info(skip_reason)
+            gui_tests = _create_gui_skip_suite(skip_reason)
     
     finally:
         os.chdir(original_dir)

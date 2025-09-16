@@ -12,7 +12,7 @@ base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, base_path)
 
 from PySubtitle.Helpers.Tests import create_logfile, end_logfile, separator
-from Tests.unit_tests import discover_tests
+from tests.unit_tests import discover_tests
 
 total_run = 0
 total_failures = 0
@@ -150,7 +150,7 @@ if __name__ == "__main__":
 
     scripts_directory = os.path.dirname(os.path.abspath(__file__))
     root_directory = os.path.dirname(scripts_directory)
-    tests_directory = os.path.join(root_directory, 'Tests')
+    tests_directory = os.path.join(root_directory, 'tests')
     subtitles_directory = os.path.join(root_directory, 'test_subtitles')
     results_directory =  os.path.join(root_directory, 'test_results')
     test_name = args.test

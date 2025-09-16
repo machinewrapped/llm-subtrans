@@ -33,7 +33,8 @@ INCLUDE_DIRS = (
 EXCLUDE_DIRS = (
     'locales',
     'PySubtitle/UnitTests',
-    'Tests',
+    'GUI/UnitTests',
+    'tests',
     'assets',
     'theme',
     'PySubtitleHooks',

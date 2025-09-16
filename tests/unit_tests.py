@@ -62,9 +62,7 @@ def discover_tests(base_dir=None, separate_suites=False):
         if gui_available:
             gui_tests = discover_tests_in_directory(loader, gui_dir, base_dir, handle_import_errors=True)
         else:
-            skip_reason = 'PySide6 unavailable'
-            if gui_dependency_error:
-                skip_reason = f"PySide6 unavailable: {gui_dependency_error}"
+            skip_reason = f"PySide6 unavailable: {gui_dependency_error}"
             logging.info(skip_reason)
             gui_tests = _create_gui_skip_suite(skip_reason)
     

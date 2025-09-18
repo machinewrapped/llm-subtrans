@@ -47,6 +47,8 @@ The helpers return the same `Options`, `SubtitleProject` and `SubtitleTranslator
 `init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. A few examples:
 
 ```python
+import os
+
 options = init_options(
     provider="Gemini",
     model="gemini-2.0-flash",

@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pysubtrans"
+version = "1.4.0"
+description = "Core subtitle translation toolkit used by LLM-Subtrans"
+readme = "README.md"
+requires-python = ">=3.10"
+license = {file = "LICENSE"}
+dependencies = [
+    "python-dotenv",
+    "srt",
+    "pysubs2",
+    "regex",
+    "babel",
+    "appdirs",
+    "events",
+    "requests",
+    "setuptools",
+    "httpx",
+    "httpx[socks]"
+]
+
+[project.optional-dependencies]
+openai = [
+    "openai"
+]
+azure = [
+    "openai"
+]
+gemini = [
+    "google-genai",
+    "google-api-core"
+]
+claude = [
+    "anthropic"
+]
+mistral = [
+    "mistralai"
+]
+bedrock = [
+    "boto3"
+]
+
+[project.urls]
+Homepage = "https://github.com/machinewrapped/llm-subtrans"
+Documentation = "https://github.com/machinewrapped/llm-subtrans/blob/main/PySubtrans/README.md"
+Source = "https://github.com/machinewrapped/llm-subtrans"
+Issues = "https://github.com/machinewrapped/llm-subtrans/issues"
+
+[tool.setuptools]
+package-dir = {"" = ".."}
+
+[tool.setuptools.packages.find]
+where = [".."]
+include = ["PySubtrans*"]

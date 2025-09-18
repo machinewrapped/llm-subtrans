@@ -53,7 +53,7 @@ class ReparseTranslationsCommand(Command):
                     continue
 
                 if not batch.translation:
-                    logging.error(_("Batch {batch} is not translated").format(batch=batch_number))
+                    logging.error(_("Batch {batch} in scene {scene} is not translated").format(batch=batch_number, scene=scene_number))
                     continue
 
                 original_summary = batch.summary

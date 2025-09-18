@@ -243,9 +243,5 @@ def Main() -> None:
             raise
 
 
-def __main__() -> None:
-    Main()
-
-
 if __name__ == "__main__":
-    __main__()
+    Main()

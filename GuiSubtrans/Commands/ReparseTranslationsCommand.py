@@ -1,10 +1,9 @@
 from GuiSubtrans.Command import Command, CommandError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
-from GuiSubtrans.ViewModel.ViewModelUpdateSection import BatchKey, LineKey, UpdateValue
+from GuiSubtrans.ViewModel.ViewModelUpdateSection import BatchKey
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatch import SubtitleBatch
-from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator

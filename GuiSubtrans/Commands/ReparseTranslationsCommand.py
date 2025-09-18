@@ -4,6 +4,7 @@ from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from GuiSubtrans.ViewModel.ViewModelUpdateSection import BatchKey, LineKey, UpdateValue
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatch import SubtitleBatch
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
@@ -47,10 +48,18 @@ class ReparseTranslationsCommand(Command):
             try:
                 batch : SubtitleBatch = subtitles.GetBatch(scene_number, batch_number)
 
+                if not batch:
+                    logging.error(_("Unable to find batch {batch} in scene {scene}").format(batch=batch_number, scene=scene_number))
+                    continue
+
+                if not batch.translation:
+                    logging.error(_("Batch {batch} is not translated").format(batch=batch_number))
+                    continue
+
                 original_summary = batch.summary
                 original_translations : dict[int,str|None] = { line.number : line.text for line in batch.translated if line.number is not None }
 
-                project.ReparseBatchTranslation(translator, scene_number, batch_number, line_numbers=self.line_numbers)
+                translator.ProcessBatchTranslation(batch, batch.translation, line_numbers=self.line_numbers)
 
                 validator.ValidateBatch(batch)
 
@@ -99,6 +108,11 @@ class ReparseTranslationsCommand(Command):
 
         for scene_number, batch_number, batch_undo_data in self.undo_data:
             batch : SubtitleBatch = subtitles.GetBatch(scene_number, batch_number)
+
+            if not batch:
+                logging.error(f"Unable to find batch {batch_number} in scene {scene_number}")
+                continue
+
             summary = batch_undo_data.get('summary', None)
             undo_lines = batch_undo_data['lines']
 

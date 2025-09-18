@@ -105,4 +105,4 @@ The full [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans) and [GUI
 
 ## License
 
-PySubtrans is released under the MIT License. See [`PySubtrans/LICENSE`](LICENSE) for details.
+PySubtrans is released under the MIT License. See [LICENSE](LICENSE) for details.

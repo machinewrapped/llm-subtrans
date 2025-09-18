@@ -22,7 +22,7 @@ if [ $? -ne 0 ]; then
 fi
 
 ./envsubtrans/bin/pyinstaller --noconfirm \
-    --additional-hooks-dir="hooks-subtrans" \
+    --additional-hooks-dir="hooks" \
     --paths="./envsubtrans/lib" \
     --add-data "theme/*:theme/" \
     --add-data "assets/*:assets/" \

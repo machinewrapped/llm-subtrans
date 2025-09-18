@@ -11,7 +11,7 @@ import unittest
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, base_path)
 
-from PySubtitle.Helpers.Tests import create_logfile, end_logfile, separator
+from PySubtrans.Helpers.Tests import create_logfile, end_logfile, separator
 from tests.unit_tests import discover_tests
 
 total_run = 0
@@ -35,7 +35,7 @@ if console_handler not in logging.getLogger().handlers:
     logging.getLogger().addHandler(console_handler)
 
 def run_unit_tests(results_path: str) -> bool:
-    """Run all unit tests in PySubtitle.UnitTests and GUI.UnitTests.
+    """Run all unit tests in PySubtrans.UnitTests and GuiSubtrans.UnitTests.
 
     Executes the two logical suites separately so we always see both sets of
     results even if the first has failures. Returns True if all tests across
@@ -52,10 +52,10 @@ def run_unit_tests(results_path: str) -> bool:
     
     py_tests, gui_tests = discover_tests(base_path, separate_suites=True)
     
-    logging.info("Running PySubtitle unit tests...")
+    logging.info("Running PySubtrans unit tests...")
     py_result = runner.run(py_tests)
 
-    logging.info("Running GUI unit tests...")
+    logging.info("Running GuiSubtrans unit tests...")
     gui_result = runner.run(gui_tests)
 
     def summarize(label: str, result: unittest.TestResult) -> dict:
@@ -70,7 +70,7 @@ def run_unit_tests(results_path: str) -> bool:
 
 
     global total_run, total_failures, total_errors, total_skipped
-    py_summary = summarize('PySubtitle', py_result)
+    py_summary = summarize('PySubtrans', py_result)
     gui_summary = summarize('GUI', gui_result)
 
     total_run = py_summary['run'] + gui_summary['run']
@@ -80,7 +80,7 @@ def run_unit_tests(results_path: str) -> bool:
     overall_success = (total_failures == 0 and total_errors == 0)
 
     summary_lines.extend([
-        format_summary_line('PySubtitle', py_summary['run'], py_summary['failures'], py_summary['errors'], py_summary['skipped'], py_summary['ok']),
+        format_summary_line('PySubtrans', py_summary['run'], py_summary['failures'], py_summary['errors'], py_summary['skipped'], py_summary['ok']),
         format_summary_line('GUI', gui_summary['run'], gui_summary['failures'], gui_summary['errors'], gui_summary['skipped'], gui_summary['ok'])
     ])
 

@@ -36,7 +36,7 @@ paid_translation_model = os.getenv('PAID_TRANSLATION_MODEL', 'google/gemini-2.5-
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-from PySubtitle.Helpers.Localization import get_available_locales
+from PySubtrans.Helpers.Localization import get_available_locales
 
 # Optional: use Babel to determine plural forms for locales
 try:

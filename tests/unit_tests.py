@@ -3,7 +3,7 @@ import os
 import sys
 import unittest
 
-from PySubtitle.Helpers.Tests import create_logfile
+from PySubtrans.Helpers.Tests import create_logfile
 
 def _check_gui_dependencies() -> tuple[bool, str]:
     """Check whether PySide6 dependencies required for GUI tests are available."""
@@ -54,7 +54,7 @@ def discover_tests(base_dir=None, separate_suites=False):
     try:
         os.chdir(base_dir)
         
-        pysubtitle_dir = os.path.join(base_dir, 'PySubtitle', 'UnitTests')
+        pysubtitle_dir = os.path.join(base_dir, 'PySubtrans', 'UnitTests')
         pysubtitle_tests = discover_tests_in_directory(loader, pysubtitle_dir, base_dir)
         
         gui_dir = os.path.join(base_dir, 'GUI', 'UnitTests')

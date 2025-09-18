@@ -15,4 +15,4 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 
-.\envsubtrans\scripts\pyinstaller --noconfirm --additional-hooks-dir="PySubtitleHooks" --add-data "theme/*;theme/" --add-data "assets/*;assets/" --add-data "instructions/*;instructions/" --add-data "LICENSE;." --add-data "locales/*;locales/" "scripts/gui-subtrans.py"
+.\envsubtrans\scripts\pyinstaller --noconfirm --additional-hooks-dir="hooks-subtrans" --add-data "theme/*;theme/" --add-data "assets/*;assets/" --add-data "instructions/*;instructions/" --add-data "LICENSE;." --add-data "locales/*;locales/" "scripts/gui-subtrans.py"

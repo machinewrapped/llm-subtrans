@@ -2,7 +2,7 @@ import os
 import logging
 
 from check_imports import check_required_imports
-check_required_imports(['PySubtitle', 'anthropic'], 'claude')
+check_required_imports(['PySubtrans', 'anthropic'], 'claude')
 
 from scripts.subtrans_common import (
     InitLogger,
@@ -12,9 +12,9 @@ from scripts.subtrans_common import (
     CreateProject,
 )
 
-from PySubtitle.Options import Options
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.Options import Options
+from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.SubtitleTranslator import SubtitleTranslator
 
 provider = "Claude"
 default_model = os.getenv('CLAUDE_MODEL') or "claude-3-haiku-20240307"

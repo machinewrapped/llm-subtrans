@@ -26,18 +26,18 @@ LOCALES_DIR = os.path.join(REPO_ROOT, 'locales')
 POT_PATH = os.path.join(LOCALES_DIR, 'gui-subtrans.pot')
 
 INCLUDE_DIRS = (
-    'GUI',
-    'PySubtitle',
+    'GuiSubtrans',
+    'PySubtrans',
     'scripts',
 )
 EXCLUDE_DIRS = (
     'locales',
-    'PySubtitle/UnitTests',
-    'GUI/UnitTests',
+    'PySubtrans/UnitTests',
+    'GuiSubtrans/UnitTests',
     'tests',
     'assets',
     'theme',
-    'PySubtitleHooks',
+    'hooks-subtrans',
 )
 
 # Global store of setting keys discovered during extraction
@@ -84,13 +84,13 @@ class SettingKeyExtractor:
         return self.setting_keys.copy()
     
     def _extract_options_keys(self, entries: dict[tuple[str|None, str], list[tuple[str, int]]]):
-        """Extract setting keys from PySubtitle/Options.py default_settings dictionary"""
-        options_path = os.path.join(REPO_ROOT, 'PySubtitle', 'Options.py')
+        """Extract setting keys from PySubtrans/Options.py default_settings dictionary"""
+        options_path = os.path.join(REPO_ROOT, 'PySubtrans', 'Options.py')
         
         try:
             with open(options_path, 'r', encoding='utf-8') as f:
                 source = f.read()
-            tree = ast.parse(source, filename='PySubtitle/Options.py')
+            tree = ast.parse(source, filename='PySubtrans/Options.py')
             
             found_default_settings = False
             for node in ast.walk(tree):
@@ -115,7 +115,7 @@ class SettingKeyExtractor:
                             setting_key = key_node.value
                             self.setting_keys.add(setting_key)
                             key = (None, setting_key)
-                            entries.setdefault(key, []).append(('PySubtitle/Options.py', key_node.lineno))
+                            entries.setdefault(key, []).append(('PySubtrans/Options.py', key_node.lineno))
                             keys_extracted += 1
                     
                     print(f"Extracted {keys_extracted} setting keys from Options.py")
@@ -133,7 +133,7 @@ class SettingKeyExtractor:
     
     def _extract_provider_keys(self, entries: dict[tuple[str|None, str], list[tuple[str, int]]]):
         """Extract setting keys from all translation providers"""
-        providers_dir = os.path.join(REPO_ROOT, 'PySubtitle', 'Providers')
+        providers_dir = os.path.join(REPO_ROOT, 'PySubtrans', 'Providers')
         provider_files = [f for f in os.listdir(providers_dir) if f.startswith('Provider_') and f.endswith('.py')]
         
         print(f"Found {len(provider_files)} provider files: {provider_files}")
@@ -147,7 +147,7 @@ class SettingKeyExtractor:
                 
                 for key in static_keys:
                     entry_key = (None, key)
-                    entries.setdefault(entry_key, []).append((f'PySubtitle/Providers/{provider_file}', 0))
+                    entries.setdefault(entry_key, []).append((f'PySubtrans/Providers/{provider_file}', 0))
                     
             except Exception as e:
                 raise Exception(f"Could not extract settings from {provider_file}: {e}")

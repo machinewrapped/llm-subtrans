@@ -2,7 +2,7 @@ import os
 import logging
 
 from check_imports import check_required_imports
-check_required_imports(['PySubtitle', 'openai'], 'azure')
+check_required_imports(['PySubtrans', 'openai'], 'azure')
 
 from scripts.subtrans_common import (
     InitLogger,
@@ -11,9 +11,9 @@ from scripts.subtrans_common import (
     CreateTranslator,
     CreateProject,
 )
-from PySubtitle.Options import Options
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.Options import Options
+from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.SubtitleTranslator import SubtitleTranslator
 
 # Update when newer ones are available - https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
 latest_azure_api_version = "2024-02-01"

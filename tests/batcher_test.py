@@ -1,7 +1,7 @@
 import os
-from PySubtitle.SubtitleBatcher import SubtitleBatcher
-from PySubtitle.Subtitles import Subtitles
-from PySubtitle.Helpers.Tests import RunTestOnAllSubtitleFiles, separator
+from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans.Subtitles import Subtitles
+from PySubtrans.Helpers.Tests import RunTestOnAllSubtitleFiles, separator
 
 def analyze_scenes(scenes):
     num_scenes = len(scenes)

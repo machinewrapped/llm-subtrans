@@ -1,8 +1,8 @@
 import os
-from PySubtitle.SettingsType import SettingsType
-from PySubtitle.Subtitles import Subtitles
-from PySubtitle.SubtitleProcessor import SubtitleProcessor
-from PySubtitle.Helpers.Tests import RunTestOnAllSubtitleFiles, separator
+from PySubtrans.SettingsType import SettingsType
+from PySubtrans.Subtitles import Subtitles
+from PySubtrans.SubtitleProcessor import SubtitleProcessor
+from PySubtrans.Helpers.Tests import RunTestOnAllSubtitleFiles, separator
 
 def preprocess_test(subtitles: Subtitles, logger, options : SettingsType):
     if not subtitles.originals:

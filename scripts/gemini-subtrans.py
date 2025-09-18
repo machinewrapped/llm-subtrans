@@ -2,7 +2,7 @@ import os
 import logging
 
 from check_imports import check_required_imports
-check_required_imports(['PySubtitle', 'google.genai', 'google.api_core'], 'gemini')
+check_required_imports(['PySubtrans', 'google.genai', 'google.api_core'], 'gemini')
 
 from scripts.subtrans_common import (
     InitLogger,
@@ -12,9 +12,9 @@ from scripts.subtrans_common import (
     CreateProject,
 )
 
-from PySubtitle.Options import Options
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.Options import Options
+from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.SubtitleTranslator import SubtitleTranslator
 
 provider = "Gemini"
 default_model = os.getenv('GEMINI_MODEL') or "Gemini 2.0 Flash"

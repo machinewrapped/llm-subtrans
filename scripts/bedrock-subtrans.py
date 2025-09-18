@@ -2,7 +2,7 @@ import os
 import logging
 
 from check_imports import check_required_imports
-check_required_imports(['PySubtitle', 'boto3'], 'bedrock')
+check_required_imports(['PySubtrans', 'boto3'], 'bedrock')
 
 from scripts.subtrans_common import (
     InitLogger,
@@ -11,9 +11,9 @@ from scripts.subtrans_common import (
     CreateTranslator,
     CreateProject,
 )
-from PySubtitle.Options import Options
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.Options import Options
+from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.SubtitleTranslator import SubtitleTranslator
 
 provider = "Bedrock"
 

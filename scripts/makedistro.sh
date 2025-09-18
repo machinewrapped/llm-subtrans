@@ -6,7 +6,7 @@ pip install --upgrade -e ".[gui,openai,gemini,claude,mistral,bedrock]"
 
 python scripts/update_translations.py
 
-pyinstaller --noconfirm --additional-hooks-dir="PySubtitleHooks" \
+pyinstaller --noconfirm --additional-hooks-dir="hooks-subtrans" \
     --add-data "theme/*:theme/"  --add-data "assets/*:assets/" \
     --add-data "instructions/*:instructions/" \
     --add-data "LICENSE:." \

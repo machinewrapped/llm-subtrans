@@ -5,7 +5,7 @@ from pathlib import Path
 
 project_root = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(project_root))
-from PySubtitle import version as ver
+from PySubtrans import version as ver
 
 pyproject = project_root / "pyproject.toml"
 version = ver.__version__.lstrip('v')

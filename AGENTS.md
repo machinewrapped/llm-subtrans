@@ -14,7 +14,7 @@ Always run the unit_tests at the end of a task to validate any changes to the co
 ## Commands
 - Activate the virtual environment first if `envsubtrans` exists (e.g. `./envsubtrans/bin/activate` on Linux/Mac)
 - Run all unit tests: `python tests/unit_tests.py` 
-- Run single test: `python -m unittest PySubtitle.UnitTests.test_MODULE` or `python -m unittest GUI.UnitTests.test_MODULE`
+- Run single test: `python -m unittest PySubtrans.UnitTests.test_MODULE` or `python -m unittest GuiSubtrans.UnitTests.test_MODULE`
 - Build distribution: `./scripts/makedistro.sh` (Linux/Mac) or `scripts\makedistro.bat` (Windows)
 - Create virtual environment, install dependencies and configure project: `./install.sh` (Linux/Mac) or `install.bat` (Windows)
 

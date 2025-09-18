@@ -3,8 +3,8 @@
 ```mermaid
 graph TD
     Scripts[scripts] --> GUI[GUI]
-    Scripts --> PySubtitle[PySubtitle]
-    GUI --> PySubtitle
+    Scripts --> PySubtrans[PySubtrans]
+    GUI --> PySubtrans
 ```
 
 This document helps developers understand where to find code and how components interact when working on the codebase.
@@ -18,7 +18,7 @@ This document helps developers understand where to find code and how components 
 
 ## Module Structure
 
-### PySubtitle (Core Engine)
+### PySubtrans (Core Engine)
 Contains all subtitle processing, translation logic, and project management. This is where you'll find:
 - Translation algorithms and providers
 - Project state management
@@ -36,7 +36,7 @@ Contains all subtitle processing, translation logic, and project management. Thi
 ### Subtitle Format Handling
 Subtitle files are processed through a pluggable system:
 - `SubtitleFileHandler` implementations read and write specific formats while exposing a common interface.
-- `SubtitleFormatRegistry` discovers handlers in `PySubtitle/Formats/` and maps file extensions to the appropriate handler based on priority.
+- `SubtitleFormatRegistry` discovers handlers in `PySubtrans/Formats/` and maps file extensions to the appropriate handler based on priority.
 - `SubtitleProject` uses the registry to detect formats from filenames and can convert subtitles when the output extension differs from the source.
 CLI tools expose `--list-formats` to enumerate supported extensions.
 
@@ -47,7 +47,7 @@ PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, 
 - `ProjectDataModel` – State management and synchronization layer
 - `ProjectViewModel` – Qt model mapping project data to UI views (scenes → batches → lines)
 - `CommandQueue` – executes operations asynchronously with undo/redo support
-- `GUI/Widgets/*` - Various custom widgets for forms, editors, and views
+- `GuiSubtrans/Widgets/*` - Various custom widgets for forms, editors, and views
 
 ## Data Organization
 
@@ -70,7 +70,7 @@ PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, 
 - Emits `TranslationEvents` with progress updates
 
 ### TranslationProvider System
-- Pluggable base class with providers in `PySubtitle/Providers/` that auto-register
+- Pluggable base class with providers in `PySubtrans/Providers/` that auto-register
 - Each provider exposes available models and creates an appropriate `TranslationClient`
 - `TranslationClient` handles API communication specifics (authentication, request format, parsing)
 - The provider can also provide a custom `TranslationParser` if a non-standard response format is expected
@@ -93,7 +93,7 @@ The GUI is built using PySide6 and follows a Model-View-ViewModel (MVVM) like pa
 This class acts as a bridge between the core `SubtitleProject` and the `ProjectViewModel`. It holds the current project, the project options, and the current translation provider. It's responsible for creating the `ProjectViewModel` and for applying updates to it.
 
 ### ProjectViewModel
-A custom `QStandardItemModel` that serves as the source for the various views in the GUI. It holds a tree of `SceneItem`, `BatchItem`, and `LineItem` objects, which mirror the structure of the `Subtitles` data.
+A custom `QStandardItemModel` that serves as the source for the various views in the GuiSubtrans. It holds a tree of `SceneItem`, `BatchItem`, and `LineItem` objects, which mirror the structure of the `Subtitles` data.
 
 It has an update queue to handle asynchronous updates, ensuring that the GUI is updated in a thread-safe manner.
 
@@ -106,11 +106,11 @@ These views are responsible for displaying the data from the `ProjectViewModel` 
 GUI operations use the Command pattern for background execution and undo/redo support:
 
 - **`CommandQueue`** – executes commands on background `QThreadPool`, manages concurrency and synchronisation
-- **Commands** – in `GUI/Commands/`, encapsulate operations (translation, file I/O, etc.)
+- **Commands** – in `GuiSubtrans/Commands/`, encapsulate operations (translation, file I/O, etc.)
 - **Undo/Redo** – maintained via `undo_stack` and `redo_stack`
 
 ## Settings Management
-Application settings are managed by the `PySubtitle.Options` class. This class is responsible for:
+Application settings are managed by the `PySubtrans.Options` class. This class is responsible for:
 
 - Loading settings from a `settings.json` file.
 - Loading settings from environment variables.
@@ -121,7 +121,7 @@ Application settings are managed by the `PySubtitle.Options` class. This class i
 ## GUI Widget Architecture
 
 ### The `ModelView`
-The central widget for displaying project data is the `GUI.Widgets.ModelView`. It is a container widget that uses a `QSplitter` to arrange three main components:
+The central widget for displaying project data is the `GuiSubtrans.Widgets.ModelView`. It is a container widget that uses a `QSplitter` to arrange three main components:
 
 #### `ProjectSettings`
 A form for editing project-specific settings. It is displayed when the user clicks on the "Settings" button in the `ProjectToolbar`.
@@ -137,7 +137,7 @@ A container widget that dynamically adapts based on the selected scene(s) and ba
 **`SelectionView`** provides contextual information and actions.
 
 #### Editors and Dialogs
-`GUI.Widgets.Editors` contains various widgets for editing scenes, batches, and individual subtitle lines, shown when a user double-clicks on an item in the `ScenesView` or `SubtitleView`. 
+`GuiSubtrans.Widgets.Editors` contains various widgets for editing scenes, batches, and individual subtitle lines, shown when a user double-clicks on an item in the `ScenesView` or `SubtitleView`. 
 
 ### Settings Dialog Architecture
 
@@ -195,7 +195,7 @@ The `TranslationClient` defines the API communication interface:
 - **`GetParser()`** – returns a `TranslationParser` to extract translated text from the response
 
 ### Adding New Providers
-Dynamic discovery: drop a new module in `PySubtitle/Providers/` with a `TranslationProvider` subclass, and it automatically registers at startup. No other code changes needed - the provider and its settings will be added to `SettingsDialog`.
+Dynamic discovery: drop a new module in `PySubtrans/Providers/` with a `TranslationProvider` subclass, and it automatically registers at startup. No other code changes needed - the provider and its settings will be added to `SettingsDialog`.
 
 ### Prompt Construction and Response Parsing
 The specific format for translation requests can vary by provider and responses can be inconsistent, so two helper classes exist to manage the differences between capabilities and expectations.
@@ -214,10 +214,10 @@ The specific format for translation requests can vary by provider and responses 
 
 ## Extending the System
 
-- **New file formats** → `PySubtitle/` (add file handler, extend `SubtitleFileHandler`)
-- **Translation providers** → `PySubtitle/Providers/` (subclass `TranslationProvider` and `TranslationClient`)  
-- **GUI features** → `GUI/Widgets/` (new views/dialogs), `GUI/Commands/` (new operations)
+- **New file formats** → `PySubtrans/` (add file handler, extend `SubtitleFileHandler`)
+- **Translation providers** → `PySubtrans/Providers/` (subclass `TranslationProvider` and `TranslationClient`)  
+- **GUI features** → `GuiSubtrans/Widgets/` (new views/dialogs), `GuiSubtrans/Commands/` (new operations)
 - **Settings** → update `Options` schema, add to `SettingsDialog.SECTIONS`
-- **Background operations** → implement `Command` pattern in `GUI/Commands/` for thread safety and undo support
+- **Background operations** → implement `Command` pattern in `GuiSubtrans/Commands/` for thread safety and undo support
 
 **Key principle:** All operations that modify project data must go through the `CommandQueue` to maintain thread safety and undo/redo functionality.

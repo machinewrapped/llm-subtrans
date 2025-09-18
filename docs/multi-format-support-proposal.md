@@ -25,7 +25,7 @@ This document captures the architecture and decisions behind LLM-Subtrans's mult
 
 ### Format Detection & Routing System
 The `SubtitleFormatRegistry`:
-- Handler classes in `PySubtitle/Formats/*.py` that inherit from `SubtitleFileHandler` are automatically registered
+- Handler classes in `PySubtrans/Formats/*.py` that inherit from `SubtitleFileHandler` are automatically registered
 - Registration is driven by each handler's `SUPPORTED_EXTENSIONS` class variable
 - Maps file extensions to appropriate handlers using priority values
 - Can auto-detect format based on content
@@ -53,8 +53,8 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - [x] Registry handles duplicate extension registration with priority
 
 **Files to Modify**:
-- Create: `PySubtitle/SubtitleFormatRegistry.py`
-- Create: `PySubtitle/UnitTests/test_SubtitleFormatRegistry.py`
+- Create: `PySubtrans/SubtitleFormatRegistry.py`
+- Create: `PySubtrans/UnitTests/test_SubtitleFormatRegistry.py`
 
 ### Phase 2: Integration with SubtitleProject and Subtitles
 **Requirements**:
@@ -70,8 +70,8 @@ The implementation prioritizes **subtitle translation** over format conversion:
  - [x] Project files instantiate appropriate file handler when loading project
 
 **Files to Modify**:
-- `PySubtitle/Subtitles.py`: Require `file_handler` parameter, remove hardcoded SRT handler
-- `PySubtitle/SubtitleProject.py`: Add format detection, handler selection, conversion logic
+- `PySubtrans/Subtitles.py`: Require `file_handler` parameter, remove hardcoded SRT handler
+- `PySubtrans/SubtitleProject.py`: Add format detection, handler selection, conversion logic
 
 ### Phase 3: SSA/ASS Format Support [X] COMPLETED
 **Requirements**:
@@ -98,8 +98,8 @@ The implementation prioritizes **subtitle translation** over format conversion:
 - [x] `SrtFileHandler` (priority 10) maintains highest priority for .srt files
 
 **Files Created**:
-- [X] `PySubtitle/Formats/SSAFileHandler.py` (pysubs2-based implementation)
-- [X] `PySubtitle/UnitTests/test_SSAFileHandler.py`
+- [X] `PySubtrans/Formats/SSAFileHandler.py` (pysubs2-based implementation)
+- [X] `PySubtrans/UnitTests/test_SSAFileHandler.py`
 
 **Implementation Outcome**:
 The project standardised on a pysubs2-based `SSAFileHandler`, which provides full metadata preservation and round-trip fidelity. Early custom efforts were discarded in favour of the library-backed approach.
@@ -189,8 +189,8 @@ Phase 5 adds a `--list-formats` option to all CLI tools, documents supported ext
 - CLI `--output` parameters still override auto-detected paths; GUI defaults can be overridden in `NewProjectSettings`.
 
 **Files to Modify**:
-- `PySubtitle/SubtitleFormatRegistry.py`: Add format detection hooks
-- `PySubtitle/SubtitleFileHandler.py` and subclasses: Add detection methods if necessary
+- `PySubtrans/SubtitleFormatRegistry.py`: Add format detection hooks
+- `PySubtrans/SubtitleFileHandler.py` and subclasses: Add detection methods if necessary
 
 ### Phase 7: WebVTT Format Support
 Universal web standard, supported by all major platforms, proof of concept for native handlers
@@ -216,8 +216,8 @@ Universal web standard, supported by all major platforms, proof of concept for n
 - [X] Test format conversion between SRT, SSA, and VTT formats
 
 **Files Created**:
-- [X] `PySubtitle/Formats/VttFileHandler.py` (native implementation)
-- [X] `PySubtitle/UnitTests/test_VttFileHandler.py`
+- [X] `PySubtrans/Formats/VttFileHandler.py` (native implementation)
+- [X] `PySubtrans/UnitTests/test_VttFileHandler.py`
 
 **Implementation Outcome**:
 After research into WebVTT we chose a **native parser approach** over pysubs2 integration for VTT:

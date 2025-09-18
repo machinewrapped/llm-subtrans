@@ -4,14 +4,14 @@ import logging
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 
-from PySubtitle.Helpers import GetOutputPath
-from PySubtitle.Helpers.Parse import ParseNames
-from PySubtitle.Options import Options, config_dir
-from PySubtitle.Substitutions import Substitutions
-from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
-from PySubtitle.TranslationProvider import TranslationProvider
+from PySubtrans.Helpers import GetOutputPath
+from PySubtrans.Helpers.Parse import ParseNames
+from PySubtrans.Options import Options, config_dir
+from PySubtrans.Substitutions import Substitutions
+from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
+from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.TranslationProvider import TranslationProvider
 
 @dataclass
 class LoggerOptions():

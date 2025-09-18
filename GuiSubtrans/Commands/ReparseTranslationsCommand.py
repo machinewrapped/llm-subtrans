@@ -1,7 +1,7 @@
 from GuiSubtrans.Command import Command, CommandError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
-from GuiSubtrans.ViewModel.ViewModelUpdateSection import BatchKey, LineKey, UpdateValue
+from GuiSubtrans.ViewModel.ViewModelUpdateSection import BatchKey
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.Subtitles import Subtitles
@@ -47,10 +47,18 @@ class ReparseTranslationsCommand(Command):
             try:
                 batch : SubtitleBatch = subtitles.GetBatch(scene_number, batch_number)
 
+                if not batch:
+                    logging.error(_("Unable to find batch {batch} in scene {scene}").format(batch=batch_number, scene=scene_number))
+                    continue
+
+                if not batch.translation:
+                    logging.error(_("Batch {batch} in scene {scene} is not translated").format(batch=batch_number, scene=scene_number))
+                    continue
+
                 original_summary = batch.summary
                 original_translations : dict[int,str|None] = { line.number : line.text for line in batch.translated if line.number is not None }
 
-                project.ReparseBatchTranslation(translator, scene_number, batch_number, line_numbers=self.line_numbers)
+                translator.ProcessBatchTranslation(batch, batch.translation, line_numbers=self.line_numbers)
 
                 validator.ValidateBatch(batch)
 
@@ -99,6 +107,11 @@ class ReparseTranslationsCommand(Command):
 
         for scene_number, batch_number, batch_undo_data in self.undo_data:
             batch : SubtitleBatch = subtitles.GetBatch(scene_number, batch_number)
+
+            if not batch:
+                logging.error(_("Unable to find batch {batch} in scene {scene}").format(batch=batch_number, scene=scene_number))
+                continue
+
             summary = batch_undo_data.get('summary', None)
             undo_lines = batch_undo_data['lines']
 

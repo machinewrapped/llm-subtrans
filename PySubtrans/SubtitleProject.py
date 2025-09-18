@@ -379,25 +379,6 @@ class SubtitleProject:
             translator.events.preprocessed -= self._on_preprocessed # type: ignore
             translator.events.batch_translated -= self._on_batch_translated # type: ignore
 
-    def ReparseBatchTranslation(self, translator : SubtitleTranslator, scene_number : int, batch_number : int, line_numbers : list[int]|None = None) -> SubtitleBatch:
-        """
-        Reparse the translation of a batch of subtitles
-        """
-        batch : SubtitleBatch = self.subtitles.GetBatch(scene_number, batch_number)
-
-        if not batch:
-            raise SubtitleError(f"Unable to find batch {batch_number} in scene {scene_number}")
-
-        if not batch.translation:
-            raise SubtitleError(f"Batch {batch} is not translated")
-
-        with self.lock:
-            translator.ProcessBatchTranslation(batch, batch.translation, line_numbers=line_numbers)
-
-            self.events.batch_translated(batch)
-
-        return batch
-
     def _on_preprocessed(self, scenes) -> None:
         logging.debug("Pre-processing finished")
         self.events.preprocessed(scenes)

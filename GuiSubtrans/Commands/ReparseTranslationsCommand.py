@@ -110,7 +110,7 @@ class ReparseTranslationsCommand(Command):
             batch : SubtitleBatch = subtitles.GetBatch(scene_number, batch_number)
 
             if not batch:
-                logging.error(f"Unable to find batch {batch_number} in scene {scene_number}")
+                logging.error(_("Unable to find batch {batch} in scene {scene}").format(batch=batch_number, scene=scene_number))
                 continue
 
             summary = batch_undo_data.get('summary', None)

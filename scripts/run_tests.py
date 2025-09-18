@@ -24,7 +24,7 @@ summary_lines = [
 ]
 
 def format_summary_line(label: str, run: int, failures: int, errors: int, skipped: int, ok: bool) -> str:
-    return f"  {label:<10}: run: {run:>3} failures: {failures:>3} errors: {errors:>3} skipped: {skipped:>3} status={'OK ' if ok else 'FAIL'}"
+    return f"  {label:<12}: run: {run:>3} failures: {failures:>3} errors: {errors:>3} skipped: {skipped:>3} status={'OK ' if ok else 'FAIL'}"
 
 logging.getLogger().setLevel(logging.DEBUG)
 console_handler = logging.StreamHandler(sys.stdout)
@@ -71,7 +71,7 @@ def run_unit_tests(results_path: str) -> bool:
 
     global total_run, total_failures, total_errors, total_skipped
     py_summary = summarize('PySubtrans', py_result)
-    gui_summary = summarize('GUI', gui_result)
+    gui_summary = summarize('GuiSubtrans', gui_result)
 
     total_run = py_summary['run'] + gui_summary['run']
     total_failures = py_summary['failures'] + gui_summary['failures']
@@ -81,7 +81,7 @@ def run_unit_tests(results_path: str) -> bool:
 
     summary_lines.extend([
         format_summary_line('PySubtrans', py_summary['run'], py_summary['failures'], py_summary['errors'], py_summary['skipped'], py_summary['ok']),
-        format_summary_line('GUI', gui_summary['run'], gui_summary['failures'], gui_summary['errors'], gui_summary['skipped'], gui_summary['ok'])
+        format_summary_line('GuiSubtrans', gui_summary['run'], gui_summary['failures'], gui_summary['errors'], gui_summary['skipped'], gui_summary['ok'])
     ])
 
     end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")

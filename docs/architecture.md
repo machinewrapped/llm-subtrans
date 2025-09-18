@@ -2,9 +2,9 @@
 
 ```mermaid
 graph TD
-    Scripts[scripts] --> GUI[GUI]
+    Scripts[scripts] --> GuiSubtrans[GuiSubtrans]
     Scripts --> PySubtrans[PySubtrans]
-    GUI --> PySubtrans
+    GuiSubtrans --> PySubtrans
 ```
 
 This document helps developers understand where to find code and how components interact when working on the codebase.
@@ -40,7 +40,7 @@ Subtitle files are processed through a pluggable system:
 - `SubtitleProject` uses the registry to detect formats from filenames and can convert subtitles when the output extension differs from the source.
 CLI tools expose `--list-formats` to enumerate supported extensions.
 
-### GUI (User Interface)
+### GuiSubtrans (User Interface)
 PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, and user interactions.
 
 ### Key Classes
@@ -93,7 +93,7 @@ The GUI is built using PySide6 and follows a Model-View-ViewModel (MVVM) like pa
 This class acts as a bridge between the core `SubtitleProject` and the `ProjectViewModel`. It holds the current project, the project options, and the current translation provider. It's responsible for creating the `ProjectViewModel` and for applying updates to it.
 
 ### ProjectViewModel
-A custom `QStandardItemModel` that serves as the source for the various views in the GuiSubtrans. It holds a tree of `SceneItem`, `BatchItem`, and `LineItem` objects, which mirror the structure of the `Subtitles` data.
+A custom `QStandardItemModel` that serves as the source for the various views in the GUI. It holds a tree of `SceneItem`, `BatchItem`, and `LineItem` objects, which mirror the structure of the `Subtitles` data.
 
 It has an update queue to handle asynchronous updates, ensuring that the GUI is updated in a thread-safe manner.
 

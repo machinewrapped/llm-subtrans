@@ -1,17 +1,17 @@
 """
 PySubtrans - Subtitle Translation Library
 
-A Python library for translating subtitle files using various translation providers.
+A Python library for translating subtitle files using various LLMs as translators.
 
 Basic Usage
 -----------
     >>> from PySubtrans import init_options, init_subtitles, init_translator
     >>>
-    >>> # Configure translation options
-    >>> opts = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-...")
-    >>>
     >>> # Load subtitles from file
     >>> subs = init_subtitles(filepath="movie.srt")
+    >>>
+    >>> # Configure translation options
+    >>> opts = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-...", prompt="Translate these subtitles into Spanish")
     >>>
     >>> # Create translator and translate
     >>> translator = init_translator(opts)
@@ -19,21 +19,6 @@ Basic Usage
     >>>
     >>> # Save translated subtitles
     >>> subs.SaveSubtitles("movie_translated.srt")
-
-Advanced Usage
---------------
-For more complex workflows, use :class:`SubtitleProject` to manage multiple subtitle
-files and persistent state:
-
-    >>> from PySubtrans import init_project, init_options, init_translator
-    >>>
-    >>> # Create a project with persistent state
-    >>> project = init_project("movie.srt", persistent=True)
-    >>>
-    >>> # Configure and translate
-    >>> opts = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-...")
-    >>> translator = init_translator(opts)
-    >>> translator.Translate(project.subtitles)
 """
 from __future__ import annotations
 
@@ -42,6 +27,7 @@ from collections.abc import Mapping
 from PySubtrans.Helpers import GetInputPath
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingType, SettingsType
+from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleProject import SubtitleProject
@@ -55,7 +41,6 @@ def init_options(
     model: str|None = None,
     api_key: str|None = None,
     prompt: str|None = None,
-    instructions: str|None = None,
     **settings: SettingType,
 ) -> Options:
     """
@@ -71,14 +56,8 @@ def init_options(
         API key for authenticating with the translation provider.
     prompt : str or None, optional
         High level prompt for the translator, e.g. "Translate these subtitles for Alien (1979) into French".
-    instructions : str or None, optional
-        Detailed instructions for the translation model (system prompt).
-        These can include specific instructions about how to handle the translation, e.g. "any profanity should be translated without censorship",
-        along with any notes about the source subtitles (e.g. the dialogue contains a lot of subtle puns).
-        It is *imperative* that the instructions contain examples of properly formatted output - see the default instructions for an example.
-        Adapting the examples to fit your use case can greatly improve the model's performance.
     **settings : SettingType
-        Additional keyword settings to configure the translation provider.
+        Additional keyword settings to configure the translation provider. See :class:`Options` for available settings.
 
     Returns
     -------
@@ -88,9 +67,7 @@ def init_options(
     Examples
     --------
     >>> from PySubtrans import init_options
-    >>> opts = init_options(provider="openai", model="gpt-5-mini", api_key="sk-...", custom_setting="value")
-    >>> print(opts.provider)
-    openai
+    >>> opts = init_options(provider="openai", model="gpt-5-mini", api_key="sk-...", prompt="Translate these subtitles into Spanish")
     """
     combined_settings = SettingsType(settings)
 
@@ -98,8 +75,7 @@ def init_options(
         'provider': provider,
         'model': model,
         'api_key': api_key,
-        'prompt'
-        'instructions': instructions,
+        'prompt': prompt,
     }
     combined_settings.update({k: v for k, v in explicit_settings.items() if v is not None})
 
@@ -249,11 +225,43 @@ def init_translator(settings: Options|Mapping[str, SettingType]) -> SubtitleTran
 
     return SubtitleTranslator(settings, translation_provider)
 
+def preprocess_subtitles(subtitles: Subtitles, options: Options) -> None:
+    """
+    Preprocess subtitles to fix common issues before translation.
+
+    This function modifies the subtitles in place.
+
+    Parameters
+    ----------
+    subtitles : Subtitles
+        The subtitles to preprocess.
+    options : Options
+        Configuration options for preprocessing.
+
+    Returns
+    -------
+    None
+
+    Examples
+    --------
+    >>> from PySubtrans import init_subtitles, init_options, preprocess_subtitles
+    >>> subs = init_subtitles(filepath="movie.srt")
+    >>> opts = PySubtrans.Options(max_line_duration=5.0, whitespaces_to_newline=True)
+    >>> preprocess_subtitles(subs, opts)
+    """
+    from PySubtrans.SubtitleProcessor import SubtitleProcessor
+
+    if not subtitles or not subtitles.originals:
+        raise ValueError("No subtitles to preprocess")
+
+    preprocessor = SubtitleProcessor(options)
+    subtitles.PreProcess(preprocessor)
 
 __all__ = [
     '__version__',
     'Options',
     'Subtitles',
+    'SubtitleBuilder',
     'SubtitleProject',
     'SubtitleTranslator',
     'TranslationProvider',

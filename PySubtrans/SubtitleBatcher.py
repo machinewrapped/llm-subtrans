@@ -48,7 +48,7 @@ class SubtitleBatcher:
 
     def CreateNewScene(self, scenes : list[SubtitleScene], current_lines : list[SubtitleLine]):
         """
-        Create a scene and lines to it in batches
+        Create a scene and add lines to it in batches
         """
         scene = SubtitleScene()
         scenes.append(scene)

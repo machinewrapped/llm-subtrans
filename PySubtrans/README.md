@@ -48,6 +48,7 @@ The helpers return the same `Options`, `SubtitleProject` and `SubtitleTranslator
 
 ```python
 import os
+from PySubtrans import init_options
 
 options = init_options(
     provider="Gemini",

@@ -1,82 +1,136 @@
 # PySubtrans
 
-PySubtrans is the subtitle preparation and translation engine that powers [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans). It provides everything required to parse subtitle files, manage translation projects, talk to large language model providers and post-process the resulting text. This package makes those capabilities available as a reusable Python library so you can compose your own translation workflows or integrate them into existing tools.
+PySubtrans is the subtitle translation engine that powers [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans). It provides tools to read and write subtitle files in various formats, manage a translation workflow connecting to various LLM APIs and to pre-process or post-process subtitles to ensure readable results. 
+
+This package makes those capabilities available as a library that you can incorporate into your own tools and workflows to take advantage of the best-in-class translation quality that LLM-Subtrans provides.
 
 ## Installation
+
+Basic installation with support for OpenRouter, DeepSeek or any server with an OpenAI-compatible API.
 
 ```bash
 pip install pysubtrans
 ```
 
-Provider integrations are delivered as optional extras so you only install the SDKs you need:
+Additional specialized provider integrations are delivered as optional extras so you only install the SDKs for providers you want to use:
 
 ```bash
 pip install pysubtrans[openai]
 pip install pysubtrans[gemini]
-pip install pysubtrans[mistral]
+pip install pysubtrans[claude]
+pip install pysubtrans[openai,gemini,claude,mistral,bedrock]
 ```
-
-The extras mirror the options that ship with LLM-Subtrans. Multiple extras can be installed in a single command: `pip install pysubtrans[openai,gemini]`.
 
 ## Quick start: translate a subtitle file
 
 The quickest way to get started is to use the helper functions exposed at the package root. They wrap the objects used by LLM-Subtrans so that you can stand up a translation pipeline in a few lines of code.
 
 ```python
-from PySubtrans import init_options, init_project, init_translator
+from PySubtrans import init_options, init_subtitles, init_translator
 
 options = init_options(
     provider="OpenAI",
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     api_key="sk-your-api-key",
-    instruction_file="instructions.txt",  # Optional – overrides the default prompt/instructions
-    target_language="es",
+    prompt="Translate these subtitles into Spanish",
 )
 
-project = init_project("movie.srt", persistent=True)
-translator = init_translator(project, options)
+subtitles = init_subtitles("movie.srt")
+translator = init_translator(options)
 
-project.TranslateSubtitles(translator)
-project.SaveTranslation()  # Writes the translated subtitles to disk
+translator.Translate(subtitles)
+subtitles.SaveTranslation("movie-translated.srt")
 ```
 
-The helpers return the same `Options`, `SubtitleProject` and `SubtitleTranslator` objects that power the main application, so you can continue to customise them as needed.
+Subtitle format will be auto-detected based on file extension or content, if it matches one of the supported formats (srt,ssa,ass,vtt).
 
 ## Configuration with `init_options`
+`init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 
 
-`init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. A few examples:
+The Options class provides a wide range of options to configure the translation process.
+
+Some that are particularly useful:
+
+`max_batch_size`: controls how many lines will be sent to the LLM in one request. The default value (30) is very conservative, for maximum compatibility. Models like Gemini 2.5 Flash can easily handle batches of 150 lines or more, which allows for faster translation.
+
+`scene_threshold`: subtitles are divided into scenes before batching, using this time value as a heuristic to indicate that a scene transition has happened. The default of 60 seconds is very coarse, and may end up with only one scene for dialogue heavy movies or dozens of scenes with only a few lines each for minimalist arthouse films. Depending on your use case, consider setting this very high and relying on the batcher instead.
+
+`postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines.
+
+Example usage:
 
 ```python
-import os
 from PySubtrans import init_options
 
 options = init_options(
     provider="Gemini",
-    model="gemini-2.0-flash",
-    api_key=os.environ["GOOGLE_API_KEY"],
+    model="gemini-2.5-flash",
+    api_key="your-key",
+    movie_name="French Movie",
+    prompt="Translate these subtitles for {movie_name} into German, with cultural references adapted for a German audience",
+    max_batch_size=150,
+    scene_threshold=120
     temperature=0.3,
-    target_language="de",
-    include_original=True,
+    postprocess_translation=True,
+    break_long_lines=True,
+    break_dialog_on_one_line=True,
+    convert_wide_dashes=True
 )
 ```
 
-* Provider credentials, endpoint details and model names can be passed directly. They will be moved into provider-specific settings automatically when the translator is created.
-* Custom instructions can be supplied via `instruction_file` or by overriding `prompt`, `instructions` and `retry_instructions` explicitly.
-* Any additional keyword arguments are merged into the returned `Options` instance, enabling full access to batching thresholds, formatting preferences, language metadata and more.
+Note that there are a number of options which are only used by the GUI-Subtrans application and have no function in PySubtrans.
 
-## Working with projects using `init_project`
+## Initialising Subtitles with `init_subtitles`
 
-`init_project` normalises the provided path, instantiates a `SubtitleProject` and loads the subtitles immediately if a file path is supplied. Passing `persistent=True` mirrors the CLI behaviour by enabling `.subtrans` project files that keep track of in-progress translations and settings.
+`init_subtitles` creates a `Subtitles` instance and optionally loads subtitle content from a file or string. It supports automatic format detection and handles multiple subtitle formats.
 
-You can continue to call the usual project helpers:
+**Parameters:**
+- `filepath`: Path to a subtitle file to load (mutually exclusive with `content`)
+- `content`: Subtitle content as a string (mutually exclusive with `filepath`)
 
+Format detection is automatic based on file extension or content analysis.
+
+**Supported formats:** `.srt`, `.ass`, `.ssa`, `.vtt`
+
+**Examples:**
+
+Load subtitles from a file:
 ```python
-project.SaveProjectFile()
-project.SaveTranslation("/custom/output/path.srt")
-project.UpdateProjectSettings(options)
+from PySubtrans import init_subtitles
+
+subtitles = init_subtitles(filepath="movie.srt")
 ```
 
-When no file path is supplied the project is created without loading subtitles, making it easy to populate the `Subtitles` object programmatically before translation.
+Load subtitles from a string:
+```python
+srt_content = """1
+00:00:01,000 --> 00:00:03,000
+Hello world
+
+2
+00:00:04,000 --> 00:00:06,000
+This is a test"""
+
+subtitles = init_subtitles(content=srt_content)
+```
+
+Create an empty subtitles instance and build manually:
+```python
+from datetime import timedelta
+from PySubtrans import init_subtitles
+from PySubtrans.SubtitleLine import SubtitleLine
+
+subtitles = init_subtitles(filepath=None, content=None)
+subtitles.originals = [
+    SubtitleLine.Construct(1, timedelta(seconds=1), timedelta(seconds=3), "Hello world"),
+    SubtitleLine.Construct(2, timedelta(seconds=4), timedelta(seconds=6), "This is a test")
+]
+```
+
+**Key methods on the returned `Subtitles` object:**
+- `LoadSubtitles(filepath)`: Load additional subtitle content
+- `SaveTranslation(path)`: Save translated subtitles to a file
+- `AutoBatch`: Split subtitles into scenes and batches ready for translation.
 
 ## Building translators with `init_translator`
 
@@ -91,9 +145,86 @@ project.TranslateSubtitles(translator)
 
 The returned `SubtitleTranslator` exposes all of the batching, retry and provider integration features from the main application.
 
+## Configuring translation with custom instructions
+ Custom instructions can be supplied via an `instruction_file` argument or by overriding `prompt` and `instructions` explicitly. 
+
+`prompt` is a high level description of the task, whilst `instructions` provide detailed instructions for the translation model (the system prompt).
+
+This can include specific instructions about how to handle the translation, e.g. "any profanity should be translated without censorship" and notes about the source subtitles (e.g. "the dialogue contains a lot of puns, these should be adapted for the translation").
+
+It is *imperative* that the instructions contain examples of properly formatted output - see the default instructions for an example. Adapting the examples to your use case can greatly improve the model's performance.
+  
+See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
+
+## Working with projects using `init_project`
+`init_project` instantiates a `SubtitleProject` and loads the source subtitles if a file path is supplied.
+
+By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk (or reload an existing project), allowing a translation job to be resumed at a future time.
+
 ## Advanced workflows
 
 PySubtrans is designed to be modular. The helper functions above are convenient entry points, but you are free to use lower-level components directly when you need more control:
+
+### Building subtitles programmatically
+
+#### Option 1: SubtitleBuilder for programmatic control
+
+Use `SubtitleBuilder` when you need to build subtitles programmatically. Batch management is handled automatically:
+
+```python
+from PySubtrans import SubtitleBuilder
+from datetime import timedelta
+
+# Simple usage - batches are created automatically
+builder = SubtitleBuilder(max_batch_size=30)  # Configure batch size in constructor
+subtitles = (builder
+    .AddScene(summary="Opening dialogue")
+    .AddLine(1, timedelta(seconds=1), timedelta(seconds=3), "Hello, my name is...")
+    .AddLine(2, timedelta(seconds=4), timedelta(seconds=6), "Nice to meet you!")
+    .AddLine(3, timedelta(seconds=8), timedelta(seconds=10), "We need to talk.")
+
+    .AddScene(summary="Action sequence")  # New scene
+    .AddLine(4, timedelta(seconds=65), timedelta(seconds=67), "Look out!")
+    # ... add more lines - they're automatically organized into batches
+    .Build()
+)
+
+# For large datasets - batches are split automatically when they exceed max_batch_size
+builder = SubtitleBuilder(max_batch_size=50)
+builder.AddScene(summary="Long dialogue scene")
+
+# Add hundreds of lines without worrying about batch management
+for i in range(1, 200):
+    builder.AddLine(i, timedelta(seconds=i), timedelta(seconds=i+2), f"Line {i}")
+
+subtitles = builder.Build()  # Automatically organized into properly sized batches
+```
+
+#### Option 2: Automatic batching with SubtitleBatcher
+
+When you don't need fine-grained control, use `SubtitleBatcher` to automatically organize lines:
+
+```python
+from PySubtrans import init_subtitles, init_options
+from PySubtrans.SubtitleLine import SubtitleLine
+from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from datetime import timedelta
+
+# Initialize subtitles and add lines
+subtitles = init_subtitles(filepath=None, content=None)
+subtitles.originals = [
+    SubtitleLine.Construct(1, timedelta(seconds=1), timedelta(seconds=3), "First line"),
+    SubtitleLine.Construct(2, timedelta(seconds=4), timedelta(seconds=6), "Second line"),
+    SubtitleLine.Construct(3, timedelta(seconds=30), timedelta(seconds=32), "After scene break"),
+]
+
+# Use SubtitleBatcher to organize into scenes and batches
+options = init_options(max_batch_size=50, scene_threshold=10)  # 10 second scene breaks
+batcher = SubtitleBatcher(options.settings)
+subtitles.AutoBatch(batcher)
+```
+
+### Custom integrations
 
 * Create a `Subtitles` instance by hand (for example when generating subtitles from a transcription pipeline) and pass it straight to `SubtitleTranslator.TranslateSubtitles`.
 * Construct your own `TranslationProvider` instance or subclass to integrate bespoke APIs. All built-in providers live under `PySubtrans.Providers` and serve as reference implementations.

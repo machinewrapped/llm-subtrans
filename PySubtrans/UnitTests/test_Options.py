@@ -36,7 +36,7 @@ class TestOptions(unittest.TestCase):
         # Check a selection of stable default options
         test_cases = [
             ('target_language', 'English'),
-            ('scene_threshold', 30.0),
+            ('scene_threshold', 60.0),
             ('max_newlines', 2),
             ('ui_language', 'en'),
             ('filler_words', standard_filler_words),
@@ -98,7 +98,7 @@ class TestOptions(unittest.TestCase):
         # Check that defaults are still present for unspecified options
         default_test_cases = [
             ('min_batch_size', 10),
-            ('scene_threshold', 30.0),
+            ('scene_threshold', 60.0),
         ]
         
         for key, expected in default_test_cases:

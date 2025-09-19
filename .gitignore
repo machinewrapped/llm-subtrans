@@ -43,3 +43,7 @@ gui-subtrans.spec
 llm-subtrans.sh
 mistral-subtrans.sh
 untranslated_msgids_*.txt
+
+/PySubtrans/build
+/PySubtrans/dist
+/PySubtrans/*.egg-info

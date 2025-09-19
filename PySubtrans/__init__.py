@@ -1,3 +1,40 @@
+"""
+PySubtrans - Subtitle Translation Library
+
+A Python library for translating subtitle files using various translation providers.
+
+Basic Usage
+-----------
+    >>> from PySubtrans import init_options, init_subtitles, init_translator
+    >>>
+    >>> # Configure translation options
+    >>> opts = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-...")
+    >>>
+    >>> # Load subtitles from file
+    >>> subs = init_subtitles(filepath="movie.srt")
+    >>>
+    >>> # Create translator and translate
+    >>> translator = init_translator(opts)
+    >>> translator.Translate(subs)
+    >>>
+    >>> # Save translated subtitles
+    >>> subs.SaveSubtitles("movie_translated.srt")
+
+Advanced Usage
+--------------
+For more complex workflows, use :class:`SubtitleProject` to manage multiple subtitle
+files and persistent state:
+
+    >>> from PySubtrans import init_project, init_options, init_translator
+    >>>
+    >>> # Create a project with persistent state
+    >>> project = init_project("movie.srt", persistent=True)
+    >>>
+    >>> # Configure and translate
+    >>> opts = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-...")
+    >>> translator = init_translator(opts)
+    >>> translator.Translate(project.subtitles)
+"""
 from __future__ import annotations
 
 from collections.abc import Mapping
@@ -5,6 +42,8 @@ from collections.abc import Mapping
 from PySubtrans.Helpers import GetInputPath
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingType, SettingsType
+from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
+from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationProvider import TranslationProvider
@@ -15,7 +54,8 @@ def init_options(
     provider: str|None = None,
     model: str|None = None,
     api_key: str|None = None,
-    instruction_file: str|None = None,
+    prompt: str|None = None,
+    instructions: str|None = None,
     **settings: SettingType,
 ) -> Options:
     """
@@ -29,8 +69,14 @@ def init_options(
         The model identifier to use for translation (e.g., "gpt-3.5-turbo").
     api_key : str or None, optional
         API key for authenticating with the translation provider.
-    instruction_file : str or None, optional
-        Path to a file containing custom translation instructions.
+    prompt : str or None, optional
+        High level prompt for the translator, e.g. "Translate these subtitles for Alien (1979) into French".
+    instructions : str or None, optional
+        Detailed instructions for the translation model (system prompt).
+        These can include specific instructions about how to handle the translation, e.g. "any profanity should be translated without censorship",
+        along with any notes about the source subtitles (e.g. the dialogue contains a lot of subtle puns).
+        It is *imperative* that the instructions contain examples of properly formatted output - see the default instructions for an example.
+        Adapting the examples to fit your use case can greatly improve the model's performance.
     **settings : SettingType
         Additional keyword settings to configure the translation provider.
 
@@ -42,7 +88,7 @@ def init_options(
     Examples
     --------
     >>> from PySubtrans import init_options
-    >>> opts = init_options(provider="openai", model="gpt-3.5-turbo", api_key="sk-...", custom_setting="value")
+    >>> opts = init_options(provider="openai", model="gpt-5-mini", api_key="sk-...", custom_setting="value")
     >>> print(opts.provider)
     openai
     """
@@ -52,11 +98,60 @@ def init_options(
         'provider': provider,
         'model': model,
         'api_key': api_key,
-        'instruction_file': instruction_file,
+        'prompt'
+        'instructions': instructions,
     }
     combined_settings.update({k: v for k, v in explicit_settings.items() if v is not None})
 
     return Options(combined_settings)
+
+def init_subtitles(filepath: str|None, content: str|None) -> Subtitles:
+    """
+    Initialise a :class:`Subtitles` instance and optionally load content from a file or string.
+
+    Parameters
+    ----------
+    filepath : str|None
+        Path to the subtitle file to load.
+
+    content : str|None
+        Subtitle content as a string. Attempts to auto-detect the format by contents.
+
+    Returns
+    -------
+    Subtitles : An initialised subtitles instance.
+
+    Examples
+    --------
+    Load subtitles from a file:
+
+    >>> from PySubtrans import init_subtitles
+    >>> subs = init_subtitles(filepath="movie.srt")
+    >>> print(len(subs))
+
+    Load subtitles from a string:
+
+    >>> srt_content = "1\\n00:00:01,000 --> 00:00:03,000\\nHello world"
+    >>> subs = init_subtitles(content=srt_content)
+    >>> print(subs[0].text)
+    """
+    if filepath and content:
+        raise ValueError("Only one of 'filepath' or 'content' should be provided, not both.")
+
+    if filepath:
+        normalised_path = GetInputPath(filepath)
+        subtitles = Subtitles(normalised_path)
+        subtitles.LoadSubtitles(normalised_path)
+        return subtitles
+
+    if content:
+        format = SubtitleFormatRegistry.detect_format_from_content(content)
+        file_handler = SubtitleFormatRegistry.create_handler(format)
+        subtitles = Subtitles()
+        subtitles.LoadSubtitlesFromString(content, file_handler=file_handler)
+        return subtitles
+
+    return Subtitles()
 
 
 def init_project(filepath: str|None, persistent: bool = False) -> SubtitleProject:
@@ -77,6 +172,21 @@ def init_project(filepath: str|None, persistent: bool = False) -> SubtitleProjec
     -------
     SubtitleProject
         The initialized subtitle project.
+
+    Examples
+    --------
+    Create a basic project:
+
+    >>> from PySubtrans import init_project
+    >>> project = init_project("movie.srt")
+    >>> print(len(project.subtitles))
+    150
+
+    Create a persistent project:
+
+    >>> project = init_project("movie.srt", persistent=True)
+    >>> # Project state will be saved to .subtrans file
+    >>> project.Save()
     """
     project = SubtitleProject(persistent=persistent)
     normalised_path = GetInputPath(filepath)
@@ -87,27 +197,22 @@ def init_project(filepath: str|None, persistent: bool = False) -> SubtitleProjec
     return project
 
 
-def init_translator(project: SubtitleProject, settings: Options|Mapping[str, SettingType]) -> SubtitleTranslator:
+def init_translator(settings: Options|Mapping[str, SettingType]) -> SubtitleTranslator:
     """
-    Return a ready-to-use :class:`SubtitleTranslator` for the given subtitle project using the specified settings.
+    Return a ready-to-use :class:`SubtitleTranslator` using the specified settings.
 
     Parameters
     ----------
-    project : SubtitleProject
-        The subtitle project to be translated. Must be an instance of :class:`SubtitleProject`.
     settings : Options or Mapping[str, SettingType]
-        The translation settings. Can be an :class:`Options` instance or a mapping of option values.
+        The translator settings. This should specify the provider and model to use, along with extra configuration options as needed.
 
     Validation
     ----------
-    - Checks that `project` is a :class:`SubtitleProject` instance.
     - Checks that `settings` is either an :class:`Options` instance or a mapping; if a mapping, it is converted to :class:`Options`.
     - Validates the settings for the translation provider.
 
     Exceptions
     ----------
-    TypeError
-        If `project` is not a :class:`SubtitleProject` instance, or if `settings` is not an :class:`Options` instance or a mapping.
     ValueError
         If the settings are invalid for the selected translation provider.
 
@@ -115,17 +220,25 @@ def init_translator(project: SubtitleProject, settings: Options|Mapping[str, Set
     -------
     SubtitleTranslator
         A ready-to-use subtitle translator configured with the given settings.
-    """
-    if not isinstance(project, SubtitleProject):
-        raise TypeError("project must be a SubtitleProject instance")
 
+    Examples
+    --------
+    Create translator from Options:
+
+    >>> from PySubtrans import init_options, init_translator
+    >>> opts = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-...")
+    >>> translator = init_translator(opts)
+
+    Create translator from dictionary:
+
+    >>> settings = {"provider": "google", "api_key": "your-key"}
+    >>> translator = init_translator(settings)
+    """
     if not isinstance(settings, Options):
         if isinstance(settings, Mapping):
             settings = Options(SettingsType(settings))
         else:
             raise TypeError("settings must be an Options instance or a mapping of option values")
-
-    project.UpdateProjectSettings(settings)
 
     translation_provider = TranslationProvider.get_provider(settings)
     if not translation_provider.ValidateSettings():
@@ -140,10 +253,12 @@ def init_translator(project: SubtitleProject, settings: Options|Mapping[str, Set
 __all__ = [
     '__version__',
     'Options',
+    'Subtitles',
     'SubtitleProject',
     'SubtitleTranslator',
     'TranslationProvider',
     'init_options',
     'init_project',
+    'init_subtitles',
     'init_translator',
 ]

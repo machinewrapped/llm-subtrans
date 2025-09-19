@@ -129,6 +129,27 @@ class SubtitleFormatRegistry:
         return extension.lower() if extension else None
 
     @classmethod
+    def detect_format_from_content(cls, content: str) -> str|None:
+        """
+        Detect subtitle format from content using pysubs2.
+        """
+        cls._ensure_discovered()
+        try:
+            detected_format = pysubs2.formats.autodetect_format(content)
+
+            detected_extension = pysubs2.formats.get_file_extension(detected_format)
+
+            logging.info(_("Detected subtitle format '{format}' from content").format(format=detected_extension))
+
+            if detected_extension not in cls._handlers:
+                return None
+
+            return detected_extension
+
+        except Exception as e:
+            raise SubtitleParseError(_("Failed to detect subtitle format: {}" ).format(str(e)), e)
+
+    @classmethod
     def detect_format_and_load_file(cls, path: str) -> SubtitleData:
         """
         Detect subtitle format using content and load file accordingly.

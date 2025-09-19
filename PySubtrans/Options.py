@@ -56,7 +56,7 @@ default_settings = {
     'target_language': env_str('TARGET_LANGUAGE', 'English'),
     'include_original': env_bool('INCLUDE_ORIGINAL', False),
     'add_right_to_left_markers': env_bool('add_right_to_left_markers', False),
-    'scene_threshold': env_float('SCENE_THRESHOLD', 30.0),
+    'scene_threshold': env_float('SCENE_THRESHOLD', 60.0),
     'min_batch_size': env_int('MIN_BATCH_SIZE', 10),
     'max_batch_size': env_int('MAX_BATCH_SIZE', 30),
     'max_context_summaries': env_int('MAX_CONTEXT_SUMMARIES', 10),

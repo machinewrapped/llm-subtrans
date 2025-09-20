@@ -10,11 +10,9 @@ from PySubtrans.Instructions import DEFAULT_TASK_TYPE
 from PySubtrans.Options import Options, SettingsType
 
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import SubtitleError, SubtitleParseError
 from PySubtrans.Helpers import GetInputPath, GetOutputPath
-from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans.SubtitleFileHandler import SubtitleFileHandler, default_encoding
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleScene import SubtitleScene, UnbatchScenes
@@ -25,26 +23,8 @@ class Subtitles:
     """
     High level class for manipulating subtitles
     """
-    DEFAULT_PROJECT_SETTINGS : SettingsType = SettingsType({
-        'provider': None,
-        'model': None,
-        'target_language': None,
-        'prompt': None,
-        'task_type': None,
-        'instructions': None,
-        'retry_instructions': None,
-        'movie_name': None,
-        'description': None,
-        'names': None,
-        'substitutions': None,
-        'substitution_mode': None,
-        'include_original': None,
-        'add_right_to_left_markers': None,
-        'instruction_file': None,
-        'format': None
-    })
 
-    def __init__(self, filepath: str|None = None, outputpath: str|None = None) -> None:
+    def __init__(self, filepath: str|None = None, outputpath: str|None = None, settings: SettingsType|None = None) -> None:
         self.originals : list[SubtitleLine]|None = None
         self.translated : list[SubtitleLine]|None = None
         self.start_line_number : int = 1
@@ -57,7 +37,7 @@ class Subtitles:
         self.metadata : dict[str, Any] = {}
         self.file_format : str|None = None
 
-        self.settings : SettingsType = deepcopy(self.DEFAULT_PROJECT_SETTINGS)
+        self.settings : SettingsType = SettingsType(deepcopy(settings)) if settings else SettingsType()
 
     @property
     def movie_name(self) -> str|None:
@@ -329,23 +309,15 @@ class Subtitles:
             self.translated = translated
             self.outputpath = outputpath
 
-    def UpdateProjectSettings(self, settings: SettingsType) -> None:
+    def UpdateSettings(self, settings: SettingsType) -> None:
         """
-        Update the project settings
+        Update the subtitle settings
         """
         if isinstance(settings, Options):
-            return self.UpdateProjectSettings(settings)
+            settings = SettingsType(settings)
 
         with self.lock:
-            self.settings.update({key: settings[key] for key in settings if key in self.DEFAULT_PROJECT_SETTINGS})
-
-            names_list = self.settings.get('names', [])
-            self.settings['names'] = ParseNames(names_list)
-            substitions_list = self.settings.get('substitutions', [])
-            if substitions_list:
-                self.settings['substitutions'] = Substitutions.Parse(substitions_list)
-
-            self._update_compatibility(self.settings)
+            self.settings.update(settings)
 
     def UpdateOutputPath(self, path: str|None = None, extension: str|None = None) -> None:
         """
@@ -391,26 +363,3 @@ class Subtitles:
         value = self.settings.get(key, default)
         return value if isinstance(value, str) else default
 
-    def _update_compatibility(self, settings: SettingsType) -> None:
-        """
-        Update settings for compatibility with older versions
-        """
-        if not settings.get('description') and settings.get('synopsis'):
-            settings['description'] = settings.get('synopsis')
-
-        if settings.get('characters'):
-            names = settings.get_str_list('names')
-            names.extend(settings.get_str_list('characters'))
-            settings['names'] = names
-            del settings['characters']
-
-        if settings.get('gpt_prompt'):
-            settings['prompt'] = settings['gpt_prompt']
-            del settings['gpt_prompt']
-
-        if settings.get('gpt_model'):
-            settings['model'] = settings['gpt_model']
-            del settings['gpt_model']
-
-        if not settings.get('substitution_mode'):
-            settings['substitution_mode'] = "Partial Words" if settings.get('match_partial_words') else "Auto"

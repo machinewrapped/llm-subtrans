@@ -47,24 +47,17 @@ class ChineseDinnerTests(SubtitleTestCase):
             self.assertEqual(subtitles.start_line_number, 1)
             self.assertSequenceEqual(subtitles.scenes, [])
 
-        with self.subTest("Update project settings"):
-            log_test_name("Update project settings")
-            subtitles.UpdateProjectSettings(chinese_dinner_data)
-
-            self.assertEqual(subtitles.movie_name, chinese_dinner_data.get('movie_name'))
-            self.assertEqual(subtitles.settings.get('description'), chinese_dinner_data.get('description'))
-            self.assertSequenceEqual(subtitles.settings.get_list('names'), chinese_dinner_data.get_list('names'))
-
         with self.subTest("Create project"):
             log_test_name("Create project")
             project = SubtitleProject()
             project.subtitles = subtitles
+            project.UpdateProjectSettings(chinese_dinner_data)
             project.UpdateProjectSettings(self.options)
 
             self.assertIsNotNone(project.subtitles)
 
             self.assertEqual(project.target_language, self.options.target_language)
-            self.assertEqual(project.movie_name, chinese_dinner_data.get_str('movie_name', '** No movie name**'))
+            self.assertEqual(project.movie_name, chinese_dinner_data.get('movie_name'))
 
             log_info("Movie name: " + (project.movie_name or "** No movie name**"))
             log_info("Target language: " + (project.target_language or "** No target language**"))

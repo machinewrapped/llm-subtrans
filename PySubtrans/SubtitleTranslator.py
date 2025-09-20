@@ -4,6 +4,7 @@ import threading
 from typing import Any
 
 from PySubtrans.Helpers.SettingsHelpers import GetStrSetting
+from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtrans.Helpers.Localization import _, tr
 from PySubtrans.Helpers.Text import Linearise, SanitiseSummary
@@ -170,7 +171,7 @@ class SubtitleTranslator:
             context = {}
 
             for batch in batches:
-                context = subtitles.GetBatchContext(scene.number, batch.number, self.max_history)
+                context = GetBatchContext(subtitles, scene.number, batch.number, self.max_history)
 
                 try:
                     self.TranslateBatch(batch, line_numbers, context)

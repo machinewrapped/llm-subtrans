@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from PySubtrans.Helpers.TestCases import PrepareSubtitles, SubtitleTestCase
+from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
@@ -142,7 +143,7 @@ class ChineseDinnerTests(SubtitleTestCase):
                 for scene in subtitles.scenes:
                     scene.AddContext('summary', f"Summary of scene {scene.number}")
 
-                scene_4_context = subtitles.GetBatchContext(4, 1, 10)
+                scene_4_context = GetBatchContext(subtitles, 4, 1, 10)
                 self.assertIsNotNone(scene_4_context)
 
                 self.assertEqual(scene_4_context.get('scene'), "Scene 4: Summary of scene 4")
@@ -198,7 +199,7 @@ class ChineseDinnerTests(SubtitleTestCase):
             log_input_expected_result("Last line number", 61, first_batch.last_line_number)
             self.assertEqual(first_batch.last_line_number, 61)
 
-            first_batch_context = subtitles.GetBatchContext(3, 1, 10)
+            first_batch_context = GetBatchContext(subtitles, 3, 1, 10)
             self.assertIsNotNone(first_batch_context)
             self.assertEqual(first_batch_context.get('scene'), "Scene 3: Summary of scene 3\nSummary of scene 4")
             self.assertEqual(first_batch_context.get('batch'), "Batch 1")
@@ -233,7 +234,7 @@ class ChineseDinnerTests(SubtitleTestCase):
             log_input_expected_result("Last line number", 64, second_batch.last_line_number)
             self.assertEqual(second_batch.last_line_number, 64)
 
-            second_batch_context = subtitles.GetBatchContext(3, 2, 10)
+            second_batch_context = GetBatchContext(subtitles, 3, 2, 10)
             self.assertIsNotNone(second_batch_context)
 
             self.assertEqual(second_batch_context.get('scene'), "Scene 3: Summary of scene 3\nSummary of scene 4")
@@ -284,7 +285,7 @@ class ChineseDinnerTests(SubtitleTestCase):
 
             self.assertEqual(merged_batch.summary, "Summary of batch 1\nSummary of batch 2")
 
-            merged_batch_context = subtitles.GetBatchContext(3, 1, 10)
+            merged_batch_context = GetBatchContext(subtitles, 3, 1, 10)
             self.assertIsNotNone(merged_batch_context)
 
             self.assertEqual(merged_batch_context.get('scene'), "Scene 3: Summary of scene 3\nSummary of scene 4")

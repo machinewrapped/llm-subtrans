@@ -263,5 +263,57 @@ class TestSubtitleBuilder(unittest.TestCase):
         log_input_expected_result("batch line numbers", [1, 2], batch_line_numbers)
         self.assertSequenceEqual(batch_line_numbers, [1, 2])
 
+    def test_build_line_with_metadata(self):
+        """Test BuildLine with metadata parameter."""
+        builder = SubtitleBuilder()
+        metadata = {"speaker": "John", "emotion": "happy"}
+
+        builder.BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Hello", metadata)
+
+        subtitles = builder.Build()
+        line = subtitles.scenes[0].batches[0].originals[0]
+
+        log_input_expected_result("line metadata", metadata, line.metadata)
+        self.assertEqual(line.metadata, metadata)
+
+    def test_add_lines_with_metadata_tuples(self):
+        """Test AddLines with 4-tuple format including metadata."""
+        builder = SubtitleBuilder()
+        builder.AddScene()
+
+        metadata1 = {"speaker": "Alice"}
+        metadata2 = {"speaker": "Bob", "volume": "loud"}
+        lines = [
+            (timedelta(seconds=1), timedelta(seconds=3), "Line 1", metadata1),
+            (timedelta(seconds=4), timedelta(seconds=6), "Line 2", metadata2)
+        ]
+
+        builder.AddLines(lines)
+        subtitles = builder.Build()
+        batch = subtitles.scenes[0].batches[0]
+
+        log_input_expected_result("first line metadata", metadata1, batch.originals[0].metadata)
+        self.assertEqual(batch.originals[0].metadata, metadata1)
+
+        log_input_expected_result("second line metadata", metadata2, batch.originals[1].metadata)
+        self.assertEqual(batch.originals[1].metadata, metadata2)
+
+    def test_edge_case_batch_sizes(self):
+        """Test builder with edge case batch sizes."""
+        builder = SubtitleBuilder(max_batch_size=1, min_batch_size=1)
+        builder.BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test 1")
+        builder.BuildLine(timedelta(seconds=4), timedelta(seconds=6), "Test 2")
+
+        subtitles = builder.Build()
+        scene = subtitles.scenes[0]
+
+        log_input_expected_result("batches count with max_batch_size=1", True, len(scene.batches) >= 2)
+        self.assertTrue(len(scene.batches) >= 2)
+
+        # Each batch should have at most 1 line
+        for i, batch in enumerate(scene.batches):
+            log_input_expected_result(f"batch {i+1} size <= 1", True, len(batch.originals) <= 1)
+            self.assertTrue(len(batch.originals) <= 1)
+
 if __name__ == '__main__':
     unittest.main()

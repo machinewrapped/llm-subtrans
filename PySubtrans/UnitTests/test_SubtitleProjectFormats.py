@@ -475,7 +475,6 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         
         with SubtitleEditor(project.subtitles) as editor:
             editor.AutoBatch(SubtitleBatcher(options))
-        with SubtitleEditor(project.subtitles) as editor:
             editor.DuplicateOriginalsAsTranslations()
         project.needs_writing = True
         project.SaveTranslation()

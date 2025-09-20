@@ -176,7 +176,7 @@ class SubtitleEditor:
                 translated = batch.translated or []
                 unmatched_translated = [line for line in translated if line.number not in original_line_numbers]
                 if unmatched_translated:
-                    logging.warning(_("Removing {} translations lines in batch ({},{}) that don't match an original line").format(len(unmatched_translated), batch.scene, batch.number))
+                    logging.warning(_("Removing {} translated lines in batch ({},{}) that don't match an original line").format(len(unmatched_translated), batch.scene, batch.number))
                     batch.translated = [line for line in translated if line not in unmatched_translated]
 
         self.subtitles.scenes = [scene for scene in self.subtitles.scenes if scene.batches]

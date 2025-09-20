@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import bisect
 from typing import Any
 
 from PySubtrans.Helpers.Localization import _
@@ -66,33 +65,6 @@ class SubtitleEditor:
 
         return batch.UpdateContext(update)
 
-    def UpdateLineText(self, line_number: int, original_text: str, translated_text: str) -> None:
-        if self.subtitles.originals is None:
-            raise SubtitleError("Original subtitles are missing!")
-
-        original_line = next((original for original in self.subtitles.originals if original.number == line_number), None)
-        if not original_line:
-            raise ValueError(f"Line {line_number} not found")
-
-        if original_text:
-            original_line.text = original_text
-            original_line.translation = translated_text
-
-        if not translated_text:
-            return
-
-        translated_line = next((translated for translated in self.subtitles.translated if translated.number == line_number), None) if self.subtitles.translated else None
-        if translated_line:
-            translated_line.text = translated_text
-            return
-
-        translated_line = SubtitleLine.Construct(line_number, original_line.start, original_line.end, translated_text, original_line.metadata)
-
-        if not self.subtitles.translated:
-            self.subtitles.translated = []
-
-        insertIndex = bisect.bisect_left([line.number for line in self.subtitles.translated], line_number)
-        self.subtitles.translated.insert(insertIndex, translated_line)
 
     def DeleteLines(self, line_numbers: list[int]) -> list[tuple[int, int, list[SubtitleLine], list[SubtitleLine]]]:
         """

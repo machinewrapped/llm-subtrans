@@ -16,30 +16,37 @@ class SubtitleBuilder:
     """
     A helper class for programmatically building subtitle structures with fine-grained control.
 
-    Provides a fluent API for creating scenes, batches, and lines without requiring
-    deep knowledge of the internal scene/batch structure.
-    """
+    Provides a fluent API for preparing subtitles for translation. 
+    
+    Scenes will be automatically divided into batches using gap lengths to determine split points.
 
+    Usage:
+    >>> builder = SubtitleBuilder(max_batch_size=100)
+    >>> subtitles = (builder
+    ...     .AddScene(summary="Opening dialogue")
+    ...     .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Hello...")
+    ...     .BuildLine(timedelta(seconds=4), timedelta(seconds=6), "Nice to meet you!")
+    ...     .BuildLine(timedelta(seconds=8), timedelta(seconds=10), "We need to talk.")
+    ...     .AddScene(summary="Action sequence")  # New scene
+    ...     .BuildLine(timedelta(seconds=65), timedelta(seconds=67), "Look out!")
+    ...     # ...
+    ...     .Build()
+    ... )
+    """
     def __init__(self, max_batch_size : int = 100, min_batch_size : int = 1):
         """
         Initialize SubtitleBuilder.
 
         Parameters
         ----------
-        subtitles : Subtitles|None
-            An existing Subtitles instance to build upon. If None, creates a new empty instance.
         max_batch_size : int
-            Maximum number of lines per batch. Lines will be automatically organized into batches
-            using intelligent gap-based splitting.
+            Maximum number of lines per batch.
         min_batch_size : int
-            Minimum size for batches when splitting. Helps avoid very small batches.
+            Minimum size hint for batches. Helps avoid very small batches.
         """
         self._scenes : list[SubtitleScene] = []
         self._current_scene : SubtitleScene|None = None
         self._current_line_number : int = 0
-        self._scene_counter : int = len(self._scenes)
-        self._max_batch_size : int = max_batch_size
-        self._min_batch_size : int = min_batch_size
         self._accumulated_lines : list[SubtitleLine] = []
         batch_settings : SettingsType = SettingsType({
             'max_batch_size': max_batch_size,
@@ -47,7 +54,7 @@ class SubtitleBuilder:
         })
         self._batcher : SubtitleBatcher = SubtitleBatcher(batch_settings)
 
-    def AddScene(self, summary : str|None = None, context : dict[str, Any]|None = None) -> 'SubtitleBuilder':
+    def AddScene(self, summary : str|None = None) -> 'SubtitleBuilder':
         """
         Add a new scene. Lines added after this will be automatically organized into batches.
 
@@ -66,15 +73,11 @@ class SubtitleBuilder:
         # Process any accumulated lines from previous scene
         self._finalize_current_scene()
 
-        self._scene_counter += 1
+        scene_number = len(self._scenes) + 1
 
-        scene_data : dict[str, Any] = {'number': self._scene_counter}
+        self._current_scene = SubtitleScene({'number': scene_number})
         if summary:
-            scene_data['context'] = {'summary': summary}
-
-        self._current_scene = SubtitleScene(scene_data)
-        if context:
-            self._current_scene.UpdateContext(context)
+            self._current_scene.context['summary'] = summary
 
         self._scenes.append(self._current_scene)
         self._accumulated_lines = []
@@ -83,8 +86,7 @@ class SubtitleBuilder:
 
     def AddLine(self, line : SubtitleLine) -> 'SubtitleBuilder':
         """
-        Add a SubtitleLine object to the current scene. Lines are accumulated and will be intelligently
-        organized into batches when the scene is finalized.
+        Add a SubtitleLine to the current scene.
 
         Parameters
         ----------
@@ -99,6 +101,9 @@ class SubtitleBuilder:
         if not self._current_scene:
             self.AddScene()
 
+        #TODO: should probably validate that line numbers are unique and sequential here
+        # or perhaps sort them on finalization.
+
         self._accumulated_lines.append(line)
 
         return self
@@ -109,8 +114,6 @@ class SubtitleBuilder:
 
         Parameters
         ----------
-        number : int
-            Line number (should be unique).
         start : timedelta|str
             Start time as timedelta or SRT format string.
         end : timedelta|str

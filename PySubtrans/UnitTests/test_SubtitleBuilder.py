@@ -237,7 +237,7 @@ class TestSubtitleBuilder(unittest.TestCase):
 
         # Test that all methods return SubtitleBuilder for chaining
         result = (builder
-                 .AddScene(summary="Test scene", context={"genre": "comedy"})
+                 .AddScene(summary="Test scene")
                  .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Hello")
                  .BuildLine(timedelta(seconds=4), timedelta(seconds=6), "World")
         )
@@ -247,15 +247,21 @@ class TestSubtitleBuilder(unittest.TestCase):
 
         # Verify the structure was built correctly
         subtitles = result.Build()
-        scene = subtitles.scenes[0]
-        batch = scene.batches[0]
 
-        log_input_expected_result("scene context genre", "comedy", scene.GetContext("genre"))
-        self.assertEqual(scene.GetContext("genre"), "comedy")
+        log_input_expected_result("scenes count", 1, len(subtitles.scenes))
+        self.assertEqual(len(subtitles.scenes), 1)
+        scene = subtitles.scenes[0]
+
+        log_input_expected_result("batches count", 1, len(scene.batches))
+        self.assertEqual(len(scene.batches), 1)
+        batch = scene.batches[0]
 
         log_input_expected_result("batch lines count", 2, len(batch.originals))
         self.assertEqual(len(batch.originals), 2)
 
+        batch_line_numbers = [line.number for line in batch.originals]
+        log_input_expected_result("batch line numbers", [1, 2], batch_line_numbers)
+        self.assertSequenceEqual(batch_line_numbers, [1, 2])
 
 if __name__ == '__main__':
     unittest.main()

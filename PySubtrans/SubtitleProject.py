@@ -7,6 +7,7 @@ from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import SettingsType
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleError import SubtitleError, TranslationAbortedError
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Subtitles import Subtitles
@@ -255,7 +256,8 @@ class SubtitleProject:
                 with open(filepath, 'r', encoding=default_encoding, newline='') as f:
                     subtitles: Subtitles = json.load(f, cls=SubtitleDecoder)
 
-                subtitles.Sanitise()
+                with SubtitleEditor(subtitles) as editor:
+                    editor.Sanitise()
 
                 self.subtitles = subtitles
                 return subtitles

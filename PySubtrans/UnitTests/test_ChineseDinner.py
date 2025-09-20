@@ -4,6 +4,7 @@ from PySubtrans.Helpers.TestCases import PrepareSubtitles, SubtitleTestCase
 from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.SubtitleLine import SubtitleLine
@@ -97,7 +98,8 @@ class ChineseDinnerTests(SubtitleTestCase):
         subtitles : Subtitles = PrepareSubtitles(chinese_dinner_data)
 
         batcher = SubtitleBatcher(self.options)
-        subtitles.AutoBatch(batcher)
+        with SubtitleEditor(subtitles) as editor:
+            editor.AutoBatch(batcher)
 
         log_info("Line count: " + str(subtitles.linecount))
         log_info("Scene count: " + str(subtitles.scenecount))
@@ -168,7 +170,8 @@ class ChineseDinnerTests(SubtitleTestCase):
             log_test_name("Merge scenes tests")
 
             # Merge scenes 3 and 4
-            subtitles.MergeScenes([3,4])
+            with SubtitleEditor(subtitles) as editor:
+                editor.MergeScenes([3,4])
 
             log_input_expected_result(f"Merge [3,4] -> scenecount", 3, subtitles.scenecount)
             self.assertEqual(subtitles.scenecount, 3)
@@ -257,7 +260,8 @@ class ChineseDinnerTests(SubtitleTestCase):
 
         with self.subTest("Merge batches"):
             log_test_name("Merge scene 3 batches 1 & 2")
-            subtitles.MergeBatches(3, [1,2])
+            with SubtitleEditor(subtitles) as editor:
+                editor.MergeBatches(3, [1,2])
 
             log_input_expected_result("Scene count", 3, subtitles.scenecount)
             self.assertEqual(subtitles.scenecount, 3)
@@ -337,7 +341,8 @@ class ChineseDinnerTests(SubtitleTestCase):
         with self.subTest("Split scene 1"):
             log_test_name("Split scene 1")
 
-            subtitles.SplitScene(1, 2)
+            with SubtitleEditor(subtitles) as editor:
+                editor.SplitScene(1, 2)
 
             log_input_expected_result("Scene count", 4, subtitles.scenecount)
             self.assertEqual(subtitles.scenecount, 4)
@@ -378,7 +383,8 @@ class ChineseDinnerTests(SubtitleTestCase):
         self.assertEqual(line.srt_end, "00:15:36,790")
         self.assertEqual(line.text, "どうして俺を殺すんだ.")
 
-        subtitles.UpdateLineText(36, original_text="どうして俺を殺すのか.", translated_text="Why are you going to kill me?")
+        with SubtitleEditor(subtitles) as editor:
+            editor.UpdateLineText(36, original_text="どうして俺を殺すのか.", translated_text="Why are you going to kill me?")
 
         log_input_expected_result("After update", "どうして俺を殺すのか.", line.text)
         log_input_expected_result("Translated", "Why are you going to kill me?", line.translation)

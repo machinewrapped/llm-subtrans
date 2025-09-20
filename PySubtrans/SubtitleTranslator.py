@@ -11,6 +11,7 @@ from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.Translation import Translation
@@ -107,7 +108,8 @@ class SubtitleTranslator:
         if not subtitles.scenes:
             if self.retranslate or self.reparse:
                 logging.warning(_("No previous translations found, starting fresh..."))
-            subtitles.AutoBatch(self.batcher)
+            with SubtitleEditor(subtitles) as editor:
+                editor.AutoBatch(self.batcher)
 
         if not subtitles.scenes:
             raise TranslationImpossibleError(_("No scenes to translate"))

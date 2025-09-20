@@ -14,7 +14,6 @@ from PySubtrans.SubtitleError import SubtitleError, TranslationAbortedError
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Subtitles import Subtitles
 
-from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
@@ -125,7 +124,8 @@ class SubtitleProject:
 
             subtitles : Subtitles = self.subtitles
             if subtitles:
-                subtitles.UpdateOutputPath()
+                self.UpdateOutputPath()
+
                 outputpath = outputpath or GetOutputPath(self.projectfile, subtitles.target_language, subtitles.file_format)
                 sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath               
                 logging.info(_("Project file loaded"))
@@ -198,6 +198,23 @@ class SubtitleProject:
             if not all(filtered_settings.get(key) == self.subtitles.settings.get(key) for key in common_keys) or new_keys:
                 self.subtitles.UpdateSettings(filtered_settings)
                 self.needs_writing = bool(self.subtitles.scenes) and self.use_project_file
+
+    def UpdateOutputPath(self, path: str|None = None, extension: str|None = None) -> None:
+        """
+        Set or generate the output path for the translated subtitles
+        """
+        path = path or self.subtitles.sourcepath
+        extension = extension or self.subtitles.file_format
+        if not extension:
+            extension = SubtitleFormatRegistry.get_format_from_filename(path) if path else None
+            extension = extension or '.srt'
+
+        if extension == ".subtrans":
+            raise SubtitleError("Cannot use .subtrans as output format")
+
+        outputpath = GetOutputPath(path, self.target_language, extension)
+        self.subtitles.outputpath = outputpath
+        self.subtitles.file_format = extension
 
     def SaveOriginal(self, outputpath : str|None = None):
         """
@@ -339,7 +356,6 @@ class SubtitleProject:
             return SettingsType()
 
         return SettingsType({ key : value for key, value in self.subtitles.settings.items() if value is not None and (value != '' or isinstance(value, list)) })
-
 
     def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:
         """

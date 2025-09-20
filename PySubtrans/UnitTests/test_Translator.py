@@ -59,8 +59,8 @@ class SubtitleTranslatorTests(SubtitleTestCase):
         log_info(f"Scene: {batch.context.get('scene')}")
         self.assertIsNotNone(batch.context.get('scene'))
 
-        self.assertEqual(batch.context.get('movie_name'), original.movie_name)
-        self.assertEqual(batch.context.get('description'), original.settings.get('description'))
+        self.assertEqual(batch.context.get('movie_name'), original.settings.get_str('movie_name'))
+        self.assertEqual(batch.context.get('description'), original.settings.get_str('description'))
         batch_names = ParseNames(batch.context.get('names'))
         original_names = ParseNames(original.settings.get('names'))
         self.assertSequenceEqual(batch_names, original_names)

@@ -6,7 +6,6 @@ import logging
 import threading
 from typing import Any
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Instructions import DEFAULT_TASK_TYPE
 from PySubtrans.Options import Options, SettingsType
 
 from PySubtrans.SettingsType import SettingsType
@@ -40,16 +39,8 @@ class Subtitles:
         self.settings : SettingsType = SettingsType(deepcopy(settings)) if settings else SettingsType()
 
     @property
-    def movie_name(self) -> str|None:
-        return self._get_setting_str('movie_name')
-
-    @property
     def target_language(self) -> str|None:
-        return self._get_setting_str('target_language')
-
-    @property
-    def task_type(self) -> str:
-        return self._get_setting_str('task_type') or DEFAULT_TASK_TYPE
+        return self.settings.get_str('target_language')
 
     @property
     def has_subtitles(self) -> bool:
@@ -296,7 +287,7 @@ class Subtitles:
                 start_line_number=self.start_line_number
             )
 
-            data.metadata['Title'] = self.movie_name
+            data.metadata['Title'] = self.settings.get_str('movie_name', data.metadata.get('Title'))
             data.metadata['Language'] = self.target_language
             
             # Apply RTL markers if requested (handler will decide format-specific implementation)
@@ -319,23 +310,6 @@ class Subtitles:
         with self.lock:
             self.settings.update(settings)
 
-    def UpdateOutputPath(self, path: str|None = None, extension: str|None = None) -> None:
-        """
-        Set or generate the output path for the translated subtitles
-        """
-        path = path or self.sourcepath
-        extension = extension or self.file_format
-        if not extension:
-            extension = SubtitleFormatRegistry.get_format_from_filename(path) if path else None
-            extension = extension or '.srt'
-
-        if extension == ".subtrans":
-            raise SubtitleError("Cannot use .subtrans as output format")
-
-        outputpath = GetOutputPath(path, self.target_language, extension)
-        self.outputpath = outputpath
-        self.file_format = extension
-
     def _renumber_if_needed(self, lines : list[SubtitleLine]|None) -> None:
         """
         Renumber subtitle lines if any have number 0 (indicating missing/invalid indices)
@@ -355,11 +329,4 @@ class Subtitles:
                 line.text = f"{line.text}\n{item.text}"
 
         return sorted(lines.values(), key=lambda item: item.key)
-
-    def _get_setting_str(self, key: str, default: str|None = None) -> str|None:
-        """
-        Get a setting as a string, or None if not set
-        """
-        value = self.settings.get(key, default)
-        return value if isinstance(value, str) else default
 

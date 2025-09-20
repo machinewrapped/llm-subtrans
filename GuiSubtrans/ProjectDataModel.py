@@ -155,7 +155,7 @@ class ProjectDataModel:
         with QMutexLocker(self.mutex):
             self.viewmodel = ProjectViewModel()
             if self.project is not None:
-                self.viewmodel.CreateModel(self.project.subtitles)
+                self.viewmodel.CreateModel(self.project.subtitles, self.project.task_type)
         return self.viewmodel
 
     def UpdateViewModel(self, update : ModelUpdate):

@@ -71,11 +71,11 @@ class SubtitleProject:
     
     @property
     def task_type(self) -> str|None:
-        return self.subtitles.task_type if self.subtitles else None
+        return self.subtitles.settings.get_str('task_type') if self.subtitles else None
 
     @property
     def movie_name(self) -> str|None:
-        return self.subtitles.movie_name if self.subtitles else None
+        return self.subtitles.settings.get_str('movie_name') if self.subtitles else None
 
     @property
     def any_translated(self) -> bool:

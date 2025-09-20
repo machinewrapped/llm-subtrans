@@ -80,12 +80,12 @@ class ProjectViewModel(QStandardItemModel):
             self.blockSignals(False)
             self.endResetModel()
 
-    def CreateModel(self, data : Subtitles):
+    def CreateModel(self, data : Subtitles, task_type : str|None = None) -> None:
         if not isinstance(data, Subtitles):
             raise ValueError(_("Can only model subtitle files"))
 
         self.model = {}
-        self.task_type = data.task_type
+        self.task_type = task_type or DEFAULT_TASK_TYPE
 
         for scene in data.scenes:
             scene_item = self.CreateSceneItem(scene)

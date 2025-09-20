@@ -30,10 +30,10 @@ def GetBatchContext(subtitles: Subtitles, scene_number: int, batch_number: int, 
         }
 
         if 'movie_name' in subtitles.settings:
-            context['movie_name'] = subtitles._get_setting_str('movie_name')
+            context['movie_name'] = subtitles.settings.get_str('movie_name')
 
         if 'description' in subtitles.settings:
-            context['description'] = subtitles._get_setting_str('description')
+            context['description'] = subtitles.settings.get_str('description')
 
         if 'names' in subtitles.settings:
             context['names'] = ParseNames(subtitles.settings.get('names', []))

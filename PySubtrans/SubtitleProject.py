@@ -277,6 +277,14 @@ class SubtitleProject:
                     self.SaveTranslation()
                 self.needs_writing = False
 
+    def UpdateProjectFile(self) -> None:
+        """
+        Save the project file if it needs updating
+        """
+        with self.lock:
+            if self.needs_writing and self.subtitles and self.subtitles.scenes:
+                self.SaveProjectFile()
+
     def SaveProjectFile(self, projectfile : str|None = None) -> None:
         """
         Write a set of subtitles to a project file
@@ -339,14 +347,6 @@ class SubtitleProject:
         except json.JSONDecodeError as e:
             logging.error(_("Error decoding JSON file: {}").format(e))
             return None
-
-    def UpdateProjectFile(self) -> None:
-        """
-        Save the project file if it needs updating
-        """
-        with self.lock:
-            if self.needs_writing and self.subtitles and self.subtitles.scenes:
-                self.SaveProjectFile()
 
     def GetProjectSettings(self) -> SettingsType:
         """

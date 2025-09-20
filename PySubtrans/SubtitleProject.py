@@ -175,10 +175,13 @@ class SubtitleProject:
             if not self.subtitles:
                 return
 
-            # Filter settings to only include known project settings (original logic)
+            # Update obsolete settings to maintain compatibility
+            self._update_compatibility(settings)
+
+            # Filter settings to only include known project settings
             filtered_settings = SettingsType({key: settings[key] for key in settings if key in self.DEFAULT_PROJECT_SETTINGS})
 
-            # Process names and substitutions
+            # Process names and substitutions into standard formats
             if 'names' in filtered_settings:
                 names_list = filtered_settings.get('names', [])
                 filtered_settings['names'] = ParseNames(names_list)
@@ -188,16 +191,13 @@ class SubtitleProject:
                 if substitutions_list:
                     filtered_settings['substitutions'] = Substitutions.Parse(substitutions_list)
 
-            # Apply compatibility updates
-            self._update_compatibility(filtered_settings)
-
-            # Check if there are actual changes before updating
+            # Check if there are any actual changes
             common_keys = filtered_settings.keys() & self.subtitles.settings.keys()
             new_keys = filtered_settings.keys() - self.subtitles.settings.keys()
 
-            if not all(filtered_settings.get(key) == self.subtitles.settings.get(key) for key in common_keys) or new_keys:
+            if new_keys or not all(filtered_settings.get(key) == self.subtitles.settings.get(key) for key in common_keys):
                 self.subtitles.UpdateSettings(filtered_settings)
-                self.needs_writing = bool(self.subtitles.scenes) and self.use_project_file
+                self.needs_writing = self.use_project_file and bool(self.subtitles.scenes)
 
     def UpdateOutputPath(self, path: str|None = None, extension: str|None = None) -> None:
         """

@@ -36,9 +36,10 @@ options = init_options(
 )
 
 subtitles = init_subtitles("movie.srt")
-translator = init_translator(options)
 
+translator = init_translator(options)
 translator.Translate(subtitles)
+
 subtitles.SaveTranslation("movie-translated.srt")
 ```
 
@@ -114,36 +115,23 @@ This is a test"""
 subtitles = init_subtitles(content=srt_content)
 ```
 
-Create an empty subtitles instance and build manually:
-```python
-from datetime import timedelta
-from PySubtrans import init_subtitles
-from PySubtrans.SubtitleLine import SubtitleLine
-
-subtitles = init_subtitles(filepath=None, content=None)
-subtitles.originals = [
-    SubtitleLine.Construct(1, timedelta(seconds=1), timedelta(seconds=3), "Hello world"),
-    SubtitleLine.Construct(2, timedelta(seconds=4), timedelta(seconds=6), "This is a test")
-]
-```
-
 **Key methods on the returned `Subtitles` object:**
 - `LoadSubtitles(filepath)`: Load additional subtitle content
 - `SaveTranslation(path)`: Save translated subtitles to a file
 - `AutoBatch`: Split subtitles into scenes and batches ready for translation.
 
-## Building translators with `init_translator`
+## Preparing a `SubtitleTranslator` with `init_translator`
 
-`init_translator` validates the provider configuration, loads any instruction file declared in the options and wires up a ready-to-use `SubtitleTranslator`. Behind the scenes it uses `TranslationProvider.get_provider` to construct the correct provider client and applies your option overrides to the current project.
+`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate the `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance that connects to the chosen translation service.
 
-Once you have a translator you can:
+Example
 
 ```python
-translator.events.scene_translated += handle_scene  # Subscribe to events
-project.TranslateSubtitles(translator)
+from PySubtrans import init_translator
+translator = init_translator({"provider": "gemini", "api_key": "your-key"})
+translator.events.scene_translated += on_scene_translated  # Subscribe to events
+translator.TranslateSubtitles(subtitles)
 ```
-
-The returned `SubtitleTranslator` exposes all of the batching, retry and provider integration features from the main application.
 
 ## Configuring translation with custom instructions
  Custom instructions can be supplied via an `instruction_file` argument or by overriding `prompt` and `instructions` explicitly. 
@@ -157,6 +145,8 @@ It is *imperative* that the instructions contain examples of properly formatted 
 See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
 
 ## Working with projects using `init_project`
+`SubtitleProject` provides a higher level interface for managing a translation job, with methods to read and write a project file to disk and events to hook into on scene/batch translation.
+
 `init_project` instantiates a `SubtitleProject` and loads the source subtitles if a file path is supplied.
 
 By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk (or reload an existing project), allowing a translation job to be resumed at a future time.
@@ -169,40 +159,30 @@ PySubtrans is designed to be modular. The helper functions above are convenient 
 
 #### Option 1: SubtitleBuilder for programmatic control
 
-Use `SubtitleBuilder` when you need to build subtitles programmatically. Batch management is handled automatically:
+Use `SubtitleBuilder` when you want to build subtitles programmatically. 
 
 ```python
 from PySubtrans import SubtitleBuilder
 from datetime import timedelta
 
-# Simple usage - batches are created automatically
-builder = SubtitleBuilder(max_batch_size=30)  # Configure batch size in constructor
+builder = SubtitleBuilder(max_batch_size=100)
 subtitles = (builder
     .AddScene(summary="Opening dialogue")
-    .AddLine(1, timedelta(seconds=1), timedelta(seconds=3), "Hello, my name is...")
-    .AddLine(2, timedelta(seconds=4), timedelta(seconds=6), "Nice to meet you!")
-    .AddLine(3, timedelta(seconds=8), timedelta(seconds=10), "We need to talk.")
+    .ConstructLine(timedelta(seconds=1), timedelta(seconds=3), "Hello, my name is...")
+    .ConstructLine(timedelta(seconds=4), timedelta(seconds=6), "Nice to meet you!")
+    .ConstructLine(timedelta(seconds=8), timedelta(seconds=10), "We need to talk.")
 
     .AddScene(summary="Action sequence")  # New scene
-    .AddLine(4, timedelta(seconds=65), timedelta(seconds=67), "Look out!")
-    # ... add more lines - they're automatically organized into batches
+    .ConstructLine(timedelta(seconds=65), timedelta(seconds=67), "Look out!")
+    # ... 
     .Build()
 )
-
-# For large datasets - batches are split automatically when they exceed max_batch_size
-builder = SubtitleBuilder(max_batch_size=50)
-builder.AddScene(summary="Long dialogue scene")
-
-# Add hundreds of lines without worrying about batch management
-for i in range(1, 200):
-    builder.AddLine(i, timedelta(seconds=i), timedelta(seconds=i+2), f"Line {i}")
-
-subtitles = builder.Build()  # Automatically organized into properly sized batches
 ```
+Batching of subtitle lines within each scene is handled automatically.
 
 #### Option 2: Automatic batching with SubtitleBatcher
 
-When you don't need fine-grained control, use `SubtitleBatcher` to automatically organize lines:
+`SubtitleBatcher` can be used to automatically group a linear list of lines into scenes and batches:
 
 ```python
 from PySubtrans import init_subtitles, init_options
@@ -211,16 +191,16 @@ from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from datetime import timedelta
 
 # Initialize subtitles and add lines
-subtitles = init_subtitles(filepath=None, content=None)
+subtitles = init_subtitles()
 subtitles.originals = [
     SubtitleLine.Construct(1, timedelta(seconds=1), timedelta(seconds=3), "First line"),
     SubtitleLine.Construct(2, timedelta(seconds=4), timedelta(seconds=6), "Second line"),
     SubtitleLine.Construct(3, timedelta(seconds=30), timedelta(seconds=32), "After scene break"),
+    #... all the lines for the translation job
 ]
 
 # Use SubtitleBatcher to organize into scenes and batches
-options = init_options(max_batch_size=50, scene_threshold=10)  # 10 second scene breaks
-batcher = SubtitleBatcher(options.settings)
+batcher = SubtitleBatcher({"scene_threshold" : 30, "max_batch_size" : 50})
 subtitles.AutoBatch(batcher)
 ```
 

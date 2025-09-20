@@ -50,9 +50,9 @@ def init_options(
     Parameters
     ----------
     provider : str or None, optional
-        The name of the translation provider to use (e.g., "openai", "google").
+        The name of the translation provider to use (e.g., "openai", "gemini").
     model : str or None, optional
-        The model identifier to use for translation (e.g., "gpt-3.5-turbo").
+        The model identifier to use for translation (e.g., "gpt-5-mini").
     api_key : str or None, optional
         API key for authenticating with the translation provider.
     prompt : str or None, optional
@@ -169,7 +169,7 @@ def init_translator(settings: Options|Mapping[str, SettingType]) -> SubtitleTran
 
     Create translator from dictionary:
 
-    >>> settings = {"provider": "google", "api_key": "your-key"}
+    >>> settings = {"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"}
     >>> translator = init_translator(settings)
     """
     if not isinstance(settings, Options):

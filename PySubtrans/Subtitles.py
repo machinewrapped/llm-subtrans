@@ -6,7 +6,7 @@ import logging
 import threading
 from typing import Any
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Options import Options, SettingsType
+from PySubtrans.Options import Options
 
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatch import SubtitleBatch

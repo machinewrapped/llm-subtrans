@@ -28,6 +28,7 @@ from PySubtrans.Helpers import GetInputPath
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
@@ -253,7 +254,8 @@ def preprocess_subtitles(subtitles: Subtitles, options: Options) -> None:
         raise ValueError("No subtitles to preprocess")
 
     preprocessor = SubtitleProcessor(options)
-    subtitles.PreProcess(preprocessor)
+    with SubtitleEditor(subtitles) as editor:
+        editor.PreProcess(preprocessor)
 
 __all__ = [
     '__version__',
@@ -261,6 +263,7 @@ __all__ = [
     'Subtitles',
     'SubtitleScene',
     'SubtitleBuilder',
+    'SubtitleEditor',
     'SubtitleProject',
     'SubtitleTranslator',
     'TranslationProvider',

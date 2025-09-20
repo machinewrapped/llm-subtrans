@@ -4,6 +4,7 @@ import threading
 from typing import Any
 
 from PySubtrans.Helpers.SettingsHelpers import GetStrSetting
+from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtrans.Helpers.Localization import _, tr
 from PySubtrans.Helpers.Text import Linearise, SanitiseSummary
@@ -11,6 +12,7 @@ from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.Translation import Translation
@@ -107,7 +109,8 @@ class SubtitleTranslator:
         if not subtitles.scenes:
             if self.retranslate or self.reparse:
                 logging.warning(_("No previous translations found, starting fresh..."))
-            subtitles.AutoBatch(self.batcher)
+            with SubtitleEditor(subtitles) as editor:
+                editor.AutoBatch(self.batcher)
 
         if not subtitles.scenes:
             raise TranslationImpossibleError(_("No scenes to translate"))
@@ -168,7 +171,7 @@ class SubtitleTranslator:
             context = {}
 
             for batch in batches:
-                context = subtitles.GetBatchContext(scene.number, batch.number, self.max_history)
+                context = GetBatchContext(subtitles, scene.number, batch.number, self.max_history)
 
                 try:
                     self.TranslateBatch(batch, line_numbers, context)

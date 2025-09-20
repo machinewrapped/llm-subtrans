@@ -2,6 +2,7 @@ from GuiSubtrans.Command import Command, CommandError, UndoError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.SubtitleBatch import SubtitleBatch
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Helpers.Localization import _
@@ -50,7 +51,8 @@ class MergeLinesCommand(Command):
 
             self.undo_data.append((batch.scene, batch.number, originals, translated))
 
-            merged_line, merged_translated = subtitles.MergeLinesInBatch(batch.scene, batch.number, batch_lines)
+            with SubtitleEditor(subtitles) as editor:
+                merged_line, merged_translated = editor.MergeLinesInBatch(batch.scene, batch.number, batch_lines)
 
             if not merged_line:
                 raise CommandError(_("Failed to merge lines"), command=self)

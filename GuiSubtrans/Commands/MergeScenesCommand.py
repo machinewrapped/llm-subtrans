@@ -3,6 +3,7 @@ import logging
 from GuiSubtrans.Command import Command, CommandError, UndoError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Helpers.Localization import _
 
@@ -33,7 +34,8 @@ class MergeScenesCommand(Command):
 
         later_scenes = [scene.number for scene in subtitles.scenes if scene.number > self.scene_numbers[-1]]
 
-        merged_scene = subtitles.MergeScenes(self.scene_numbers)
+        with SubtitleEditor(subtitles) as editor:
+            merged_scene = editor.MergeScenes(self.scene_numbers)
 
         model_update : ModelUpdate =  self.AddModelUpdate()
         for new_number, current_number in enumerate(later_scenes, start=merged_scene.number + 1):
@@ -74,12 +76,14 @@ class MergeScenesCommand(Command):
             model_update.scenes.update(current_number, { 'number' : scene_number })
 
         # Split the merged scene according to the saved scene sizes and add the new scenes to the viewmodel
-        for scene_number, scene_size in enumerate(self.scene_sizes[:-1], start=self.scene_numbers[0]):
-            subtitles.SplitScene(scene_number, scene_size + 1)
-            new_scene = subtitles.GetScene(scene_number + 1)
-            if new_scene.number in self.original_summaries:
-                new_scene.summary = self.original_summaries.get(new_scene.number, None)
+        with SubtitleEditor(subtitles) as editor:
+            for scene_number, scene_size in enumerate(self.scene_sizes[:-1], start=self.scene_numbers[0]):
+                editor.SplitScene(scene_number, scene_size + 1)
 
-            model_update.scenes.add(scene_number + 1, new_scene)
+                new_scene = subtitles.GetScene(scene_number + 1)
+                if new_scene.number in self.original_summaries:
+                    new_scene.summary = self.original_summaries.get(new_scene.number, None)
+
+                model_update.scenes.add(scene_number + 1, new_scene)
 
         return True

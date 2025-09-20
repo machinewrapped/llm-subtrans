@@ -3,6 +3,7 @@ from PySubtrans.Helpers.TestCases import AddTranslations, PrepareSubtitles
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleProject import SubtitleProject
 
@@ -33,7 +34,8 @@ def CreateTestDataModelBatched(test_data : dict, options : Options|None = None, 
 
     subtitles : Subtitles = datamodel.project.subtitles
     batcher = SubtitleBatcher(options.GetSettings())
-    subtitles.AutoBatch(batcher)
+    with SubtitleEditor(subtitles) as editor:
+        editor.AutoBatch(batcher)
 
     if translated and 'translated' in test_data:
         AddTranslations(subtitles, test_data, 'translated')

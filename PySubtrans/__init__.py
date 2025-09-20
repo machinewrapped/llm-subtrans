@@ -30,6 +30,7 @@ from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Subtitles import Subtitles
+from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationProvider import TranslationProvider
@@ -79,7 +80,12 @@ def init_options(
     }
     combined_settings.update({k: v for k, v in explicit_settings.items() if v is not None})
 
-    return Options(combined_settings)
+    options = Options(combined_settings)
+
+    options.InitialiseInstructions()
+
+    return options
+
 
 def init_subtitles(filepath: str|None, content: str|None) -> Subtitles:
     """
@@ -130,49 +136,6 @@ def init_subtitles(filepath: str|None, content: str|None) -> Subtitles:
     return Subtitles()
 
 
-def init_project(filepath: str|None, persistent: bool = False) -> SubtitleProject:
-    """
-    Create a :class:`SubtitleProject` and optionally load subtitles from *filepath*.
-
-    Parameters
-    ----------
-    filepath : str or None
-        Path to the subtitle file to load into the project.
-    persistent : bool, optional
-        If True, enables persistent project state by creating and managing a
-        `.subtrans` project file in the working directory. This allows the project
-        to be saved and restored across sessions. If False (default), the project
-        is not persisted to disk.
-
-    Returns
-    -------
-    SubtitleProject
-        The initialized subtitle project.
-
-    Examples
-    --------
-    Create a basic project:
-
-    >>> from PySubtrans import init_project
-    >>> project = init_project("movie.srt")
-    >>> print(len(project.subtitles))
-    150
-
-    Create a persistent project:
-
-    >>> project = init_project("movie.srt", persistent=True)
-    >>> # Project state will be saved to .subtrans file
-    >>> project.Save()
-    """
-    project = SubtitleProject(persistent=persistent)
-    normalised_path = GetInputPath(filepath)
-
-    if normalised_path:
-        project.InitialiseProject(normalised_path)
-
-    return project
-
-
 def init_translator(settings: Options|Mapping[str, SettingType]) -> SubtitleTranslator:
     """
     Return a ready-to-use :class:`SubtitleTranslator` using the specified settings.
@@ -184,13 +147,12 @@ def init_translator(settings: Options|Mapping[str, SettingType]) -> SubtitleTran
 
     Validation
     ----------
-    - Checks that `settings` is either an :class:`Options` instance or a mapping; if a mapping, it is converted to :class:`Options`.
     - Validates the settings for the translation provider.
 
     Exceptions
     ----------
     ValueError
-        If the settings are invalid for the selected translation provider.
+        If the settings are invalid.
 
     Returns
     -------
@@ -221,9 +183,45 @@ def init_translator(settings: Options|Mapping[str, SettingType]) -> SubtitleTran
         message = translation_provider.validation_message or f"Invalid settings for provider {settings.provider}"
         raise ValueError(message)
 
-    settings.InitialiseInstructions()
-
     return SubtitleTranslator(settings, translation_provider)
+
+
+def init_project(filepath: str|None, persistent: bool = False) -> SubtitleProject:
+    """
+    Create a :class:`SubtitleProject` and optionally load subtitles from *filepath*.
+
+    Parameters
+    ----------
+    filepath : str or None
+        Path to the subtitle file to load into the project.
+    persistent : bool, optional
+        If True, enables persistent project state by creating a`.subtrans` project file for the job.
+
+    Returns
+    -------
+    SubtitleProject
+        The initialized subtitle project.
+
+    Examples
+    --------
+    Create a basic project:
+
+    >>> from PySubtrans import init_project
+    >>> project = init_project("movie.srt")
+
+    Create a persistent project:
+
+    >>> project = init_project("movie.srt", persistent=True)
+    >>> project.SaveProject()
+    """
+    project = SubtitleProject(persistent=persistent)
+    normalised_path = GetInputPath(filepath)
+
+    if normalised_path:
+        project.InitialiseProject(normalised_path)
+
+    return project
+
 
 def preprocess_subtitles(subtitles: Subtitles, options: Options) -> None:
     """
@@ -261,6 +259,7 @@ __all__ = [
     '__version__',
     'Options',
     'Subtitles',
+    'SubtitleScene',
     'SubtitleBuilder',
     'SubtitleProject',
     'SubtitleTranslator',

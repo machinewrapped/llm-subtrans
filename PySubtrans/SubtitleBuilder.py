@@ -41,10 +41,11 @@ class SubtitleBuilder:
         self._max_batch_size : int = max_batch_size
         self._min_batch_size : int = min_batch_size
         self._accumulated_lines : list[SubtitleLine] = []
-        self._settings : SettingsType = SettingsType({
+        batch_settings : SettingsType = SettingsType({
             'max_batch_size': max_batch_size,
             'min_batch_size': min_batch_size,
         })
+        self._batcher : SubtitleBatcher = SubtitleBatcher(batch_settings)
 
     def AddScene(self, summary : str|None = None, context : dict[str, Any]|None = None) -> 'SubtitleBuilder':
         """
@@ -102,11 +103,9 @@ class SubtitleBuilder:
 
         return self
 
-    def ConstructLine(self, start : timedelta|str, end : timedelta|str, text : str, metadata : dict[str, Any]|None = None) -> 'SubtitleBuilder':
+    def BuildLine(self, start : timedelta|str, end : timedelta|str, text : str, metadata : dict[str, Any]|None = None) -> 'SubtitleBuilder':
         """
-        Construct a SubtitleLine from parameters and add it to the current scene.
-
-        This is a convenience method that combines SubtitleLine.Construct() with AddLine().
+        Build a SubtitleLine from parameters and add it to the current scene.
 
         Parameters
         ----------
@@ -133,33 +132,29 @@ class SubtitleBuilder:
 
     def AddLines(self, lines : Sequence[SubtitleLine] | Sequence[LineData]) -> 'SubtitleBuilder':
         """
-        Add multiple subtitle lines to the current scene. Lines are automatically organized into batches.
+        Add multiple subtitle lines to the current scene. 
 
         Parameters
         ----------
-        lines : list[SubtitleLine|tuple[timedelta|str, timedelta|str, str, dict]]
-            Either a list of SubtitleLine instances or tuples (number, start, end, text).
+        lines : Sequence[SubtitleLine] | Sequence[LineData]
+            Either a sequence of SubtitleLine instances or tuples (start, end, text[, metadata]).
 
         Returns
         -------
         SubtitleBuilder
             Returns self for method chaining.
-
-        Raises
-        ------
-        ValueError
-            If no scene has been added yet.
         """
         for line_data in lines:
             if isinstance(line_data, SubtitleLine):
                 self.AddLine(line_data)
+
             elif isinstance(line_data, tuple):
                 if len(line_data) == 3:
                     start, end, text = line_data
-                    self.ConstructLine(start, end, text)
+                    self.BuildLine(start, end, text)
                 elif len(line_data) == 4:
                     start, end, text, metadata = line_data
-                    self.ConstructLine(start, end, text, metadata)
+                    self.BuildLine(start, end, text, metadata)
                 else:
                     raise ValueError(f"Invalid line data tuple length: {line_data}")
             else:
@@ -174,29 +169,24 @@ class SubtitleBuilder:
         Returns
         -------
         Subtitles
-            The completed subtitles with scenes and batches.
+            The completed subtitles organised into scenes and batches.
         """
-        # Finalize the current scene
         self._finalize_current_scene()
 
-        # Trigger the scenes setter to update flattened lists
         subtitles = Subtitles()
         subtitles.scenes = self._scenes
         return subtitles
 
     def _finalize_current_scene(self) -> None:
         """
-        Finalize the current scene by intelligently batching accumulated lines.
+        Split accumulated lines into batches to stay within max_batch_size.
         """
         if not self._current_scene or not self._accumulated_lines:
             return
 
-        batcher = SubtitleBatcher(self._settings)
+        # Use batcher's subdivision logic
+        split_line_groups : list[list[SubtitleLine]] = self._batcher._split_lines(self._accumulated_lines)
 
-        # Use batcher's intelligent splitting logic
-        split_line_groups : list[list[SubtitleLine]] = batcher._split_lines(self._accumulated_lines)
-
-        # Create batches from the intelligently split groups
         for i, line_group in enumerate(split_line_groups):
             batch_data : dict[str, Any] = {
                 'scene': self._current_scene.number,

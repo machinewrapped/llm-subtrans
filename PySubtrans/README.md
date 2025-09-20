@@ -168,12 +168,12 @@ from datetime import timedelta
 builder = SubtitleBuilder(max_batch_size=100)
 subtitles = (builder
     .AddScene(summary="Opening dialogue")
-    .ConstructLine(timedelta(seconds=1), timedelta(seconds=3), "Hello, my name is...")
-    .ConstructLine(timedelta(seconds=4), timedelta(seconds=6), "Nice to meet you!")
-    .ConstructLine(timedelta(seconds=8), timedelta(seconds=10), "We need to talk.")
+    .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Hello, my name is...")
+    .BuildLine(timedelta(seconds=4), timedelta(seconds=6), "Nice to meet you!")
+    .BuildLine(timedelta(seconds=8), timedelta(seconds=10), "We need to talk.")
 
     .AddScene(summary="Action sequence")  # New scene
-    .ConstructLine(timedelta(seconds=65), timedelta(seconds=67), "Look out!")
+    .BuildLine(timedelta(seconds=65), timedelta(seconds=67), "Look out!")
     # ... 
     .Build()
 )
@@ -182,7 +182,7 @@ Batching of subtitle lines within each scene is handled automatically.
 
 #### Option 2: Automatic batching with SubtitleBatcher
 
-`SubtitleBatcher` can be used to automatically group a linear list of lines into scenes and batches:
+`SubtitleBatcher` can be used to automatically group lines into scenes and batches:
 
 ```python
 from PySubtrans import init_subtitles, init_options

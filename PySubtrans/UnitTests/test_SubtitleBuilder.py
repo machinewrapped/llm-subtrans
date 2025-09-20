@@ -47,7 +47,7 @@ class TestSubtitleBuilder(unittest.TestCase):
         """Test that batches are created automatically when scene is finalized."""
         builder = SubtitleBuilder()
         builder.AddScene()
-        result = builder.ConstructLine(timedelta(seconds=1), timedelta(seconds=3), "Test line")
+        result = builder.BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test line")
 
         log_input_expected_result("AddLine return type", SubtitleBuilder, type(result))
         self.assertEqual(type(result), SubtitleBuilder)
@@ -69,7 +69,7 @@ class TestSubtitleBuilder(unittest.TestCase):
         """Test that adding a line without a scene automatically adds the scene."""
         builder = SubtitleBuilder()
 
-        builder.ConstructLine(timedelta(seconds=1), timedelta(seconds=3), "Test")
+        builder.BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test")
 
         subtitles = builder.Build()
         log_input_expected_result("scenes count", 1, len(subtitles.scenes))
@@ -80,7 +80,7 @@ class TestSubtitleBuilder(unittest.TestCase):
         builder = SubtitleBuilder()
         builder.AddScene()
 
-        result = builder.ConstructLine(timedelta(seconds=1), timedelta(seconds=3), "Test line")
+        result = builder.BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test line")
 
         log_input_expected_result("AddLine return type", SubtitleBuilder, type(result))
         self.assertEqual(type(result), SubtitleBuilder)
@@ -152,10 +152,10 @@ class TestSubtitleBuilder(unittest.TestCase):
 
         (builder
          .AddScene(summary="Scene 1")
-         .ConstructLine(timedelta(seconds=1), timedelta(seconds=3), "Line 1")
-         .ConstructLine(timedelta(seconds=4), timedelta(seconds=6), "Line 2")
+         .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Line 1")
+         .BuildLine(timedelta(seconds=4), timedelta(seconds=6), "Line 2")
          .AddScene(summary="Scene 2")
-         .ConstructLine(timedelta(seconds=65), timedelta(seconds=67), "Line 3")
+         .BuildLine(timedelta(seconds=65), timedelta(seconds=67), "Line 3")
         )
 
         # Finalize to create batches
@@ -176,7 +176,7 @@ class TestSubtitleBuilder(unittest.TestCase):
 
         # Add many lines to trigger automatic batch splitting
         for i in range(1, 11):  # 10 lines
-            builder.ConstructLine(timedelta(seconds=i), timedelta(seconds=i+1), f"Line {i}")
+            builder.BuildLine(timedelta(seconds=i), timedelta(seconds=i+1), f"Line {i}")
 
         # Batching happens when scene is finalized
         subtitles = builder.Build()
@@ -198,7 +198,7 @@ class TestSubtitleBuilder(unittest.TestCase):
 
         # Add few lines that don't exceed max_batch_size
         for i in range(1, 6):  # 5 lines
-            builder.ConstructLine(timedelta(seconds=i), timedelta(seconds=i+1), f"Line {i}")
+            builder.BuildLine(timedelta(seconds=i), timedelta(seconds=i+1), f"Line {i}")
 
         # Batching happens when scene is finalized
         subtitles = builder.Build()
@@ -216,7 +216,7 @@ class TestSubtitleBuilder(unittest.TestCase):
 
         subtitles = (builder
                     .AddScene()
-                    .ConstructLine(timedelta(seconds=1), timedelta(seconds=3), "Test line")
+                    .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test line")
                     .Build()
         )
 
@@ -238,8 +238,8 @@ class TestSubtitleBuilder(unittest.TestCase):
         # Test that all methods return SubtitleBuilder for chaining
         result = (builder
                  .AddScene(summary="Test scene", context={"genre": "comedy"})
-                 .ConstructLine(timedelta(seconds=1), timedelta(seconds=3), "Hello")
-                 .ConstructLine(timedelta(seconds=4), timedelta(seconds=6), "World")
+                 .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Hello")
+                 .BuildLine(timedelta(seconds=4), timedelta(seconds=6), "World")
         )
 
         log_input_expected_result("fluent API result type", SubtitleBuilder, type(result))

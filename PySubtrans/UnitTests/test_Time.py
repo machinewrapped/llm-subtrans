@@ -47,13 +47,28 @@ class TestTimeHelpers(unittest.TestCase):
         (timedelta(seconds=0), "00,000", True),
         (timedelta(microseconds=999000), "00,999", True),
         (timedelta(microseconds=999), "00,000", True),
+        (-timedelta(hours=2, minutes=34, seconds=56, microseconds=789000), "-2:34:56,789", True),
+        (-timedelta(minutes=4, seconds=5, microseconds=0), "-04:05,000", True),
+        (-timedelta(seconds=45, microseconds=200000), "-45,200", True),
+        (-timedelta(seconds=5, microseconds=100000), "-05,100", True),
+        (-timedelta(milliseconds=500), "-00,500", True),
+        (-timedelta(hours=13, minutes=0, seconds=0), "-13:00:00,000", True),
+        (-timedelta(minutes=59, seconds=59), "-59:59,000", True),
+        (-timedelta(seconds=1), "-01,000", True),
         (timedelta(hours=2, minutes=34, seconds=56, microseconds=789000), "2:34:56", False),
         (timedelta(minutes=4, seconds=5, microseconds=0), "04:05", False),
         (timedelta(seconds=45, microseconds=200000), "45", False),
         (timedelta(hours=13, minutes=0, seconds=0), "13:00:00", False),
         (timedelta(minutes=59, seconds=59), "59:59", False),
         (timedelta(seconds=1), "01", False),
-        (timedelta(seconds=0), "00", False)
+        (timedelta(seconds=0), "00", False),
+        (-timedelta(hours=2, minutes=34, seconds=56, microseconds=789000), "-2:34:56", False),
+        (-timedelta(minutes=4, seconds=5, microseconds=0), "-04:05", False),
+        (-timedelta(seconds=45, microseconds=200000), "-45", False),
+        (-timedelta(hours=13, minutes=0, seconds=0), "-13:00:00", False),
+        (-timedelta(minutes=59, seconds=59), "-59:59", False),
+        (-timedelta(seconds=1), "-01", False),
+        (-timedelta(milliseconds=500), "-00", False)
     ]
 
     def test_TimeDeltaToText(self):

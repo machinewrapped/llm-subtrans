@@ -68,8 +68,11 @@ def TimedeltaToText(time: datetime.timedelta|None, include_milliseconds : bool =
     if time is None:
         return ""
 
-    total_seconds = int(time.total_seconds())
-    milliseconds = time.microseconds // 1000
+    negative = time < datetime.timedelta()
+    absolute_time = abs(time)
+
+    total_seconds = int(absolute_time.total_seconds())
+    milliseconds = absolute_time.microseconds // 1000
 
     hours, remainder = divmod(total_seconds, 3600)
     minutes, seconds = divmod(remainder, 60)
@@ -83,6 +86,9 @@ def TimedeltaToText(time: datetime.timedelta|None, include_milliseconds : bool =
 
     if include_milliseconds:
         time_str += f",{milliseconds:03d}"
+
+    if negative and time_str:
+        time_str = f"-{time_str}"
 
     return time_str
 

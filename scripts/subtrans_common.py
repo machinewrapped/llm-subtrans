@@ -183,33 +183,30 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     project.UpdateProjectSettings(options)
 
     subtitles = project.subtitles
-    if subtitles and subtitles.originals:
-        preprocess_enabled = options.get_bool('preprocess_subtitles', True)
-        created_batches = False
 
-        if preprocess_enabled and not subtitles.scenes:
-            preprocess_subtitles(subtitles, options)
+    if not subtitles or not subtitles.originals:
+        raise ValueError("No subtitles to translate")
 
-        if not subtitles.scenes:
-            scene_threshold = options.get_float('scene_threshold')
-            min_batch_size = options.get_int('min_batch_size')
-            max_batch_size = options.get_int('max_batch_size')
+    if options.get_bool('preprocess_subtitles'):
+        preprocess_subtitles(subtitles, options)
 
-            if scene_threshold is None or min_batch_size is None or max_batch_size is None:
-                raise ValueError("scene_threshold, min_batch_size and max_batch_size must be specified for batching")
+    scene_threshold = options.get_float('scene_threshold')
+    min_batch_size = options.get_int('min_batch_size')
+    max_batch_size = options.get_int('max_batch_size')
 
-            batch_subtitles(
-                subtitles,
-                scene_threshold=scene_threshold,
-                min_batch_size=min_batch_size,
-                max_batch_size=max_batch_size,
-            )
-            created_batches = True
+    if scene_threshold is None or min_batch_size is None or max_batch_size is None:
+        raise ValueError("scene_threshold, min_batch_size and max_batch_size must be defined")
 
-        if created_batches:
-            scene_count = subtitles.scenecount
-            batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
-            logging.info(f"Created {scene_count} scenes and {batch_count} batches for translation")
+    batch_subtitles(
+        subtitles,
+        scene_threshold=scene_threshold,
+        min_batch_size=min_batch_size,
+        max_batch_size=max_batch_size,
+    )
+
+    scene_count = subtitles.scenecount
+    batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
+    logging.info(f"Created {scene_count} scenes and {batch_count} batches for translation")
 
     if not args.output:
         output_path = GetOutputPath(project.subtitles.sourcepath, project.subtitles.target_language or options.provider, project.subtitles.file_format)

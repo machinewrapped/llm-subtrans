@@ -45,55 +45,16 @@ subtitles.SaveTranslation("movie-translated.srt")
 
 Subtitle format is auto-detected based on file extension or content.
 
-## Working with a `SubtitleProject` using `init_project`
-`SubtitleProject` provides a high level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation. This is the framework that LLM-Subtrans and GUI-Subtrans use to manage translation workflows, but it is general enough that it could be used in other contexts.
-
-`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads and prepares the source subtitles if a file path is supplied.
-
-```python
-from PySubtrans import init_options, init_project
-
-# Create a project with a pre-warmed translator
-project_settings = init_options(
-    provider='OpenRouter',
-    model='qwen/qwen3-235b-a22b:free',
-    target_language='Spanish',
-    api_key='your-openrouter-api-key',
-    preprocess_subtitles=True,
-    scene_threshold=60,
-    max_batch_size=100,
-)
-
-project = init_project(project_settings, filepath='path_to_source_subtitles.srt')
-
-# Translate the subtitles
-project.TranslateSubtitles()
-
-# Save the translation - filename is automatically generated
-project.SaveTranslation()
-```
-
-By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk or reload an existing project, allowing a translation job to be resumed at a future time.
-
-```python
-# Create a persistent project that can be resumed later
-project = init_project(project_settings, filepath='subtitles.srt', persistent=True)
-# ... do some work
-project.SaveProject()  # Progress is automatically saved
-```
-
 ## Configuration with `init_options`
 `init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 
 
-The Options class provides a wide range of options to configure the translation process.
-
-Some that are particularly useful:
+The Options class provides a wide range of options to configure the translation process. The default values should work well for most use cases, but some are definitely worth experimenting with.
 
 `max_batch_size`: controls how many lines will be sent to the LLM in one request. The default value (30) is very conservative, for maximum compatibility. Models like Gemini 2.5 Flash can easily handle batches of 150 lines or more, which allows for faster translation.
 
 `scene_threshold`: subtitles are divided into scenes before batching, using this time value as a heuristic to indicate that a scene transition has happened. The default of 60 seconds is very coarse, and may end up with only one scene for dialogue heavy movies or dozens of scenes with only a few lines each for minimalist arthouse films. Depending on your use case, consider setting this very high and relying on the batcher instead.
 
-`postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines.
+`postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines. The post-processor can perform a range of operations, each of which is enabled by another setting, e.g. `break_dialog_on_one_line`, `normalise_dialog_tags`, `whitespaces_to_newline`, `remove_filler_words`.
 
 Example usage:
 
@@ -155,9 +116,58 @@ subtitles = init_subtitles(content=srt_content)
 
 By default `init_subtitles` preprocesses and batches subtitles to be ready for translation, using the provided `options`. See `batch_subtitles` for details.
 
-## Batching subtitles manually with `batch_subtitles`
+## Working with a `SubtitleProject` with `init_project`
+`SubtitleProject` provides a high level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation. This is the framework that LLM-Subtrans and GUI-Subtrans use to manage translation workflows, but it is general enough that it could be used in other contexts.
 
-`Subtitles` must be batched before translation, so if auto batching is not used you should call `batch_subtitles` explcitly instead. The parameters are:
+`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads and prepares the source subtitles if a file path is supplied.
+
+```python
+from PySubtrans import init_options, init_project
+
+# Create a project with a pre-warmed translator
+project_settings = init_options(
+    provider='OpenRouter',
+    model='qwen/qwen3-235b-a22b:free',
+    target_language='Spanish',
+    api_key='your-openrouter-api-key',
+    preprocess_subtitles=True,
+    scene_threshold=60,
+    max_batch_size=100,
+)
+
+project = init_project(project_settings, filepath='path_to_source_subtitles.srt')
+
+# Translate the subtitles
+project.TranslateSubtitles()
+
+# Save the translation - filename is automatically generated
+project.SaveTranslation()
+```
+
+By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk or reload an existing project, allowing a translation job to be resumed at a future time.
+
+```python
+# Create a persistent project that can be resumed later
+project = init_project(project_settings, filepath='subtitles.srt', persistent=True)
+# ... do some work
+project.SaveProject()  # Progress is automatically saved
+```
+
+## Advanced workflows
+
+PySubtrans is designed to be modular. The helper functions above are convenient entry points, but you are free to use lower-level components directly when you need more control:
+
+### Preprocessing subtitles with `preprocess_subtitles`
+
+`preprocess_subtitles` applies some heuristics to address common issues that can impact the quality of the translation, if they exist in the source subtitles.
+
+#TODO: detail the pre-processor steps and relevant options
+
+### Batching subtitles manually with `batch_subtitles`
+
+`Subtitles` must be batched before translation, so if the subtitles were not automatically batched via `init_subtitles` or `init_project` you can call `batch_subtitles` explcitly instead. This returns a list of `SubtitleScene` containing the batched subtitles.
+
+The parameters are:
 
 `scene_threshold`: A new scene will be introduced after a gap of N seconds.
 `max_batch_size`: If a scene contains too more lines than this it will be subdivided into batches until each batch is no larger than this.
@@ -172,60 +182,6 @@ batch_subtitles(subtitles, scene_threshold=90.0, min_batch_size=2, max_batch_siz
 
 print(f"Created {subtitles.scenecount} scenes")
 ```
-
-## Preprocessing subtitles with `preprocess_subtitles`
-
-`preprocess_subtitles` normalises applies some heuristic rules to address common issues that may exist in the source subtitles which can impact the quality of the translation.
-
-#TODO: detail the pre-processor steps and relevant options
-
-## Preparing a `SubtitleTranslator` with `init_translator`
-
-`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance that connects to the chosen translation service. Subtitles must be batched prior to translation.
-
-Example
-
-```python
-from PySubtrans import init_translator
-translator = init_translator({"provider": "gemini", "api_key": "your-key"})
-translator.events.scene_translated += on_scene_translated  # Subscribe to events
-translator.TranslateSubtitles(subtitles)
-```
-
-### Customising translation with custom instructions
- Custom instructions can be supplied via an `instruction_file` argument or by explicitly overriding `prompt` and `instructions`. 
-
-`prompt` is a high level description of the task, whilst `instructions` provide detailed instructions for the model (as a system prompt, where possible).
-
-This can include directions about how to handle the translation, e.g. "any profanity should be translated without censorship", or notes about the source subtitles (e.g. "the dialogue contains a lot of puns, these should be adapted for the translation").
-
-It is *imperative* that the instructions contain examples of properly formatted output - see the default instructions for examples.
-
-```
-Your response will be processed by an automated system, so you MUST respond using the required format:
-
-Example (translating to English):
-
-#200
-Original>
-変わりゆく時代において、
-Translation>
-In an ever-changing era,
-
-#501
-Original>
-進化し続けることが生き残る秘訣です。
-Translation>
-continuing to evolve is the key to survival.
-```
-
-Adapting the examples to your use case can greatly improve the model's performance by teaching it what good looks like.
-  
-See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
-
-## Advanced workflows
-
-PySubtrans is designed to be modular. The helper functions above are convenient entry points, but you are free to use lower-level components directly when you need more control:
 
 ### Building subtitles programmatically
 
@@ -273,7 +229,51 @@ batcher = SubtitleBatcher({"scene_threshold" : 30, "max_batch_size" : 50})
 subtitles.scenes = batcher.BatchSubtitles(lines)
 ```
 
-### Working directly with `SubtitleTranslator`
+### Initialising a `SubtitleTranslator` with `init_translator`
+
+`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance to connect to the chosen translation service. Subtitles must be batched prior to translation.
+
+Example
+
+```python
+from PySubtrans import init_translator
+translator = init_translator({"provider": "gemini", "api_key": "your-key"})
+translator.events.scene_translated += on_scene_translated  # Subscribe to events
+translator.TranslateSubtitles(subtitles)
+```
+
+### Customising translation with custom instructions
+ Custom instructions can be supplied via an `instruction_file` argument or by explicitly overriding `prompt` and `instructions`. 
+
+`prompt` is a high level description of the task, whilst `instructions` provide detailed instructions for the model (as a system prompt, where possible).
+
+This can include directions about how to handle the translation, e.g. "any profanity should be translated without censorship", or notes about the source subtitles (e.g. "the dialogue contains a lot of puns, these should be adapted for the translation").
+
+It is *imperative* that the instructions contain examples of properly formatted output - see the default instructions for examples.
+
+```
+Your response will be processed by an automated system, so you MUST respond using the required format:
+
+Example (translating to English):
+
+#200
+Original>
+変わりゆく時代において、
+Translation>
+In an ever-changing era,
+
+#501
+Original>
+進化し続けることが生き残る秘訣です。
+Translation>
+continuing to evolve is the key to survival.
+```
+
+Adapting the examples to your use case can greatly improve the model's performance by teaching it what good looks like.
+  
+See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
+
+#### Working directly with `SubtitleTranslator`
 Instantiating your own `SubtitleTranslator` allows you to have more fine-grained control over the translation process, e.g. translating individual scenes or batches. You can subscribe to `events` to receive notifications when individual scenes or batches have been translated to provide realtime feedback or further processing.
 
 TODO: provide examples

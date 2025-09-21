@@ -44,6 +44,7 @@ class SubtitleProject:
         'instruction_file': None,
         'format': None
     })
+   
     def __init__(self, persistent : bool = False):
         """
         A subtitle translation project.

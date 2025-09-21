@@ -160,14 +160,14 @@ Adapting the examples to your use case can greatly improve the model's performan
 See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
 
 ## Working with projects using `init_project`
-`SubtitleProject` provides a higher level interface for managing a translation job, with methods to read and write a project file to disk and events to hook into on scene/batch translation.
+`SubtitleProject` provides a higher level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation.
 
 `init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads the source subtitles if a file path is supplied.
 
 ```python
 from PySubtrans import init_project
 
-# Create a project with translator ready to go
+# Create a project with a pre-warmed translator
 translation_settings = {
     'provider': 'OpenRouter',
     'model': 'qwen/qwen3-235b-a22b:free',
@@ -180,8 +180,8 @@ project = init_project('path_to_source_subtitles.srt', translation_settings=tran
 # Translate the subtitles
 project.TranslateSubtitles()
 
-# Save the translation
-project.SaveTranslation('output_subtitles.srt')
+# Save the translation - filename is automatically generated
+project.SaveTranslation()
 ```
 
 By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk (or reload an existing project), allowing a translation job to be resumed at a future time.
@@ -189,7 +189,8 @@ By default projects are only held in memory, but specifying `persistent=True` wi
 ```python
 # Create a persistent project that can be resumed later
 project = init_project('subtitles.srt', persistent=True, translation_settings=translation_settings)
-project.TranslateSubtitles()  # Progress is automatically saved
+# ... do some work
+project.SaveProject()  # Progress is automatically saved
 ```
 
 ## Advanced workflows

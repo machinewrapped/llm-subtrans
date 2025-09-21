@@ -23,7 +23,7 @@ pip install pysubtrans[openai,gemini,claude,mistral,bedrock]
 
 ## Quick start: translate a subtitle file
 
-The quickest way to get started is to use the helper functions exposed at the package root. They wrap the objects used by LLM-Subtrans so that you can execute a full translation pipeline with a few lines of code.
+The quickest way to get started is to use the helper functions exposed at the package root. They wrap the classes used by LLM-Subtrans so that you can execute a full translation pipeline with a few lines of code.
 
 ```python
 from PySubtrans import init_options, init_subtitles, init_translator
@@ -32,12 +32,8 @@ options = init_options(
     provider="OpenAI",
     model="gpt-5-mini",
     api_key="sk-your-api-key",
-    prompt="Translate these subtitles into Spanish",
-    preprocess_subtitles=True,
-    scene_threshold=90.0,
-    min_batch_size=2,
-    max_batch_size=40,
-)
+    prompt="Translate these subtitles into Spanish"
+    )
 
 subtitles = init_subtitles("movie.srt", options=options)
 
@@ -48,6 +44,43 @@ subtitles.SaveTranslation("movie-translated.srt")
 ```
 
 Subtitle format is auto-detected based on file extension or content.
+
+## Working with a `SubtitleProject` using `init_project`
+`SubtitleProject` provides a high level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation. This is the framework that LLM-Subtrans and GUI-Subtrans use to manage translation workflows, but it is general enough that it could be used in other contexts.
+
+`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads and prepares the source subtitles if a file path is supplied.
+
+```python
+from PySubtrans import init_options, init_project
+
+# Create a project with a pre-warmed translator
+project_settings = init_options(
+    provider='OpenRouter',
+    model='qwen/qwen3-235b-a22b:free',
+    target_language='Spanish',
+    api_key='your-openrouter-api-key',
+    preprocess_subtitles=True,
+    scene_threshold=60,
+    max_batch_size=100,
+)
+
+project = init_project(project_settings, filepath='path_to_source_subtitles.srt')
+
+# Translate the subtitles
+project.TranslateSubtitles()
+
+# Save the translation - filename is automatically generated
+project.SaveTranslation()
+```
+
+By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk or reload an existing project, allowing a translation job to be resumed at a future time.
+
+```python
+# Create a persistent project that can be resumed later
+project = init_project(project_settings, filepath='subtitles.srt', persistent=True)
+# ... do some work
+project.SaveProject()  # Progress is automatically saved
+```
 
 ## Configuration with `init_options`
 `init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 
@@ -120,13 +153,16 @@ This is a test"""
 subtitles = init_subtitles(content=srt_content)
 ```
 
-### Controlling preprocessing and batching
+By default `init_subtitles` preprocesses and batches subtitles to be ready for translation, using the provided `options`. See `batch_subtitles` for details.
 
-By default `init_subtitles` preprocesses and batches lines that are loaded from a file or string. Supply an `Options` instance via the `options` argument to reuse existing settings such as `scene_threshold`, `min_batch_size` and `max_batch_size`. Set `preprocess_subtitles=False` in those options when you need to skip preprocessing, or pass `auto_batch=False` to postpone batching and call `batch_subtitles` later.
+## Batching subtitles manually with `batch_subtitles`
 
-## Batching subtitles with `batch_subtitles`
+`Subtitles` must be batched before translation, so if auto batching is not used you should call `batch_subtitles` explcitly instead. The parameters are:
 
-Call `batch_subtitles` whenever you disable `auto_batch` or construct a `Subtitles` instance manually. Provide the scene threshold and batch size settings you want to use so `TranslateSubtitles` can be called safely.
+`scene_threshold`: A new scene will be introduced after a gap of N seconds.
+`max_batch_size`: If a scene contains too more lines than this it will be subdivided into batches until each batch is no larger than this.
+`min_batch_size`: More of a suggestion than a rule, batches are primarily divided to maximise temporal cohesion of each batch.
+`prevent_overlap`: If the end time of a subtitle overlaps the start time of the next subtitle it will be reduced to ensure that there is no overlap.
 
 ```python
 from PySubtrans import batch_subtitles, init_subtitles
@@ -139,7 +175,9 @@ print(f"Created {subtitles.scenecount} scenes")
 
 ## Preprocessing subtitles with `preprocess_subtitles`
 
-`preprocess_subtitles` normalises subtitles using the same rules as the GUI and CLI helpers. Call it when you disable automatic preprocessing or when you build a `Subtitles` instance manually, and pass an `Options` instance or mapping when you need to customise preprocessing behaviour.
+`preprocess_subtitles` normalises applies some heuristic rules to address common issues that may exist in the source subtitles which can impact the quality of the translation.
+
+#TODO: detail the pre-processor steps and relevant options
 
 ## Preparing a `SubtitleTranslator` with `init_translator`
 
@@ -184,43 +222,6 @@ continuing to evolve is the key to survival.
 Adapting the examples to your use case can greatly improve the model's performance by teaching it what good looks like.
   
 See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
-
-## Working with projects using `init_project`
-`SubtitleProject` provides a higher level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation.
-
-`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads and prepares the source subtitles if a file path is supplied.
-
-```python
-from PySubtrans import init_options, init_project
-
-# Create a project with a pre-warmed translator
-project_settings = init_options(
-    provider='OpenRouter',
-    model='qwen/qwen3-235b-a22b:free',
-    target_language='Spanish',
-    api_key='your-openrouter-api-key',
-    preprocess_subtitles=True,
-    scene_threshold=60,
-    max_batch_size=100,
-)
-
-project = init_project(project_settings, filepath='path_to_source_subtitles.srt')
-
-# Translate the subtitles
-project.TranslateSubtitles()
-
-# Save the translation - filename is automatically generated
-project.SaveTranslation()
-```
-
-By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk (or reload an existing project), allowing a translation job to be resumed at a future time.
-
-```python
-# Create a persistent project that can be resumed later
-project = init_project(project_settings, filepath='subtitles.srt', persistent=True)
-# ... do some work
-project.SaveProject()  # Progress is automatically saved
-```
 
 ## Advanced workflows
 

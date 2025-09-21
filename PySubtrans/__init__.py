@@ -162,7 +162,7 @@ def init_subtitles(
             scene_threshold=options.get_float('scene_threshold') or 60.0,
             min_batch_size=options.get_int('min_batch_size') or 1,
             max_batch_size=options.get_int('max_batch_size') or 100,
-            fix_overlaps=options.get_bool('prevent_overlapping_times'),
+            prevent_overlap=options.get_bool('prevent_overlapping_times'),
         )
 
     return subtitles
@@ -198,14 +198,14 @@ def init_translator(settings: Options|SettingsType) -> SubtitleTranslator:
     settings = {"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"}
     translator = init_translator(settings)
     """
-    settings = Options(settings)
+    options = Options(settings)
 
-    translation_provider = TranslationProvider.get_provider(settings)
+    translation_provider = TranslationProvider.get_provider(options)
     if not translation_provider.ValidateSettings():
         message = translation_provider.validation_message or f"Invalid settings for provider {settings.provider}"
         raise SubtitleError(message)
 
-    return SubtitleTranslator(settings, translation_provider)
+    return SubtitleTranslator(options, translation_provider)
 
 
 def init_project(
@@ -285,7 +285,7 @@ def init_project(
                 scene_threshold=options.get_float('scene_threshold') or 60.0,
                 min_batch_size=options.get_int('min_batch_size') or 1,
                 max_batch_size=options.get_int('max_batch_size') or 100,
-                fix_overlaps=options.get_bool('prevent_overlapping_times'),
+                prevent_overlap=options.get_bool('prevent_overlapping_times'),
             )
 
     if options.provider:
@@ -325,7 +325,7 @@ def batch_subtitles(
     min_batch_size: int,
     max_batch_size: int,
     *,
-    fix_overlaps: bool = False,
+    prevent_overlap: bool = False,
 ) -> list[SubtitleScene]:
     """
     Divide subtitles into scenes and batches using :class:`SubtitleBatcher`.
@@ -340,7 +340,7 @@ def batch_subtitles(
         Minimum number of lines per batch.
     max_batch_size : int
         Maximum number of lines per batch.
-    fix_overlaps : bool, optional
+    prevent_overlap : bool, optional
         If True, adjust overlapping subtitle times while batching.
 
     Returns
@@ -358,7 +358,7 @@ def batch_subtitles(
         'scene_threshold': scene_threshold,
         'min_batch_size': min_batch_size,
         'max_batch_size': max_batch_size,
-        'prevent_overlapping_times': fix_overlaps,
+        'prevent_overlapping_times': prevent_overlap,
     }))
 
     with SubtitleEditor(subtitles) as editor:

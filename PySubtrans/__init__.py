@@ -137,9 +137,8 @@ def init_subtitles(
         raise SubtitleError("Only one of 'filepath' or 'content' should be provided, not both.")
 
     if filepath:
-        normalised_path = GetInputPath(filepath)
-        subtitles = Subtitles(normalised_path)
-        subtitles.LoadSubtitles(normalised_path)
+        subtitles = Subtitles(filepath)
+        subtitles.LoadSubtitles()
     elif content:
         format = SubtitleFormatRegistry.detect_format_from_content(content)
         file_handler = SubtitleFormatRegistry.create_handler(format)

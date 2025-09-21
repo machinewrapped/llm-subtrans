@@ -382,7 +382,7 @@ class SubtitleProject:
     def InitialiseTranslator(self, options : Options, translation_provider : TranslationProvider|None = None) -> None:
         """
         Initialize the project translator with the provided options.
-        If the translation provider is not explictly specified it will be determined automatically from the options.
+        If the translation provider is not explicitly specified it will be determined automatically from the options.
 
         :param options: The options to use for creating the translator
         :param translation_provider: [optional] translation provider to use.

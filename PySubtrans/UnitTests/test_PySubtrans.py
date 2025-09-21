@@ -4,6 +4,8 @@ import unittest
 
 from PySubtrans import (
     SubtitleBuilder,
+    SubtitleTranslator,
+    TranslationProvider,
     batch_subtitles,
     init_options,
     init_project,
@@ -220,9 +222,9 @@ class PySubtransConvenienceTests(unittest.TestCase):
         self.assertGreater(scene1_batch_count, 1)
 
         # Test event system with translation
-        translator = init_translator(options)
+        translation_provider = TranslationProvider.get_provider(options)
+        translator = SubtitleTranslator(options, translation_provider)
 
-        # Track events
         batch_events = []
         scene_events = []
 

@@ -11,8 +11,6 @@ from PySubtrans.Helpers.Text import Linearise, SanitiseSummary
 from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
-from PySubtrans.SubtitleBatcher import SubtitleBatcher
-from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.Translation import Translation
@@ -88,8 +86,6 @@ class SubtitleTranslator:
         if not self.client:
             raise ProviderError(_("Unable to create translation client"), translation_provider)
 
-        self.batcher = SubtitleBatcher(settings)
-
         self.postprocessor = SubtitleProcessor(settings) if settings.get('postprocess_translation') else None
 
     def StopTranslating(self):
@@ -107,17 +103,7 @@ class SubtitleTranslator:
             logging.info(_("Resuming translation"))
 
         if not subtitles.scenes:
-            if self.retranslate or self.reparse:
-                logging.warning(_("No previous translations found, starting fresh..."))
-            with SubtitleEditor(subtitles) as editor:
-                editor.AutoBatch(self.batcher)
-
-        if not subtitles.scenes:
-            raise TranslationImpossibleError(_("No scenes to translate"))
-
-        if self.resume or self.retranslate:
-            if not any(scene.any_translated for scene in subtitles.scenes):
-                logging.warning(_("No previous translations found, starting fresh..."))
+            raise TranslationImpossibleError(_("Subtitles must be batched before translation"))
 
         logging.info(_("Translating {linecount} lines in {scenecount} scenes").format(linecount=subtitles.linecount, scenecount=subtitles.scenecount))
 

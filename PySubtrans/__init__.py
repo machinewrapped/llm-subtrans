@@ -7,15 +7,24 @@ Basic Usage
 -----------
     >>> from PySubtrans import init_options, init_subtitles, init_translator
     >>>
-    >>> # Load subtitles from file
-    >>> subs = init_subtitles(filepath="movie.srt")
-    >>>
     >>> # Configure translation options
-    >>> opts = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-...", prompt="Translate these subtitles into Spanish")
+    >>> opts = init_options(
+    ...     provider="openai",
+    ...     model="gpt-4o-mini",
+    ...     api_key="sk-...",
+    ...     prompt="Translate these subtitles into Spanish",
+    ...     preprocess_subtitles=True,
+    ...     scene_threshold=90.0,
+    ...     min_batch_size=2,
+    ...     max_batch_size=60,
+    ... )
     >>>
-    >>> # Create translator and translate
+    >>> # Load subtitles from file with automatic preprocessing and batching
+    >>> subs = init_subtitles(filepath="movie.srt", options=opts)
+    >>>
+    >>> # Create translator and translate the prepared subtitles
     >>> translator = init_translator(opts)
-    >>> translator.Translate(subs)
+    >>> translator.TranslateSubtitles(subs)
     >>>
     >>> # Save translated subtitles
     >>> subs.SaveSubtitles("movie_translated.srt")
@@ -90,7 +99,13 @@ def init_options(
     return options
 
 
-def init_subtitles(filepath: str|None, content: str|None) -> Subtitles:
+def init_subtitles(
+    filepath: str|None = None,
+    content: str|None = None,
+    *,
+    options: Options|Mapping[str, SettingType]|None = None,
+    auto_batch: bool = True,
+) -> Subtitles:
     """
     Initialise a :class:`Subtitles` instance and optionally load content from a file or string.
 
@@ -101,6 +116,15 @@ def init_subtitles(filepath: str|None, content: str|None) -> Subtitles:
 
     content : str|None
         Subtitle content as a string. Attempts to auto-detect the format by contents.
+
+    options : Options or mapping, optional
+        Settings applied to the subtitles before preprocessing or batching. When omitted a default
+        :class:`Options` instance is created. Provide batching values such as ``scene_threshold``,
+        ``min_batch_size`` and ``max_batch_size`` via this mapping.
+
+    auto_batch : bool, optional
+        If True (default), automatically divide the subtitles into scenes and batches using
+        :func:`batch_subtitles` and the values supplied in ``options``.
 
     Returns
     -------
@@ -127,16 +151,84 @@ def init_subtitles(filepath: str|None, content: str|None) -> Subtitles:
         normalised_path = GetInputPath(filepath)
         subtitles = Subtitles(normalised_path)
         subtitles.LoadSubtitles(normalised_path)
-        return subtitles
-
-    if content:
+    elif content:
         format = SubtitleFormatRegistry.detect_format_from_content(content)
         file_handler = SubtitleFormatRegistry.create_handler(format)
         subtitles = Subtitles()
         subtitles.LoadSubtitlesFromString(content, file_handler=file_handler)
-        return subtitles
+    else:
+        return Subtitles()
 
-    return Subtitles()
+    if not subtitles.originals:
+        raise ValueError("No subtitle lines were loaded from the supplied input")
+
+    options_supplied = options is not None
+    if options is not None and not isinstance(options, (Options, Mapping)):
+        raise TypeError("options must be an Options instance, mapping, or None")
+    options = Options(options)
+
+    should_preprocess = options.get_bool('preprocess_subtitles') if options_supplied else True
+    if should_preprocess:
+        preprocess_subtitles(subtitles, options)
+
+    if auto_batch:
+        batch_subtitles(
+            subtitles,
+            scene_threshold=options.get_float('scene_threshold'),
+            min_batch_size=options.get_int('min_batch_size'),
+            max_batch_size=options.get_int('max_batch_size'),
+            fix_overlaps=options.get_bool('prevent_overlapping_times'),
+        )
+
+    return subtitles
+
+
+def batch_subtitles(
+    subtitles: Subtitles,
+    scene_threshold: float,
+    min_batch_size: int,
+    max_batch_size: int,
+    *,
+    fix_overlaps: bool = False,
+) -> list[SubtitleScene]:
+    """
+    Divide subtitles into scenes and batches using :class:`SubtitleBatcher`.
+
+    Parameters
+    ----------
+    subtitles : Subtitles
+        The subtitle collection to batch.
+    scene_threshold : float
+        Minimum gap between lines (in seconds) to consider a new scene.
+    min_batch_size : int
+        Minimum number of lines per batch.
+    max_batch_size : int
+        Maximum number of lines per batch.
+    fix_overlaps : bool, optional
+        If True, adjust overlapping subtitle times while batching.
+
+    Returns
+    -------
+    list[SubtitleScene]
+        The generated scenes containing batches of subtitle lines.
+    """
+    if not subtitles:
+        raise ValueError("No subtitles supplied for batching")
+
+    if not subtitles.originals:
+        raise ValueError("No subtitle lines available to batch")
+
+    batcher = SubtitleBatcher(SettingsType({
+        'scene_threshold': scene_threshold,
+        'min_batch_size': min_batch_size,
+        'max_batch_size': max_batch_size,
+        'prevent_overlapping_times': fix_overlaps,
+    }))
+
+    with SubtitleEditor(subtitles) as editor:
+        editor.AutoBatch(batcher)
+
+    return subtitles.scenes
 
 
 def init_translator(settings: Options|Mapping[str, SettingType]) -> SubtitleTranslator:
@@ -189,40 +281,55 @@ def init_translator(settings: Options|Mapping[str, SettingType]) -> SubtitleTran
     return SubtitleTranslator(settings, translation_provider)
 
 
-def init_project(settings: Options|Mapping[str, SettingType]|None = None, filepath: str|None = None, persistent: bool = False) -> SubtitleProject:
+def init_project(
+    settings: Options|Mapping[str, SettingType]|None = None,
+    filepath: str|None = None,
+    persistent: bool = False,
+    *,
+    auto_batch: bool = True,
+) -> SubtitleProject:
     """
     Create a :class:`SubtitleProject` and optionally load subtitles from *filepath*.
 
     Parameters
     ----------
-    filepath : str or None
+    settings : Options, Mapping[str, SettingType], or None, optional
+        Settings to configure the translation workflow. When provided, the translator will be automatically initialised and
+        the same settings will be used to preprocess and batch the subtitles.
+    filepath : str or None, optional
         Path to the subtitle file to load into the project.
     persistent : bool, optional
-        If True, enables persistent project state by creating a`.subtrans` project file for the job.
-    settings : Options, Mapping[str, SettingType], or None, optional
-        Settings to configure the translatopm workflow. If provided, the translator will be automatically initialized.
+        If True, enables persistent project state by creating a `.subtrans` project file for the job.
+    auto_batch : bool, optional
+        If True (default), automatically divide the subtitles into scenes and batches using
+        :class:`SubtitleBatcher`.
 
     Returns
     -------
     SubtitleProject
         The initialized subtitle project.
 
+    Notes
+    -----
+    Subtitles are preprocessed and automatically divided into scenes and batches using :class:`SubtitleBatcher` with the supplied
+    settings (or default values when settings are omitted).
+
     Examples
     --------
     Create a basic project:
 
     >>> from PySubtrans import init_project
-    >>> project = init_project("movie.srt")
+    >>> project = init_project(filepath="movie.srt")
 
     Create a project with translator ready for translation:
 
     >>> settings = {"provider": "OpenAI", "model": "gpt-4o", "target_language": "Spanish", "api_key": "your-key"}
-    >>> project = init_project("movie.srt", settings)
+    >>> project = init_project(settings, filepath="movie.srt")
     >>> project.TranslateSubtitles()
 
     Create a persistent project:
 
-    >>> project = init_project("movie.srt", persistent=True)
+    >>> project = init_project(filepath="movie.srt", persistent=True)
     >>> project.SaveProject()
     """
     project = SubtitleProject(persistent=persistent)
@@ -231,20 +338,39 @@ def init_project(settings: Options|Mapping[str, SettingType]|None = None, filepa
     if normalised_path:
         project.InitialiseProject(normalised_path)
 
-    if settings:
-        if not isinstance(settings, Options):
-            if isinstance(settings, Mapping):
-                settings = Options(SettingsType(settings))
-            else:
-                raise TypeError("translation_settings must be an Options instance or a mapping of option values")
+    options_supplied = settings is not None
+    if settings is not None and not isinstance(settings, (Options, Mapping)):
+        raise TypeError("settings must be an Options instance, mapping, or None")
+    options = Options(settings)
 
-        if settings.provider:
-            project.InitialiseTranslator(settings)
+    project.UpdateProjectSettings(options)
+
+    subtitles = project.subtitles
+    if subtitles and subtitles.originals:
+        should_preprocess = options.get_bool('preprocess_subtitles') if options_supplied else True
+
+        if should_preprocess:
+            preprocess_subtitles(subtitles, options)
+
+        if auto_batch:
+            batch_subtitles(
+                subtitles,
+                scene_threshold=options.get_float('scene_threshold'),
+                min_batch_size=options.get_int('min_batch_size'),
+                max_batch_size=options.get_int('max_batch_size'),
+                fix_overlaps=options.get_bool('prevent_overlapping_times'),
+            )
+
+    if options.provider:
+        project.InitialiseTranslator(options)
 
     return project
 
 
-def preprocess_subtitles(subtitles: Subtitles, options: Options) -> None:
+def preprocess_subtitles(
+    subtitles: Subtitles,
+    options: Options|Mapping[str, SettingType]|None = None,
+) -> None:
     """
     Preprocess subtitles to fix common issues before translation.
 
@@ -254,26 +380,28 @@ def preprocess_subtitles(subtitles: Subtitles, options: Options) -> None:
     ----------
     subtitles : Subtitles
         The subtitles to preprocess.
-    options : Options
-        Configuration options for preprocessing.
+    options : Options or mapping, optional
+        Configuration options for preprocessing. When omitted, default options are used.
 
     Returns
     -------
     None
-
-    Examples
-    --------
-    >>> from PySubtrans import init_subtitles, init_options, preprocess_subtitles
-    >>> subs = init_subtitles(filepath="movie.srt")
-    >>> opts = PySubtrans.Options(max_line_duration=5.0, whitespaces_to_newline=True)
-    >>> preprocess_subtitles(subs, opts)
     """
     from PySubtrans.SubtitleProcessor import SubtitleProcessor
 
     if not subtitles or not subtitles.originals:
         raise ValueError("No subtitles to preprocess")
 
-    preprocessor = SubtitleProcessor(options)
+    if isinstance(options, Options):
+        preprocess_options = options
+    elif isinstance(options, Mapping):
+        preprocess_options = Options(SettingsType(options))
+    elif options is None:
+        preprocess_options = Options()
+    else:
+        raise TypeError("options must be an Options instance, mapping, or None")
+
+    preprocessor = SubtitleProcessor(preprocess_options)
     with SubtitleEditor(subtitles) as editor:
         editor.PreProcess(preprocessor)
 
@@ -290,7 +418,9 @@ __all__ = [
     'SubtitleTranslator',
     'TranslationProvider',
     'init_options',
+    'batch_subtitles',
     'init_project',
     'init_subtitles',
     'init_translator',
+    'preprocess_subtitles',
 ]

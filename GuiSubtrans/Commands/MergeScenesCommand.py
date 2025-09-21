@@ -38,7 +38,7 @@ class MergeScenesCommand(Command):
 
         later_scenes = [scene.number for scene in subtitles.scenes if scene.number > self.scene_numbers[-1]]
 
-        with project.GetEditor() as editor:  # type: SubtitleEditor
+        with project.GetEditor() as editor:
             merged_scene = editor.MergeScenes(self.scene_numbers)
 
         model_update : ModelUpdate =  self.AddModelUpdate()
@@ -81,7 +81,7 @@ class MergeScenesCommand(Command):
             model_update.scenes.update(current_number, { 'number' : scene_number })
 
         # Split the merged scene according to the saved scene sizes and add the new scenes to the viewmodel
-        with project.GetEditor() as editor:  # type: SubtitleEditor
+        with project.GetEditor() as editor:
             for scene_number, scene_size in enumerate(self.scene_sizes[:-1], start=self.scene_numbers[0]):
                 editor.SplitScene(scene_number, scene_size + 1)
 

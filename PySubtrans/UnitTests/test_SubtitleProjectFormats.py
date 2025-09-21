@@ -433,7 +433,7 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         with project.GetEditor() as editor:
             editor.AutoBatch(SubtitleBatcher(options))
             editor.DuplicateOriginalsAsTranslations()
-        project.needs_writing = True
+
         project.SaveTranslation()
         
         log_input_expected_result("output file exists", True, os.path.exists(out_path))
@@ -475,7 +475,7 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         with project.GetEditor() as editor:
             editor.AutoBatch(SubtitleBatcher(options))
             editor.DuplicateOriginalsAsTranslations()
-        project.needs_writing = True
+
         project.SaveTranslation()
         
         log_input_expected_result("output file exists", True, os.path.exists(out_path))
@@ -515,7 +515,6 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         with project.GetEditor() as editor:
             editor.AutoBatch(SubtitleBatcher(options))
             editor.DuplicateOriginalsAsTranslations()
-        project.needs_writing = True
         
         # Create and write project file
         with tempfile.NamedTemporaryFile(delete=False, suffix=".subtrans") as tmp_project:

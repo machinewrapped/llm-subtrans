@@ -55,7 +55,7 @@ class MergeLinesCommand(Command):
 
             self.undo_data.append((batch.scene, batch.number, originals, translated))
 
-            with project.GetEditor() as editor:  # type: SubtitleEditor
+            with project.GetEditor() as editor:
                 merged_line, merged_translated = editor.MergeLinesInBatch(batch.scene, batch.number, batch_lines)
 
             if not merged_line:

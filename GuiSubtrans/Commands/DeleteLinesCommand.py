@@ -36,7 +36,7 @@ class DeleteLinesCommand(Command):
         if not project.subtitles:
             raise CommandError(_("No subtitles"), command=self)
 
-        with project.GetEditor() as editor:  # type: SubtitleEditor
+        with project.GetEditor() as editor:
             self.deletions = editor.DeleteLines(self.line_numbers)
 
         if not self.deletions:

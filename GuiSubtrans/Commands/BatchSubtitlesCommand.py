@@ -34,7 +34,7 @@ class BatchSubtitlesCommand(Command):
         if not project or not project.subtitles or not project.subtitles.originals:
             raise CommandError(_("No subtitles to batch"), command=self)
 
-        with project.GetEditor() as editor:  # type: SubtitleEditor
+        with project.GetEditor() as editor:
             if self.preprocess_subtitles:
                 originals = deepcopy(project.subtitles.originals)
                 preprocessor = SubtitleProcessor(self.options)

@@ -43,7 +43,7 @@ class MergeBatchesCommand(Command):
             self.original_first_line_numbers = [batch.first_line_number for batch in original_batches if batch and batch.first_line_number]
             self.original_summaries = {batch.number: batch.summary for batch in original_batches if batch and batch.summary}
 
-            with project.GetEditor() as editor:  # type: SubtitleEditor
+            with project.GetEditor() as editor:
                 editor.MergeBatches(self.scene_number, self.batch_numbers)
 
             merged_batch = scene.GetBatch(merged_batch_number)

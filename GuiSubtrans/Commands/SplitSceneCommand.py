@@ -33,7 +33,7 @@ class SplitSceneCommand(Command):
 
         last_batch = scene.batches[-1].number
 
-        with project.GetEditor() as editor:  # type: SubtitleEditor
+        with project.GetEditor() as editor:
             editor.SplitScene(self.scene_number, self.batch_number)
 
         model_update : ModelUpdate =  self.AddModelUpdate()
@@ -60,7 +60,7 @@ class SplitSceneCommand(Command):
             scene_numbers = [self.scene_number, self.scene_number + 1]
             later_scenes = [scene.number for scene in project.subtitles.scenes if scene.number > scene_numbers[1]]
 
-            with project.GetEditor() as editor:  # type: SubtitleEditor
+            with project.GetEditor() as editor:
                 merged_scene = editor.MergeScenes(scene_numbers)
 
             # Recombine the split scenes

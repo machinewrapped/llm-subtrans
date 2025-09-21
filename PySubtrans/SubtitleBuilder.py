@@ -1,3 +1,4 @@
+from collections import Counter
 from collections.abc import Sequence
 from datetime import timedelta
 from typing import Any, TypeAlias
@@ -101,9 +102,6 @@ class SubtitleBuilder:
         if not self._current_scene:
             self.AddScene()
 
-        #TODO: should probably validate that line numbers are unique and sequential here
-        # or perhaps sort them on finalization.
-
         self._accumulated_lines.append(line)
 
         return self
@@ -186,6 +184,19 @@ class SubtitleBuilder:
         """
         if not self._current_scene or not self._accumulated_lines:
             return
+
+        line_numbers : list[int] = []
+        for line in self._accumulated_lines:
+            if line.number is None:
+                raise ValueError("Subtitle lines must have a number before batching")
+            line_numbers.append(line.number)
+
+        duplicates = [str(number) for number, count in Counter(line_numbers).items() if count > 1]
+        if duplicates:
+            duplicate_list = ', '.join(sorted(duplicates, key=int))
+            raise ValueError(f"Duplicate line numbers detected in scene {self._current_scene.number}: {duplicate_list}")
+
+        self._accumulated_lines.sort(key=lambda line: line.number)
 
         # Use batcher's subdivision logic
         split_line_groups : list[list[SubtitleLine]] = self._batcher._split_lines(self._accumulated_lines)

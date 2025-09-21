@@ -338,11 +338,11 @@ subtitles = builder.Build()
 
 # Configure translator with progress tracking
 options = Options({
-    provider="OpenAI",
-    model="gpt-4o-mini",
-    api_key="your-api-key",
-    prompt=f"Translate subtitles for {json_data['movie_name']} into Spanish",
-    max_batch_size=5
+    'provider': "OpenAI",
+    'model': "gpt-4o-mini",
+    'api_key': "your-api-key",
+    'prompt': f"Translate subtitles for {json_data['movie_name']} into Spanish",
+    'max_batch_size': 5
 })
 
 translation_provider = TranslationProvider.get_provider(options)

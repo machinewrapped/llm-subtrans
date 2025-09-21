@@ -5,6 +5,7 @@ from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 
 from PySubtrans.Helpers import GetOutputPath
+from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans import batch_subtitles, preprocess_subtitles
 from PySubtrans.Options import Options, config_dir
@@ -166,7 +167,7 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     subtitles = project.subtitles
 
     if not subtitles or not subtitles.originals:
-        raise ValueError("Subtitle file contains no translatable content")
+        raise ValueError(_("Subtitle file contains no translatable content"))
 
     if options.get_bool('preprocess_subtitles'):
         preprocess_subtitles(subtitles, options)

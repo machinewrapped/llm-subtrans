@@ -30,10 +30,10 @@ from PySubtrans import init_options, init_subtitles, init_translator
 
 options = init_options(
     provider="OpenAI",
-    model="gpt-4o-mini",
+    model="gpt-5-mini",
     api_key="sk-your-api-key",
-    prompt="Translate these subtitles into Spanish",
-)
+    prompt="Translate these subtitles into Spanish"
+    )
 
 subtitles = init_subtitles("movie.srt", options=options)
 
@@ -167,7 +167,7 @@ options = init_options(
     postprocess_translation=True,
     break_long_lines=True,
     break_dialog_on_one_line=True,
-    convert_wide_dashes=True,
+    convert_wide_dashes=True
 )
 ```
 
@@ -342,7 +342,7 @@ options = Options({
     'model': "gpt-4o-mini",
     'api_key': "your-api-key",
     'prompt': f"Translate subtitles for {json_data['movie_name']} into Spanish",
-    'max_batch_size': 5,
+    'max_batch_size': 5
 })
 
 translation_provider = TranslationProvider.get_provider(options)

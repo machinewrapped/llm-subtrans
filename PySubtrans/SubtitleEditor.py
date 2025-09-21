@@ -25,17 +25,11 @@ class SubtitleEditor:
         self._on_exit: Callable[[bool], None]|None = on_exit
 
     def __enter__(self) -> SubtitleEditor:
-        acquired = self.subtitles.lock.acquire()
-        if not acquired:
+        self._lock_acquired = self.subtitles.lock.acquire()
+        if not self._lock_acquired:
             raise SubtitleError(_("Unable to acquire subtitle lock"))
 
-        try:
-            self._lock_acquired = True
-            return self
-        except Exception:
-            self.subtitles.lock.release()
-            self._lock_acquired = False
-            raise
+        return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
         if self._lock_acquired:

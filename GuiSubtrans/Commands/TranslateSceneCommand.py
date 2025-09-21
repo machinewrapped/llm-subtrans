@@ -47,8 +47,12 @@ class TranslateSceneCommand(Command):
 
         # Create our own translator instance for thread safety
         options = self.datamodel.project_options
-        translation_provider = self.datamodel.translation_provider or TranslationProvider.get_provider(options)
-        self.translator = SubtitleTranslator(options, translation_provider)
+        translation_provider = self.datamodel.translation_provider
+
+        if not translation_provider:
+            raise CommandError(_("No translation provider configured"), command=self)
+
+        self.translator = SubtitleTranslator(options, translation_provider, resume=self.resume)
 
         self.translator.events.batch_translated += self._on_batch_translated # type: ignore
 

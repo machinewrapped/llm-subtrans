@@ -247,6 +247,20 @@ class SubtitleProject:
         except Exception as e:
             logging.error(_("Unable to save translation: {}").format(e))
 
+    def GetEditor(self) -> SubtitleEditor:
+        """
+        Return a SubtitleEditor that marks the project as needing to be written
+        when edits complete successfully.
+        """
+        if not self.subtitles:
+            raise SubtitleError("Cannot edit project without subtitles")
+
+        def mark_project_dirty(success: bool) -> None:
+            if success:
+                self.needs_writing = True
+
+        return SubtitleEditor(self.subtitles, mark_project_dirty)
+
     def GetProjectFilepath(self, filepath : str) -> str:
         """
         Calculate the project file path based on the source file path

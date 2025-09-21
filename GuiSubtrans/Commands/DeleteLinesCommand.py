@@ -1,14 +1,17 @@
+import logging
+from typing import TYPE_CHECKING
+
 from GuiSubtrans.Command import Command, CommandError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
-from PySubtrans.SubtitleValidator import SubtitleValidator
+from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.SubtitleEditor import SubtitleEditor
-from PySubtrans.Helpers.Localization import _
+from PySubtrans.SubtitleValidator import SubtitleValidator
 
-import logging
+if TYPE_CHECKING:
+    from PySubtrans.SubtitleEditor import SubtitleEditor
 
 class DeleteLinesCommand(Command):
     """
@@ -33,7 +36,7 @@ class DeleteLinesCommand(Command):
         if not project.subtitles:
             raise CommandError(_("No subtitles"), command=self)
 
-        with SubtitleEditor(project.subtitles) as editor:
+        with project.GetEditor() as editor:  # type: SubtitleEditor
             self.deletions = editor.DeleteLines(self.line_numbers)
 
         if not self.deletions:

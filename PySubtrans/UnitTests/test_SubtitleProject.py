@@ -6,8 +6,8 @@ from PySubtrans.Helpers.TestCases import SubtitleTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
-from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.UnitTests.TestData.chinese_dinner import chinese_dinner_data
 
@@ -304,7 +304,7 @@ class SubtitleProjectTests(SubtitleTestCase):
 
         # Batch the subtitles so we have scenes to save
         batcher = SubtitleBatcher(self.options)
-        with SubtitleEditor(project.subtitles) as editor:
+        with project.GetEditor() as editor:
             editor.AutoBatch(batcher)
 
         # Save the project
@@ -360,7 +360,7 @@ class SubtitleProjectTests(SubtitleTestCase):
         project.UpdateProjectSettings(settings)
 
         batcher = SubtitleBatcher(self.options)
-        with SubtitleEditor(project.subtitles) as editor:
+        with project.GetEditor() as editor:
             editor.AutoBatch(batcher)
 
         project.SaveProjectFile(self.test_project_file)
@@ -403,7 +403,7 @@ class SubtitleProjectTests(SubtitleTestCase):
         project.UpdateProjectSettings(settings)
 
         batcher = SubtitleBatcher(self.options)
-        with SubtitleEditor(project.subtitles) as editor:
+        with project.GetEditor() as editor:
             editor.AutoBatch(batcher)
 
         project.SaveProjectFile(self.test_project_file)
@@ -565,6 +565,33 @@ Modified subtitle line 2
         self.assertEqual(project.target_language, 'Russian')
         self.assertEqual(project.task_type, 'translation')
         self.assertEqual(project.movie_name, 'Property Test Movie')
+
+    def test_get_editor_marks_project_dirty(self):
+        """GetEditor should mark the project as needing to be written after edits"""
+
+        project = SubtitleProject(persistent=True)
+
+        log_input_expected_result("initial needs_writing", False, project.needs_writing)
+        self.assertFalse(project.needs_writing)
+
+        with project.GetEditor() as editor:
+            new_scene = SubtitleScene({'number': 1})
+            editor.AddScene(new_scene)
+
+        log_input_expected_result("needs_writing after edit", True, project.needs_writing)
+        self.assertTrue(project.needs_writing)
+
+    def test_get_editor_exception_does_not_mark_project_dirty(self):
+        """GetEditor should not mark the project dirty if the edit fails"""
+
+        project = SubtitleProject(persistent=True)
+
+        with self.assertRaises(ValueError):
+            with project.GetEditor():
+                raise ValueError("Test edit failure")
+
+        log_input_expected_result("needs_writing after failed edit", False, project.needs_writing)
+        self.assertFalse(project.needs_writing)
 
 
 if __name__ == '__main__':

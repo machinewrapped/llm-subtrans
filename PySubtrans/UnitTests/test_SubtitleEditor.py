@@ -77,6 +77,51 @@ class SubtitleEditorTests(SubtitleTestCase):
         log_input_expected_result("lock released after context", False, editor._lock_acquired)
         self.assertFalse(editor._lock_acquired)
 
+    def test_exit_callback_invoked_on_success(self):
+        """Test that exit callback is invoked with success flag when no exception occurs"""
+
+        callback_results: list[bool] = []
+        editor = SubtitleEditor(self.subtitles, lambda success: callback_results.append(success))
+
+        with editor:
+            pass
+
+        log_input_expected_result("callback invoked count", 1, len(callback_results))
+        self.assertEqual(len(callback_results), 1)
+
+        log_input_expected_result("callback success flag", True, callback_results[0])
+        self.assertTrue(callback_results[0])
+
+    def test_exit_callback_invoked_on_failure(self):
+        """Test that exit callback receives failure flag when an exception occurs"""
+
+        callback_results: list[bool] = []
+
+        with self.assertRaises(ValueError):
+            with SubtitleEditor(self.subtitles, lambda success: callback_results.append(success)):
+                raise ValueError("Test exception for callback")
+
+        log_input_expected_result("callback invoked on failure", 1, len(callback_results))
+        self.assertEqual(len(callback_results), 1)
+
+        log_input_expected_result("callback failure flag", False, callback_results[0])
+        self.assertFalse(callback_results[0])
+
+    def test_exit_callback_exception_propagates(self):
+        """Exit callback exceptions should propagate out of the context manager"""
+
+        def failing_callback(_: bool) -> None:
+            raise RuntimeError("Callback failure")
+
+        editor = SubtitleEditor(self.subtitles, failing_callback)
+
+        with self.assertRaises(RuntimeError):
+            with editor:
+                pass
+
+        log_input_expected_result("lock released after callback failure", False, editor._lock_acquired)
+        self.assertFalse(editor._lock_acquired)
+
 
     def test_autobatch_functionality(self):
         """Test AutoBatch divides subtitles into scenes and batches"""

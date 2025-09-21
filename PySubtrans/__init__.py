@@ -202,7 +202,7 @@ def init_translator(settings: Options|SettingsType) -> SubtitleTranslator:
 
     translation_provider = TranslationProvider.get_provider(options)
     if not translation_provider.ValidateSettings():
-        message = translation_provider.validation_message or f"Invalid settings for provider {settings.provider}"
+        message = translation_provider.validation_message or f"Invalid settings for provider {options.provider}"
         raise SubtitleError(message)
 
     return SubtitleTranslator(options, translation_provider)
@@ -296,7 +296,7 @@ def init_project(
 
 def preprocess_subtitles(
     subtitles: Subtitles,
-    options: Options|SettingsType|None = None,
+    settings: Options|SettingsType|None = None,
 ) -> None:
     """
     Preprocess subtitles to fix common issues before translation.
@@ -315,7 +315,7 @@ def preprocess_subtitles(
     if not subtitles or not subtitles.originals:
         raise SubtitleError("No subtitles to preprocess")
 
-    preprocessor = SubtitleProcessor(options or Options())
+    preprocessor = SubtitleProcessor(settings or Options())
     with SubtitleEditor(subtitles) as editor:
         editor.PreProcess(preprocessor)
 

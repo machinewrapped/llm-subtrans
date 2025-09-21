@@ -82,8 +82,9 @@ class TranslateSceneCommand(Command):
         return True
 
     def on_abort(self):
-        if self.datamodel and self.datamodel.project and self.datamodel.project.translator:
-            self.datamodel.project.translator.StopTranslating()
+        project = self.datamodel.project if self.datamodel else None
+        if project and project.translator:
+            project.translator.StopTranslating()
 
     def _on_batch_translated(self, batch : SubtitleBatch):
         # Update viewmodel as each batch is translated

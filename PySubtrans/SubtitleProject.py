@@ -385,7 +385,7 @@ class SubtitleProject:
         If the translation provider is not explictly specified it will be determined automatically from the options.
 
         :param options: The options to use for creating the translator
-        :param provider: [optional] translation provider to use.
+        :param translation_provider: [optional] translation provider to use.
         """
         if not translation_provider:
             translation_provider = TranslationProvider.get_provider(options)

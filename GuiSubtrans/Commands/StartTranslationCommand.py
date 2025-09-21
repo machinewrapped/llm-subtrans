@@ -27,11 +27,6 @@ class StartTranslationCommand(Command):
         project : SubtitleProject = self.datamodel.project
         subtitles : Subtitles = project.subtitles
 
-        # Initialize the project translator if not already done
-        if not project.translator:
-            options = self.datamodel.project_options
-            project.InitialiseTranslator(options, self.datamodel.translation_provider)
-
         if self.resume and subtitles.scenes and all(scene.all_translated for scene in subtitles.scenes):
             logging.info(_("All scenes are fully translated"))
             return True

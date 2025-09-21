@@ -6,6 +6,7 @@ from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import TranslationAbortedError, TranslationImpossibleError
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.Helpers.Localization import _
 
 import logging
@@ -28,6 +29,7 @@ class TranslateSceneCommand(Command):
         self.batch_numbers : list[int]|None = batch_numbers
         self.line_numbers : list[int]|None = line_numbers
         self.can_undo = False
+        self.translator : SubtitleTranslator|None = None
 
     def execute(self) -> bool:
         if self.batch_numbers:
@@ -40,13 +42,19 @@ class TranslateSceneCommand(Command):
 
         project : SubtitleProject = self.datamodel.project
 
-        if not project.translator:
-            raise CommandError(_("No translator initialized in project. StartTranslationCommand should initialize it."), command=self)
+        if not project.subtitles:
+            raise CommandError(_("No subtitles in project"), command=self)
 
-        project.translator.events.batch_translated += self._on_batch_translated # type: ignore
+        # Create our own translator instance for thread safety
+        options = self.datamodel.project_options
+        translation_provider = self.datamodel.translation_provider or TranslationProvider.get_provider(options)
+        self.translator = SubtitleTranslator(options, translation_provider)
+
+        self.translator.events.batch_translated += self._on_batch_translated # type: ignore
 
         try:
-            scene = project.TranslateScene(self.scene_number, batch_numbers=self.batch_numbers, line_numbers=self.line_numbers)
+            scene = project.subtitles.GetScene(self.scene_number)
+            self.translator.TranslateScene(project.subtitles, scene, batch_numbers=self.batch_numbers, line_numbers=self.line_numbers)
 
             if scene:
                 model_update : ModelUpdate =  self.AddModelUpdate()
@@ -54,12 +62,12 @@ class TranslateSceneCommand(Command):
                     'summary' : scene.summary
                 })
 
-            if project.translator.errors and project.translator.stop_on_error:
-                logging.info(_("Errors: {errors}").format(errors=FormatErrorMessages(project.translator.errors)))
+            if self.translator.errors and self.translator.stop_on_error:
+                logging.info(_("Errors: {errors}").format(errors=FormatErrorMessages(self.translator.errors)))
                 logging.error(_("Errors translating scene {scene} - aborting translation").format(scene=scene.number if scene else self.scene_number))
                 self.terminal = True
 
-            if project.translator.aborted:
+            if self.translator.aborted:
                 self.aborted = True
                 self.terminal = True
 
@@ -74,17 +82,17 @@ class TranslateSceneCommand(Command):
 
         except Exception as e:
             logging.error(_("Error translating scene {scene}: {error}").format(scene=self.scene_number, error=e))
-            if project.translator.stop_on_error:
+            if self.translator and self.translator.stop_on_error:
                 self.terminal = True
 
-        project.translator.events.batch_translated -= self._on_batch_translated # type: ignore
+        if self.translator:
+            self.translator.events.batch_translated -= self._on_batch_translated # type: ignore
 
         return True
 
     def on_abort(self):
-        project = self.datamodel.project if self.datamodel else None
-        if project and project.translator:
-            project.translator.StopTranslating()
+        if self.translator:
+            self.translator.StopTranslating()
 
     def _on_batch_translated(self, batch : SubtitleBatch):
         # Update viewmodel as each batch is translated

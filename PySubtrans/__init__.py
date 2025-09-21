@@ -264,7 +264,12 @@ def init_project(
     if normalised_path:
         project.InitialiseProject(normalised_path)
 
-        project.UpdateProjectSettings(options)
+        if project.existing_project:
+            project_settings = project.GetProjectSettings()
+            options.update(project_settings)
+
+        if settings:
+            project.UpdateProjectSettings(settings)
 
         subtitles = project.subtitles
 

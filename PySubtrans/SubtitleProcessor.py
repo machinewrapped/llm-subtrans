@@ -89,7 +89,10 @@ class SubtitleProcessor:
 
         for line in lines:
             line.number = line_number
+
+            # Preprocess the line (split dialogs, convert whitespace, etc)
             self._preprocess_line(line)
+
             if not line.text:
                 continue
 

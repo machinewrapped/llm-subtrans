@@ -161,11 +161,23 @@ PySubtrans is designed to be modular. The helper functions above are convenient 
 
 ### Preprocessing subtitles with `preprocess_subtitles`
 
-`preprocess_subtitles` can adjust the source subtitles using some heuristics to help produce more translatable subtitles.
+`preprocess_subtitles` can adjust the source subtitles using various heuristics to help produce more translatable subtitles.
 
-- `max_line_duration`: Split lines longer than specified duration
-- `min_line_duration`: Merge very short lines
+**Duration and timing adjustments:**
+- `merge_line_duration`: Merge lines with very short durations into the previous line
+- `max_line_duration`: Split lines longer than specified duration (using punctuation as a guide)
+- `min_split_chars`: Minimum characters required for splitting lines
+- `min_line_duration`: Minimum duration for split lines
 - `min_gap`: Ensure minimum gap between subtitle lines
+
+**Text processing:**
+- `whitespaces_to_newline`: Convert whitespace blocks to newlines (Chinese subtitles often separate dialog lines with multiple spaces, which confuses the translation)
+- `break_dialog_on_one_line`: Detect mid-line dialog markers and add line breaks (helps the models recognise they are separate speakers, not just a dash in the line)
+- `normalise_dialog_tags`: If one line of a multiline subtitle has a dialog marker, add it to the other(s)
+- `remove_filler_words`: Remove specified filler words from text
+- `filler_words`: Comma-separated list of filler words to remove (err, umm, ah, etc.)
+- `full_width_punctuation`: Ensure full-width punctuation is used in Asian languages
+- `convert_wide_dashes`: Convert wide dashes (emdash) to standard dashes (an anti-GPT pill)
 
 ### Batching subtitles manually with `batch_subtitles`
 

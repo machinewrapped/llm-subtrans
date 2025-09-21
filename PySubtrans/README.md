@@ -45,7 +45,9 @@ subtitles.SaveTranslation("movie-translated.srt")
 
 Subtitle format is auto-detected based on file extension or content.
 
-## Working with a `SubtitleProject` with `init_project`
+## Basic Usage
+
+### Working with a `SubtitleProject` with `init_project`
 
 `SubtitleProject` provides a high level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation. This is the framework that LLM-Subtrans and GUI-Subtrans use to manage translation workflows, but it is general enough that it could be used in other contexts.
 
@@ -83,42 +85,7 @@ project = init_project(project_settings, filepath='subtitles.srt', persistent=Tr
 project.SaveProject()  # Progress is automatically saved
 ```
 
-## Configuration with `init_options`
-
-`init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 
-
-The Options class provides a wide range of options to configure the translation process. The default values should work well for most use cases, but some are definitely worth experimenting with.
-
-`max_batch_size`: controls how many lines will be sent to the LLM in one request. The default value (30) is very conservative, for maximum compatibility. Models like Gemini 2.5 Flash can easily handle batches of 150 lines or more, which allows for faster translation.
-
-`scene_threshold`: subtitles are divided into scenes before batching, using this time value as a heuristic to indicate that a scene transition has happened. The default of 60 seconds is very coarse, and may end up with only one scene for dialogue heavy movies or dozens of scenes with only a few lines each for minimalist arthouse films. Depending on your use case, consider setting this very high and relying on the batcher instead.
-
-`postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines. The post-processor can perform a range of operations, each of which is enabled by another setting, e.g. `break_dialog_on_one_line`, `normalise_dialog_tags`, `whitespaces_to_newline`, `remove_filler_words`.
-
-Example usage:
-
-```python
-from PySubtrans import init_options
-
-options = init_options(
-    provider="Gemini",
-    model="gemini-2.5-flash",
-    api_key="your-key",
-    movie_name="French Movie",
-    prompt="Translate these subtitles for {movie_name} into German, with cultural references adapted for a German audience",
-    max_batch_size=150,
-    scene_threshold=120
-    temperature=0.3,
-    postprocess_translation=True,
-    break_long_lines=True,
-    break_dialog_on_one_line=True,
-    convert_wide_dashes=True
-)
-```
-
-Note that there are a number of options which are only used by the GUI-Subtrans application and have no function in PySubtrans.
-
-## Initialising Subtitles with `init_subtitles`
+### Initialising Subtitles directly with `init_subtitles`
 
 `init_subtitles` creates a `Subtitles` instance, optionally loading subtitle content from a file or string. It auto-detects the format and, by default, prepares the subtitles for translation.
 
@@ -154,6 +121,57 @@ subtitles = init_subtitles(content=srt_content)
 ```
 
 By default `init_subtitles` preprocesses and batches subtitles to be ready for translation, using the provided `options`. See `batch_subtitles` for details.
+
+### Initialising a `SubtitleTranslator` with `init_translator`
+`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance to connect to the chosen translation service. 
+
+Instantiating your own `SubtitleTranslator` allows you to have more fine-grained control over the translation process, e.g. translating individual scenes or batches. You can subscribe to `events` to receive notifications when individual scenes or batches have been translated to provide realtime feedback or further processing.
+
+Subtitles must be batched prior to translation.
+
+Example
+
+```python
+from PySubtrans import init_translator
+translator = init_translator({"provider": "gemini", "api_key": "your-key"})
+translator.events.scene_translated += on_scene_translated  # Subscribe to events
+translator.TranslateSubtitles(subtitles)
+```
+
+### Configuration with `init_options`
+
+`init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 
+
+The Options class provides a wide range of options to configure the translation process. The default values should work well for most use cases, but some are definitely worth experimenting with.
+
+`max_batch_size`: controls how many lines will be sent to the LLM in one request. The default value (30) is very conservative, for maximum compatibility. Models like Gemini 2.5 Flash can easily handle batches of 150 lines or more, which allows for faster translation.
+
+`scene_threshold`: subtitles are divided into scenes before batching, using this time value as a heuristic to indicate that a scene transition has happened. The default of 60 seconds is very coarse, and may end up with only one scene for dialogue heavy movies or dozens of scenes with only a few lines each for minimalist arthouse films. Depending on your use case, consider setting this very high and relying on the batcher instead.
+
+`postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines. The post-processor can perform a range of operations, each of which is enabled by another setting, e.g. `break_dialog_on_one_line`, `normalise_dialog_tags`, `whitespaces_to_newline`, `remove_filler_words`.
+
+Example usage:
+
+```python
+from PySubtrans import init_options
+
+options = init_options(
+    provider="Gemini",
+    model="gemini-2.5-flash",
+    api_key="your-key",
+    movie_name="French Movie",
+    prompt="Translate these subtitles for {movie_name} into German, with cultural references adapted for a German audience",
+    max_batch_size=150,
+    scene_threshold=120
+    temperature=0.3,
+    postprocess_translation=True,
+    break_long_lines=True,
+    break_dialog_on_one_line=True,
+    convert_wide_dashes=True
+)
+```
+
+Note that there are a number of options which are only used by the GUI-Subtrans application and have no function in PySubtrans.
 
 ## Advanced workflows
 
@@ -240,22 +258,6 @@ lines = [
 subtitles = Subtitles()
 batcher = SubtitleBatcher({"scene_threshold" : 30, "max_batch_size" : 50})
 subtitles.scenes = batcher.BatchSubtitles(lines)
-```
-
-### Initialising a `SubtitleTranslator` with `init_translator`
-`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance to connect to the chosen translation service. 
-
-Instantiating your own `SubtitleTranslator` allows you to have more fine-grained control over the translation process, e.g. translating individual scenes or batches. You can subscribe to `events` to receive notifications when individual scenes or batches have been translated to provide realtime feedback or further processing.
-
-Subtitles must be batched prior to translation.
-
-Example
-
-```python
-from PySubtrans import init_translator
-translator = init_translator({"provider": "gemini", "api_key": "your-key"})
-translator.events.scene_translated += on_scene_translated  # Subscribe to events
-translator.TranslateSubtitles(subtitles)
 ```
 
 ### Customising translation with custom instructions

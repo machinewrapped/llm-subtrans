@@ -23,12 +23,12 @@ class TranslateSceneCommand(Command):
                     datamodel : ProjectDataModel|None = None):
 
         super().__init__(datamodel)
+        self.translator : SubtitleTranslator|None = None
         self.resume : bool = resume
         self.scene_number : int = scene_number
         self.batch_numbers : list[int]|None = batch_numbers
         self.line_numbers : list[int]|None = line_numbers
         self.can_undo = False
-        self.translator : SubtitleTranslator|None = None
 
     def execute(self) -> bool:
         if self.batch_numbers:

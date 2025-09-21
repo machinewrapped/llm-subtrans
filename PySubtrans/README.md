@@ -45,7 +45,46 @@ subtitles.SaveTranslation("movie-translated.srt")
 
 Subtitle format is auto-detected based on file extension or content.
 
+## Working with a `SubtitleProject` with `init_project`
+
+`SubtitleProject` provides a high level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation. This is the framework that LLM-Subtrans and GUI-Subtrans use to manage translation workflows, but it is general enough that it could be used in other contexts.
+
+`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads and prepares the source subtitles if a file path is supplied.
+
+```python
+from PySubtrans import init_options, init_project
+
+# Create a project with a pre-warmed translator
+project_settings = init_options(
+    provider='OpenRouter',
+    model='qwen/qwen3-235b-a22b:free',
+    target_language='Spanish',
+    api_key='your-openrouter-api-key',
+    preprocess_subtitles=True,
+    scene_threshold=60,
+    max_batch_size=100,
+)
+
+project = init_project(project_settings, filepath='path_to_source_subtitles.srt')
+
+# Translate the subtitles
+project.TranslateSubtitles()
+
+# Save the translation - filename is automatically generated
+project.SaveTranslation()
+```
+
+By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk or reload an existing project, allowing a translation job to be resumed at a future time.
+
+```python
+# Create a persistent project that can be resumed later
+project = init_project(project_settings, filepath='subtitles.srt', persistent=True)
+# ... do some work
+project.SaveProject()  # Progress is automatically saved
+```
+
 ## Configuration with `init_options`
+
 `init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 
 
 The Options class provides a wide range of options to configure the translation process. The default values should work well for most use cases, but some are definitely worth experimenting with.
@@ -116,52 +155,17 @@ subtitles = init_subtitles(content=srt_content)
 
 By default `init_subtitles` preprocesses and batches subtitles to be ready for translation, using the provided `options`. See `batch_subtitles` for details.
 
-## Working with a `SubtitleProject` with `init_project`
-`SubtitleProject` provides a high level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation. This is the framework that LLM-Subtrans and GUI-Subtrans use to manage translation workflows, but it is general enough that it could be used in other contexts.
-
-`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads and prepares the source subtitles if a file path is supplied.
-
-```python
-from PySubtrans import init_options, init_project
-
-# Create a project with a pre-warmed translator
-project_settings = init_options(
-    provider='OpenRouter',
-    model='qwen/qwen3-235b-a22b:free',
-    target_language='Spanish',
-    api_key='your-openrouter-api-key',
-    preprocess_subtitles=True,
-    scene_threshold=60,
-    max_batch_size=100,
-)
-
-project = init_project(project_settings, filepath='path_to_source_subtitles.srt')
-
-# Translate the subtitles
-project.TranslateSubtitles()
-
-# Save the translation - filename is automatically generated
-project.SaveTranslation()
-```
-
-By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk or reload an existing project, allowing a translation job to be resumed at a future time.
-
-```python
-# Create a persistent project that can be resumed later
-project = init_project(project_settings, filepath='subtitles.srt', persistent=True)
-# ... do some work
-project.SaveProject()  # Progress is automatically saved
-```
-
 ## Advanced workflows
 
 PySubtrans is designed to be modular. The helper functions above are convenient entry points, but you are free to use lower-level components directly when you need more control:
 
 ### Preprocessing subtitles with `preprocess_subtitles`
 
-`preprocess_subtitles` applies some heuristics to address common issues that can impact the quality of the translation, if they exist in the source subtitles.
+`preprocess_subtitles` can adjust the source subtitles using some heuristics to help produce more translatable subtitles.
 
-#TODO: detail the pre-processor steps and relevant options
+- `max_line_duration`: Split lines longer than specified duration
+- `min_line_duration`: Merge very short lines
+- `min_gap`: Ensure minimum gap between subtitle lines
 
 ### Batching subtitles manually with `batch_subtitles`
 
@@ -185,8 +189,6 @@ print(f"Created {subtitles.scenecount} scenes")
 
 ### Building subtitles programmatically
 
-#### Option 1: SubtitleBuilder for programmatic control
-
 Use `SubtitleBuilder` when you want to build subtitles programmatically. 
 
 ```python
@@ -208,8 +210,7 @@ subtitles : Subtitles = (builder
 ```
 Batching of subtitle lines within each scene is handled automatically.
 
-#### Option 2: Automatic construction with SubtitleBatcher
-
+### Preparing subtitles with SubtitleBatcher
 `SubtitleBatcher` can be used to automatically group lines into scenes and batches:
 
 ```python
@@ -230,8 +231,11 @@ subtitles.scenes = batcher.BatchSubtitles(lines)
 ```
 
 ### Initialising a `SubtitleTranslator` with `init_translator`
+`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance to connect to the chosen translation service. 
 
-`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance to connect to the chosen translation service. Subtitles must be batched prior to translation.
+Instantiating your own `SubtitleTranslator` allows you to have more fine-grained control over the translation process, e.g. translating individual scenes or batches. You can subscribe to `events` to receive notifications when individual scenes or batches have been translated to provide realtime feedback or further processing.
+
+Subtitles must be batched prior to translation.
 
 Example
 
@@ -273,14 +277,110 @@ Adapting the examples to your use case can greatly improve the model's performan
   
 See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
 
-#### Working directly with `SubtitleTranslator`
-Instantiating your own `SubtitleTranslator` allows you to have more fine-grained control over the translation process, e.g. translating individual scenes or batches. You can subscribe to `events` to receive notifications when individual scenes or batches have been translated to provide realtime feedback or further processing.
+### A programmatic workflow example
+This example shows how to construct subtitles and translate them with progress feedback, working directly with the PySubtrans business logic.
 
-TODO: provide examples
+```python
+import json
+from datetime import timedelta
+from PySubtrans import SubtitleBuilder, Options, SubtitleTranslator, TranslationProvider, SubtitleError
+
+# Sample data with scene markers
+json_data = {
+    "movie_name": "Sample Film",
+    "description": "A sample film for demonstration",
+    "scenes": [
+        {
+            "summary": "Opening scene",
+            "lines": [
+                {"start": "00:00:01.000", "end": "00:00:03.000", "text": "Hello world"},
+                {"start": "00:00:04.000", "end": "00:00:06.000", "text": "How are you?"}
+            ]
+        },
+        {
+            "summary": "Action sequence",
+            "lines": [
+                {"start": "00:01:05.000", "end": "00:01:07.000", "text": "Look out!"},
+                {"start": "00:01:08.000", "end": "00:01:10.000", "text": "Watch out!"}
+            ]
+        }
+    ]
+}
+
+# Build subtitles programmatically
+builder = SubtitleBuilder(max_batch_size=5)
+
+for scene_data in json_data["scenes"]:
+    builder.AddScene(summary=scene_data["summary"])
+
+    for line_data in scene_data["lines"]:
+        builder.BuildLine(
+            start=line_data["start"],
+            end=line_data["end"],
+            text=line_data["text"]
+        )
+
+subtitles = builder.Build()
+
+# Configure translator with progress tracking
+options = Options({
+    provider="OpenAI",
+    model="gpt-4o-mini",
+    api_key="your-api-key",
+    prompt=f"Translate subtitles for {json_data['movie_name']} into Spanish",
+    max_batch_size=5
+})
+
+translation_provider = TranslationProvider.get_provider(options)
+if not translation_provider.ValidateSettings():
+    raise SubtitleError(translation_provider.validation_message)
+    
+translator = SubtitleTranslator(options, translation_provider)
+
+# Set up event handlers for real-time feedback
+def on_batch_translated(batch):
+    print(f"Translated batch {batch.number} in scene {batch.scene} ({batch.size} lines)")
+    if batch.summary:
+        print(f"  Summary: {batch.summary}")
+
+def on_scene_translated(scene):
+    print(f"Completed scene {scene.number}: {scene.summary}")
+    print(f"   Total: {scene.linecount} lines in {scene.size} batches")
+
+# Subscribe to translation events
+translator.events.batch_translated += on_batch_translated
+translator.events.scene_translated += on_scene_translated
+
+# Execute translation with progress feedback
+print(f"Starting translation of {subtitles.linecount} lines...")
+translator.TranslateSubtitles(subtitles)
+print("\nTranslation completed!")
+```
 
 ### Using SubtitleEditor to manipulate `Subtitles`
 
-TODO: provide some basic examples
+`SubtitleEditor` provides a context manager for modifying `Subtitles` in a thread-safe manner:
+
+```python
+from PySubtrans import SubtitleEditor
+
+subtitles = [...]
+
+with SubtitleEditor(subtitles) as editor:
+    # Update scene metadata
+    editor.UpdateScene(scene_number = 1, update = {"summary": "Opening dialogue"})
+
+    # Split scene 1 at batch 2 (creates a new scene)
+    editor.SplitScene(scene_number = 1, batch_number = 2)
+
+    # Merge batches 1 and 2 in scene 3
+    editor.MergeBatches(scene_number = 3, batch_numbers = [1, 2])
+
+    # Merge lines 100 and 101 within batch (2, 1)
+    editor.MergeLinesInBatch(scene_number = 2, batch_number = 1, line_numbers = [100, 101])
+
+print(f"Final state: {subtitles.scenecount} scenes, {subtitles.linecount} lines")
+```
 
 ### Custom integrations
 

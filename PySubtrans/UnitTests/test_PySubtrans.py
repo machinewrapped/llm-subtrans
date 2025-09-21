@@ -3,6 +3,7 @@ import tempfile
 import unittest
 
 from PySubtrans import (
+    SubtitleBuilder,
     batch_subtitles,
     init_options,
     init_project,
@@ -10,6 +11,7 @@ from PySubtrans import (
     init_translator,
 )
 from PySubtrans.Helpers.TestCases import DummyProvider  # noqa: F401 - ensure provider is registered
+from PySubtrans.UnitTests.TestData.chinese_dinner import chinese_dinner_json_data
 from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
     log_input_expected_result,
@@ -156,6 +158,124 @@ class PySubtransConvenienceTests(unittest.TestCase):
         finally:
             if os.path.exists(subtitle_path):
                 os.remove(subtitle_path)
+
+
+    def test_json_workflow_with_events(self) -> None:
+        """Test the JSON workflow example from README documentation"""
+        options = self._create_options()
+
+        # Use the realistic test JSON data from chinese_dinner module
+        json_data = chinese_dinner_json_data
+
+        log_input_expected_result("JSON scenes loaded", True, len(json_data["scenes"]) > 0)
+        self.assertGreater(len(json_data["scenes"]), 0)
+
+        # Build subtitles from JSON using SubtitleBuilder
+        builder = SubtitleBuilder(max_batch_size=5)  # Small batch size to test multiple batches
+
+        total_lines = 0
+        for scene_data in json_data["scenes"]:
+            builder.AddScene(summary=scene_data["summary"])
+
+            for line_data in scene_data["lines"]:
+                builder.BuildLine(
+                    start=line_data["start"],
+                    end=line_data["end"],
+                    text=line_data["text"]
+                )
+                total_lines += 1
+
+        subtitles = builder.Build()
+
+        # Set movie name from JSON data for the translator
+        subtitles.UpdateSettings(SettingsType({
+            'movie_name': json_data.get('movie_name', 'Test Movie'),
+            'description': json_data.get('description', 'Test description'),
+            'names': json_data.get('names', []),
+            'target_language': json_data.get('target_language', 'English'),
+        }))
+
+        log_input_expected_result("built subtitles line count", total_lines, subtitles.linecount)
+        self.assertEqual(subtitles.linecount, total_lines)
+
+        log_input_expected_result("built subtitles scene count", len(json_data["scenes"]), subtitles.scenecount)
+        self.assertEqual(subtitles.scenecount, len(json_data["scenes"]))
+
+        # Verify scenes have summaries
+        for i, scene in enumerate(subtitles.scenes):
+            expected_summary = json_data["scenes"][i]["summary"]
+            log_input_expected_result(f"scene {scene.number} summary", expected_summary, scene.context.get('summary'))
+            self.assertEqual(scene.context.get('summary'), expected_summary)
+
+        # The SubtitleBatcher creates batches based on timing gaps, not just max_batch_size
+        # So we just verify we have a reasonable number of batches
+        actual_batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
+
+        log_input_expected_result("total batch count", True, actual_batch_count >= len(json_data["scenes"]))
+        self.assertGreaterEqual(actual_batch_count, len(json_data["scenes"]))  # At least one batch per scene
+
+        # Verify scene 1 has multiple batches (since it has 55 lines with max_batch_size=5)
+        scene1_batch_count = len(subtitles.scenes[0].batches)
+        log_input_expected_result("scene 1 multiple batches", True, scene1_batch_count > 1)
+        self.assertGreater(scene1_batch_count, 1)
+
+        # Test event system with translation
+        translator = init_translator(options)
+
+        # Track events
+        batch_events = []
+        scene_events = []
+
+        def on_batch_translated(batch):
+            batch_events.append({
+                'scene': batch.scene,
+                'batch': batch.number,
+                'size': batch.size,
+                'summary': batch.summary
+            })
+
+        def on_scene_translated(scene):
+            scene_events.append({
+                'scene': scene.number,
+                'summary': scene.summary,
+                'linecount': scene.linecount,
+                'batch_count': scene.size
+            })
+
+        # Subscribe to events
+        translator.events.batch_translated += on_batch_translated  # type: ignore
+        translator.events.scene_translated += on_scene_translated  # type: ignore
+
+        # Execute translation
+        translator.TranslateSubtitles(subtitles)
+
+        # Verify events were fired
+        log_input_expected_result("batch events fired", actual_batch_count, len(batch_events))
+        self.assertEqual(len(batch_events), actual_batch_count)
+
+        log_input_expected_result("scene events fired", len(json_data["scenes"]), len(scene_events))
+        self.assertEqual(len(scene_events), len(json_data["scenes"]))
+
+        # Verify event data accuracy
+        for event in batch_events:
+            log_input_expected_result(f"batch event scene {event['scene']} size", True, event['size'] > 0)
+            self.assertGreater(event['size'], 0)
+
+        for i, event in enumerate(scene_events):
+            expected_scene_num = i + 1
+            log_input_expected_result(f"scene event {i} number", expected_scene_num, event['scene'])
+            self.assertEqual(event['scene'], expected_scene_num)
+
+            log_input_expected_result(f"scene event {i} linecount", True, event['linecount'] > 0)
+            self.assertGreater(event['linecount'], 0)
+
+        # Note: Translation may fail due to dummy provider limitations, but events should still fire
+        # Just verify that we tried to translate (events fired properly)
+        log_input_expected_result("translation attempted", True, len(batch_events) > 0)
+        self.assertGreater(len(batch_events), 0)
+
+        log_input_expected_result("scene processing completed", True, len(scene_events) > 0)
+        self.assertGreater(len(scene_events), 0)
 
 
 if __name__ == '__main__':

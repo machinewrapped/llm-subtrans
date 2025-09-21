@@ -16,14 +16,13 @@ class TranslateSceneCommand(Command):
     """
     Ask the translator to translate a scene (optionally just select batches in the scene)
     """
-    def __init__(self, scene_number : int, 
-                    batch_numbers : list[int]|None = None, 
+    def __init__(self, scene_number : int,
+                    batch_numbers : list[int]|None = None,
                     line_numbers : list[int]|None = None,
-                    resume : bool = False, 
+                    resume : bool = False,
                     datamodel : ProjectDataModel|None = None):
 
         super().__init__(datamodel)
-        self.translator : SubtitleTranslator|None = None
         self.resume : bool = resume
         self.scene_number : int = scene_number
         self.batch_numbers : list[int]|None = batch_numbers
@@ -41,18 +40,13 @@ class TranslateSceneCommand(Command):
 
         project : SubtitleProject = self.datamodel.project
 
-        options = self.datamodel.project_options
-        translation_provider = self.datamodel.translation_provider
+        if not project.translator:
+            raise CommandError(_("No translator initialized in project. StartTranslationCommand should initialize it."), command=self)
 
-        if not translation_provider:
-            raise CommandError(_("No translation provider configured"), command=self)
-
-        self.translator = SubtitleTranslator(options, translation_provider, resume=self.resume)
-
-        self.translator.events.batch_translated += self._on_batch_translated # type: ignore
+        project.translator.events.batch_translated += self._on_batch_translated # type: ignore
 
         try:
-            scene = project.TranslateScene(self.translator, self.scene_number, batch_numbers=self.batch_numbers, line_numbers=self.line_numbers)
+            scene = project.TranslateScene(self.scene_number, batch_numbers=self.batch_numbers, line_numbers=self.line_numbers)
 
             if scene:
                 model_update : ModelUpdate =  self.AddModelUpdate()
@@ -60,12 +54,12 @@ class TranslateSceneCommand(Command):
                     'summary' : scene.summary
                 })
 
-            if self.translator.errors and self.translator.stop_on_error:
-                logging.info(_("Errors: {errors}").format(errors=FormatErrorMessages(self.translator.errors)))
+            if project.translator.errors and project.translator.stop_on_error:
+                logging.info(_("Errors: {errors}").format(errors=FormatErrorMessages(project.translator.errors)))
                 logging.error(_("Errors translating scene {scene} - aborting translation").format(scene=scene.number if scene else self.scene_number))
                 self.terminal = True
 
-            if self.translator.aborted:
+            if project.translator.aborted:
                 self.aborted = True
                 self.terminal = True
 
@@ -80,16 +74,16 @@ class TranslateSceneCommand(Command):
 
         except Exception as e:
             logging.error(_("Error translating scene {scene}: {error}").format(scene=self.scene_number, error=e))
-            if self.translator.stop_on_error:
+            if project.translator.stop_on_error:
                 self.terminal = True
 
-        self.translator.events.batch_translated -= self._on_batch_translated # type: ignore
+        project.translator.events.batch_translated -= self._on_batch_translated # type: ignore
 
         return True
 
     def on_abort(self):
-        if self.translator:
-            self.translator.StopTranslating()
+        if self.datamodel and self.datamodel.project and self.datamodel.project.translator:
+            self.datamodel.project.translator.StopTranslating()
 
     def _on_batch_translated(self, batch : SubtitleBatch):
         # Update viewmodel as each batch is translated

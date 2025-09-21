@@ -57,6 +57,8 @@ class TranslateSceneCommand(Command):
 
         try:
             scene = project.subtitles.GetScene(self.scene_number)
+            scene.errors = []
+
             self.translator.TranslateScene(project.subtitles, scene, batch_numbers=self.batch_numbers, line_numbers=self.line_numbers)
 
             if scene:

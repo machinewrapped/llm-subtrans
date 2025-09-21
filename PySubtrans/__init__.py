@@ -27,8 +27,6 @@ Basic Usage
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
-
 from PySubtrans.Helpers import GetInputPath
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingType, SettingsType

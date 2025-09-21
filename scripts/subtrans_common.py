@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Parse import ParseNames
+from PySubtrans import batch_subtitles, preprocess_subtitles
 from PySubtrans.Options import Options, config_dir
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
@@ -148,25 +149,6 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
 
     return Options(options)
 
-def CreateTranslator(options : Options) -> SubtitleTranslator:
-    """
-    Initialise a subtitle translator with the provided options
-    """
-    translation_provider = TranslationProvider.get_provider(options)
-    if not translation_provider:
-        raise ValueError(f"Unable to create translation provider {options.provider}")
-
-    if not translation_provider.ValidateSettings():
-        logging.error(f"Provider settings are not valid: {translation_provider.validation_message}")
-        raise ValueError(f"Invalid settings for provider {options.provider}")
-
-    logging.info(f"Using translation provider {translation_provider.name}")
-
-    # Load the instructions
-    options.InitialiseInstructions()
-
-    return SubtitleTranslator(options, translation_provider)
-
 def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     """
     Initialise a subtitle project with the provided arguments
@@ -180,6 +162,35 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
         project.SaveBackupFile()
 
     project.UpdateProjectSettings(options)
+
+    subtitles = project.subtitles
+
+    if not subtitles or not subtitles.originals:
+        raise ValueError("No subtitles to translate")
+
+    if options.get_bool('preprocess_subtitles'):
+        preprocess_subtitles(subtitles, options)
+
+    scene_threshold = options.get_float('scene_threshold')
+    min_batch_size = options.get_int('min_batch_size')
+    max_batch_size = options.get_int('max_batch_size')
+
+    if scene_threshold is None or min_batch_size is None or max_batch_size is None:
+        raise ValueError("scene_threshold, min_batch_size and max_batch_size must be defined")
+
+    batch_subtitles(
+        subtitles,
+        scene_threshold=scene_threshold,
+        min_batch_size=min_batch_size,
+        max_batch_size=max_batch_size,
+    )
+
+    scene_count = subtitles.scenecount
+    batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
+    logging.info(f"Created {scene_count} scenes and {batch_count} batches for translation")
+
+    # Initialize the translator
+    project.InitialiseTranslator(options)
 
     if not args.output:
         output_path = GetOutputPath(project.subtitles.sourcepath, project.subtitles.target_language or options.provider, project.subtitles.file_format)

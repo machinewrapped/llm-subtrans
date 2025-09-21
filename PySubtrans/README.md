@@ -33,12 +33,16 @@ options = init_options(
     model="gpt-5-mini",
     api_key="sk-your-api-key",
     prompt="Translate these subtitles into Spanish",
+    preprocess_subtitles=True,
+    scene_threshold=90.0,
+    min_batch_size=2,
+    max_batch_size=40,
 )
 
-subtitles = init_subtitles("movie.srt")
+subtitles = init_subtitles("movie.srt", options=options)
 
 translator = init_translator(options)
-translator.Translate(subtitles)
+translator.TranslateSubtitles(subtitles)
 
 subtitles.SaveTranslation("movie-translated.srt")
 ```
@@ -83,11 +87,12 @@ Note that there are a number of options which are only used by the GUI-Subtrans 
 
 ## Initialising Subtitles with `init_subtitles`
 
-`init_subtitles` creates a `Subtitles` instance and optionally loads subtitle content from a file or string. It supports automatic format detection and handles multiple subtitle formats.
+`init_subtitles` creates a `Subtitles` instance, optionally loading subtitle content from a file or string. It auto-detects the format and, by default, prepares the subtitles for translation.
 
 **Parameters:**
 - `filepath`: Path to a subtitle file to load (mutually exclusive with `content`)
 - `content`: Subtitle content as a string (mutually exclusive with `filepath`)
+- `options`: Optional `Options` instance providing preprocessing and batching settings
 
 Format detection is automatic based on file extension or content analysis.
 
@@ -115,9 +120,30 @@ This is a test"""
 subtitles = init_subtitles(content=srt_content)
 ```
 
+### Controlling preprocessing and batching
+
+By default `init_subtitles` preprocesses and batches lines that are loaded from a file or string. Supply an `Options` instance via the `options` argument to reuse existing settings such as `scene_threshold`, `min_batch_size` and `max_batch_size`. Set `preprocess_subtitles=False` in those options when you need to skip preprocessing, or pass `auto_batch=False` to postpone batching and call `batch_subtitles` later.
+
+## Batching subtitles with `batch_subtitles`
+
+Call `batch_subtitles` whenever you disable `auto_batch` or construct a `Subtitles` instance manually. Provide the scene threshold and batch size settings you want to use so `TranslateSubtitles` can be called safely.
+
+```python
+from PySubtrans import batch_subtitles, init_subtitles
+
+subtitles = init_subtitles("movie.srt", auto_batch=False)
+batch_subtitles(subtitles, scene_threshold=90.0, min_batch_size=2, max_batch_size=40)
+
+print(f"Created {subtitles.scenecount} scenes")
+```
+
+## Preprocessing subtitles with `preprocess_subtitles`
+
+`preprocess_subtitles` normalises subtitles using the same rules as the GUI and CLI helpers. Call it when you disable automatic preprocessing or when you build a `Subtitles` instance manually, and pass an `Options` instance or mapping when you need to customise preprocessing behaviour.
+
 ## Preparing a `SubtitleTranslator` with `init_translator`
 
-`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance that connects to the chosen translation service.
+`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance that connects to the chosen translation service. Subtitles must be batched prior to translation.
 
 Example
 
@@ -162,20 +188,23 @@ See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) 
 ## Working with projects using `init_project`
 `SubtitleProject` provides a higher level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation.
 
-`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads the source subtitles if a file path is supplied.
+`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads and prepares the source subtitles if a file path is supplied.
 
 ```python
-from PySubtrans import init_project
+from PySubtrans import init_options, init_project
 
 # Create a project with a pre-warmed translator
-translation_settings = {
-    'provider': 'OpenRouter',
-    'model': 'qwen/qwen3-235b-a22b:free',
-    'target_language': 'Spanish',
-    'api_key': 'your-openrouter-api-key'
-}
+project_settings = init_options(
+    provider='OpenRouter',
+    model='qwen/qwen3-235b-a22b:free',
+    target_language='Spanish',
+    api_key='your-openrouter-api-key',
+    preprocess_subtitles=True,
+    scene_threshold=60,
+    max_batch_size=100,
+)
 
-project = init_project('path_to_source_subtitles.srt', translation_settings=translation_settings)
+project = init_project(project_settings, filepath='path_to_source_subtitles.srt')
 
 # Translate the subtitles
 project.TranslateSubtitles()
@@ -188,7 +217,7 @@ By default projects are only held in memory, but specifying `persistent=True` wi
 
 ```python
 # Create a persistent project that can be resumed later
-project = init_project('subtitles.srt', persistent=True, translation_settings=translation_settings)
+project = init_project(project_settings, filepath='subtitles.srt', persistent=True)
 # ... do some work
 project.SaveProject()  # Progress is automatically saved
 ```

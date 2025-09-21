@@ -96,8 +96,7 @@ The command-line interface provides simple synchronous processing of a source fi
 
 1. **Argument parsing** – allows configuration via command line arguments.
 2. **Options creation** – Parsed arguments and environment variables are merged to produce an `Options` instance that configures the translation flow.
-3. **Project initialization** – `CreateProject` loads the source subtitles and optionally reads/writes a project file.
-4. **Translation invocation** – `CreateTranslator` constructs a `SubtitleTranslator` with the provided options to perform the translation process
+3. **Project initialization** – `CreateProject` loads the source subtitles and prepares them for translation, and initialises a `SubtitleTranslator`, optionally reading/writing a project file.
 5. **Completion** the resulting translation is saved, and the optional project file is updated.
 
 ## GUI Architecture

@@ -42,9 +42,6 @@ try:
     # Create a project for the translation
     project : SubtitleProject = CreateProject(options, args)
 
-    # Initialize the translator with the provided options
-    project.InitialiseTranslator(options)
-
     # Translate the subtitles
     project.TranslateSubtitles()
 

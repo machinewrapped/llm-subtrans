@@ -116,7 +116,7 @@ class ProjectDataModel:
             # Update the output path with optional format change
             previous_output_path : str|None = self.project.subtitles.outputpath
 
-            self.project.subtitles.UpdateOutputPath(path=self.project.projectfile)
+            self.project.UpdateOutputPath(path=self.project.projectfile)
 
             if self.project.subtitles.outputpath != previous_output_path:
                 logging.info(_("Setting output path to {}").format(self.project.subtitles.outputpath))
@@ -155,7 +155,7 @@ class ProjectDataModel:
         with QMutexLocker(self.mutex):
             self.viewmodel = ProjectViewModel()
             if self.project is not None:
-                self.viewmodel.CreateModel(self.project.subtitles)
+                self.viewmodel.CreateModel(self.project.subtitles, self.project.task_type)
         return self.viewmodel
 
     def UpdateViewModel(self, update : ModelUpdate):

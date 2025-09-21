@@ -3,6 +3,7 @@ from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleBatch import SubtitleBatch
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleProject import SubtitleProject
 
 import logging
@@ -40,7 +41,8 @@ class MergeBatchesCommand(Command):
             self.original_first_line_numbers = [batch.first_line_number for batch in original_batches if batch and batch.first_line_number]
             self.original_summaries = {batch.number: batch.summary for batch in original_batches if batch and batch.summary}
 
-            project.subtitles.MergeBatches(self.scene_number, self.batch_numbers)
+            with SubtitleEditor(project.subtitles) as editor:
+                editor.MergeBatches(self.scene_number, self.batch_numbers)
 
             merged_batch = scene.GetBatch(merged_batch_number)
             if merged_batch is not None:

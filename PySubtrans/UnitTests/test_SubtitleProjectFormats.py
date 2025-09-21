@@ -10,6 +10,7 @@ from PySubtrans.SubtitleFileHandler import SubtitleFileHandler
 from PySubtrans.SubtitleData import SubtitleData
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.Formats.SSAFileHandler import SSAFileHandler
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleSerialisation import SubtitleEncoder, SubtitleDecoder
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Helpers.Color import Color
@@ -430,8 +431,9 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         log_input_expected_result("format after setting output path", ".srt", project.subtitles.file_format)
         self.assertEqual(project.subtitles.file_format, ".srt")
         
-        project.subtitles.AutoBatch(SubtitleBatcher(options))
-        project.subtitles._duplicate_originals_as_translations()
+        with SubtitleEditor(project.subtitles) as editor:
+            editor.AutoBatch(SubtitleBatcher(options))
+            editor.DuplicateOriginalsAsTranslations()
         project.needs_writing = True
         project.SaveTranslation()
         
@@ -471,8 +473,9 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         log_input_expected_result("format after setting output path", ".ass", project.subtitles.file_format)
         self.assertEqual(project.subtitles.file_format, ".ass")
         
-        project.subtitles.AutoBatch(SubtitleBatcher(options))
-        project.subtitles._duplicate_originals_as_translations()
+        with SubtitleEditor(project.subtitles) as editor:
+            editor.AutoBatch(SubtitleBatcher(options))
+            editor.DuplicateOriginalsAsTranslations()
         project.needs_writing = True
         project.SaveTranslation()
         
@@ -510,8 +513,9 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         log_input_expected_result("project.subtitles not None", True, project.subtitles is not None)
         self.assertIsNotNone(project.subtitles)
         
-        project.subtitles.AutoBatch(SubtitleBatcher(options))
-        project.subtitles._duplicate_originals_as_translations()
+        with SubtitleEditor(project.subtitles) as editor:
+            editor.AutoBatch(SubtitleBatcher(options))
+            editor.DuplicateOriginalsAsTranslations()
         project.needs_writing = True
         
         # Create and write project file

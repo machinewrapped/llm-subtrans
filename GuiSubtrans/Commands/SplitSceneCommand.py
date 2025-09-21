@@ -1,6 +1,7 @@
 from GuiSubtrans.Command import Command, CommandError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Helpers.Localization import _
 
@@ -29,7 +30,8 @@ class SplitSceneCommand(Command):
 
         last_batch = scene.batches[-1].number
 
-        project.subtitles.SplitScene(self.scene_number, self.batch_number)
+        with SubtitleEditor(project.subtitles) as editor:
+            editor.SplitScene(self.scene_number, self.batch_number)
 
         model_update : ModelUpdate =  self.AddModelUpdate()
         for scene_number in range(self.scene_number + 1, len(project.subtitles.scenes)):
@@ -55,7 +57,8 @@ class SplitSceneCommand(Command):
             scene_numbers = [self.scene_number, self.scene_number + 1]
             later_scenes = [scene.number for scene in project.subtitles.scenes if scene.number > scene_numbers[1]]
 
-            merged_scene = project.subtitles.MergeScenes(scene_numbers)
+            with SubtitleEditor(project.subtitles) as editor:
+                merged_scene = editor.MergeScenes(scene_numbers)
 
             # Recombine the split scenes
             model_update : ModelUpdate =  self.AddModelUpdate()

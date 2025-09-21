@@ -5,49 +5,25 @@ import os
 import logging
 import threading
 from typing import Any
-import bisect
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Instructions import DEFAULT_TASK_TYPE
-from PySubtrans.Options import Options, SettingsType
+from PySubtrans.Options import Options
 
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import SubtitleError, SubtitleParseError
 from PySubtrans.Helpers import GetInputPath, GetOutputPath
-from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans.SubtitleFileHandler import SubtitleFileHandler, default_encoding
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
-from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleScene import SubtitleScene, UnbatchScenes
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleData import SubtitleData
-from PySubtrans.SubtitleBatcher import SubtitleBatcher
 
 class Subtitles:
     """
     High level class for manipulating subtitles
     """
-    DEFAULT_PROJECT_SETTINGS : SettingsType = SettingsType({
-        'provider': None,
-        'model': None,
-        'target_language': None,
-        'prompt': None,
-        'task_type': None,
-        'instructions': None,
-        'retry_instructions': None,
-        'movie_name': None,
-        'description': None,
-        'names': None,
-        'substitutions': None,
-        'substitution_mode': None,
-        'include_original': None,
-        'add_right_to_left_markers': None,
-        'instruction_file': None,
-        'format': None
-    })
 
-    def __init__(self, filepath: str|None = None, outputpath: str|None = None) -> None:
+    def __init__(self, filepath: str|None = None, outputpath: str|None = None, settings: SettingsType|None = None) -> None:
         self.originals : list[SubtitleLine]|None = None
         self.translated : list[SubtitleLine]|None = None
         self.start_line_number : int = 1
@@ -60,19 +36,11 @@ class Subtitles:
         self.metadata : dict[str, Any] = {}
         self.file_format : str|None = None
 
-        self.settings : SettingsType = deepcopy(self.DEFAULT_PROJECT_SETTINGS)
-
-    @property
-    def movie_name(self) -> str|None:
-        return self._get_setting_str('movie_name')
+        self.settings : SettingsType = SettingsType(deepcopy(settings)) if settings else SettingsType()
 
     @property
     def target_language(self) -> str|None:
-        return self._get_setting_str('target_language')
-
-    @property
-    def task_type(self) -> str:
-        return self._get_setting_str('task_type') or DEFAULT_TASK_TYPE
+        return self.settings.get_str('target_language')
 
     @property
     def has_subtitles(self) -> bool:
@@ -218,41 +186,6 @@ class Subtitles:
 
         return out_batches
 
-    def GetBatchContext(self, scene_number: int, batch_number: int, max_lines: int|None = None) -> dict[str, Any]:
-        """
-        Get context for a batch of subtitles, by extracting summaries from previous scenes and batches
-        """
-        with self.lock:
-            scene = self.GetScene(scene_number)
-            if not scene:
-                raise SubtitleError(f"Failed to find scene {scene_number}")
-
-            batch = self.GetBatch(scene_number, batch_number)
-            if not batch:
-                raise SubtitleError(f"Failed to find batch {batch_number} in scene {scene_number}")
-
-            context : dict[str,Any] = {
-                'scene_number': scene.number,
-                'batch_number': batch.number,
-                'scene': f"Scene {scene.number}: {scene.summary}" if scene.summary else f"Scene {scene.number}",
-                'batch': f"Batch {batch.number}: {batch.summary}" if batch.summary else f"Batch {batch.number}"
-            }
-
-            if 'movie_name' in self.settings:
-                context['movie_name'] = self._get_setting_str('movie_name')
-
-            if 'description' in self.settings:
-                context['description'] = self._get_setting_str('description')
-
-            if 'names' in self.settings:
-                context['names'] = ParseNames(self.settings.get('names', []))
-
-            history_lines = self._get_history(scene_number, batch_number, max_lines)
-
-            if history_lines:
-                context['history'] = history_lines
-
-        return context
 
     def LoadSubtitles(self, filepath: str|None = None) -> None:
         """
@@ -354,7 +287,7 @@ class Subtitles:
                 start_line_number=self.start_line_number
             )
 
-            data.metadata['Title'] = self.movie_name
+            data.metadata['Title'] = self.settings.get_str('movie_name', data.metadata.get('Title'))
             data.metadata['Language'] = self.target_language
             
             # Apply RTL markers if requested (handler will decide format-specific implementation)
@@ -367,237 +300,15 @@ class Subtitles:
             self.translated = translated
             self.outputpath = outputpath
 
-    def UpdateProjectSettings(self, settings: SettingsType) -> None:
+    def UpdateSettings(self, settings: SettingsType) -> None:
         """
-        Update the project settings
+        Update the subtitle settings
         """
         if isinstance(settings, Options):
-            return self.UpdateProjectSettings(settings)
+            settings = SettingsType(settings)
 
         with self.lock:
-            self.settings.update({key: settings[key] for key in settings if key in self.DEFAULT_PROJECT_SETTINGS})
-
-            names_list = self.settings.get('names', [])
-            self.settings['names'] = ParseNames(names_list)
-            substitions_list = self.settings.get('substitutions', [])
-            if substitions_list:
-                self.settings['substitutions'] = Substitutions.Parse(substitions_list)
-
-            self._update_compatibility(self.settings)
-
-    def UpdateOutputPath(self, path: str|None = None, extension: str|None = None) -> None:
-        """
-        Set or generate the output path for the translated subtitles
-        """
-        path = path or self.sourcepath
-        extension = extension or self.file_format
-        if not extension:
-            extension = SubtitleFormatRegistry.get_format_from_filename(path) if path else None
-            extension = extension or '.srt'
-
-        if extension == ".subtrans":
-            raise SubtitleError("Cannot use .subtrans as output format")
-
-        outputpath = GetOutputPath(path, self.target_language, extension)
-        self.outputpath = outputpath
-        self.file_format = extension
-
-    def PreProcess(self, preprocessor: SubtitleProcessor) -> None:
-        """
-        Preprocess subtitles
-        """
-        with self.lock:
-            if self.originals:
-                self.originals = preprocessor.PreprocessSubtitles(self.originals)
-
-    def AutoBatch(self, batcher: SubtitleBatcher) -> None:
-        """
-        Divide subtitles into scenes and batches based on threshold options
-        """
-        with self.lock:
-            if self.originals:
-                self.scenes = batcher.BatchSubtitles(self.originals)
-
-    def AddScene(self, scene: SubtitleScene) -> None:
-        with self.lock:
-            self.scenes.append(scene)
-            logging.debug("Added a new scene")
-
-    def UpdateScene(self, scene_number: int, update: dict[str, Any]) -> Any:
-        with self.lock:
-            scene: SubtitleScene = self.GetScene(scene_number)
-            if not scene:
-                raise ValueError(f"Scene {scene_number} does not exist")
-
-            return scene.UpdateContext(update)
-
-    def UpdateBatch(self, scene_number: int, batch_number: int, update: dict[str, Any]) -> bool:
-        with self.lock:
-            batch: SubtitleBatch = self.GetBatch(scene_number, batch_number)
-            if not batch:
-                raise ValueError(f"Batch ({scene_number},{batch_number}) does not exist")
-
-            return batch.UpdateContext(update)
-
-    def UpdateLineText(self, line_number : int, original_text : str, translated_text : str) -> None:
-        with self.lock:
-            if self.originals is None:
-                raise SubtitleError("Original subtitles are missing!")
-
-            original_line = next((original for original in self.originals if original.number == line_number), None)
-            if not original_line:
-                raise ValueError(f"Line {line_number} not found")
-
-            if original_text:
-                original_line.text = original_text
-                original_line.translation = translated_text
-
-            if not translated_text:
-                return
-
-            translated_line = next((translated for translated in self.translated if translated.number == line_number), None) if self.translated else None
-            if translated_line:
-                translated_line.text = translated_text
-                return
-
-            translated_line = SubtitleLine.Construct(line_number, original_line.start, original_line.end, translated_text, original_line.metadata)
-
-            if not self.translated:
-                self.translated = []
-
-            insertIndex = bisect.bisect_left([line.number for line in self.translated], line_number)
-            self.translated.insert(insertIndex, translated_line)
-
-    def DeleteLines(self, line_numbers: list[int]) -> list[tuple[int, int, list[SubtitleLine], list[SubtitleLine]]]:
-        """
-        Delete lines from the subtitles
-        """
-        deletions = []
-        with self.lock:
-            batches = self.GetBatchesContainingLines(line_numbers)
-
-            for batch in batches:
-                deleted_originals, deleted_translated = batch.DeleteLines(line_numbers)
-                if len(deleted_originals) > 0 or len(deleted_translated) > 0:
-                    deletion = (batch.scene, batch.number, deleted_originals, deleted_translated)
-                    deletions.append(deletion)
-
-            if not deletions:
-                raise ValueError("No lines were deleted from any batches")
-
-        return deletions
-
-    def MergeScenes(self, scene_numbers: list[int]) -> SubtitleScene:
-        """
-        Merge several (sequential) scenes into one scene
-        """
-        if not scene_numbers:
-            raise ValueError("No scene numbers supplied to MergeScenes")
-
-        scene_numbers = sorted(scene_numbers)
-        if scene_numbers != list(range(scene_numbers[0], scene_numbers[0] + len(scene_numbers))):
-            raise ValueError("Scene numbers to be merged are not sequential")
-
-        with self.lock:
-            scenes : list[SubtitleScene] = [scene for scene in self.scenes if scene.number in scene_numbers]
-            if len(scenes) != len(scene_numbers):
-                raise ValueError(f"Could not find scenes {','.join([str(i) for i in scene_numbers])}")
-
-            # Merge all scenes into the first
-            merged_scene = scenes[0]
-            merged_scene.MergeScenes(scenes[1:])
-
-            # Slice out the merged scenes
-            start_index = self.scenes.index(scenes[0])
-            end_index = self.scenes.index(scenes[-1])
-            self.scenes = self.scenes[:start_index + 1] + self.scenes[end_index+1:]
-
-            self._renumber_scenes()
-
-        return merged_scene
-
-    def MergeBatches(self, scene_number: int, batch_numbers: list[int]) -> None:
-        """
-        Merge several (sequential) batches from a scene into one batch
-        """
-        if not batch_numbers:
-            raise ValueError("No batch numbers supplied to MergeBatches")
-
-        with self.lock:
-            scene : SubtitleScene|None = next((scene for scene in self.scenes if scene.number == scene_number), None)
-            if not scene:
-                raise ValueError(f"Scene {str(scene_number)} not found")
-
-            scene.MergeBatches(batch_numbers)
-
-    def MergeLinesInBatch(self, scene_number: int, batch_number: int, line_numbers: list[int]) -> tuple[SubtitleLine, SubtitleLine|None]:
-        """
-        Merge several sequential lines together, remapping originals and translated lines if necessary.
-        """
-        with self.lock:
-            batch : SubtitleBatch = self.GetBatch(scene_number, batch_number)
-            return batch.MergeLines(line_numbers)
-
-    def SplitScene(self, scene_number: int, batch_number: int) -> None:
-        """
-        Split a scene into two at the specified batch number
-        """
-        with self.lock:
-            scene : SubtitleScene = self.GetScene(scene_number)
-            batch : SubtitleBatch|None = scene.GetBatch(batch_number) if scene else None
-
-            if not batch:
-                raise ValueError(f"Scene {scene_number} batch {batch_number} does not exist")
-
-            batch_index : int = scene.batches.index(batch)
-
-            new_scene = SubtitleScene({ 'number' : scene_number + 1})
-            new_scene.batches = scene.batches[batch_index:]
-            scene.batches = scene.batches[:batch_index]
-
-            for number, batch in enumerate(new_scene.batches, start=1):
-                batch.scene = new_scene.number
-                batch.number = number
-
-            split_index = self.scenes.index(scene) + 1
-            if split_index < len(self.scenes):
-                self.scenes = self.scenes[:split_index] + [new_scene] + self.scenes[split_index:]
-            else:
-                self.scenes.append(new_scene)
-
-            self._renumber_scenes()
-
-    def Sanitise(self) -> None:
-        """
-        Remove invalid lines, empty batches and empty scenes
-        """
-        with self.lock:
-            for scene in self.scenes:
-                scene.batches = [batch for batch in scene.batches if batch.originals]
-
-                for batch in scene.batches:
-                    batch.originals = [line for line in batch.originals if line.number and line.start is not None]
-                    if batch.translated:
-                        batch.translated = [line for line in batch.translated if line.number and line.start is not None ]
-
-                    original_line_numbers = [line.number for line in batch.originals]
-                    unmatched_translated = [line for line in batch.translated if line.number not in original_line_numbers]
-                    if unmatched_translated:
-                        logging.warning(_("Removing {} translations lines in batch ({},{}) that don't match an original line").format(len(unmatched_translated), batch.scene, batch.number))
-                        batch.translated = [line for line in batch.translated if line not in unmatched_translated]
-
-        self.scenes = [scene for scene in self.scenes if scene.batches]
-        self._renumber_scenes()
-
-    def _renumber_scenes(self) -> None:
-        """
-        Ensure scenes are numbered sequentially
-        """
-        for scene_number, scene in enumerate(self.scenes, start = 1):
-            scene.number = scene_number
-            for batch_number, batch in enumerate(scene.batches, start = 1):
-                batch.scene = scene.number
-                batch.number = batch_number
+            self.settings.update(settings)
 
     def _renumber_if_needed(self, lines : list[SubtitleLine]|None) -> None:
         """
@@ -608,29 +319,6 @@ class Subtitles:
             for line_number, line in enumerate(lines, start=1):
                 line.number = line_number
 
-    def _get_history(self, scene_number: int, batch_number: int, max_lines: int|None = None) -> list[str]:
-        """
-        Get a list of historical summaries up to a given scene and batch number
-        """
-        history_lines : list[str] = []
-        last_summary : str = ""
-
-        scenes = [scene for scene in self.scenes if scene.number and scene.number < scene_number]
-        for scene in [scene for scene in scenes if scene.summary]:
-            if scene.summary != last_summary:
-                history_lines.append(f"scene {scene.number}: {scene.summary}")
-                last_summary = scene.summary or ""
-
-        batches = [batch for batch in self.GetScene(scene_number).batches if batch.number is not None and batch.number < batch_number]
-        for batch in [batch for batch in batches if batch.summary]:
-            if batch.summary != last_summary:
-                history_lines.append(f"scene {batch.scene} batch {batch.number}: {batch.summary}")
-                last_summary = batch.summary or ""
-
-        if max_lines:
-            history_lines = history_lines[-max_lines:]
-
-        return history_lines
 
     def _merge_original_and_translated(self, originals: list[SubtitleLine], translated: list[SubtitleLine]) -> list[SubtitleLine]:
         lines = {item.key: SubtitleLine(item) for item in originals if item.key}
@@ -642,44 +330,3 @@ class Subtitles:
 
         return sorted(lines.values(), key=lambda item: item.key)
 
-    def _duplicate_originals_as_translations(self) -> None:
-        """
-        Duplicate original lines as translated lines if no translations exist (for testing)
-        """
-        for scene in self.scenes:
-            for batch in scene.batches:
-                if batch.any_translated:
-                    raise SubtitleError("Translations already exist")
-
-                batch.translated = [ SubtitleLine.Construct(line.number, line.start, line.end, line.text or "", line.metadata) for line in batch.originals ]
-
-    def _get_setting_str(self, key: str, default: str|None = None) -> str|None:
-        """
-        Get a setting as a string, or None if not set
-        """
-        value = self.settings.get(key, default)
-        return value if isinstance(value, str) else default
-
-    def _update_compatibility(self, settings: SettingsType) -> None:
-        """
-        Update settings for compatibility with older versions
-        """
-        if not settings.get('description') and settings.get('synopsis'):
-            settings['description'] = settings.get('synopsis')
-
-        if settings.get('characters'):
-            names = settings.get_str_list('names')
-            names.extend(settings.get_str_list('characters'))
-            settings['names'] = names
-            del settings['characters']
-
-        if settings.get('gpt_prompt'):
-            settings['prompt'] = settings['gpt_prompt']
-            del settings['gpt_prompt']
-
-        if settings.get('gpt_model'):
-            settings['model'] = settings['gpt_model']
-            del settings['gpt_model']
-
-        if not settings.get('substitution_mode'):
-            settings['substitution_mode'] = "Partial Words" if settings.get('match_partial_words') else "Auto"

@@ -5,6 +5,7 @@ from PySubtrans.SubtitleValidator import SubtitleValidator
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.Helpers.Localization import _
 
 import logging
@@ -32,7 +33,8 @@ class DeleteLinesCommand(Command):
         if not project.subtitles:
             raise CommandError(_("No subtitles"), command=self)
 
-        self.deletions = project.subtitles.DeleteLines(self.line_numbers)
+        with SubtitleEditor(project.subtitles) as editor:
+            self.deletions = editor.DeleteLines(self.line_numbers)
 
         if not self.deletions:
             raise CommandError(_("No lines were deleted"), command=self)

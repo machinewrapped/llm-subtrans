@@ -23,7 +23,7 @@ class SaveProjectFile(Command):
 
         # Update the project path and set the subtitle output path to the same location
         self.project.projectfile = self.project.GetProjectFilepath(self.filepath)
-        self.project.subtitles.UpdateOutputPath(path=self.project.projectfile, extension=self.project.subtitles.file_format)
+        self.project.UpdateOutputPath(path=self.project.projectfile, extension=self.project.subtitles.file_format)
 
         if current_filepath != self.project.projectfile or current_outputpath != self.project.subtitles.outputpath:
             self.project.needs_writing = True

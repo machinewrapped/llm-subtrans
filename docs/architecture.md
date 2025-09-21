@@ -26,19 +26,21 @@ Contains all subtitle processing, translation logic, and project management. Thi
 - File format support and parsing
 
 **Key Classes:**
-- `SubtitleProject` – main orchestrator managing translation sessions
-- `Subtitles`, `SubtitleScene`, `SubtitleBatch` – hierarchical organization splitting files into manageable translation units
+- `Subtitles` – container for subtitle data with thread-safe access patterns
+- `SubtitleScene`, `SubtitleBatch` – hierarchical organization splitting files into manageable translation units
 - `SubtitleLine` – represents individual subtitles with timing, text, and translation data
+- `Options` – centralized settings management
+- `SubtitleProject` – orchestrator managing translation sessions and project persistence
 - `SubtitleTranslator` – executes translation jobs, handles retries and errors
 - `TranslationProvider` – base class for pluggable backends (OpenAI, Anthropic, etc.)
-- `Options` – centralized settings management
+- `SubtitleBuilder` – fluent API for programmatically building subtitle structures
+- `SubtitleEditor` – handles mutation operations on subtitle data with thread safety
 
 ### Subtitle Format Handling
 Subtitle files are processed through a pluggable system:
 - `SubtitleFileHandler` implementations read and write specific formats while exposing a common interface.
 - `SubtitleFormatRegistry` discovers handlers in `PySubtrans/Formats/` and maps file extensions to the appropriate handler based on priority.
 - `SubtitleProject` uses the registry to detect formats from filenames and can convert subtitles when the output extension differs from the source.
-CLI tools expose `--list-formats` to enumerate supported extensions.
 
 ### GuiSubtrans (User Interface)
 PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, and user interactions.
@@ -51,13 +53,27 @@ PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, 
 
 ## Data Organization
 
-**SubtitleProject** manages translation sessions, loading subtitle files and saving/loading `.subtrans` project files (JSON format containing subtitles, translations, and metadata).
-
 ### Data Hierarchy
-- `Subtitles` – top-level container with subtitle content and metadata
+- `Subtitles` – top-level container with subtitle content and metadata, provides thread-safe access to scenes and lines
 - `SubtitleScene` – a time-sliced section of subtitles, grouped into batches
 - `SubtitleBatch` – groups of lines within a scene, split into chunks for translation
 - `SubtitleLine` – individual subtitle with index, timing, text and metadata
+
+### SubtitleProject
+Manages translation sessions and project persistence. It orchestrates loading subtitle files, saving/loading `.subtrans` project files (JSON format containing subtitles, translations, and metadata), and coordinates project settings management.
+
+### SubtitleBatcher
+Pre-processes subtitles to divide them into scenes and batches ready for translation. Scene detection threshold and maximum batch size are configurable.
+
+### SubtitleBuilder
+The `SubtitleBuilder` class provides a fluent API for constructing `Subtitles`.
+- Automatic scene and batch organization based on configurable size limits
+- Integration with `SubtitleBatcher` for intelligent scene subdivision
+
+### SubtitleEditor
+Mutation operations on subtitle data should go through the `SubtitleEditor` class to ensure proper thread safety when adding/removing/merging/splitting scenes, batches and lines.
+
+Also provides methods for preprocessing, auto-batching and data sanitization.
 
 ## Translation Process
 
@@ -65,8 +81,7 @@ PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, 
 - Splits `Subtitles` into scenes and batches for processing
 - Builds prompts with context for each batch
 - Delegates to `TranslationProvider` clients for API calls
-- Applies substitutions and merges results back into subtitle data
-- Handles retries, error management, and post-processing
+- Handles retries, error management and post-processing
 - Emits `TranslationEvents` with progress updates
 
 ### TranslationProvider System
@@ -105,17 +120,21 @@ These views are responsible for displaying the data from the `ProjectViewModel` 
 ### Command Queue
 GUI operations use the Command pattern for background execution and undo/redo support:
 
-- **`CommandQueue`** – executes commands on background `QThreadPool`, manages concurrency and synchronisation
+- **CommandQueue** – executes commands on background `QThreadPool`, manages concurrency and synchronisation
 - **Commands** – in `GuiSubtrans/Commands/`, encapsulate operations (translation, file I/O, etc.)
 - **Undo/Redo** – maintained via `undo_stack` and `redo_stack`
 
 ## Settings Management
-Application settings are managed by the `PySubtrans.Options` class. This class is responsible for:
+Application settings are managed through a layered system:
 
-- Loading settings from a `settings.json` file.
-- Loading settings from environment variables.
-- Providing default values for all settings.
+**`SettingsType`** - generic type-safe settings container
 - Provides typed getters (`get_str`, `get_int`, `get_bool`) and convenience properties
+
+**`PySubtrans.Options`** 
+- application-specific `SettingsType`
+- Provides default values for all application settings
+- Loads settings from a `settings.json` file
+- Import settings from environment variables and command line arguments
 - Supports project-specific and provider-specific settings
 
 ## GUI Widget Architecture
@@ -215,9 +234,11 @@ The specific format for translation requests can vary by provider and responses 
 ## Extending the System
 
 - **New file formats** → `PySubtrans/` (add file handler, extend `SubtitleFileHandler`)
-- **Translation providers** → `PySubtrans/Providers/` (subclass `TranslationProvider` and `TranslationClient`)  
+- **Translation providers** → `PySubtrans/Providers/` (subclass `TranslationProvider` and `TranslationClient`)
 - **GUI features** → `GuiSubtrans/Widgets/` (new views/dialogs), `GuiSubtrans/Commands/` (new operations)
 - **Settings** → update `Options` schema, add to `SettingsDialog.SECTIONS`
 - **Background operations** → implement `Command` pattern in `GuiSubtrans/Commands/` for thread safety and undo support
 
-**Key principle:** All operations that modify project data must go through the `CommandQueue` to maintain thread safety and undo/redo functionality.
+**Key principles:**
+- All operations that modify project data must go through the `CommandQueue` to maintain thread safety and undo/redo functionality.
+- All subtitle mutations should use a `SubtitleEditor` for lock management.

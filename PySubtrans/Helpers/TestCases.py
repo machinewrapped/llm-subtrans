@@ -98,7 +98,7 @@ def PrepareSubtitles(subtitle_data : dict, key : str = 'original', file_handler:
     handler = file_handler or SubtitleFormatRegistry.create_handler(filename=filename)
     subtitles: Subtitles = Subtitles()
     subtitles.LoadSubtitlesFromString(subtitle_data[key], file_handler=handler)
-    subtitles.UpdateProjectSettings(SettingsType(subtitle_data))
+    subtitles.UpdateSettings(SettingsType(subtitle_data))
     return subtitles
 
 def AddTranslations(subtitles : Subtitles, subtitle_data : dict, key : str = 'translated'):

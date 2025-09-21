@@ -8,7 +8,6 @@ from scripts.subtrans_common import (
     InitLogger,
     CreateArgParser,
     CreateOptions,
-    CreateTranslator,
     CreateProject,
 )
 
@@ -43,11 +42,11 @@ try:
     # Create a project for the translation
     project : SubtitleProject = CreateProject(options, args)
 
-    # Create a translator with the provided options
-    translator : SubtitleTranslator = CreateTranslator(options)
+    # Initialize the translator with the provided options
+    project.InitialiseTranslator(options)
 
     # Translate the subtitles
-    project.TranslateSubtitles(translator)
+    project.TranslateSubtitles()
 
     if project.use_project_file:
         logging.info(f"Writing project data to {str(project.projectfile)}")

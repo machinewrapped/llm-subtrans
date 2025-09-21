@@ -16,10 +16,10 @@ class TranslateSceneCommand(Command):
     """
     Ask the translator to translate a scene (optionally just select batches in the scene)
     """
-    def __init__(self, scene_number : int, 
-                    batch_numbers : list[int]|None = None, 
+    def __init__(self, scene_number : int,
+                    batch_numbers : list[int]|None = None,
                     line_numbers : list[int]|None = None,
-                    resume : bool = False, 
+                    resume : bool = False,
                     datamodel : ProjectDataModel|None = None):
 
         super().__init__(datamodel)
@@ -41,6 +41,10 @@ class TranslateSceneCommand(Command):
 
         project : SubtitleProject = self.datamodel.project
 
+        if not project.subtitles:
+            raise CommandError(_("No subtitles in project"), command=self)
+
+        # Create our own translator instance for thread safety
         options = self.datamodel.project_options
         translation_provider = self.datamodel.translation_provider
 
@@ -52,7 +56,10 @@ class TranslateSceneCommand(Command):
         self.translator.events.batch_translated += self._on_batch_translated # type: ignore
 
         try:
-            scene = project.TranslateScene(self.translator, self.scene_number, batch_numbers=self.batch_numbers, line_numbers=self.line_numbers)
+            scene = project.subtitles.GetScene(self.scene_number)
+            scene.errors = []
+
+            self.translator.TranslateScene(project.subtitles, scene, batch_numbers=self.batch_numbers, line_numbers=self.line_numbers)
 
             if scene:
                 model_update : ModelUpdate =  self.AddModelUpdate()
@@ -80,10 +87,11 @@ class TranslateSceneCommand(Command):
 
         except Exception as e:
             logging.error(_("Error translating scene {scene}: {error}").format(scene=self.scene_number, error=e))
-            if self.translator.stop_on_error:
+            if self.translator and self.translator.stop_on_error:
                 self.terminal = True
 
-        self.translator.events.batch_translated -= self._on_batch_translated # type: ignore
+        if self.translator:
+            self.translator.events.batch_translated -= self._on_batch_translated # type: ignore
 
         return True
 

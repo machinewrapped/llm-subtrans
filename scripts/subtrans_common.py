@@ -190,3 +190,4 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     logging.info(f"Output path will be: {project.subtitles.outputpath}")
 
     return project
+

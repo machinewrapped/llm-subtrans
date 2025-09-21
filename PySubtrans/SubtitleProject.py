@@ -18,6 +18,7 @@ from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationEvents import TranslationEvents
+from PySubtrans.TranslationProvider import TranslationProvider
 
 default_encoding = os.getenv('DEFAULT_ENCODING', 'utf-8')
 
@@ -45,11 +46,11 @@ class SubtitleProject:
     })
     def __init__(self, persistent : bool = False):
         """
-        A subtitle translation project. 
-        
+        A subtitle translation project.
+
         Can be initialised from a project file or a subtitle file,
         or manually configured by assigning a SubtitleFile and updating settings if necessary.
-        
+
         :param persistent: if True, the project will be saved to disk and automatically reloaded next time
         """
         self.subtitles : Subtitles = Subtitles(settings=self.DEFAULT_PROJECT_SETTINGS)
@@ -58,6 +59,7 @@ class SubtitleProject:
         self.existing_project : bool = False
         self.needs_writing : bool = False
         self.lock = threading.RLock()
+        self._translator : SubtitleTranslator|None = None
 
         # By default the project is not persistent, i.e. it will not be saved to a file and automatically reloaded next time
         self.use_project_file : bool = persistent
@@ -86,6 +88,11 @@ class SubtitleProject:
     def all_translated(self) -> bool:
         with self.lock:
             return bool(self.subtitles and self.subtitles.all_translated)
+
+    @property
+    def translator(self) -> SubtitleTranslator|None:
+        """Get the current translator instance"""
+        return self._translator
 
     def InitialiseProject(self, filepath : str, outputpath : str|None = None, reload_subtitles : bool = False):
         """
@@ -372,30 +379,58 @@ class SubtitleProject:
                 project_json = json.dumps(self.subtitles, cls=encoder_class, ensure_ascii=False, indent=4) # type: ignore
                 f.write(project_json)
 
-    def TranslateSubtitles(self, translator : SubtitleTranslator) -> None:
+    def InitialiseTranslator(self, options : Options, translation_provider : TranslationProvider|None = None) -> None:
+        """
+        Initialize the project translator with the provided options.
+        If the translation provider is not explicitly specified it will be determined automatically from the options.
+
+        :param options: The options to use for creating the translator
+        :param translation_provider: [optional] translation provider to use.
+        """
+        if not translation_provider:
+            translation_provider = TranslationProvider.get_provider(options)
+            if not translation_provider:
+                raise ValueError(f"Unable to create translation provider {options.provider}")
+
+        if not translation_provider.ValidateSettings():
+            logging.error(f"Provider settings are not valid: {translation_provider.validation_message}")
+            raise ValueError(f"Invalid settings for provider {options.provider}")
+
+        logging.info(f"Using translation provider {translation_provider.name}")
+
+        # Load the instructions
+        options.InitialiseInstructions()
+
+        with self.lock:
+            self._translator = SubtitleTranslator(options, translation_provider)
+
+    def TranslateSubtitles(self) -> None:
         """
         One-stop shop: Use the translation provider to translate a project, then save the translation.
         """
         if not self.subtitles:
             raise Exception("No subtitles to translate")
 
+        if not self._translator:
+            raise Exception("No translator initialized. Call InitialiseTranslator() first.")
+
         # Prime new project files
         self.UpdateProjectFile()
 
-        save_translation : bool = self.write_translation and not translator.preview
+        save_translation : bool = self.write_translation and not self._translator.preview
 
         try:
-            translator.events.preprocessed += self._on_preprocessed # type: ignore
-            translator.events.batch_translated += self._on_batch_translated # type: ignore
-            translator.events.scene_translated += self._on_scene_translated # type: ignore
+            self._translator.events.preprocessed += self._on_preprocessed # type: ignore
+            self._translator.events.batch_translated += self._on_batch_translated # type: ignore
+            self._translator.events.scene_translated += self._on_scene_translated # type: ignore
 
-            translator.TranslateSubtitles(self.subtitles)
+            self._translator.TranslateSubtitles(self.subtitles)
 
-            translator.events.preprocessed -= self._on_preprocessed # type: ignore
-            translator.events.batch_translated -= self._on_batch_translated # type: ignore
-            translator.events.scene_translated -= self._on_scene_translated # type: ignore
+            self._translator.events.preprocessed -= self._on_preprocessed # type: ignore
+            self._translator.events.batch_translated -= self._on_batch_translated # type: ignore
+            self._translator.events.scene_translated -= self._on_scene_translated # type: ignore
 
-            if save_translation and not translator.aborted:
+            if save_translation and not self._translator.aborted:
                 self.SaveTranslation()
 
         except TranslationAbortedError:
@@ -409,22 +444,25 @@ class SubtitleProject:
             logging.error(_("Failed to translate subtitles: {}").format(str(e)))
             raise
 
-    def TranslateScene(self, translator : SubtitleTranslator, scene_number : int, batch_numbers : list[int]|None = None, line_numbers : list[int]|None = None) -> SubtitleScene|None:
+    def TranslateScene(self, scene_number : int, batch_numbers : list[int]|None = None, line_numbers : list[int]|None = None) -> SubtitleScene|None:
         """
         Pass batches of subtitles to the translation engine.
         """
         if not self.subtitles:
             raise Exception("No subtitles to translate")
 
-        translator.events.preprocessed += self._on_preprocessed             # type: ignore
-        translator.events.batch_translated += self._on_batch_translated     # type: ignore
+        if not self._translator:
+            raise Exception("No translator initialized. Call InitialiseTranslator() first.")
+
+        self._translator.events.preprocessed += self._on_preprocessed             # type: ignore
+        self._translator.events.batch_translated += self._on_batch_translated     # type: ignore
 
         try:
             scene : SubtitleScene = self.subtitles.GetScene(scene_number)
 
             scene.errors = []
 
-            translator.TranslateScene(self.subtitles, scene, batch_numbers=batch_numbers, line_numbers=line_numbers)
+            self._translator.TranslateScene(self.subtitles, scene, batch_numbers=batch_numbers, line_numbers=line_numbers)
 
             return scene
 
@@ -432,8 +470,9 @@ class SubtitleProject:
             pass
 
         finally:
-            translator.events.preprocessed -= self._on_preprocessed # type: ignore
-            translator.events.batch_translated -= self._on_batch_translated # type: ignore
+            self._translator.events.preprocessed -= self._on_preprocessed # type: ignore
+            self._translator.events.batch_translated -= self._on_batch_translated # type: ignore
+
 
     def _on_preprocessed(self, scenes) -> None:
         logging.debug("Pre-processing finished")

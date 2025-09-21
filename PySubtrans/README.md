@@ -1,8 +1,8 @@
 # PySubtrans
 
-PySubtrans is the subtitle translation engine that powers [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans). It provides tools to read and write subtitle files in various formats, manage a translation workflow connecting to various LLM APIs and to pre-process or post-process subtitles to ensure readable results. 
+PySubtrans is the subtitle translation engine that powers [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans). It provides tools to read and write subtitle files in various formats, connect to various LLMs as translators and manage a translation workflow.
 
-This package makes those capabilities available as a library that you can incorporate into your own tools and workflows to take advantage of the best-in-class translation quality that LLM-Subtrans provides.
+This package makes these capabilities available as a library that you can incorporate into your own tools and workflows to take advantage of the best-in-class translation quality that LLM-Subtrans provides.
 
 ## Installation
 
@@ -12,7 +12,7 @@ Basic installation with support for OpenRouter, DeepSeek or any server with an O
 pip install pysubtrans
 ```
 
-Additional specialized provider integrations are delivered as optional extras so you only install the SDKs for providers you want to use:
+Additional specialized provider integrations are delivered as optional extras, so that you only install the SDKs for providers you intend to use:
 
 ```bash
 pip install pysubtrans[openai]
@@ -23,7 +23,7 @@ pip install pysubtrans[openai,gemini,claude,mistral,bedrock]
 
 ## Quick start: translate a subtitle file
 
-The quickest way to get started is to use the helper functions exposed at the package root. They wrap the objects used by LLM-Subtrans so that you can stand up a translation pipeline in a few lines of code.
+The quickest way to get started is to use the helper functions exposed at the package root. They wrap the objects used by LLM-Subtrans so that you can execute a full translation pipeline with a few lines of code.
 
 ```python
 from PySubtrans import init_options, init_subtitles, init_translator
@@ -43,7 +43,7 @@ translator.Translate(subtitles)
 subtitles.SaveTranslation("movie-translated.srt")
 ```
 
-Subtitle format will be auto-detected based on file extension or content, if it matches one of the supported formats (srt,ssa,ass,vtt).
+Subtitle format is auto-detected based on file extension or content.
 
 ## Configuration with `init_options`
 `init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 
@@ -115,14 +115,9 @@ This is a test"""
 subtitles = init_subtitles(content=srt_content)
 ```
 
-**Key methods on the returned `Subtitles` object:**
-- `LoadSubtitles(filepath)`: Load additional subtitle content
-- `SaveTranslation(path)`: Save translated subtitles to a file
-- `AutoBatch`: Split subtitles into scenes and batches ready for translation.
-
 ## Preparing a `SubtitleTranslator` with `init_translator`
 
-`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate the `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance that connects to the chosen translation service.
+`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance that connects to the chosen translation service.
 
 Example
 
@@ -133,23 +128,69 @@ translator.events.scene_translated += on_scene_translated  # Subscribe to events
 translator.TranslateSubtitles(subtitles)
 ```
 
-## Configuring translation with custom instructions
- Custom instructions can be supplied via an `instruction_file` argument or by overriding `prompt` and `instructions` explicitly. 
+### Customising translation with custom instructions
+ Custom instructions can be supplied via an `instruction_file` argument or by explicitly overriding `prompt` and `instructions`. 
 
-`prompt` is a high level description of the task, whilst `instructions` provide detailed instructions for the translation model (the system prompt).
+`prompt` is a high level description of the task, whilst `instructions` provide detailed instructions for the model (as a system prompt, where possible).
 
-This can include specific instructions about how to handle the translation, e.g. "any profanity should be translated without censorship" and notes about the source subtitles (e.g. "the dialogue contains a lot of puns, these should be adapted for the translation").
+This can include directions about how to handle the translation, e.g. "any profanity should be translated without censorship", or notes about the source subtitles (e.g. "the dialogue contains a lot of puns, these should be adapted for the translation").
 
-It is *imperative* that the instructions contain examples of properly formatted output - see the default instructions for an example. Adapting the examples to your use case can greatly improve the model's performance.
+It is *imperative* that the instructions contain examples of properly formatted output - see the default instructions for examples.
+
+```
+Your response will be processed by an automated system, so you MUST respond using the required format:
+
+Example (translating to English):
+
+#200
+Original>
+変わりゆく時代において、
+Translation>
+In an ever-changing era,
+
+#501
+Original>
+進化し続けることが生き残る秘訣です。
+Translation>
+continuing to evolve is the key to survival.
+```
+
+Adapting the examples to your use case can greatly improve the model's performance by teaching it what good looks like.
   
 See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
 
 ## Working with projects using `init_project`
 `SubtitleProject` provides a higher level interface for managing a translation job, with methods to read and write a project file to disk and events to hook into on scene/batch translation.
 
-`init_project` instantiates a `SubtitleProject` and loads the source subtitles if a file path is supplied.
+`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads the source subtitles if a file path is supplied.
+
+```python
+from PySubtrans import init_project
+
+# Create a project with translator ready to go
+translation_settings = {
+    'provider': 'OpenRouter',
+    'model': 'qwen/qwen3-235b-a22b:free',
+    'target_language': 'Spanish',
+    'api_key': 'your-openrouter-api-key'
+}
+
+project = init_project('path_to_source_subtitles.srt', translation_settings=translation_settings)
+
+# Translate the subtitles
+project.TranslateSubtitles()
+
+# Save the translation
+project.SaveTranslation('output_subtitles.srt')
+```
 
 By default projects are only held in memory, but specifying `persistent=True` will write a `.subtrans` project file to disk (or reload an existing project), allowing a translation job to be resumed at a future time.
+
+```python
+# Create a persistent project that can be resumed later
+project = init_project('subtitles.srt', persistent=True, translation_settings=translation_settings)
+project.TranslateSubtitles()  # Progress is automatically saved
+```
 
 ## Advanced workflows
 

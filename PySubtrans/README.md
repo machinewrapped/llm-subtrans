@@ -204,11 +204,11 @@ PySubtrans is designed to be modular. The helper functions above are convenient 
 Use `SubtitleBuilder` when you want to build subtitles programmatically. 
 
 ```python
-from PySubtrans import SubtitleBuilder
+from PySubtrans import Subtitles, SubtitleBuilder
 from datetime import timedelta
 
 builder = SubtitleBuilder(max_batch_size=100)
-subtitles = (builder
+subtitles : Subtitles = (builder
     .AddScene(summary="Opening dialogue")
     .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Hello, my name is...")
     .BuildLine(timedelta(seconds=4), timedelta(seconds=6), "Nice to meet you!")
@@ -222,29 +222,35 @@ subtitles = (builder
 ```
 Batching of subtitle lines within each scene is handled automatically.
 
-#### Option 2: Automatic batching with SubtitleBatcher
+#### Option 2: Automatic construction with SubtitleBatcher
 
 `SubtitleBatcher` can be used to automatically group lines into scenes and batches:
 
 ```python
-from PySubtrans import init_subtitles, init_options
-from PySubtrans.SubtitleLine import SubtitleLine
-from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans import Subtitles, SubtitleLine, SubtitleBatcher
 from datetime import timedelta
 
 # Initialize subtitles and add lines
-subtitles = init_subtitles()
-subtitles.originals = [
+lines = [
     SubtitleLine.Construct(1, timedelta(seconds=1), timedelta(seconds=3), "First line"),
     SubtitleLine.Construct(2, timedelta(seconds=4), timedelta(seconds=6), "Second line"),
     SubtitleLine.Construct(3, timedelta(seconds=30), timedelta(seconds=32), "After scene break"),
     #... all the lines for the translation job
 ]
 
-# Use SubtitleBatcher to organize into scenes and batches
+subtitles = Subtitles()
 batcher = SubtitleBatcher({"scene_threshold" : 30, "max_batch_size" : 50})
-subtitles.AutoBatch(batcher)
+subtitles.scenes = batcher.BatchSubtitles(lines)
 ```
+
+### Working directly with `SubtitleTranslator`
+Instantiating your own `SubtitleTranslator` allows you to have more fine-grained control over the translation process, e.g. translating individual scenes or batches. You can subscribe to `events` to receive notifications when individual scenes or batches have been translated to provide realtime feedback or further processing.
+
+TODO: provide examples
+
+### Using SubtitleEditor to manipulate `Subtitles`
+
+TODO: provide some basic examples
 
 ### Custom integrations
 
@@ -257,7 +263,7 @@ For a detailed breakdown of the module layout and responsibilities refer to the 
 
 ## Learning from LLM-Subtrans and GUI-Subtrans
 
-The full [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans) and [GUI-Subtrans](https://github.com/machinewrapped/llm-subtrans/tree/main/GuiSubtrans) applications provide end-to-end examples that combine PySubtrans with logging, configuration UIs and persistence layers. They are excellent references when designing larger systems or when you want to replicate advanced features such as preview runs, retries or translation replays.
+There are many possible and correct ways to use PySubtrans. [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans) and [GUI-Subtrans](https://github.com/machinewrapped/llm-subtrans/tree/main/GuiSubtrans) provide two complete end-to-end examples that use PySubtrans in different ways, making use of different workflows and features. They can be used as a reference when integrating PySubtrans into your application if you want to use more advanced features.
 
 ## License
 

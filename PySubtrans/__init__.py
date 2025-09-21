@@ -27,9 +27,11 @@ from collections.abc import Mapping
 from PySubtrans.Helpers import GetInputPath
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingType, SettingsType
+from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
+from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleProject import SubtitleProject
@@ -279,6 +281,8 @@ __all__ = [
     'Options',
     'Subtitles',
     'SubtitleScene',
+    'SubtitleLine',
+    'SubtitleBatcher',
     'SubtitleBuilder',
     'SubtitleEditor',
     'SubtitleProject',

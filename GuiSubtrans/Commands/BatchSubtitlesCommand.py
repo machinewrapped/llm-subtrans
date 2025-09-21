@@ -1,4 +1,7 @@
 from copy import deepcopy
+import logging
+from typing import TYPE_CHECKING
+
 from GuiSubtrans.Command import Command, CommandError
 from GuiSubtrans.Commands.SaveProjectFile import SaveProjectFile
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
@@ -8,9 +11,9 @@ from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.SubtitleEditor import SubtitleEditor
 
-import logging
+if TYPE_CHECKING:
+    from PySubtrans.SubtitleEditor import SubtitleEditor
 
 class BatchSubtitlesCommand(Command):
     """
@@ -31,7 +34,7 @@ class BatchSubtitlesCommand(Command):
         if not project or not project.subtitles or not project.subtitles.originals:
             raise CommandError(_("No subtitles to batch"), command=self)
 
-        with SubtitleEditor(project.subtitles) as editor:
+        with project.GetEditor() as editor:  # type: SubtitleEditor
             if self.preprocess_subtitles:
                 originals = deepcopy(project.subtitles.originals)
                 preprocessor = SubtitleProcessor(self.options)

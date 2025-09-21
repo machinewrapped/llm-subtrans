@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, Callable
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleError import SubtitleError
@@ -19,9 +19,10 @@ class SubtitleEditor:
     Use as a context manager to ensure proper locking.
     """
 
-    def __init__(self, subtitles: Subtitles) -> None:
+    def __init__(self, subtitles: Subtitles, on_exit: Callable[[bool], None]|None = None) -> None:
         self.subtitles = subtitles
         self._lock_acquired = False
+        self._on_exit: Callable[[bool], None]|None = on_exit
 
     def __enter__(self) -> SubtitleEditor:
         self.subtitles.lock.acquire()
@@ -32,6 +33,9 @@ class SubtitleEditor:
         if self._lock_acquired:
             self.subtitles.lock.release()
             self._lock_acquired = False
+
+        if self._on_exit:
+            self._on_exit(exc_type is None)
 
     def PreProcess(self, preprocessor: SubtitleProcessor) -> None:
         """

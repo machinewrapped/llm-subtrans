@@ -1,11 +1,14 @@
 import logging
+from typing import TYPE_CHECKING
 
 from GuiSubtrans.Command import Command, CommandError, UndoError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
-from PySubtrans.SubtitleEditor import SubtitleEditor
-from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Subtitles import Subtitles
+
+if TYPE_CHECKING:
+    from PySubtrans.SubtitleEditor import SubtitleEditor
 
 class MergeScenesCommand(Command):
     """
@@ -23,7 +26,8 @@ class MergeScenesCommand(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
-        subtitles : Subtitles = self.datamodel.project.subtitles
+        project = self.datamodel.project
+        subtitles : Subtitles = project.subtitles
 
         if len(self.scene_numbers) < 2:
             raise CommandError(_("Cannot merge less than two scenes"), command=self)
@@ -34,7 +38,7 @@ class MergeScenesCommand(Command):
 
         later_scenes = [scene.number for scene in subtitles.scenes if scene.number > self.scene_numbers[-1]]
 
-        with SubtitleEditor(subtitles) as editor:
+        with project.GetEditor() as editor:  # type: SubtitleEditor
             merged_scene = editor.MergeScenes(self.scene_numbers)
 
         model_update : ModelUpdate =  self.AddModelUpdate()
@@ -56,7 +60,8 @@ class MergeScenesCommand(Command):
         if not self.datamodel or not self.datamodel.project:
             raise CommandError(_("No project data"), command=self)
 
-        subtitles : Subtitles = self.datamodel.project.subtitles
+        project = self.datamodel.project
+        subtitles : Subtitles = project.subtitles
 
         model_update : ModelUpdate =  self.AddModelUpdate()
 
@@ -76,7 +81,7 @@ class MergeScenesCommand(Command):
             model_update.scenes.update(current_number, { 'number' : scene_number })
 
         # Split the merged scene according to the saved scene sizes and add the new scenes to the viewmodel
-        with SubtitleEditor(subtitles) as editor:
+        with project.GetEditor() as editor:  # type: SubtitleEditor
             for scene_number, scene_size in enumerate(self.scene_sizes[:-1], start=self.scene_numbers[0]):
                 editor.SplitScene(scene_number, scene_size + 1)
 

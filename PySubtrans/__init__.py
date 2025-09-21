@@ -189,7 +189,7 @@ def init_translator(settings: Options|Mapping[str, SettingType]) -> SubtitleTran
     return SubtitleTranslator(settings, translation_provider)
 
 
-def init_project(filepath: str|None, persistent: bool = False, translation_settings: Options|Mapping[str, SettingType]|None = None) -> SubtitleProject:
+def init_project(settings: Options|Mapping[str, SettingType]|None = None, filepath: str|None = None, persistent: bool = False) -> SubtitleProject:
     """
     Create a :class:`SubtitleProject` and optionally load subtitles from *filepath*.
 
@@ -199,8 +199,8 @@ def init_project(filepath: str|None, persistent: bool = False, translation_setti
         Path to the subtitle file to load into the project.
     persistent : bool, optional
         If True, enables persistent project state by creating a`.subtrans` project file for the job.
-    translation_settings : Options, Mapping[str, SettingType], or None, optional
-        Translation settings to configure the translator. If provided, the translator will be automatically initialized.
+    settings : Options, Mapping[str, SettingType], or None, optional
+        Settings to configure the translatopm workflow. If provided, the translator will be automatically initialized.
 
     Returns
     -------
@@ -217,7 +217,7 @@ def init_project(filepath: str|None, persistent: bool = False, translation_setti
     Create a project with translator ready for translation:
 
     >>> settings = {"provider": "OpenAI", "model": "gpt-4o", "target_language": "Spanish", "api_key": "your-key"}
-    >>> project = init_project("movie.srt", translation_settings=settings)
+    >>> project = init_project("movie.srt", settings)
     >>> project.TranslateSubtitles()
 
     Create a persistent project:
@@ -231,14 +231,15 @@ def init_project(filepath: str|None, persistent: bool = False, translation_setti
     if normalised_path:
         project.InitialiseProject(normalised_path)
 
-    if translation_settings:
-        if not isinstance(translation_settings, Options):
-            if isinstance(translation_settings, Mapping):
-                translation_settings = Options(SettingsType(translation_settings))
+    if settings:
+        if not isinstance(settings, Options):
+            if isinstance(settings, Mapping):
+                settings = Options(SettingsType(settings))
             else:
                 raise TypeError("translation_settings must be an Options instance or a mapping of option values")
 
-        project.InitialiseTranslator(translation_settings)
+        if settings.provider:
+            project.InitialiseTranslator(settings)
 
     return project
 

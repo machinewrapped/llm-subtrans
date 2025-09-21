@@ -43,7 +43,7 @@ translator.Translate(subtitles)
 subtitles.SaveTranslation("movie-translated.srt")
 ```
 
-Subtitle format is auto-detected based on file extension.
+Subtitle format is auto-detected based on file extension or content.
 
 ## Configuration with `init_options`
 `init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 

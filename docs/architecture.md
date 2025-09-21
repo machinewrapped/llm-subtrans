@@ -63,7 +63,7 @@ PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, 
 Manages translation sessions and project persistence. It orchestrates loading subtitle files, saving/loading `.subtrans` project files (JSON format containing subtitles, translations, and metadata), and coordinates project settings management.
 
 ### SubtitleBatcher
-Pre-processes subtitles to divide them into scenes and batches ready for translation. Scene detection threshould and maximum batch size are configurable.
+Pre-processes subtitles to divide them into scenes and batches ready for translation. Scene detection threshold and maximum batch size are configurable.
 
 ### SubtitleBuilder
 The `SubtitleBuilder` class provides a fluent API for constructing `Subtitles`.

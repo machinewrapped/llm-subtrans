@@ -6,7 +6,6 @@ from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import TranslationAbortedError, TranslationImpossibleError
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
-from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.Helpers.Localization import _
 
 import logging

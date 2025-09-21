@@ -149,25 +149,6 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
 
     return Options(options)
 
-def CreateTranslator(options : Options) -> SubtitleTranslator:
-    """
-    Initialise a subtitle translator with the provided options
-    """
-    translation_provider = TranslationProvider.get_provider(options)
-    if not translation_provider:
-        raise ValueError(f"Unable to create translation provider {options.provider}")
-
-    if not translation_provider.ValidateSettings():
-        logging.error(f"Provider settings are not valid: {translation_provider.validation_message}")
-        raise ValueError(f"Invalid settings for provider {options.provider}")
-
-    logging.info(f"Using translation provider {translation_provider.name}")
-
-    # Load the instructions
-    options.InitialiseInstructions()
-
-    return SubtitleTranslator(options, translation_provider)
-
 def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     """
     Initialise a subtitle project with the provided arguments
@@ -207,6 +188,9 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     scene_count = subtitles.scenecount
     batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
     logging.info(f"Created {scene_count} scenes and {batch_count} batches for translation")
+
+    # Initialize the translator
+    project.InitialiseTranslator(options)
 
     if not args.output:
         output_path = GetOutputPath(project.subtitles.sourcepath, project.subtitles.target_language or options.provider, project.subtitles.file_format)

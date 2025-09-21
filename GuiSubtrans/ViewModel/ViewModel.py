@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import os
+from datetime import timedelta
 from collections.abc import Callable
 from PySide6.QtCore import Qt, QModelIndex, QRecursiveMutex, QMutexLocker, Signal
 from PySide6.QtGui import QStandardItemModel, QStandardItem
@@ -10,7 +11,7 @@ from GuiSubtrans.ViewModel.LineItem import LineItem
 from GuiSubtrans.ViewModel.SceneItem import SceneItem
 from GuiSubtrans.ViewModel.ViewModelError import ViewModelError
 
-from PySubtrans.Helpers.Time import TimedeltaToText
+from PySubtrans.Helpers.Time import GetTimeDelta, TimedeltaToText
 from PySubtrans.Instructions import DEFAULT_TASK_TYPE
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
@@ -419,6 +420,23 @@ class ProjectViewModel(QStandardItemModel):
         if line.number in batch_item.lines.keys():
             raise ViewModelError(f"Line {line.number} already exists in {scene_number} batch {batch_number}")
 
+        gap_duration = timedelta(seconds=0)
+        previous_line_number = max((existing_number for existing_number in batch_item.lines.keys() if existing_number < line.number), default=None)
+        if previous_line_number is not None:
+            previous_line_item = batch_item.lines.get(previous_line_number)
+            if isinstance(previous_line_item, LineItem):
+                previous_end = GetTimeDelta(previous_line_item.end, raise_exception=False)
+                if isinstance(previous_end, Exception):
+                    logging.error(
+                        f"Unable to parse end time for line {previous_line_number} in scene {scene_number} batch {batch_number}: {previous_line_item.end}"
+                    )
+                elif isinstance(previous_end, timedelta):
+                    gap_duration = line.start - previous_end
+            else:
+                logging.error(
+                    f"Expected LineItem for line {previous_line_number} in scene {scene_number} batch {batch_number}, got {type(previous_line_item).__name__ if previous_line_item is not None else 'None'}"
+                )
+
         self.beginInsertRows(self.indexFromItem(batch_item), line.number - 1, line.number - 1)
         batch_item.AddLineItem(line.number, {
                 'scene': scene_number,
@@ -426,7 +444,7 @@ class ProjectViewModel(QStandardItemModel):
                 'start': line.txt_start,
                 'end': line.srt_end,
                 'duration': line.txt_duration,
-                'gap': None,
+                'gap': TimedeltaToText(gap_duration),
                 'text': line.text,
                 'style': line.metadata.get('style')
             })

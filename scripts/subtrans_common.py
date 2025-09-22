@@ -172,9 +172,9 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     if options.get_bool('preprocess_subtitles'):
         preprocess_subtitles(subtitles, options)
 
-    scene_threshold = options.get_float('scene_threshold')
-    min_batch_size = options.get_int('min_batch_size')
-    max_batch_size = options.get_int('max_batch_size')
+    scene_threshold = options.get_float('scene_threshold') or 120.0
+    min_batch_size = options.get_int('min_batch_size') or 1
+    max_batch_size = options.get_int('max_batch_size') or 100
 
     missing_params = [
         name for name, value in (

@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from typing import Any, Callable
 
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Time import GetTimeDelta
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleScene import SubtitleScene
@@ -68,6 +70,59 @@ class SubtitleEditor:
             raise ValueError(f"Batch ({scene_number},{batch_number}) does not exist")
 
         return batch.UpdateContext(update)
+
+    def UpdateLine(self, line_number: int, update: dict[str, Any]) -> bool:
+        """
+        Update a subtitle line with the provided changes
+        """
+        batch: SubtitleBatch|None = self.subtitles.GetBatchContainingLine(line_number)
+        if not batch:
+            raise ValueError(f"Line {line_number} not found in any batch")
+
+        line: SubtitleLine|None = batch.GetOriginalLine(line_number)
+        if not line:
+            raise ValueError(f"Line {line_number} not found in batch ({batch.scene},{batch.number})")
+
+        updated = False
+
+        if 'start' in update:
+            start_time = GetTimeDelta(update['start'])
+            if isinstance(start_time, timedelta) and start_time != line.start:
+                line.start = start_time
+                updated = True
+            elif not isinstance(start_time, timedelta):
+                raise ValueError("Invalid start time format")
+
+        if 'end' in update:
+            end_time = GetTimeDelta(update['end'])
+            if isinstance(end_time, timedelta) and end_time != line.end:
+                line.end = end_time
+                updated = True
+            elif not isinstance(end_time, timedelta):
+                raise ValueError("Invalid end time format")
+
+        if 'text' in update and update['text'] != line.text:
+            line.text = update['text']
+            updated = True
+
+        if 'metadata' in update and update['metadata'] != line.metadata:
+            line.metadata.update(update['metadata'])
+            updated = True
+
+        if 'translation' in update:
+            if line.translation != update['translation']:
+                line.translation = update['translation']
+                updated = True
+
+        # If any updates were made and the line has a translation,
+        # replace the translated line with a fresh clone that syncs all properties
+        if updated and line.translation is not None:
+            translated_line = line.translated
+            if translated_line:
+                translated_line.original = line.text
+                batch.AddTranslatedLine(translated_line)
+
+        return updated
 
 
     def DeleteLines(self, line_numbers: list[int]) -> list[tuple[int, int, list[SubtitleLine], list[SubtitleLine]]]:

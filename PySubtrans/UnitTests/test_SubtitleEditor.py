@@ -638,6 +638,339 @@ class SubtitleEditorTests(SubtitleTestCase):
         log_input_expected_result("editor lock released", False, editor._lock_acquired)
         self.assertFalse(editor._lock_acquired)
 
+    def test_update_line_text(self):
+        """Test UpdateLine updates line text"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            # Find a line to update
+            test_line_number = 1
+            batch = self.subtitles.GetBatchContainingLine(test_line_number)
+            self.assertIsNotNone(batch)
+            assert batch is not None
+
+            original_line = batch.GetOriginalLine(test_line_number)
+            self.assertIsNotNone(original_line)
+            assert original_line is not None
+
+            new_text = "Updated text content"
+
+            # Update the line text
+            result = editor.UpdateLine(test_line_number, {'text': new_text})
+
+            log_input_expected_result("update line returned True", True, result)
+            self.assertTrue(result)
+
+            # Verify text was updated
+            updated_line = batch.GetOriginalLine(test_line_number)
+            assert updated_line is not None
+            log_input_expected_result("line text updated", new_text, updated_line.text)
+            self.assertEqual(updated_line.text, new_text)
+
+    def test_update_line_translation_new(self):
+        """Test UpdateLine creates new translation when none exists"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            test_line_number = 2
+            batch = self.subtitles.GetBatchContainingLine(test_line_number)
+            self.assertIsNotNone(batch)
+            assert batch is not None
+
+            # Verify no translation exists initially
+            translated_line = batch.GetTranslatedLine(test_line_number)
+            log_input_expected_result("no initial translation", None, translated_line)
+            self.assertIsNone(translated_line)
+
+            new_translation = "New translation text"
+
+            # Update with translation
+            result = editor.UpdateLine(test_line_number, {'translation': new_translation})
+
+            log_input_expected_result("update line returned True", True, result)
+            self.assertTrue(result)
+
+            # Verify translation was created
+            translated_line = batch.GetTranslatedLine(test_line_number)
+            log_input_expected_result("translation created", True, translated_line is not None)
+            self.assertIsNotNone(translated_line)
+
+            if translated_line:
+                log_input_expected_result("translation text correct", new_translation, translated_line.text)
+                self.assertEqual(translated_line.text, new_translation)
+
+                # Verify original line also has translation reference
+                original_line = batch.GetOriginalLine(test_line_number)
+                assert original_line is not None
+                log_input_expected_result("original line translation", new_translation, original_line.translation)
+                self.assertEqual(original_line.translation, new_translation)
+
+    def test_update_line_translation_existing(self):
+        """Test UpdateLine updates existing translation"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            test_line_number = 3
+            batch = self.subtitles.GetBatchContainingLine(test_line_number)
+            self.assertIsNotNone(batch)
+            assert batch is not None
+
+            # Create initial translation
+            initial_translation = "Initial translation"
+            editor.UpdateLine(test_line_number, {'translation': initial_translation})
+
+            # Verify translation exists
+            translated_line = batch.GetTranslatedLine(test_line_number)
+            self.assertIsNotNone(translated_line)
+            if translated_line:
+                self.assertEqual(translated_line.text, initial_translation)
+
+            # Update existing translation
+            new_translation = "Updated translation text"
+            result = editor.UpdateLine(test_line_number, {'translation': new_translation})
+
+            log_input_expected_result("update existing translation returned True", True, result)
+            self.assertTrue(result)
+
+            # Verify translation was updated
+            updated_translated_line = batch.GetTranslatedLine(test_line_number)
+            assert updated_translated_line is not None
+            log_input_expected_result("translation updated", new_translation, updated_translated_line.text)
+            self.assertEqual(updated_translated_line.text, new_translation)
+
+    def test_update_line_timing(self):
+        """Test UpdateLine updates start and end times"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            test_line_number = 4
+            batch = self.subtitles.GetBatchContainingLine(test_line_number)
+            self.assertIsNotNone(batch)
+            assert batch is not None
+
+            original_line = batch.GetOriginalLine(test_line_number)
+            self.assertIsNotNone(original_line)
+            assert original_line is not None
+
+            new_start = timedelta(seconds=10)
+            new_end = timedelta(seconds=15)
+
+            # Update timing
+            result = editor.UpdateLine(test_line_number, {
+                'start': new_start,
+                'end': new_end
+            })
+
+            log_input_expected_result("update timing returned True", True, result)
+            self.assertTrue(result)
+
+            # Verify timing was updated
+            updated_line = batch.GetOriginalLine(test_line_number)
+            assert updated_line is not None
+            log_input_expected_result("start time updated", new_start, updated_line.start)
+            log_input_expected_result("end time updated", new_end, updated_line.end)
+            self.assertEqual(updated_line.start, new_start)
+            self.assertEqual(updated_line.end, new_end)
+
+    def test_update_line_timing_with_translation_sync(self):
+        """Test UpdateLine syncs timing changes to translated lines"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            test_line_number = 5
+            batch = self.subtitles.GetBatchContainingLine(test_line_number)
+            self.assertIsNotNone(batch)
+            assert batch is not None
+
+            # Create translation first
+            editor.UpdateLine(test_line_number, {'translation': "Test translation"})
+
+            translated_line = batch.GetTranslatedLine(test_line_number)
+            self.assertIsNotNone(translated_line)
+
+            new_start = timedelta(seconds=20)
+            new_end = timedelta(seconds=25)
+
+            # Update timing and translation
+            result = editor.UpdateLine(test_line_number, {
+                'start': new_start,
+                'end': new_end,
+                'translation': "Updated translation"
+            })
+
+            log_input_expected_result("update with sync returned True", True, result)
+            self.assertTrue(result)
+
+            # Verify translated line timing was synced
+            updated_translated_line = batch.GetTranslatedLine(test_line_number)
+            assert updated_translated_line is not None
+            log_input_expected_result("translated start synced", new_start, updated_translated_line.start)
+            log_input_expected_result("translated end synced", new_end, updated_translated_line.end)
+            self.assertEqual(updated_translated_line.start, new_start)
+            self.assertEqual(updated_translated_line.end, new_end)
+
+    def test_update_line_metadata(self):
+        """Test UpdateLine updates line metadata"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            test_line_number = 1
+            batch = self.subtitles.GetBatchContainingLine(test_line_number)
+            self.assertIsNotNone(batch)
+            assert batch is not None
+
+            original_line = batch.GetOriginalLine(test_line_number)
+            self.assertIsNotNone(original_line)
+            assert original_line is not None
+
+            new_metadata = {'speaker': 'John', 'emotion': 'angry', 'volume': 'loud'}
+
+            # Update metadata
+            result = editor.UpdateLine(test_line_number, {'metadata': new_metadata})
+
+            log_input_expected_result("update metadata returned True", True, result)
+            self.assertTrue(result)
+
+            # Verify metadata was updated
+            updated_line = batch.GetOriginalLine(test_line_number)
+            assert updated_line is not None
+            log_input_expected_result("metadata updated", new_metadata, updated_line.metadata)
+            self.assertEqual(updated_line.metadata, new_metadata)
+
+    def test_update_line_multiple_fields(self):
+        """Test UpdateLine updates multiple fields at once"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            test_line_number = 2
+            batch = self.subtitles.GetBatchContainingLine(test_line_number)
+            self.assertIsNotNone(batch)
+            assert batch is not None
+
+            new_text = "Multi-field update text"
+            new_translation = "Multi-field translation"
+            new_start = timedelta(seconds=30)
+            new_end = timedelta(seconds=35)
+            new_metadata = {'test': 'multi-field'}
+
+            # Update multiple fields
+            result = editor.UpdateLine(test_line_number, {
+                'text': new_text,
+                'translation': new_translation,
+                'start': new_start,
+                'end': new_end,
+                'metadata': new_metadata
+            })
+
+            log_input_expected_result("multi-field update returned True", True, result)
+            self.assertTrue(result)
+
+            # Verify all fields were updated
+            updated_line = batch.GetOriginalLine(test_line_number)
+            assert updated_line is not None
+            log_input_expected_result("text updated", new_text, updated_line.text)
+            log_input_expected_result("translation updated", new_translation, updated_line.translation)
+            log_input_expected_result("start updated", new_start, updated_line.start)
+            log_input_expected_result("end updated", new_end, updated_line.end)
+            log_input_expected_result("metadata updated", new_metadata, updated_line.metadata)
+
+            self.assertEqual(updated_line.text, new_text)
+            self.assertEqual(updated_line.translation, new_translation)
+            self.assertEqual(updated_line.start, new_start)
+            self.assertEqual(updated_line.end, new_end)
+            self.assertEqual(updated_line.metadata, new_metadata)
+
+            # Verify translated line was created and synced
+            translated_line = batch.GetTranslatedLine(test_line_number)
+            self.assertIsNotNone(translated_line)
+            if translated_line:
+                self.assertEqual(translated_line.text, new_translation)
+                self.assertEqual(translated_line.start, new_start)
+                self.assertEqual(translated_line.end, new_end)
+                self.assertEqual(translated_line.metadata, new_metadata)
+
+    def test_update_line_no_change(self):
+        """Test UpdateLine returns False when no changes are made"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            test_line_number = 1
+            batch = self.subtitles.GetBatchContainingLine(test_line_number)
+            self.assertIsNotNone(batch)
+            assert batch is not None
+
+            original_line = batch.GetOriginalLine(test_line_number)
+            self.assertIsNotNone(original_line)
+            assert original_line is not None
+
+            # Update with same values
+            result = editor.UpdateLine(test_line_number, {
+                'text': original_line.text,
+                'start': original_line.start,
+                'end': original_line.end
+            })
+
+            log_input_expected_result("no change update returned False", False, result)
+            self.assertFalse(result)
+
+    def test_update_line_invalid_line(self):
+        """Test UpdateLine raises error for non-existent line"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            # Try to update non-existent line
+            with self.assertRaises(ValueError) as context:
+                editor.UpdateLine(999, {'text': 'Should fail'})
+
+            error_message = str(context.exception)
+            log_input_expected_result("error mentions line not found", True, "not found" in error_message.lower())
+            self.assertIn("not found", error_message.lower())
+
+    def test_update_line_invalid_timing(self):
+        """Test UpdateLine raises error for invalid timing"""
+
+        batcher = SubtitleBatcher(self.options)
+
+        with SubtitleEditor(self.subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+            test_line_number = 1
+
+            # Try to update with invalid start time
+            with self.assertRaises(ValueError) as context:
+                editor.UpdateLine(test_line_number, {'start': 'invalid time'})
+
+            error_message = str(context.exception)
+            log_input_expected_result("error mentions invalid time", True, "invalid" in error_message.lower())
+            self.assertIn("invalid", error_message.lower())
+
 
 if __name__ == '__main__':
     unittest.main()

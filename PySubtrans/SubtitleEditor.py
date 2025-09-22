@@ -85,21 +85,14 @@ class SubtitleEditor:
         if not line:
             raise ValueError(f"Line {line_number} not found in batch ({batch.scene},{batch.number})")
 
-        updated = False
-
-        if 'start' in update:
-            start_time = GetTimeDelta(update['start'])
-            if isinstance(start_time, timedelta) and start_time != line.start:
-                line.start = start_time
-                updated = True
-            elif not isinstance(start_time, timedelta):
-                raise ValueError("Invalid start time format")
-
-        if 'end' in update:
-            end_time = GetTimeDelta(update['end'])
-            if isinstance(end_time, timedelta) and end_time != line.end:
-                line.end = end_time
-                updated = True
+        for prop in ['start', 'end']:
+            if prop in update:
+                time_val = GetTimeDelta(update[prop])
+                if isinstance(time_val, timedelta) and time_val != getattr(line, prop):
+                    setattr(line, prop, time_val)
+                    updated = True
+                elif not isinstance(time_val, timedelta):
+                    raise ValueError(f"Invalid {prop} time format")
             elif not isinstance(end_time, timedelta):
                 raise ValueError("Invalid end time format")
 

@@ -114,6 +114,7 @@ class SubtitleEditor:
 
         # If any updates were made and the line has a translation,
         # replace the translated line with a fresh clone that syncs all properties
+        # TODO: should we remove the translated line if translation is now None?
         if updated and line.translation is not None:
             translated_line = line.translated
             if translated_line:

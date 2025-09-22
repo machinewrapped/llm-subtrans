@@ -369,6 +369,7 @@ def batch_subtitles(
 __all__ = [
     '__version__',
     'Options',
+    'SettingsType',
     'Subtitles',
     'SubtitleScene',
     'SubtitleLine',

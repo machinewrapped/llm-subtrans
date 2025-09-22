@@ -138,6 +138,8 @@ translator.events.scene_translated += on_scene_translated  # Subscribe to events
 translator.TranslateSubtitles(subtitles)
 ```
 
+Note that different providers may require different settings. See the [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/) documentation for details on supported providers.
+
 ### Configuration with `init_options`
 
 `init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 
@@ -176,6 +178,29 @@ Note that there are a number of options which are only used by the GUI-Subtrans 
 ## Advanced workflows
 
 PySubtrans is designed to be modular. The helper functions above are convenient entry points, but you are free to use lower-level components directly when you need more control:
+
+### Explicitly nitialising a `TranslationProvider`
+
+`init_translator` will automatically construct a `TranslationProvider` based on the provided options, but it may be useful to construct one explicitly as each supported provider presents slightly different options.
+
+```python
+  from PySubtrans import SubtitleTranslator, SettingsType
+  from PySubtrans.Providers.Provider_OpenRouter import
+  OpenRouterProvider
+
+  openrouter = OpenRouterProvider(SettingsType({
+      'api_key': 'your_openrouter_api_key',
+      'use_default_model': False,
+      'model_family': "Google",  # Note: should be 
+  "Google" not "Gemini"
+      'model': "Gemini 2.5 Flash Lite",
+      'temperature': 0.2
+  }))
+
+translator = SubtitleTranslator(settings, openrouter)
+```
+
+A provider can be constructed once and then used to initalise multiple `SubtitleTranslator` instances.
 
 ### Preprocessing subtitles with `preprocess_subtitles`
 

@@ -27,7 +27,7 @@ class OpenRouterProvider(TranslationProvider):
 
     def __init__(self, settings : SettingsType):
         super().__init__(self.name, SettingsType({
-            "api_key": settings.get_str('api_key', os.getenv('OPENROUTER_API_KEY')),
+            'api_key': settings.get_str('api_key', os.getenv('OPENROUTER_API_KEY')),
             'use_default_model': settings.get_bool('use_default_model', True),
             "server_address": settings.get_str('server_address', os.getenv('OPENROUTER_SERVER_ADDRESS', "https://openrouter.ai/api/")),
             'model_family': settings.get_str('model_family', os.getenv('OPENROUTER_MODEL_FAMILY', "Google")),

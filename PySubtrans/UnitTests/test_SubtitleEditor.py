@@ -4,7 +4,7 @@ import unittest
 from datetime import timedelta
 
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
+from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name, skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleEditor import SubtitleEditor
@@ -94,6 +94,8 @@ class SubtitleEditorTests(SubtitleTestCase):
 
     def test_exit_callback_invoked_on_failure(self):
         """Test that exit callback receives failure flag when an exception occurs"""
+        if skip_if_debugger_attached(self._testMethodName):
+            return
 
         callback_results: list[bool] = []
 
@@ -109,6 +111,8 @@ class SubtitleEditorTests(SubtitleTestCase):
 
     def test_exit_callback_exception_propagates(self):
         """Exit callback exceptions should propagate out of the context manager"""
+        if skip_if_debugger_attached(self._testMethodName):
+            return
 
         def failing_callback(_: bool) -> None:
             raise RuntimeError("Callback failure")
@@ -329,6 +333,8 @@ class SubtitleEditorTests(SubtitleTestCase):
 
     def test_duplicate_originals_fails_with_existing_translations(self):
         """Test DuplicateOriginalsAsTranslations raises error if translations exist"""
+        if skip_if_debugger_attached(self._testMethodName):
+            return
 
         # Create scenes with batching and add a translation
         batcher = SubtitleBatcher(self.options)
@@ -444,6 +450,8 @@ class SubtitleEditorTests(SubtitleTestCase):
 
     def test_delete_lines_nonexistent(self):
         """Test DeleteLines raises error when no lines are deleted"""
+        if skip_if_debugger_attached(self._testMethodName):
+            return
 
         batcher = SubtitleBatcher(self.options)
 
@@ -499,6 +507,8 @@ class SubtitleEditorTests(SubtitleTestCase):
 
     def test_merge_scenes_invalid_input(self):
         """Test MergeScenes raises errors for invalid input"""
+        if skip_if_debugger_attached(self._testMethodName):
+            return
 
         batcher = SubtitleBatcher(self.options)
 
@@ -939,6 +949,8 @@ class SubtitleEditorTests(SubtitleTestCase):
 
     def test_update_line_invalid_line(self):
         """Test UpdateLine raises error for non-existent line"""
+        if skip_if_debugger_attached(self._testMethodName):
+            return
 
         batcher = SubtitleBatcher(self.options)
 
@@ -955,6 +967,8 @@ class SubtitleEditorTests(SubtitleTestCase):
 
     def test_update_line_invalid_timing(self):
         """Test UpdateLine raises error for invalid timing"""
+        if skip_if_debugger_attached(self._testMethodName):
+            return
 
         batcher = SubtitleBatcher(self.options)
 

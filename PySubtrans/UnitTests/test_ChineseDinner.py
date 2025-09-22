@@ -4,7 +4,7 @@ from datetime import timedelta
 
 from PySubtrans.Helpers.TestCases import PrepareSubtitles, SubtitleTestCase
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
-from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name
+from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name, skip_if_debugger_attached
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleEditor import SubtitleEditor
@@ -556,20 +556,21 @@ class ChineseDinnerTests(SubtitleTestCase):
         with self.subTest("Error handling"):
             log_test_name("Error handling")
 
-            with SubtitleEditor(subtitles) as editor:
-                # Test non-existent line
-                with self.assertRaises(ValueError) as context:
-                    editor.UpdateLine(999, {'text': 'Should fail'})
+            if not skip_if_debugger_attached("Error handling"):
+                with SubtitleEditor(subtitles) as editor:
+                    # Test non-existent line
+                    with self.assertRaises(ValueError) as context:
+                        editor.UpdateLine(999, {'text': 'Should fail'})
 
-                error_message = str(context.exception)
-                log_input_expected_result("Error mentions line not found", True, "not found" in error_message.lower())
-                self.assertIn("not found", error_message.lower())
+                    error_message = str(context.exception)
+                    log_input_expected_result("Error mentions line not found", True, "not found" in error_message.lower())
+                    self.assertIn("not found", error_message.lower())
 
-                # Test invalid timing
-                with self.assertRaises(ValueError) as context:
-                    editor.UpdateLine(1, {'start': 'invalid time format'})
+                    # Test invalid timing
+                    with self.assertRaises(ValueError) as context:
+                        editor.UpdateLine(1, {'start': 'invalid time format'})
 
-                error_message = str(context.exception)
-                log_input_expected_result("Error mentions invalid time", True, "invalid" in error_message.lower())
-                self.assertIn("invalid", error_message.lower())
+                    error_message = str(context.exception)
+                    log_input_expected_result("Error mentions invalid time", True, "invalid" in error_message.lower())
+                    self.assertIn("invalid", error_message.lower())
 

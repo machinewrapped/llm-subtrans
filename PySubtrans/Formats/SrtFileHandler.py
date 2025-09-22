@@ -107,14 +107,15 @@ class SrtFileHandler(SubtitleFileHandler):
         try:
             srt_items = list(srt.parse(source))
             for srt_item in srt_items:
+                proprietary = getattr(srt_item, 'proprietary', '')
+                metadata = {"proprietary": proprietary} if proprietary else {}
+
                 line = SubtitleLine.Construct(
                     number=srt_item.index,
                     start=srt_item.start,
                     end=srt_item.end,
                     text=srt_item.content,
-                    metadata={
-                        "proprietary": getattr(srt_item, 'proprietary', '')
-                    }
+                    metadata=metadata
                 )
                 yield line
                 

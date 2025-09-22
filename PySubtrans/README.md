@@ -396,18 +396,13 @@ with SubtitleEditor(subtitles) as editor:
 print(f"Final state: {subtitles.scenecount} scenes, {subtitles.linecount} lines")
 ```
 
-### Custom integrations
-
-* Create a `Subtitles` instance by hand (for example when generating subtitles from a transcription pipeline) and pass it straight to `SubtitleTranslator.TranslateSubtitles`.
-* Construct your own `TranslationProvider` instance or subclass to integrate bespoke APIs. All built-in providers live under `PySubtrans.Providers` and serve as reference implementations.
-* Use `SubtitleBatcher` and `SubtitleBatch` to implement custom batching strategies when the default automatic batching does not fit your use case.
-* Hook into `TranslationEvents` to monitor progress or feed translated scenes into additional post-processing steps.
-
-For a detailed breakdown of the module layout and responsibilities refer to the [architecture guide](https://github.com/machinewrapped/llm-subtrans/blob/main/docs/architecture.md).
-
 ## Learning from LLM-Subtrans and GUI-Subtrans
 
 There are many possible and correct ways to use PySubtrans. [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans) and [GUI-Subtrans](https://github.com/machinewrapped/llm-subtrans/tree/main/GuiSubtrans) provide two complete end-to-end examples that use PySubtrans in different ways, making use of different workflows and features. They can be used as a reference when integrating PySubtrans into your application if you want to use more advanced features.
+
+## If you need to know more
+
+For a more complete breakdown of the module layout and responsibilities of the various components of PySubtrans refer to the LLM-Subtrans [architecture guide](https://github.com/machinewrapped/llm-subtrans/blob/main/docs/architecture.md).
 
 ## License
 

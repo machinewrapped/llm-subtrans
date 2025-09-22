@@ -8,6 +8,7 @@ from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Helpers.Time import GetTimeDelta
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleLine import SubtitleLine
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.Subtitles import Subtitles
 
 from PySubtrans.SubtitleValidator import SubtitleValidator
@@ -33,7 +34,7 @@ class EditLineCommand(Command):
         if not isinstance(self.edit, dict):
             raise CommandError(_("Edit data must be a dictionary"), command=self)
 
-        with subtitles.lock:
+        with SubtitleEditor(subtitles) as editor:
             batch : SubtitleBatch|None = subtitles.GetBatchContainingLine(self.line_number)
             if not batch:
                 raise CommandError(_("Line {line} not found in any batch").format(line=self.line_number), command=self)
@@ -42,44 +43,28 @@ class EditLineCommand(Command):
             if not line:
                 raise CommandError(_("Line {line} not found in batch ({scene},{batch})").format(line=self.line_number, scene=batch.scene, batch=batch.number), command=self)
 
+            # Store undo data before making changes
             self.undo_data = {
+                key: getattr(line, key)
+                for key in ['start', 'end', 'text']
+                if key in self.edit
             }
 
-            if 'start' in self.edit:
-                self.undo_data['start'] = line.start
-                start_time = GetTimeDelta(self.edit['start'])
-                if isinstance(start_time, timedelta):
-                    line.start = start_time
-                else:
-                    raise CommandError(_("Invalid start time format"), command=self)
-
-            if 'end' in self.edit:
-                self.undo_data['end'] = line.end
-                end_time = GetTimeDelta(self.edit['end'])
-                if isinstance(end_time, timedelta):
-                    line.end = end_time
-                else:
-                    raise CommandError(_("Invalid end time format"), command=self)
-
-            if 'text' in self.edit:
-                self.undo_data['text'] = line.text
-                line.text = self.edit['text']
-
             if 'translation' in self.edit:
-                translated_line : SubtitleLine|None = batch.GetTranslatedLine(self.line_number)
+                translated_line = batch.GetTranslatedLine(self.line_number)
+                self.undo_data['translation'] = translated_line.text if translated_line else line.translation
 
-                if translated_line:
-                    self.undo_data['translation'] = translated_line.text
-                    translated_line.text = self.edit['translation']
-                    translated_line.original = line.text
-                    line.translation = translated_line.text
-                else:
-                    self.undo_data['translation'] = line.translation
-                    line.translation = self.edit['translation']
-                    translated_line = line.translated
-                    if translated_line:
-                        translated_line.original = line.text
-                        batch.AddTranslatedLine(translated_line)
+            # Handle metadata separately to track additions and removals
+            if 'metadata' in self.edit:
+                self.undo_data['metadata'] = {}
+                # Store existing values (or None for new keys that need removal on undo)
+                for key in self.edit['metadata'].keys():
+                    self.undo_data['metadata'][key] = line.metadata.get(key)
+
+            try:
+                editor.UpdateLine(self.line_number, self.edit)
+            except ValueError as e:
+                raise CommandError(str(e), command=self)
 
             self._update_model(batch, line)
 
@@ -96,7 +81,7 @@ class EditLineCommand(Command):
 
         subtitles : Subtitles = self.datamodel.project.subtitles
 
-        with subtitles.lock:
+        with SubtitleEditor(subtitles) as editor:
             batch : SubtitleBatch|None = subtitles.GetBatchContainingLine(self.line_number)
             if not batch:
                 raise CommandError(_("Line {line} not found in any batch").format(line=self.line_number), command=self)
@@ -105,23 +90,10 @@ class EditLineCommand(Command):
             if not line:
                 raise CommandError(_("Line {line} not found in batch ({scene},{batch})").format(line=self.line_number, scene=batch.scene, batch=batch.number), command=self)
 
-            if 'start' in self.undo_data:
-                line.start = self.undo_data['start']
-
-            if 'end' in self.undo_data:
-                line.end = self.undo_data['end']
-
-            if 'text' in self.undo_data:
-                line.text = self.undo_data['text']
-
-            if 'translation' in self.undo_data:
-                line.translation = self.undo_data['translation']
-                translated_line = batch.GetTranslatedLine(self.line_number)
-                if translated_line:
-                    translated_line.start = line.start
-                    translated_line.end = line.end
-                    translated_line.text = self.undo_data['translation']
-                    translated_line.original = line.text
+            try:
+                editor.UpdateLine(self.line_number, self.undo_data)
+            except ValueError as e:
+                raise CommandError(str(e), command=self)
 
             self._update_model(batch, line)
 

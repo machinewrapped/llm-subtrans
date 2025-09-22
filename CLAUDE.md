@@ -20,6 +20,7 @@ Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Window
 ## Code Style
 - **Naming**: PascalCase for classes and methods, snake_case for variables
 - **Imports**: Standard lib → third-party → local, alphabetical within groups
+  - NEVER add imports in the middle of functions - always place imports at the top of the file
 - **Class structure**: Docstring → constants → init → properties → public methods → private methods
 - **Type Hints**: Use type hints for parameters, return values, and class variables
   - NEVER put spaces around the `|` in type unions. Use `str|None`, never `str | None`

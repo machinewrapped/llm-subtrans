@@ -54,6 +54,13 @@ class EditLineCommand(Command):
                 translated_line = batch.GetTranslatedLine(self.line_number)
                 self.undo_data['translation'] = translated_line.text if translated_line else line.translation
 
+            # Handle metadata separately to track additions and removals
+            if 'metadata' in self.edit:
+                self.undo_data['metadata'] = {}
+                # Store existing values (or None for new keys that need removal on undo)
+                for key in self.edit['metadata'].keys():
+                    self.undo_data['metadata'][key] = line.metadata.get(key)
+
             try:
                 editor.UpdateLine(self.line_number, self.edit)
             except ValueError as e:

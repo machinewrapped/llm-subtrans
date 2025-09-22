@@ -108,7 +108,11 @@ class SubtitleEditor:
             updated = True
 
         if 'metadata' in update and update['metadata'] != line.metadata:
-            line.metadata.update(update['metadata'])
+            for key, value in update['metadata'].items():
+                if value is None:
+                    line.metadata.pop(key, None)  # Remove key if it exists
+                else:
+                    line.metadata[key] = value
             updated = True
 
         if 'translation' in update:

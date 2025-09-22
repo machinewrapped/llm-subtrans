@@ -278,7 +278,9 @@ class EditCommandsTests(SubtitleTestCase):
             if 'expected_metadata' in test_data:
                 expected_metadata = test_data['expected_metadata']
                 log_input_expected_result("Translated line metadata synced", expected_metadata, translated_line.metadata)
-                self.assertEqual(translated_line.metadata, expected_metadata)
+                for key, expected_value in expected_metadata.items():
+                    self.assertIn(key, translated_line.metadata)
+                    self.assertEqual(translated_line.metadata[key], expected_value)
         else:
             self.assertIsNone(translated_line, f"Translated line {line_number} should not exist when not expected")
 

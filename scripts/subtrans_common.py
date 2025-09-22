@@ -5,6 +5,7 @@ from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
 
 from PySubtrans.Helpers import GetOutputPath
+from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans import batch_subtitles, preprocess_subtitles
 from PySubtrans.Options import Options, config_dir
@@ -166,7 +167,7 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     subtitles = project.subtitles
 
     if not subtitles or not subtitles.originals:
-        raise ValueError("No subtitles to translate")
+        raise ValueError(_("Subtitle file contains no translatable content"))
 
     if options.get_bool('preprocess_subtitles'):
         preprocess_subtitles(subtitles, options)
@@ -175,8 +176,16 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     min_batch_size = options.get_int('min_batch_size')
     max_batch_size = options.get_int('max_batch_size')
 
-    if scene_threshold is None or min_batch_size is None or max_batch_size is None:
-        raise ValueError("scene_threshold, min_batch_size and max_batch_size must be defined")
+    missing_params = [
+        name for name, value in (
+            ("scene_threshold", scene_threshold),
+            ("min_batch_size", min_batch_size),
+            ("max_batch_size", max_batch_size),
+        ) if value is None
+    ]
+
+    if missing_params:
+        raise ValueError(f"The following parameter(s) must be defined: {', '.join(missing_params)}")
 
     batch_subtitles(
         subtitles,

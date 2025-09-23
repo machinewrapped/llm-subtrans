@@ -183,7 +183,8 @@ def init_translation_provider(
         Translator options containing the provider configuration. Values supplied at the top level
         (e.g. ``model`` or ``api_key``) will be moved into provider-specific settings during
         initialisation. Provider specific settings may also be supplied under
-        ``options['provider_settings'][provider]``.
+        ``options['provider_settings'][provider]``. The supplied options object is updated so that
+        ``options.provider`` matches the ``provider`` argument.
 
     Returns
     -------
@@ -214,13 +215,7 @@ def init_translation_provider(
     if not isinstance(options, Options):
         options = Options(options)
 
-    if options.provider and options.provider.lower() != provider.lower():
-        raise SubtitleError(
-            f"Translation provider mismatch: expected {options.provider}, got {provider}"
-        )
-
-    if not options.provider:
-        options.provider = provider
+    options.provider = provider
 
     try:
         translation_provider = TranslationProvider.get_provider(options)

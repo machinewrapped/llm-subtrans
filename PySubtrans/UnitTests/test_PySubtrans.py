@@ -144,6 +144,35 @@ class PySubtransConvenienceTests(unittest.TestCase):
         )
         self.assertIs(translator.translation_provider, provider)
 
+    def test_init_translation_provider_updates_provider(self) -> None:
+        options = init_options(model="dummy-model")
+
+        log_input_expected_result("options provider before init", None, options.provider)
+        self.assertIsNone(options.provider)
+
+        provider = init_translation_provider("Dummy Provider", options)
+
+        log_input_expected_result("options provider after init", "Dummy Provider", options.provider)
+        self.assertEqual(options.provider, "Dummy Provider")
+
+        log_input_expected_result("provider instance name", "Dummy Provider", provider.name)
+        self.assertEqual(provider.name, "Dummy Provider")
+
+        log_input_expected_result(
+            "provider settings created",
+            True,
+            "Dummy Provider" in options.provider_settings,
+        )
+        self.assertIn("Dummy Provider", options.provider_settings)
+
+        provider_options = options.provider_settings['Dummy Provider']
+        log_input_expected_result(
+            "provider model stored",
+            "dummy-model",
+            provider_options.get('model'),
+        )
+        self.assertEqual(provider_options.get('model'), "dummy-model")
+
     def test_init_translator_mismatch_error(self) -> None:
         provider_options = init_options(provider="Dummy Provider", model="dummy-model")
         provider = init_translation_provider("Dummy Provider", provider_options)

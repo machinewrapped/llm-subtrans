@@ -202,8 +202,8 @@ gpt-subtrans <path_to_subtitle_file> --target_language <target_language>
 gemini-subtrans <path_to_subtitle_file> --target_language <target_language>
 claude-subtrans <path_to_subtitle_file> --target_language <target_language>
 
-# process files in different folders (the script will need editing to configure the path and provider settings)
-python3 batch_process.py
+# Batch process files in a folder tree (activate the virtual environment first)
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --api-key sk-... --target-language Spanish
 ```
 
 The output format is inferred from file extensions. To convert between formats, provide an output path with the desired extension.

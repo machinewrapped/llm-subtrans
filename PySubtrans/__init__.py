@@ -458,6 +458,7 @@ __all__ = [
     'SubtitleBatcher',
     'SubtitleBuilder',
     'SubtitleEditor',
+    'SubtitleFormatRegistry',
     'SubtitleProcessor',
     'SubtitleProject',
     'SubtitleTranslator',

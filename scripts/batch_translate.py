@@ -23,27 +23,28 @@ from __future__ import annotations
 
 import argparse
 from contextlib import contextmanager
-import json
 import logging
 import pathlib
 import sys
 
-from PySubtrans import init_options, init_subtitles, init_translator, init_translation_provider
+from PySubtrans import init_subtitles, init_translator, init_translation_provider
+from PySubtrans import Options, SettingsType, SubtitleError
+from PySubtrans import SubtitleTranslator
+from PySubtrans import TranslationProvider
+from PySubtrans import SubtitleFormatRegistry
+
 from PySubtrans.Helpers import GetOutputPath
-from PySubtrans.Options import Options
-from PySubtrans.SettingsType import SettingType, SettingsType
-from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
-from PySubtrans.SubtitleTranslator import SubtitleTranslator
-from PySubtrans.TranslationProvider import TranslationProvider
+from PySubtrans.Helpers.SettingsHelpers import parse_setting_value, redact_sensitive_values
 
 # Default configuration options for batch processing.
 # These can be overridden by command line arguments.
+# Some providers may require additional options to be set (e.g. server_address, use_default_model).
 DEFAULT_OPTIONS = SettingsType({
     'source_path': './subtitles',
     'destination_path': './translated',
     'output_format': None,                          # Optional format override, e.g. "srt". If not specified, inferred from source file.
     'provider': "OpenRouter",                       # Translation provider to use, e.g. "Gemini"
+    'api_key': None,                                # Your API key for the selected provider
     'model': "moonshotai/kimi-k2:free",             # Your preferred model name
     'target_language': 'Spanish',                   # The language to translate subtitles to
     'prompt': 'Translate these subtitles into {target_language}',       # High level prompt template
@@ -260,33 +261,6 @@ def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def parse_setting_value(value : str) -> SettingType:
-    """Infer an appropriate SettingType value from a string."""
-    lowered = value.lower()
-    if lowered in {"true", "yes", "on"}:
-        return True
-    if lowered in {"false", "no", "off"}:
-        return False
-
-    try:
-        if value.startswith('[') or value.startswith('{'):
-            parsed = json.loads(value)
-            if isinstance(parsed, dict):
-                return SettingsType(parsed)
-            if isinstance(parsed, (list, str, int, float, bool)) or parsed is None:
-                return parsed
-    except json.JSONDecodeError:
-        pass
-
-    try:
-        return int(value)
-    except ValueError:
-        pass
-
-    try:
-        return float(value)
-    except ValueError:
-        return value
 
 def build_config(args : argparse.Namespace) -> BatchJobConfig:
     """Combine DEFAULT_OPTIONS with command line arguments."""
@@ -341,19 +315,6 @@ def configure_logging(log_path : str, verbose : bool) -> None:
     console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
     console_handler.setFormatter(logging.Formatter('%(message)s'))
     logging.root.addHandler(console_handler)
-
-def redact_sensitive_values(settings : SettingsType) -> SettingsType:
-    """Return a copy of settings with any potential secrets redacted."""
-    redacted : SettingsType = SettingsType()
-    for key, value in settings.items():
-        if isinstance(value, SettingsType):
-            redacted[key] = redact_sensitive_values(value)
-        elif 'key' in key.lower() or 'token' in key.lower():
-            redacted[key] = '***'
-        else:
-            redacted[key] = value
-    return redacted
-
 
 class BatchStatistics:
     """Summary of the batch processing run."""

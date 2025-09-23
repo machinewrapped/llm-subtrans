@@ -179,7 +179,7 @@ Note that there are a number of options which are only used by the GUI-Subtrans 
 
 PySubtrans is designed to be modular. The helper functions above are convenient entry points, but you are free to use lower-level components directly when you need more control:
 
-### Explicitly nitialising a `TranslationProvider`
+### Explicitly initialising a `TranslationProvider`
 
 `init_translator` will automatically construct a `TranslationProvider` based on the provided options, but it may be useful to construct one explicitly as each supported provider presents slightly different options.
 

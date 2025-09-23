@@ -432,7 +432,7 @@ There are many possible and correct ways to use PySubtrans. [LLM-Subtrans](https
 
 ### Batch automation example
 
-The repository also includes [`scripts/batch_process_new.py`](../scripts/batch_process_new.py) as a ready-to-run batch sample. The script shows how to:
+The repository also includes [`scripts/batch_translate.py`](../scripts/batch_translate.py) as a ready-to-run batch sample. The script shows how to:
 
 - build an `Options` instance with `init_options`, including command line overrides for provider, model and preview settings,
 - walk a source directory using `SubtitleFormatRegistry.enumerate_formats()` to filter files that PySubtrans can translate,

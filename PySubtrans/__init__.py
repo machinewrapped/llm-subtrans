@@ -198,13 +198,11 @@ def init_translation_provider(
         provider="openai",
         model="gpt-4o-mini",
         api_key="sk-...",
-    )
-    provider = init_translation_provider("openai", options)
-    runtime_options = init_options(
         prompt="Translate these subtitles into {target_language}",
         target_language="French",
     )
-    translator = init_translator(runtime_options, translation_provider=provider)
+    provider = init_translation_provider("openai", options)
+    translator = init_translator(options, translation_provider=provider)
     """
 
     if not provider:
@@ -213,31 +211,21 @@ def init_translation_provider(
     if options is None:
         raise SubtitleError("Translation options are required to initialise a provider")
 
-    if isinstance(options, Options):
-        resolved_options = options
-    else:
-        resolved_options = Options(options)
+    if not isinstance(options, Options):
+        options = Options(options)
 
-    if resolved_options.provider and resolved_options.provider.lower() != provider.lower():
+    if options.provider and options.provider.lower() != provider.lower():
         raise SubtitleError(
-            f"Translation provider mismatch: expected {resolved_options.provider}, got {provider}"
+            f"Translation provider mismatch: expected {options.provider}, got {provider}"
         )
 
-    if not resolved_options.provider:
-        resolved_options.provider = provider
-
-    provider_settings_view = resolved_options.provider_settings
-    current_settings = provider_settings_view.get_with_default(provider, SettingsType())
-    provider_settings_view[provider] = current_settings
-
-    provider_settings = SettingsType(current_settings)
+    if not options.provider:
+        options.provider = provider
 
     try:
-        translation_provider = TranslationProvider.create_provider(provider, provider_settings)
+        translation_provider = TranslationProvider.get_provider(options)
     except ValueError as exc:
         raise SubtitleError(str(exc)) from exc
-
-    translation_provider.UpdateSettings(resolved_options)
 
     if not translation_provider.ValidateSettings():
         message = translation_provider.validation_message or f"Invalid settings for provider {provider}"

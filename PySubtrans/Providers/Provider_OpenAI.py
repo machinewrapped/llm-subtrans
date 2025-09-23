@@ -7,7 +7,7 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
 if not importlib.util.find_spec("openai"):
     from PySubtrans.Helpers.Localization import _
-    logging.info(_("OpenAI SDK is not installed. OpenAI provider will not be available"))
+    logging.debug(_("OpenAI SDK is not installed. OpenAI provider will not be available"))
 else:
     try:
         import openai   # type: ignore

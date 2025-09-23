@@ -140,7 +140,7 @@ class SubtitleTranslator:
         if translations:
             logging.info(_("Successfully translated {count} lines!").format(count=len(translations)))
 
-        if untranslated and not self.max_lines:
+        if untranslated and not self.max_lines and not self.preview:
             logging.warning(_("Failed to translate {count} lines:").format(count=len(untranslated)))
             for line in untranslated:
                 logging.info(_("Untranslated > {number}. {text}").format(number=line.number, text=line.text))

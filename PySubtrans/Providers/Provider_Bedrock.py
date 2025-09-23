@@ -7,7 +7,7 @@ from PySubtrans.Options import SettingsType
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
 if not importlib.util.find_spec("boto3"):
-    logging.info(_("Amazon Boto3 SDK is not installed. Bedrock provider will not be available"))
+    logging.debug(_("Amazon Boto3 SDK is not installed. Bedrock provider will not be available"))
 else:
     try:
         import boto3 # type: ignore[import]

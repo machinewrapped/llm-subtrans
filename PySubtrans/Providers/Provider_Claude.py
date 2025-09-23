@@ -6,7 +6,7 @@ from PySubtrans.Options import env_float, env_int, env_bool
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
 if not importlib.util.find_spec("anthropic"):
-    logging.info(_("Anthropic SDK is not installed. Claude provider will not be available"))
+    logging.debug(_("Anthropic SDK is not installed. Claude provider will not be available"))
 else:
     try:
         import anthropic

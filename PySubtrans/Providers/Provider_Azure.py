@@ -6,7 +6,7 @@ from PySubtrans.Options import SettingsType, env_str
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
 if not importlib.util.find_spec("openai"):
-    logging.info(_("OpenAI SDK is not installed. Azure provider will not be available"))
+    logging.debug(_("OpenAI SDK is not installed. Azure provider will not be available"))
 else:
     try:
         import openai   # type: ignore

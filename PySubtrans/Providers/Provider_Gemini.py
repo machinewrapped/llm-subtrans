@@ -7,7 +7,7 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
 if not importlib.util.find_spec("google"):
     from PySubtrans.Helpers.Localization import _
-    logging.info(_("Google SDK (google-genai) is not installed. Gemini provider will not be available"))
+    logging.debug(_("Google SDK (google-genai) is not installed. Gemini provider will not be available"))
 else:
     try:
         from collections import defaultdict

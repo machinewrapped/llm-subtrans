@@ -7,7 +7,7 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
 if not importlib.util.find_spec("mistralai"):
     from PySubtrans.Helpers.Localization import _
-    logging.info(_("Mistral SDK is not installed. Mistral provider will not be available"))
+    logging.debug(_("Mistral SDK is not installed. Mistral provider will not be available"))
 else:
     try:
         import mistralai

@@ -8,6 +8,7 @@ incompatibilities.
 
 from typing import Any, TypeVar, overload, Mapping
 from datetime import timedelta
+import json
 
 import regex
 
@@ -324,3 +325,44 @@ def validate_setting_type(settings: SettingsType|Mapping[str, SettingType]|Optio
         return True
     except SettingsError:
         return False
+
+
+def parse_setting_value(value : str) -> SettingType:
+    """Infer an appropriate SettingType value from a string."""
+    lowered = value.lower()
+    if lowered in {"true", "yes", "on"}:
+        return True
+    if lowered in {"false", "no", "off"}:
+        return False
+
+    try:
+        if value.startswith('[') or value.startswith('{'):
+            parsed = json.loads(value)
+            if isinstance(parsed, dict):
+                return SettingsType(parsed)
+            if isinstance(parsed, (list, str, int, float, bool)) or parsed is None:
+                return parsed
+    except json.JSONDecodeError:
+        pass
+
+    try:
+        return int(value)
+    except ValueError:
+        pass
+
+    try:
+        return float(value)
+    except ValueError:
+        return value
+
+def redact_sensitive_values(settings : SettingsType) -> SettingsType:
+    """Return a copy of settings with any potential secrets redacted."""
+    redacted : SettingsType = SettingsType()
+    for key, value in settings.items():
+        if isinstance(value, SettingsType):
+            redacted[key] = redact_sensitive_values(value)
+        elif 'key' in key.lower() or 'token' in key.lower():
+            redacted[key] = '***'
+        else:
+            redacted[key] = value
+    return redacted

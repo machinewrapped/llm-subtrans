@@ -10,11 +10,11 @@ file.
 Update the DEFAULT_OPTIONS values below to suit your environment, or
 pass overrides on the command line. Example usage:
 
-    python scripts/batch_process_new.py ./subtitles ./translated --provider openai \\
+    python scripts/batch_translate.py ./subtitles ./translated --provider openai \\
         --model gpt-4o-mini --api-key sk-... --target-language Spanish
 
     # Preview mode exercises the entire pipeline without contacting the API
-    python scripts/batch_process_new.py ./subtitles ./translated --preview
+    python scripts/batch_translate.py ./subtitles ./translated --preview
 
 Set output_format in DEFAULT_OPTIONS or pass --output-format to
 change the file type written to the destination directory.
@@ -50,7 +50,7 @@ DEFAULT_OPTIONS = SettingsType({
     'source_path': './subtitles',
     'destination_path': './translated',
     'output_format': None,
-    'log_path': './batch_process.log',
+    'log_path': './batch_translate.log',
 })
 
 
@@ -62,7 +62,7 @@ class BatchJobConfig:
 
         source_value = self.options.get_str('source_path') or './subtitles'
         destination_value = self.options.get_str('destination_path') or './translated'
-        log_value = self.options.get_str('log_path') or './batch_process.log'
+        log_value = self.options.get_str('log_path') or './batch_translate.log'
 
         self.source_path = pathlib.Path(source_value)
         self.destination_path = pathlib.Path(destination_value)

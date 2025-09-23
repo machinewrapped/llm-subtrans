@@ -38,15 +38,16 @@ from PySubtrans.Helpers.SettingsHelpers import parse_setting_value, redact_sensi
 
 # Default configuration options for batch processing.
 # These can be overridden by command line arguments.
+# Any unspecified options will use PySubtrans defaults.
 # Some providers may require additional options to be set (e.g. server_address, use_default_model).
 DEFAULT_OPTIONS = SettingsType({
     'source_path': './subtitles',
     'destination_path': './translated',
+    'target_language': 'Spanish',                   # The language to translate subtitles to
     'output_format': None,                          # Optional format override, e.g. "srt". If not specified, inferred from source file.
     'provider': "OpenRouter",                       # Translation provider to use, e.g. "Gemini"
     'api_key': None,                                # Your API key for the selected provider
-    'model': "x-ai/grok-4-fast:free",             # Your preferred model name
-    'target_language': 'Spanish',                   # The language to translate subtitles to
+    'model': "deepseek/deepseek-chat-v3.1:free",    # Your preferred model name
     'prompt': 'Translate these subtitles into {target_language}',       # High level prompt template
     'instruction_file': 'instructions.txt',         # Optional file containing detailed instructions
     'scene_threshold': 60.0,                        # Scene detection threshold in seconds

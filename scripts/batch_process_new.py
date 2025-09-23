@@ -285,11 +285,10 @@ def parse_setting_value(value : str) -> SettingType:
     except json.JSONDecodeError:
         pass
 
-    if value.isdigit() or (value.startswith('-') and value[1:].isdigit()):
-        try:
-            return int(value)
-        except ValueError:
-            pass
+    try:
+        return int(value)
+    except ValueError:
+        pass
 
     try:
         return float(value)

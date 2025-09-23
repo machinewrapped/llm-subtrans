@@ -236,7 +236,7 @@ class BatchProcessor:
 
         translation_provider = init_translation_provider(
             provider_name,
-            model=self.options.model or self.options.get('model'),
+            model=self.options.get('model'),
             api_key=self.options.get('api_key'),
         )
         translation_provider.UpdateSettings(self.options)

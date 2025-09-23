@@ -37,46 +37,24 @@ from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationProvider import TranslationProvider
 
+# Default configuration options for batch processing.
+# These can be overridden by command line arguments.
 DEFAULT_OPTIONS = SettingsType({
-    'provider': None,  # Set to your provider name, e.g. "openai"
-    'model': None,     # Set to the provider specific model name
-    'target_language': 'Spanish',
-    'prompt': 'Translate these subtitles into {target_language}',
-    'instruction_file': None,
-    'preview': True,
-    'preprocess_subtitles': True,
-    'postprocess_translation': True,
-    'max_batch_size': 60,
     'source_path': './subtitles',
     'destination_path': './translated',
-    'output_format': None,
+    'output_format': None,                          # Optional format override, e.g. "srt". If not specified, inferred from source file.
+    'provider': "OpenRouter",                       # Translation provider to use, e.g. "Gemini"
+    'model': "moonshotai/kimi-k2:free",             # Your preferred model name
+    'target_language': 'Spanish',                   # The language to translate subtitles to
+    'prompt': 'Translate these subtitles into {target_language}',       # High level prompt template
+    'instruction_file': 'instructions.txt',         # Optional file containing detailed instructions
+    'scene_threshold': 60.0,                        # Scene detection threshold in seconds
+    'max_batch_size': 100,                          # Maximum number of lines to include in each translation batch
+    'preprocess_subtitles': True,                   # Whether to apply preprocessing steps to the subtitles before translation
+    'postprocess_translation': True,                # Whether to apply postprocessing steps to the translated subtitles
     'log_path': './batch_translate.log',
+    'preview': False,                               # Set to True to exercise the workflow without calling the API to execute translations.
 })
-
-
-class BatchJobConfig:
-    """Container for batch translation configuration derived from the options dictionary."""
-
-    def __init__(self, settings : SettingsType):
-        self.options = SettingsType(dict(settings))
-
-        source_value = self.options.get_str('source_path') or './subtitles'
-        destination_value = self.options.get_str('destination_path') or './translated'
-        log_value = self.options.get_str('log_path') or './batch_translate.log'
-
-        self.source_path = pathlib.Path(source_value)
-        self.destination_path = pathlib.Path(destination_value)
-        self.log_path = pathlib.Path(log_value)
-
-        self.output_format = self.options.get_str('output_format')
-
-        self.options['source_path'] = str(self.source_path)
-        self.options['destination_path'] = str(self.destination_path)
-        self.options['log_path'] = str(self.log_path)
-        if self.output_format is not None:
-            self.options['output_format'] = self.output_format
-        else:
-            self.options.pop('output_format', None)
 
 
 class BatchProcessor:
@@ -91,8 +69,8 @@ class BatchProcessor:
 
     def run(self) -> BatchStatistics:
         """Execute the batch translation workflow."""
-        source_root = self.config.source_path.expanduser().resolve()
-        destination_root = self.config.destination_path.expanduser().resolve()
+        source_root = pathlib.Path(self.config.source_path).expanduser().resolve()
+        destination_root = pathlib.Path(self.config.destination_path).expanduser().resolve()
         destination_root.mkdir(parents=True, exist_ok=True)
 
         if not source_root.exists() or not source_root.is_dir():
@@ -244,6 +222,22 @@ class BatchProcessor:
 
         return translation_provider
 
+class BatchJobConfig:
+    """Container for batch translation configuration derived from the options dictionary."""
+
+    def __init__(self, settings : SettingsType):
+        self.options = Options(settings)
+
+        self.source_path = self.options.get_str('source_path') or './subtitles'
+        self.destination_path = self.options.get_str('destination_path') or './translated'
+        self.log_path = self.options.get_str('log_path') or './batch_translate.log'
+
+        self.output_format = self.options.get_str('output_format')
+
+        self.options['source_path'] = self.source_path
+        self.options['destination_path'] = self.destination_path
+        self.options['log_path'] = self.log_path
+
 
 def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
     """Parse command line arguments."""
@@ -328,18 +322,17 @@ def build_config(args : argparse.Namespace) -> BatchJobConfig:
 
     return BatchJobConfig(settings)
 
-
-def configure_logging(log_path : pathlib.Path, verbose : bool) -> None:
+def configure_logging(log_path : str, verbose : bool) -> None:
     """Configure logging to emit concise console output and detailed log file."""
-    log_path = log_path.expanduser().resolve()
-    log_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved_log_path = pathlib.Path(log_path).expanduser().resolve()
+    resolved_log_path.parent.mkdir(parents=True, exist_ok=True)
 
     for handler in logging.root.handlers[:]:
         logging.root.removeHandler(handler)
 
     logging.root.setLevel(logging.DEBUG)
 
-    file_handler = logging.FileHandler(log_path, encoding='utf-8')
+    file_handler = logging.FileHandler(resolved_log_path, encoding='utf-8')
     file_handler.setLevel(logging.DEBUG)
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.root.addHandler(file_handler)

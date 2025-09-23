@@ -436,7 +436,7 @@ Remember to change the local port to yours and turn on your proxy tools such as 
 
 ### batch process
 
-you can process files with the following struct：
+You can process files with the following directory structure：
 
       #   -SRT
       #   --fold1
@@ -448,10 +448,23 @@ you can process files with the following struct：
       #   ---2.srt
       #   ...
 
+Use the `batch_translate.py` script to process multiple subtitle files:
+
+You can modify the `DEFAULT_OPTIONS` values directly in the script file, or use a combination of script defaults and command line overrides.
+
 ```sh
-python3 batch_process.py  # process files in different folders
+# Preview mode to test settings without making API calls
+python scripts/batch_translate.py --preview
+
+# Basic usage with command line arguments
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --api-key sk-... --target-language Spanish
+
+# Override output format
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --output-format srt
+
+# Use additional options
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --option max_batch_size=40 --option preprocess_subtitles=false
 ```
-You need to modify the command line in batch_process.py accordingly.
 
 ### Developers
 It is recommended to use an IDE such as Visual Studio Code to run the program when installed from source, and set up a launch.json file to specify the arguments.

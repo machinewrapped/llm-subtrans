@@ -11,7 +11,7 @@ Update the DEFAULT_OPTIONS values below to suit your environment, or
 pass overrides on the command line. Example usage:
 
     python scripts/batch_translate.py ./subtitles ./translated --provider openai \\
-        --model gpt-4o-mini --api-key sk-... --target-language Spanish
+        --model gpt-5-mini --api-key sk-... --target-language Spanish
 
     # Preview mode exercises the entire pipeline without contacting the API
     python scripts/batch_translate.py ./subtitles ./translated --preview

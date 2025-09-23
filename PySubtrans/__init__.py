@@ -10,7 +10,7 @@ Basic Usage
     # Configure options
     opts = init_options(
             provider="openai",
-            model="gpt-4o-mini",
+            model="gpt-5-mini",
             api_key="sk-...",
             prompt="Translate these subtitles into Spanish",
         )
@@ -192,7 +192,7 @@ def init_translation_provider(
     from PySubtrans import init_options, init_translation_provider, init_translator
 
     options = init_options(
-        model="gpt-4o-mini",
+        model="gpt-5-mini",
         api_key="sk-...",
         prompt="Translate these subtitles into {target_language}",
         target_language="French",
@@ -253,7 +253,7 @@ def init_translator(
     from PySubtrans import init_options, init_translator
 
     # Create translator from Options
-    opts = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
+    opts = init_options(provider="openai", model="gpt-5-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
     translator = init_translator(opts)
 
     # Create translator from dictionary
@@ -261,7 +261,7 @@ def init_translator(
     translator = init_translator(settings)
 
     # Create translator with a pre-initialised TranslationProvider
-    provider_options = init_options(model="gpt-4o-mini", api_key="sk-...")
+    provider_options = init_options(model="gpt-5-mini", api_key="sk-...")
     provider = init_translation_provider("openai", provider_options)
     options = init_options(prompt="Translate these subtitles into Spanish")
     translator = init_translator(options, translation_provider=provider)

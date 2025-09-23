@@ -124,11 +124,13 @@ class PySubtransConvenienceTests(unittest.TestCase):
     def test_init_translation_provider_reuse(self) -> None:
         options = self._create_options()
 
-        provider = init_translation_provider(
-            "Dummy Provider",
-            model="dummy-model",
-            data={'response_map': {}},
-        )
+        provider_settings = options.provider_settings['Dummy Provider']
+        provider_settings['data'] = {
+            'names': ['Alice', 'Bob'],
+            'response_map': {},
+        }
+
+        provider = init_translation_provider("Dummy Provider", options)
 
         log_input_expected_result("provider initialised", "Dummy Provider", provider.name)
         self.assertEqual(provider.name, "Dummy Provider")
@@ -143,7 +145,8 @@ class PySubtransConvenienceTests(unittest.TestCase):
         self.assertIs(translator.translation_provider, provider)
 
     def test_init_translator_mismatch_error(self) -> None:
-        provider = init_translation_provider("Dummy Provider", model="dummy-model")
+        provider_options = init_options(provider="Dummy Provider", model="dummy-model")
+        provider = init_translation_provider("Dummy Provider", provider_options)
 
         mismatch_options = init_options(provider="Dummy GPT", model="gpt-5-dummy")
 

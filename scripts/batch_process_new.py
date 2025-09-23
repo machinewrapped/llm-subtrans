@@ -236,10 +236,8 @@ class BatchProcessor:
 
         translation_provider = init_translation_provider(
             provider_name,
-            model=self.options.get('model'),
-            api_key=self.options.get('api_key'),
+            self.options,
         )
-        translation_provider.UpdateSettings(self.options)
 
         self.logger.debug("Validated translation provider %s", translation_provider.name)
 

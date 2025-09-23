@@ -27,6 +27,8 @@ Basic Usage
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from PySubtrans.Helpers import GetInputPath
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingType, SettingsType
@@ -168,9 +170,7 @@ def init_subtitles(
 
 def init_translation_provider(
     provider : str,
-    model : str|None = None,
-    api_key : str|None = None,
-    **settings : SettingType,
+    options : Options|SettingsType|Mapping[str, SettingType],
 ) -> TranslationProvider:
     """
     Initialise and validate a :class:`TranslationProvider` instance.
@@ -179,12 +179,11 @@ def init_translation_provider(
     ----------
     provider : str
         The provider name registered with :class:`TranslationProvider`.
-    model : str, optional
-        Provider specific model identifier.
-    api_key : str, optional
-        API key for the provider.
-    **settings : SettingType
-        Additional provider configuration values.
+    options : Options or mapping
+        Translator options containing the provider configuration. Values supplied at the top level
+        (e.g. ``model`` or ``api_key``) will be moved into provider-specific settings during
+        initialisation. Provider specific settings may also be supplied under
+        ``options['provider_settings'][provider]``.
 
     Returns
     -------
@@ -195,29 +194,50 @@ def init_translation_provider(
     --------
     from PySubtrans import init_options, init_translation_provider, init_translator
 
-    provider = init_translation_provider("openai", model="gpt-4o-mini", api_key="sk-...")
     options = init_options(
+        provider="openai",
+        model="gpt-4o-mini",
+        api_key="sk-...",
+    )
+    provider = init_translation_provider("openai", options)
+    runtime_options = init_options(
         prompt="Translate these subtitles into {target_language}",
         target_language="French",
     )
-    translator = init_translator(options, translation_provider=provider)
+    translator = init_translator(runtime_options, translation_provider=provider)
     """
 
     if not provider:
         raise SubtitleError("Translation provider name is required")
 
-    provider_settings = SettingsType(settings)
+    if options is None:
+        raise SubtitleError("Translation options are required to initialise a provider")
 
-    if model is not None:
-        provider_settings['model'] = model
+    if isinstance(options, Options):
+        resolved_options = options
+    else:
+        resolved_options = Options(options)
 
-    if api_key is not None:
-        provider_settings['api_key'] = api_key
+    if resolved_options.provider and resolved_options.provider.lower() != provider.lower():
+        raise SubtitleError(
+            f"Translation provider mismatch: expected {resolved_options.provider}, got {provider}"
+        )
+
+    if not resolved_options.provider:
+        resolved_options.provider = provider
+
+    provider_settings_view = resolved_options.provider_settings
+    current_settings = provider_settings_view.get_with_default(provider, SettingsType())
+    provider_settings_view[provider] = current_settings
+
+    provider_settings = SettingsType(current_settings)
 
     try:
         translation_provider = TranslationProvider.create_provider(provider, provider_settings)
     except ValueError as exc:
         raise SubtitleError(str(exc)) from exc
+
+    translation_provider.UpdateSettings(resolved_options)
 
     if not translation_provider.ValidateSettings():
         message = translation_provider.validation_message or f"Invalid settings for provider {provider}"
@@ -261,7 +281,8 @@ def init_translator(
     translator = init_translator(settings)
 
     # Reuse a validated TranslationProvider instance
-    provider = init_translation_provider("openai", model="gpt-4o-mini", api_key="sk-...")
+    provider_options = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-...")
+    provider = init_translation_provider("openai", provider_options)
     options = init_options(prompt="Translate these subtitles into Spanish")
     translator = init_translator(options, translation_provider=provider)
     """

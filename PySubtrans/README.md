@@ -134,10 +134,11 @@ Subtitles must be batched prior to translation.
 Example
 
 ```python
-from PySubtrans import init_translator, init_translation_provider
+from PySubtrans import init_options, init_translator, init_translation_provider
 
-provider = init_translation_provider("gemini", api_key="your-key")
-translator = init_translator({"provider": "gemini"}, translation_provider=provider)
+options = init_options(provider="gemini", api_key="your-key")
+provider = init_translation_provider("gemini", options)
+translator = init_translator(options, translation_provider=provider)
 translator.events.scene_translated += on_scene_translated  # Subscribe to events
 translator.TranslateSubtitles(subtitles)
 ```

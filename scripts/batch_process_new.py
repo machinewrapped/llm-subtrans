@@ -7,7 +7,7 @@ in a source directory, translates them and writes the results to a target
 directory while logging progress to both the console and a detailed log
 file.
 
-Update the ``DEFAULT_OPTIONS`` values below to suit your environment, or
+Update the DEFAULT_OPTIONS values below to suit your environment, or
 pass overrides on the command line. Example usage:
 
     python scripts/batch_process_new.py ./subtitles ./translated --provider openai \\
@@ -16,7 +16,7 @@ pass overrides on the command line. Example usage:
     # Preview mode exercises the entire pipeline without contacting the API
     python scripts/batch_process_new.py ./subtitles ./translated --preview
 
-Set ``output_format`` in ``DEFAULT_OPTIONS`` or pass ``--output-format`` to
+Set output_format in DEFAULT_OPTIONS or pass --output-format to
 change the file type written to the destination directory.
 """
 from __future__ import annotations
@@ -114,13 +114,12 @@ class BatchProcessor:
 
         for index, source_file in enumerate(files, start=1):
             relative_name = source_file.relative_to(source_root)
-            tentative_output = destination_root / relative_name
+            output_base = destination_root / relative_name
 
             self.logger.info("[%d/%d] Loading %s", index, len(files), source_file)
 
             try:
-                # ``init_subtitles`` loads and batches the file using the
-                # Options we prepared earlier.
+                # init_subtitles loads and batches the file using the Options we prepared earlier.
                 subtitles = init_subtitles(filepath=str(source_file), options=self.options)
             except SubtitleError as exc:
                 self.logger.error("Failed to load %s: %s", source_file, exc)
@@ -132,9 +131,10 @@ class BatchProcessor:
             try:
                 # Determine the final output path so language suffixes and format overrides are applied consistently.
                 destination_file = self._prepare_destination(
-                    tentative_output,
+                    output_base,
                     subtitles.file_format,
                 )
+
             except SubtitleError as exc:
                 self.logger.error("Unable to determine output path for %s: %s", source_file, exc)
                 stats.failed_files += 1
@@ -146,21 +146,21 @@ class BatchProcessor:
                 continue
 
             try:
-                # ``init_translator`` builds a ready-to-use SubtitleTranslator
+                # init_translator builds a ready-to-use SubtitleTranslator
                 # configured with our provider and processing settings.
                 translator = init_translator(self.options, translation_provider=self.translation_provider)
+
             except SubtitleError as exc:
                 raise SubtitleError(f"Unable to initialise translator: {exc}") from exc
 
-            # ``ProgressDisplay.track`` hooks into SubtitleTranslator events to
-            # provide a concise console progress indicator while the batches are
-            # being processed.
+            # ProgressDisplay.track hooks into SubtitleTranslator events to provide 
+            # a concise console progress indicator while the batches are being processed.
             with self.progress_display.track(translator, source_file, translator.preview):
                 try:
-                    # ``TranslateSubtitles`` drives the end-to-end translation
-                    # process, raising SubtitleError if the provider reports a
-                    # problem.
+                    # TranslateSubtitles drives the end-to-end translation process, 
+                    # raising SubtitleError if the provider reports a problem.
                     translator.TranslateSubtitles(subtitles)
+
                 except SubtitleError as exc:
                     self.logger.error("Translation failed for %s: %s", source_file, exc)
                     stats.failed_files += 1
@@ -178,9 +178,10 @@ class BatchProcessor:
             try:
                 # Save the translated subtitles. Format is deduced from the filename.
                 subtitles.SaveTranslation(str(destination_file))
+
             except (SubtitleError, OSError) as exc:
-                # At this point we have already paid for the translation, so a
-                # failure to write the result must abort the batch.
+                # A failure to write the result should abort the batch
+                # to avoid incurring further costs if we cannot save the translations.
                 raise SubtitleError(f"Failed to save translation for {source_file}: {exc}") from exc
 
             if translator.errors:
@@ -348,11 +349,11 @@ def configure_logging(log_path : pathlib.Path, verbose : bool) -> None:
     console_handler.setFormatter(logging.Formatter('%(message)s'))
     logging.root.addHandler(console_handler)
 
-def redact_sensitive_values(settings : SettingsType | dict[str, SettingType]) -> dict[str, SettingType]:
+def redact_sensitive_values(settings : SettingsType) -> SettingsType:
     """Return a copy of settings with any potential secrets redacted."""
-    redacted : dict[str, SettingType] = {}
+    redacted : SettingsType = SettingsType()
     for key, value in settings.items():
-        if isinstance(value, dict):
+        if isinstance(value, SettingsType):
             redacted[key] = redact_sensitive_values(value)
         elif 'key' in key.lower() or 'token' in key.lower():
             redacted[key] = '***'
@@ -511,8 +512,8 @@ def main(argv : list[str]|None = None) -> int:
     if config.output_format:
         logging.info("Output format override: %s", config.output_format)
 
-    options = init_options(**config.options)
-    logging.debug("Effective options: %s", redact_sensitive_values(dict(options)))
+    options = Options(config.options)
+    logging.debug("Effective options: %s", redact_sensitive_values(options))
     model_name = options.model or options.get('model')
     logging.info(
         "Using provider '%s' model '%s' (preview=%s)",

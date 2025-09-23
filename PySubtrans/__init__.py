@@ -180,11 +180,7 @@ def init_translation_provider(
     provider : str
         The provider name registered with :class:`TranslationProvider`.
     options : Options or mapping
-        Translator options containing the provider configuration. Values supplied at the top level
-        (e.g. ``model`` or ``api_key``) will be moved into provider-specific settings during
-        initialisation. Provider specific settings may also be supplied under
-        ``options['provider_settings'][provider]``. The supplied options object is updated so that
-        ``options.provider`` matches the ``provider`` argument.
+        Translator options containing the provider configuration (vary depending on the provider).
 
     Returns
     -------
@@ -196,7 +192,6 @@ def init_translation_provider(
     from PySubtrans import init_options, init_translation_provider, init_translator
 
     options = init_options(
-        provider="openai",
         model="gpt-4o-mini",
         api_key="sk-...",
         prompt="Translate these subtitles into {target_language}",
@@ -240,6 +235,8 @@ def init_translator(
     ----------
     settings : Options or SettingsType
         The translator settings. This should specify the provider and model to use, along with extra configuration options as needed.
+    translation_provider : TranslationProvider or None, optional
+        An pre-configured :class:`TranslationProvider` instance (if not specified a provider is created automatically based on the settings).
 
     Exceptions
     ----------
@@ -263,8 +260,8 @@ def init_translator(
     settings = {"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"}
     translator = init_translator(settings)
 
-    # Reuse a validated TranslationProvider instance
-    provider_options = init_options(provider="openai", model="gpt-4o-mini", api_key="sk-...")
+    # Create translator with a pre-initialised TranslationProvider
+    provider_options = init_options(model="gpt-4o-mini", api_key="sk-...")
     provider = init_translation_provider("openai", provider_options)
     options = init_options(prompt="Translate these subtitles into Spanish")
     translator = init_translator(options, translation_provider=provider)

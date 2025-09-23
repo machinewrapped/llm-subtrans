@@ -166,7 +166,70 @@ def init_subtitles(
 
     return subtitles
 
-def init_translator(settings: Options|SettingsType) -> SubtitleTranslator:
+def init_translation_provider(
+    provider : str,
+    model : str|None = None,
+    api_key : str|None = None,
+    **settings : SettingType,
+) -> TranslationProvider:
+    """
+    Initialise and validate a :class:`TranslationProvider` instance.
+
+    Parameters
+    ----------
+    provider : str
+        The provider name registered with :class:`TranslationProvider`.
+    model : str, optional
+        Provider specific model identifier.
+    api_key : str, optional
+        API key for the provider.
+    **settings : SettingType
+        Additional provider configuration values.
+
+    Returns
+    -------
+    TranslationProvider
+        A provider instance with validated credentials and settings.
+
+    Examples
+    --------
+    from PySubtrans import init_options, init_translation_provider, init_translator
+
+    provider = init_translation_provider("openai", model="gpt-4o-mini", api_key="sk-...")
+    options = init_options(
+        prompt="Translate these subtitles into {target_language}",
+        target_language="French",
+    )
+    translator = init_translator(options, translation_provider=provider)
+    """
+
+    if not provider:
+        raise SubtitleError("Translation provider name is required")
+
+    provider_settings = SettingsType(settings)
+
+    if model is not None:
+        provider_settings['model'] = model
+
+    if api_key is not None:
+        provider_settings['api_key'] = api_key
+
+    try:
+        translation_provider = TranslationProvider.create_provider(provider, provider_settings)
+    except ValueError as exc:
+        raise SubtitleError(str(exc)) from exc
+
+    if not translation_provider.ValidateSettings():
+        message = translation_provider.validation_message or f"Invalid settings for provider {provider}"
+        raise SubtitleError(message)
+
+    return translation_provider
+
+
+def init_translator(
+    settings : Options|SettingsType,
+    translation_provider : TranslationProvider|None = None,
+) -> SubtitleTranslator:
     """
     Return a ready-to-use :class:`SubtitleTranslator` using the specified settings.
 
@@ -196,10 +259,28 @@ def init_translator(settings: Options|SettingsType) -> SubtitleTranslator:
     # Create translator from dictionary
     settings = {"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"}
     translator = init_translator(settings)
+
+    # Reuse a validated TranslationProvider instance
+    provider = init_translation_provider("openai", model="gpt-4o-mini", api_key="sk-...")
+    options = init_options(prompt="Translate these subtitles into Spanish")
+    translator = init_translator(options, translation_provider=provider)
     """
     options = Options(settings)
 
-    translation_provider = TranslationProvider.get_provider(options)
+    if translation_provider is None:
+        translation_provider = TranslationProvider.get_provider(options)
+    else:
+        provider_name = translation_provider.name
+        if options.provider and options.provider.lower() != provider_name.lower():
+            raise SubtitleError(
+                f"Translation provider mismatch: expected {options.provider}, got {provider_name}"
+            )
+
+        if not options.provider:
+            options.provider = provider_name
+
+        translation_provider.UpdateSettings(options)
+
     if not translation_provider.ValidateSettings():
         message = translation_provider.validation_message or f"Invalid settings for provider {options.provider}"
         raise SubtitleError(message)

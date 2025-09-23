@@ -123,7 +123,9 @@ subtitles = init_subtitles(content=srt_content)
 By default `init_subtitles` preprocesses and batches subtitles to be ready for translation, using the provided `options`. See `batch_subtitles` for details.
 
 ### Initialising a `SubtitleTranslator` with `init_translator`
-`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance to connect to the chosen translation service. 
+`init_translator` prepares a `SubtitleTranslator` instance that can be used to translate `Subtitles`. It uses the provided `Options` to initialise a `TranslationProvider` instance to connect to the chosen translation service.
+
+If you want to validate provider credentials and connection details before starting work, call `init_translation_provider` first and pass the resulting provider into `init_translator`. This pattern lets you fail fast when credentials are missing or incorrect and reuse the same provider instance across multiple translators.
 
 Instantiating your own `SubtitleTranslator` allows you to have more fine-grained control over the translation process, e.g. translating individual scenes or batches. You can subscribe to `events` to receive notifications when individual scenes or batches have been translated to provide realtime feedback or further processing.
 
@@ -132,8 +134,10 @@ Subtitles must be batched prior to translation.
 Example
 
 ```python
-from PySubtrans import init_translator
-translator = init_translator({"provider": "gemini", "api_key": "your-key"})
+from PySubtrans import init_translator, init_translation_provider
+
+provider = init_translation_provider("gemini", api_key="your-key")
+translator = init_translator({"provider": "gemini"}, translation_provider=provider)
 translator.events.scene_translated += on_scene_translated  # Subscribe to events
 translator.TranslateSubtitles(subtitles)
 ```
@@ -424,6 +428,21 @@ print(f"Final state: {subtitles.scenecount} scenes, {subtitles.linecount} lines"
 ## Learning from LLM-Subtrans and GUI-Subtrans
 
 There are many possible and correct ways to use PySubtrans. [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans) and [GUI-Subtrans](https://github.com/machinewrapped/llm-subtrans/tree/main/GuiSubtrans) provide two complete end-to-end examples that use PySubtrans in different ways, making use of different workflows and features. They can be used as a reference when integrating PySubtrans into your application if you want to use more advanced features.
+
+### Batch automation example
+
+The repository also includes [`scripts/batch_process_new.py`](../scripts/batch_process_new.py) as a ready-to-run batch sample. The script shows how to:
+
+- build an `Options` instance with `init_options`, including command line overrides for provider, model and preview settings,
+- walk a source directory using `SubtitleFormatRegistry.enumerate_formats()` to filter files that PySubtrans can translate,
+- load subtitles with `init_subtitles`, initialise a `TranslationProvider` and `SubtitleTranslator`, and subscribe to translator events to provide live progress feedback, and
+- save translations to a mirrored directory structure while writing a detailed execution log to disk.
+
+Existing translations are skipped automatically, allowing you to resume long-running jobs without reprocessing completed files.
+
+Preview mode can be enabled with `--preview` to exercise the entire pipeline without sending requests to a translation provider, which is helpful for smoke-testing workflows or validating settings.
+
+_Documentation opportunity_: a dedicated README section covering translator events and preview mode would complement the sample script and make it easier for new users to discover these features without reading the source code.
 
 ## If you need to know more
 

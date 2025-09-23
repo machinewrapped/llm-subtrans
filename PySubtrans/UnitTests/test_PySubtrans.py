@@ -11,6 +11,7 @@ from PySubtrans import (
     init_project,
     init_subtitles,
     init_translator,
+    init_translation_provider,
 )
 from PySubtrans.Helpers.TestCases import DummyProvider  # noqa: F401 - ensure provider is registered
 from PySubtrans.UnitTests.TestData.chinese_dinner import chinese_dinner_json_data
@@ -21,7 +22,7 @@ from PySubtrans.Helpers.Tests import (
     skip_if_debugger_attached,
 )
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleError import TranslationImpossibleError
+from PySubtrans.SubtitleError import SubtitleError, TranslationImpossibleError
 
 
 class PySubtransConvenienceTests(unittest.TestCase):
@@ -119,6 +120,37 @@ class PySubtransConvenienceTests(unittest.TestCase):
             scene_threshold,
         )
         self.assertIsNone(scene_threshold)
+
+    def test_init_translation_provider_reuse(self) -> None:
+        options = self._create_options()
+
+        provider = init_translation_provider(
+            "Dummy Provider",
+            model="dummy-model",
+            data={'response_map': {}},
+        )
+
+        log_input_expected_result("provider initialised", "Dummy Provider", provider.name)
+        self.assertEqual(provider.name, "Dummy Provider")
+
+        translator = init_translator(options, translation_provider=provider)
+
+        log_input_expected_result(
+            "translator provider reused",
+            provider.name,
+            translator.translation_provider.name,
+        )
+        self.assertIs(translator.translation_provider, provider)
+
+    def test_init_translator_mismatch_error(self) -> None:
+        provider = init_translation_provider("Dummy Provider", model="dummy-model")
+
+        mismatch_options = init_options(provider="Dummy GPT", model="gpt-5-dummy")
+
+        with self.assertRaises(SubtitleError) as exc:
+            init_translator(mismatch_options, translation_provider=provider)
+
+        log_input_expected_error("provider mismatch", SubtitleError, exc.exception)
 
     def test_init_project_batches_on_creation(self) -> None:
         options = self._create_options()

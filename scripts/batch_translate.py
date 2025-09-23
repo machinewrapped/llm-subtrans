@@ -45,7 +45,7 @@ DEFAULT_OPTIONS = SettingsType({
     'output_format': None,                          # Optional format override, e.g. "srt". If not specified, inferred from source file.
     'provider': "OpenRouter",                       # Translation provider to use, e.g. "Gemini"
     'api_key': None,                                # Your API key for the selected provider
-    'model': "moonshotai/kimi-k2:free",             # Your preferred model name
+    'model': "x-ai/grok-4-fast:free",             # Your preferred model name
     'target_language': 'Spanish',                   # The language to translate subtitles to
     'prompt': 'Translate these subtitles into {target_language}',       # High level prompt template
     'instruction_file': 'instructions.txt',         # Optional file containing detailed instructions
@@ -296,26 +296,6 @@ def build_config(args : argparse.Namespace) -> BatchJobConfig:
 
     return BatchJobConfig(settings)
 
-def configure_logging(log_path : str, verbose : bool) -> None:
-    """Configure logging to emit concise console output and detailed log file."""
-    resolved_log_path = pathlib.Path(log_path).expanduser().resolve()
-    resolved_log_path.parent.mkdir(parents=True, exist_ok=True)
-
-    for handler in logging.root.handlers[:]:
-        logging.root.removeHandler(handler)
-
-    logging.root.setLevel(logging.DEBUG)
-
-    file_handler = logging.FileHandler(resolved_log_path, encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
-    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
-    logging.root.addHandler(file_handler)
-
-    console_handler = logging.StreamHandler(stream=sys.stderr)
-    console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
-    console_handler.setFormatter(logging.Formatter('%(message)s'))
-    logging.root.addHandler(console_handler)
-
 class BatchStatistics:
     """Summary of the batch processing run."""
 
@@ -453,6 +433,36 @@ class ProgressDisplay:
         if len(summary) <= limit:
             return summary
         return summary[:limit - 3] + "..."
+
+def configure_logging(log_path : str, verbose : bool) -> None:
+    """Configure logging to emit concise console output and detailed log file."""
+    resolved_log_path = pathlib.Path(log_path).expanduser().resolve()
+    resolved_log_path.parent.mkdir(parents=True, exist_ok=True)
+
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+
+    logging.root.setLevel(logging.DEBUG)
+
+    # File handler captures everything
+    file_handler = logging.FileHandler(resolved_log_path, encoding='utf-8')
+    file_handler.setLevel(logging.DEBUG)
+    file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
+    logging.root.addHandler(file_handler)
+
+    # Console handler only shows messages from this script, not PySubtrans internals
+    console_handler = logging.StreamHandler(stream=sys.stderr)
+    console_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
+    console_handler.setFormatter(logging.Formatter('%(message)s'))
+
+    # Add a filter to only show messages from the batch script logger
+    class BatchScriptFilter(logging.Filter):
+        def filter(self, record):
+            # Only show messages from __main__ (this script) and errors
+            return record.name == '__main__' or record.levelno >= logging.ERROR
+
+    console_handler.addFilter(BatchScriptFilter())
+    logging.root.addHandler(console_handler)
 
 
 def main(argv : list[str]|None = None) -> int:

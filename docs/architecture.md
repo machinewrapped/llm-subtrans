@@ -39,7 +39,7 @@ Contains all subtitle processing, translation logic, and project management. Thi
 ### Subtitle Format Handling
 Subtitle files are processed through a pluggable system:
 - `SubtitleFileHandler` implementations read and write specific formats while exposing a common interface.
-- `SubtitleFormatRegistry` discovers handlers in `PySubtrans/Formats/` and maps file extensions to the appropriate handler based on priority.
+- `SubtitleFormatRegistry` loads handlers from `PySubtrans/Formats/` and maps file extensions to the appropriate handler based on priority.
 - `SubtitleProject` uses the registry to detect formats from filenames and can convert subtitles when the output extension differs from the source.
 
 ### GuiSubtrans (User Interface)
@@ -85,7 +85,7 @@ Also provides methods for preprocessing, auto-batching and data sanitization.
 - Emits `TranslationEvents` with progress updates
 
 ### TranslationProvider System
-- Pluggable base class with providers in `PySubtrans/Providers/` that auto-register
+- Pluggable base class with providers in `PySubtrans/Providers/` that register at startup
 - Each provider exposes available models and creates an appropriate `TranslationClient`
 - `TranslationClient` handles API communication specifics (authentication, request format, parsing)
 - The provider can also provide a custom `TranslationParser` if a non-standard response format is expected
@@ -213,7 +213,11 @@ The `TranslationClient` defines the API communication interface:
 - **`GetParser()`** – returns a `TranslationParser` to extract translated text from the response
 
 ### Adding New Providers
-Dynamic discovery: drop a new module in `PySubtrans/Providers/` with a `TranslationProvider` subclass, and it automatically registers at startup. No other code changes needed - the provider and its settings will be added to `SettingsDialog`.
+To add a new provider:
+1. Create a new module in `PySubtrans/Providers/` with a `TranslationProvider` subclass
+2. Add an import statement for the new module in `PySubtrans/Providers/__init__.py`
+
+The provider will then automatically register at startup and its settings will be added to `SettingsDialog`.
 
 ### Prompt Construction and Response Parsing
 The specific format for translation requests can vary by provider and responses can be inconsistent, so two helper classes exist to manage the differences between capabilities and expectations.
@@ -232,8 +236,8 @@ The specific format for translation requests can vary by provider and responses 
 
 ## Extending the System
 
-- **New file formats** → `PySubtrans/` (add file handler, extend `SubtitleFileHandler`)
-- **Translation providers** → `PySubtrans/Providers/` (subclass `TranslationProvider` and `TranslationClient`)
+- **New file formats** → `PySubtrans/Formats/` (add file handler, extend `SubtitleFileHandler`, add import to `__init__.py`)
+- **Translation providers** → `PySubtrans/Providers/` (subclass `TranslationProvider` and `TranslationClient`, add import to `__init__.py`)
 - **GUI features** → `GuiSubtrans/Widgets/` (new views/dialogs), `GuiSubtrans/Commands/` (new operations)
 - **Settings** → update `Options` schema, add to `SettingsDialog.SECTIONS`
 - **Background operations** → implement `Command` pattern in `GuiSubtrans/Commands/` for thread safety and undo support

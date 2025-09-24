@@ -17,10 +17,10 @@ class SubtitleFormatRegistry:
     """
     Manages discovery and lookup of subtitle file handlers.
 
-    Uses lazy discovery to find all subclasses of SubtitleFileHandler in the Formats package.
+    Uses lazy loading to find all subclasses of SubtitleFileHandler in the Formats package.
     Handlers are registered by their supported file extensions and priorities.
 
-    Provides methods to create handler instances based on file extensions or filenames.    
+    Provides methods to create handler instances based on file extensions or filenames.
     """
     _handlers : dict[str, type[SubtitleFileHandler]] = {}
     _priorities : dict[str, int] = {}
@@ -84,19 +84,19 @@ class SubtitleFormatRegistry:
 
     @classmethod
     def disable_autodiscovery(cls) -> None:
-        """ Disable automatic discovery of subtitle formats (for testing) """
+        """ Disable automatic loading of subtitle formats (for testing) """
         cls.clear()
         cls._discovered = True
 
     @classmethod
     def enable_autodiscovery(cls) -> None:
-        """ Enable automatic discovery of subtitle formats (for testing) """
+        """ Enable automatic loading of subtitle formats (for testing) """
         cls._discovered = False
 
     @classmethod
     def discover(cls) -> None:
         """
-        Discover and register all subtitle file handlers using reflection.
+        Load and register all subtitle file handlers using reflection.
         """
         # Import the formats package, which will trigger explicit imports
         from . import Formats  # type: ignore[ignore-unused]

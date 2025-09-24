@@ -11,9 +11,9 @@ from scripts.subtrans_common import (
     CreateProject,
 )
 
+from PySubtrans import init_translator
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.SubtitleTranslator import SubtitleTranslator
 
 provider = "Mistral"
 default_model = os.getenv('MISTRAL_MODEL') or "open-mistral-nemo"
@@ -38,7 +38,8 @@ try:
     project : SubtitleProject = CreateProject(options, args)
 
     # Translate the subtitles
-    project.TranslateSubtitles()
+    translator = init_translator(options)
+    project.TranslateSubtitles(translator)
 
     if project.use_project_file:
         logging.info(f"Writing project data to {str(project.projectfile)}")

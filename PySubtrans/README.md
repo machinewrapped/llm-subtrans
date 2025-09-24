@@ -51,12 +51,12 @@ Subtitle format is auto-detected based on file extension or content.
 
 `SubtitleProject` provides a high level interface for managing a translation job, with methods to read and write a project file to disk and event hooks on scene/batch translation. This is the framework that LLM-Subtrans and GUI-Subtrans use to manage translation workflows, but it is general enough that it could be used in other contexts.
 
-`init_project` instantiates a `SubtitleProject` with a pre-initialised `SubtitleTranslator` and loads and prepares the source subtitles if a file path is supplied.
+`init_project` instantiates a `SubtitleProject` and loads and prepares the source subtitles if a file path is supplied.
 
 ```python
-from PySubtrans import init_options, init_project
+from PySubtrans import init_options, init_project, init_translator
 
-# Create a project with a pre-warmed translator
+# Create a project and translate the subtitles
 project_settings = init_options(
     provider='OpenRouter',
     model='qwen/qwen3-235b-a22b:free',
@@ -70,7 +70,8 @@ project_settings = init_options(
 project = init_project(project_settings, filepath='path_to_source_subtitles.srt')
 
 # Translate the subtitles
-project.TranslateSubtitles()
+translator = init_translator(project_settings)
+project.TranslateSubtitles(translator)
 
 # Save the translation - filename is automatically generated
 project.SaveTranslation()

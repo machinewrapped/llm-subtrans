@@ -5,25 +5,24 @@ A Python library for translating subtitle files using various LLMs as translator
 
 Basic Usage
 -----------
-    from PySubtrans import init_options, init_subtitles, init_translator
 
-    # Configure options
-    opts = init_options(
-            provider="openai",
-            model="gpt-5-mini",
-            api_key="sk-...",
-            prompt="Translate these subtitles into Spanish",
-        )
+# Configure options
+opts = init_options(
+        provider="OpenAI",
+        model="gpt-5-mini",
+        api_key="sk-...",
+        prompt="Translate these subtitles into Spanish",
+    )
 
-    # Load subtitles from file and prepare them for translation
-    subs = init_subtitles(filepath="movie.srt", options=opts)
+# Load subtitles from file and prepare them for translation
+subs = init_subtitles(filepath="movie.srt", options=opts)
 
-    # Create translator and translate the prepared subtitles
-    translator = init_translator(opts)
-    translator.TranslateSubtitles(subs)
+# Create translator and translate the prepared subtitles
+translator = init_translator(opts)
+translator.TranslateSubtitles(subs)
 
-    # Save translated subtitles
-    subs.SaveSubtitles("movie_translated.srt")
+# Save translated subtitles
+subs.SaveSubtitles("movie_translated.srt")
 """
 from __future__ import annotations
 
@@ -80,8 +79,8 @@ def init_options(**settings: SettingType) -> Options:
 
     Examples
     --------
-    from PySubtrans import init_options
-    opts = init_options(provider="openai", model="gpt-5-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
+
+    opts = init_options(provider="OpenAI", model="gpt-5-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
     """
     settings = SettingsType(settings)
     options = Options(settings)
@@ -130,7 +129,6 @@ def init_subtitles(
 
     Examples
     --------
-    from PySubtrans import init_subtitles
 
     # Load subtitles from a file:
     subs = init_subtitles(filepath="movie.srt")
@@ -193,7 +191,6 @@ def init_translation_provider(
 
     Examples
     --------
-    from PySubtrans import init_options, init_translation_provider, init_translator
 
     options = init_options(
         model="gpt-5-mini",
@@ -201,7 +198,7 @@ def init_translation_provider(
         prompt="Translate these subtitles into {target_language}",
         target_language="French",
     )
-    provider = init_translation_provider("openai", options)
+    provider = init_translation_provider("OpenAI", options)
     translator = init_translator(options, translation_provider=provider)
     """
 
@@ -254,17 +251,16 @@ def init_translator(
 
     Examples
     --------
-    from PySubtrans import init_options, init_translator
 
     # Create translator from Options
-    opts = init_options(provider="openai", model="gpt-5-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
+    opts = init_options(provider="OpenAI", model="gpt-5-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
     translator = init_translator(opts)
 
     # Create translator from dictionary
     translator = init_translator({"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"})
 
     # Create translator with a pre-initialised TranslationProvider
-    provider = init_translation_provider("openai", {model="gpt-5-mini", api_key="sk-..."})
+    provider = init_translation_provider("OpenAI", {model="gpt-5-mini", api_key="sk-..."})
     options = init_options(prompt="Translate these subtitles into Spanish")
     translator = init_translator(options, translation_provider=provider)
     """
@@ -275,6 +271,8 @@ def init_translator(
     if not translation_provider.ValidateSettings():
         message = translation_provider.validation_message or f"Invalid settings for provider {options.provider}"
         raise SubtitleError(message)
+
+    options.provider = translation_provider.name
 
     return SubtitleTranslator(options, translation_provider)
 
@@ -312,19 +310,18 @@ def init_project(
 
     Examples
     --------
-    from PySubtrans import init_project, init_translator
 
     # Create a minimal project
     project = init_project(filepath="movie.srt")
 
     # Create a project and translate it with a translator
-    settings = {"provider": "OpenAI", "model": "gpt-4o", "target_language": "Spanish", "api_key": "your-key"}
-    project = init_project(settings, filepath="movie.srt")
-    translator = init_translator(settings)
+    options = init_options("target_language": "Spanish", provider="OpenAI", model="gpt-5-mini", api_key="sk-   ")
+    project = init_project(options, filepath="movie.srt")
+    translator = init_translator(options)
     project.TranslateSubtitles(translator)
 
     # Create a persistent project
-    project = init_project(settings, filepath="movie.srt", persistent=True)
+    project = init_project(options, filepath="movie.srt", persistent=True)
     project.SaveProject()
     """
     project = SubtitleProject(persistent=persistent)

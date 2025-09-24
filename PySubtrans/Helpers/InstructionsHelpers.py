@@ -177,6 +177,3 @@ def GetInstructionsFiles() -> list[str]:
 
     # Sort 'instructions.txt' to the top of the list followed by other names case-insensitive
     return sorted(list(instructions_map.values()), key=lambda x: (x.lower() != 'instructions.txt', x.lower()))
-
-
-    

@@ -264,7 +264,7 @@ def init_translator(
     translator = init_translator({"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"})
 
     # Create translator with a pre-initialised TranslationProvider
-    provider = init_translation_provider("openai", {model="gpt-5-mini", api_key="sk-..."})
+    provider = init_translation_provider("openai", {"model": "gpt-5-mini", "api_key": "sk-..."})
     options = init_options(prompt="Translate these subtitles into Spanish")
     translator = init_translator(options, translation_provider=provider)
     """

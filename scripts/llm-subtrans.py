@@ -10,9 +10,9 @@ from scripts.subtrans_common import (
     CreateProject,
 )
 
+from PySubtrans import init_translator
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.SubtitleTranslator import SubtitleTranslator
 
 # Parse command line arguments
 parser = CreateArgParser("Translates subtitles using OpenRouter or a custom AI model server")
@@ -54,7 +54,9 @@ try:
     # Create a project for the translation
     project : SubtitleProject = CreateProject(options, args)
 
-    project.TranslateSubtitles()
+    translator = init_translator(options)
+
+    project.TranslateSubtitles(translator)
 
     if project.use_project_file:
         logging.info(f"Writing project data to {str(project.projectfile)}")

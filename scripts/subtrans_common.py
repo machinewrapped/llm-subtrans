@@ -12,8 +12,6 @@ from PySubtrans.Options import Options, config_dir
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.SubtitleTranslator import SubtitleTranslator
-from PySubtrans.TranslationProvider import TranslationProvider
 
 @dataclass
 class LoggerOptions():
@@ -197,9 +195,6 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     scene_count = subtitles.scenecount
     batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
     logging.info(f"Created {scene_count} scenes and {batch_count} batches for translation")
-
-    # Initialize the translator
-    project.InitialiseTranslator(options)
 
     if not args.output:
         output_path = GetOutputPath(project.subtitles.sourcepath, project.target_language or options.provider, project.subtitles.file_format)

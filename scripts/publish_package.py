@@ -53,9 +53,26 @@ def WritePackageToml(
     dependencies: list[str],
     optional_dependencies: dict[str, list[str]],
     requires_python: str,
+    package_dir: Path,
 ) -> None:
     """Write the dedicated PySubtrans pyproject file."""
     dependencies_block = FormatTomlList(dependencies)
+
+    # Dynamically discover all packages (directories with __init__.py)
+    packages = ["PySubtrans"]  # Root package
+
+    # Find all subdirectory packages (excluding UnitTests)
+    for init_file in package_dir.rglob("__init__.py"):
+        if init_file.parent != package_dir:  # Skip the root __init__.py
+            relative_path = init_file.parent.relative_to(package_dir)
+            # Convert path separators to dots for Python package names
+            package_name = f"PySubtrans.{str(relative_path).replace('\\', '.').replace('/', '.')}"
+            # Exclude unit tests from distribution
+            if not package_name.startswith("PySubtrans.UnitTests"):
+                packages.append(package_name)
+
+    packages.sort()
+    packages_block = FormatTomlList(packages)
 
     lines: list[str] = [
         "[build-system]",
@@ -88,11 +105,8 @@ def WritePackageToml(
             f'Issues = "{ISSUES_URL}"',
             "",
             "[tool.setuptools]",
-            'package-dir = {"" = ".."}',
-            "",
-            "[tool.setuptools.packages.find]",
-            'where = [".."]',
-            'include = ["PySubtrans*"]',
+            f"packages = {packages_block}",
+            'package-dir = {"PySubtrans" = "."}',
             "",
         ]
     )
@@ -208,7 +222,7 @@ def Main() -> None:
         if name != "gui"
     }
 
-    WritePackageToml(package_pyproject, version, dependencies, optional, requires_python)
+    WritePackageToml(package_pyproject, version, dependencies, optional, requires_python, package_dir)
     PrintSummary(version, dependencies, optional)
 
     try:

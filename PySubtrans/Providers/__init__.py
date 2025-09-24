@@ -17,5 +17,3 @@ from . import Provider_Mistral
 from . import Provider_OpenAI
 from . import Provider_OpenRouter
 
-# Import client directory to ensure all client implementations are loaded
-from . import Clients

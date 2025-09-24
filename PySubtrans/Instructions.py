@@ -79,10 +79,10 @@ class Instructions:
         return settings
 
     def InitialiseInstructions(self, settings : dict[str, str|None]) -> None:
-        self.prompt = settings.get('prompt') or settings.get('gpt_prompt') or default_user_prompt
+        self.prompt = settings.get('prompt') or default_user_prompt
         self.instructions = settings.get('instructions') or default_instructions
         self.retry_instructions = settings.get('retry_instructions') or default_retry_instructions
-        self.instruction_file = settings.get('instruction_file') or None
+        self.instruction_file = settings.get('instruction_file')
         self.target_language = None
         self.task_type = settings.get('task_type') or DEFAULT_TASK_TYPE
 

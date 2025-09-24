@@ -31,8 +31,8 @@ EXAMPLES:
     python scripts/batch-translate.py ./subtitles ./translated --prompt "Translate these subtitles into Spanish"
 
     # With provider and model overrides on the command line
-    python scripts/batch-translate.py ./subtitles ./translated --language French \\
-        --provider openai --model gpt-4o-mini --apikey sk-... 
+    python scripts/batch-translate.py ./subtitles ./translated --language="French" \\
+        --provider="OpenAI" --model="gpt-5-mini" --apikey="sk-..."
 
 There are many more options available, some of which are provider-specific. 
 See Options.py or the documentation at https://github.com/machinewrapped/llm-subtrans/ for more details.

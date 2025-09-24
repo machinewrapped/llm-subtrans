@@ -29,9 +29,9 @@ The quickest way to get started is to use the helper functions exposed at the pa
 from PySubtrans import init_options, init_subtitles, init_translator
 
 options = init_options(
-    provider="OpenAI",
-    model="gpt-5-mini",
-    api_key="sk-your-api-key",
+    provider="Gemini",
+    model="gemini-2.5-flash-lite",
+    api_key="your-api-key",
     prompt="Translate these subtitles into Spanish"
     )
 

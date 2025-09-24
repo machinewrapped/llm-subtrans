@@ -257,30 +257,16 @@ def init_translator(
     translator = init_translator(opts)
 
     # Create translator from dictionary
-    settings = {"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"}
-    translator = init_translator(settings)
+    translator = init_translator({"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"})
 
     # Create translator with a pre-initialised TranslationProvider
-    provider_options = init_options(model="gpt-5-mini", api_key="sk-...")
-    provider = init_translation_provider("openai", provider_options)
     options = init_options(prompt="Translate these subtitles into Spanish")
+    provider = init_translation_provider("openai", {model="gpt-5-mini", api_key="sk-..."})
     translator = init_translator(options, translation_provider=provider)
     """
     options = Options(settings)
 
-    if translation_provider is None:
-        translation_provider = TranslationProvider.get_provider(options)
-    else:
-        provider_name = translation_provider.name
-        if options.provider and options.provider.lower() != provider_name.lower():
-            raise SubtitleError(
-                f"Translation provider mismatch: expected {options.provider}, got {provider_name}"
-            )
-
-        if not options.provider:
-            options.provider = provider_name
-
-        translation_provider.UpdateSettings(options)
+    translation_provider = translation_provider or TranslationProvider.get_provider(options)
 
     if not translation_provider.ValidateSettings():
         message = translation_provider.validation_message or f"Invalid settings for provider {options.provider}"

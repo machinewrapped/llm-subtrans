@@ -173,17 +173,6 @@ class PySubtransConvenienceTests(unittest.TestCase):
         )
         self.assertEqual(provider_options.get('model'), "dummy-model")
 
-    def test_init_translator_mismatch_error(self) -> None:
-        provider_options = init_options(provider="Dummy Provider", model="dummy-model")
-        provider = init_translation_provider("Dummy Provider", provider_options)
-
-        mismatch_options = init_options(provider="Dummy GPT", model="gpt-5-dummy")
-
-        with self.assertRaises(SubtitleError) as exc:
-            init_translator(mismatch_options, translation_provider=provider)
-
-        log_input_expected_error("provider mismatch", SubtitleError, exc.exception)
-
     def test_init_project_batches_on_creation(self) -> None:
         options = self._create_options()
 

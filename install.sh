@@ -104,7 +104,7 @@ python3 -m venv envsubtrans
 source envsubtrans/bin/activate
 
 extras=()
-scripts_to_generate=("llm-subtrans")
+scripts_to_generate=("llm-subtrans", "batch-translate")
 
 echo "Select installation type:"
 echo "1 = Install with GUI"

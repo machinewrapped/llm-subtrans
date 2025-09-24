@@ -55,7 +55,7 @@ if exist "envsubtrans" (
 )
 
 set "EXTRAS="
-set "SCRIPTS=llm-subtrans"
+set "SCRIPTS=llm-subtrans batch-translate"
 
 echo Select installation type:
 echo 1 = Install with GUI

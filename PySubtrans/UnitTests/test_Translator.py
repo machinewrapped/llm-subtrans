@@ -46,8 +46,8 @@ class SubtitleTranslatorTests(SubtitleTestCase):
                 self.assertEqual(originals.scenes[i].linecount, reference.scenes[i].linecount)
 
             translator = SubtitleTranslator(self.options, translation_provider=provider)
-            translator.events.batch_translated += lambda batch: self.validate_batch(batch, original=originals, reference=reference) # type: ignore
-            translator.events.scene_translated += lambda scene: self.validate_scene(scene, original=originals, reference=reference) # type: ignore
+            translator.events.batch_translated += lambda batch: self.validate_batch(batch, original=originals, reference=reference)
+            translator.events.scene_translated += lambda scene: self.validate_scene(scene, original=originals, reference=reference)
 
             translator.TranslateSubtitles(originals)
 

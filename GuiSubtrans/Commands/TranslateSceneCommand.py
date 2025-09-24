@@ -51,6 +51,9 @@ class TranslateSceneCommand(Command):
         if not translation_provider:
             raise CommandError(_("No translation provider configured"), command=self)
 
+        if not translation_provider.ValidateSettings():
+            raise CommandError(_("Translation provider settings are invalid"), command=self)
+
         self.translator = SubtitleTranslator(options, translation_provider, resume=self.resume)
 
         self.translator.events.batch_translated += self._on_batch_translated # type: ignore

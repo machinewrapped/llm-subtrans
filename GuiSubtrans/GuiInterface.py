@@ -217,15 +217,15 @@ class GuiInterface(QObject):
 
         LoadStylesheet(options.theme)
 
+        # Initialise instructions
+        self._initialise_instructions(options)
+
         if options.provider is None or options.get('firstrun'):
             # Configure critical settings
             self._first_run(options)
         else:
             # Check if the translation provider is configured correctly
             self._check_provider_settings(options)
-
-            # Load instructions file
-            self._initialise_instructions(options)
 
             if filepath:
                 # Load file if we were opened with one

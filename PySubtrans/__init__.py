@@ -268,6 +268,8 @@ def init_translator(
     """
     options = Options(settings)
 
+    options.InitialiseInstructions()
+
     if translation_provider is None:
         translation_provider = TranslationProvider.get_provider(options)
     else:
@@ -297,7 +299,7 @@ def init_project(
     auto_batch: bool = True,
 ) -> SubtitleProject:
     """
-    Create a :class:`SubtitleProject`, optionally load subtitles from *filepath* and configure a `SubtitleTranslator` for the project.
+    Create a :class:`SubtitleProject`, optionally load subtitles from *filepath* and prepare it for translation.
 
     Parameters
     ----------
@@ -322,15 +324,16 @@ def init_project(
 
     Examples
     --------
-    from PySubtrans import init_project
+    from PySubtrans import init_project, init_translator
 
     # Create a minimal project
     project = init_project(filepath="movie.srt")
 
-    # Create a project with translator ready for translation
+    # Create a project and translate it with a translator
     settings = {"provider": "OpenAI", "model": "gpt-4o", "target_language": "Spanish", "api_key": "your-key"}
     project = init_project(settings, filepath="movie.srt")
-    project.TranslateSubtitles()
+    translator = init_translator(settings)
+    project.TranslateSubtitles(translator)
 
     # Create a persistent project
     project = init_project(settings, filepath="movie.srt", persistent=True)
@@ -368,9 +371,6 @@ def init_project(
                 max_batch_size=options.get_int('max_batch_size') or 100,
                 prevent_overlap=options.get_bool('prevent_overlapping_times'),
             )
-
-    if options.provider:
-        project.InitialiseTranslator(options)
 
     return project
 

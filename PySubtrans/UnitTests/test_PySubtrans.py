@@ -219,8 +219,6 @@ class PySubtransConvenienceTests(unittest.TestCase):
             log_input_expected_result("project subtitles scene threshold", None, scene_threshold)
             self.assertIsNone(scene_threshold)
 
-            log_input_expected_result("translator initialised", True, project.translator is not None)
-            self.assertIsNotNone(project.translator)
         finally:
             if os.path.exists(subtitle_path):
                 os.remove(subtitle_path)

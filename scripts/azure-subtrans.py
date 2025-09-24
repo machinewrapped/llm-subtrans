@@ -10,9 +10,9 @@ from scripts.subtrans_common import (
     CreateOptions,
     CreateProject,
 )
+from PySubtrans import init_translator
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.SubtitleTranslator import SubtitleTranslator
 
 # Update when newer ones are available - https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
 latest_azure_api_version = "2024-02-01"
@@ -44,7 +44,8 @@ try:
     project : SubtitleProject = CreateProject(options, args)
 
     # Translate the subtitles
-    project.TranslateSubtitles()
+    translator = init_translator(options)
+    project.TranslateSubtitles(translator)
 
     if project.use_project_file:
         logging.info(f"Writing project data to {str(project.projectfile)}")

@@ -169,29 +169,33 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     if options.get_bool('preprocess_subtitles'):
         preprocess_subtitles(subtitles, options)
 
-    scene_threshold = options.get_float('scene_threshold') or 120.0
-    min_batch_size = options.get_int('min_batch_size') or 1
-    max_batch_size = options.get_int('max_batch_size') or 100
+    scene_threshold = options.get_float('scene_threshold')
+    min_batch_size = options.get_int('min_batch_size')
+    max_batch_size = options.get_int('max_batch_size')
 
     missing_params = [
         name for name, value in (
             ("scene_threshold", scene_threshold),
             ("min_batch_size", min_batch_size),
             ("max_batch_size", max_batch_size),
-        ) if value is None
+        ) if not value # 0 is not valid for any of these
     ]
 
     if missing_params:
         raise ValueError(f"The following parameter(s) must be defined: {', '.join(missing_params)}")
 
-    batch_subtitles(
-        subtitles,
-        scene_threshold=scene_threshold,
-        min_batch_size=min_batch_size,
-        max_batch_size=max_batch_size,
-    )
+    if scene_threshold and min_batch_size and max_batch_size:
+        batch_subtitles(
+            subtitles,
+            scene_threshold=scene_threshold,
+            min_batch_size=min_batch_size,
+            max_batch_size=max_batch_size,
+        )
 
     scene_count = subtitles.scenecount
+    if scene_count < 1:
+        raise ValueError(_("No scenes were created from the subtitles"))
+
     batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
     logging.info(f"Created {scene_count} scenes and {batch_count} batches for translation")
 

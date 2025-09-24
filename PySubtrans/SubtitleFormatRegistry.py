@@ -109,7 +109,7 @@ class SubtitleFormatRegistry:
             cls.register_handler(handler_class)
 
         cls._discovered = True
-        logging.info(f"Supported formats: {sorted(cls._handlers.keys())}")
+        logging.debug(f"Supported formats: {sorted(cls._handlers.keys())}")
 
     @classmethod
     def clear(cls) -> None:

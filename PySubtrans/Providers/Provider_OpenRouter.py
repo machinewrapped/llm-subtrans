@@ -5,7 +5,7 @@ import httpx
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import SettingsType, env_float, env_int
-from PySubtrans.Providers.Custom.OpenRouterClient import OpenRouterClient
+from PySubtrans.Providers.Clients.OpenRouterClient import OpenRouterClient
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationProvider import TranslationProvider

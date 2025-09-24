@@ -1,16 +1,14 @@
 import logging
-import time
-from typing import Any
-
-from anthropic import NotGiven
-
-from PySubtrans.Options import SettingsType
 
 try:
     import anthropic
 
+    import time
+    from typing import Any
+
     from PySubtrans.Helpers import FormatMessages
     from PySubtrans.Helpers.Localization import _
+    from PySubtrans.Options import SettingsType
     from PySubtrans.SubtitleError import TranslationError, TranslationResponseError, TranslationImpossibleError
     from PySubtrans.TranslationClient import TranslationClient
     from PySubtrans.Translation import Translation
@@ -46,7 +44,7 @@ try:
             return self.settings.get_bool( 'thinking', False)
         
         @property
-        def thinking(self) -> dict|NotGiven:
+        def thinking(self) -> dict|anthropic.NotGiven:
             if self.allow_thinking:
                 return {
                     'type' : 'enabled',

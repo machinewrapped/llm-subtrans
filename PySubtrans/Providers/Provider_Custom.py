@@ -4,7 +4,7 @@ from copy import deepcopy
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import MULTILINE_OPTION, SettingsType, env_bool, env_float, env_int
-from PySubtrans.Providers.Custom.CustomClient import CustomClient
+from PySubtrans.Providers.Clients.CustomClient import CustomClient
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import default_prompt_template

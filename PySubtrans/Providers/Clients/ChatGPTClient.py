@@ -3,7 +3,7 @@ from openai.types.chat import ChatCompletion    # type: ignore
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import SettingsType
-from PySubtrans.Providers.OpenAI.OpenAIClient import OpenAIClient
+from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SubtitleError import TranslationError, TranslationResponseError
 from PySubtrans.TranslationPrompt import TranslationPrompt
 

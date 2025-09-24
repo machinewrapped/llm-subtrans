@@ -1,6 +1,6 @@
 from typing import Any
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Providers.OpenAI.OpenAIClient import OpenAIClient
+from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import TranslationError, TranslationResponseError
 from PySubtrans.TranslationPrompt import TranslationPrompt

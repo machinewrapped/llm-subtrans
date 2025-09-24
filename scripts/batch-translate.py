@@ -1,23 +1,41 @@
-"""Batch translate subtitle files using the PySubtrans library.
+"""Batch translate subtitle files using PySubtrans.
 
-This script demonstrates how to combine the high level helper functions
-provided by PySubtrans with the underlying translation events to build a
-robust batch processing workflow. It discovers supported subtitle files
-in a source directory, translates them and writes the results to a target
-directory while logging progress to both the console and a detailed log
-file.
+Processes all subtitle files in a source directory and writes translated versions to a destination
+directory. The script also serves as a self-contained example of a full translation workflow using
+PySubtrans.
 
-Update the DEFAULT_OPTIONS values below to suit your environment, or
-pass overrides on the command line. Example usage:
+QUICK START:
+1. Set your provider and API key (see options below)
+2. Run: python scripts/batch-translate.py source_dir output_dir
 
-    python scripts/batch_translate.py ./subtitles ./translated --provider openai \\
-        --model gpt-5-mini --apikey sk-... --target-language Spanish
+Important options:
+- source_path: Directory containing subtitle files to translate
+- destination_path: Directory to write translated subtitle files
+- provider: Translation service (required - e.g. "OpenRouter", "Gemini")
+- api_key: Your API key for the selected provider
+- model: Specific model to use
+- target_language: The language subtitles should be translated into
+- prompt: A more specific prompt to give the translator (e.g. "Translate these subtitles into French and make them funny")
+- instruction_file: Path to a file containing detailed custom instructions for the translator
+- output_format: (optionally) write all translated subtitles using a specific file format (e.g. ".srt")
+- preview: Exercise the workflow without making any API calls to the translation provider
 
-    # Preview mode exercises the entire pipeline without contacting the API
-    python scripts/batch_translate.py ./subtitles ./translated --preview
+Options can be specified by:
+- Passing command line arguments
+- Editing DEFAULT_OPTIONS in this script
+- Via environment variables (e.g. OPENROUTER_API_KEY=sk-...) or a .env file
+- Any combination of the above, in order of precedence
 
-Set output_format in DEFAULT_OPTIONS or pass --output-format to
-change the file type written to the destination directory.
+EXAMPLES:
+    # Minimal: assumes most settings are configured in the script or environment
+    python scripts/batch-translate.py ./subtitles ./translated --prompt "Translate these subtitles into Spanish"
+
+    # With provider and model overrides on the command line
+    python scripts/batch-translate.py ./subtitles ./translated --target-language French \\
+        --provider openai --model gpt-4o-mini --apikey sk-... 
+
+There are many more options available, some of which are provider-specific. 
+See Options.py or the documentation at https://github.com/machinewrapped/llm-subtrans/ for more details.
 """
 from __future__ import annotations
 
@@ -136,7 +154,7 @@ class BatchProcessor:
                 stats.failed_files += 1
                 continue
 
-            self.logger.debug("Detected format %s", subtitles.file_format or "unknown")
+            self.logger.info("Detected format %s", subtitles.file_format or "unknown")
 
             try:
                 # Determine the final output path so language suffixes and format overrides are applied consistently.
@@ -458,7 +476,7 @@ def configure_logging(log_path : str, verbose : bool) -> None:
 
     # File handler captures everything
     file_handler = logging.FileHandler(resolved_log_path, encoding='utf-8')
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.DEBUG if verbose else logging.INFO)
     file_handler.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s'))
     logging.root.addHandler(file_handler)
 

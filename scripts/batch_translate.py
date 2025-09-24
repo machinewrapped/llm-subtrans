@@ -11,7 +11,7 @@ Update the DEFAULT_OPTIONS values below to suit your environment, or
 pass overrides on the command line. Example usage:
 
     python scripts/batch_translate.py ./subtitles ./translated --provider openai \\
-        --model gpt-5-mini --api-key sk-... --target-language Spanish
+        --model gpt-5-mini --apikey sk-... --target-language Spanish
 
     # Preview mode exercises the entire pipeline without contacting the API
     python scripts/batch_translate.py ./subtitles ./translated --preview
@@ -27,14 +27,14 @@ import logging
 import pathlib
 import sys
 
-from PySubtrans import init_subtitles, init_translator, init_translation_provider
+from PySubtrans import init_options, init_subtitles, init_translator, init_translation_provider
 from PySubtrans import Options, SettingsType, SubtitleError
 from PySubtrans import SubtitleTranslator
 from PySubtrans import TranslationProvider
 from PySubtrans import SubtitleFormatRegistry
 
 from PySubtrans.Helpers import GetOutputPath
-from PySubtrans.Helpers.SettingsHelpers import parse_setting_value, redact_sensitive_values
+from PySubtrans.SettingsType import redact_sensitive_values
 
 # Default configuration options for batch processing.
 # These can be overridden by command line arguments.
@@ -58,6 +58,24 @@ DEFAULT_OPTIONS = SettingsType({
     'preview': False,                               # Set to True to exercise the workflow without calling the API to execute translations.
 })
 
+class BatchJobConfig:
+    """
+    Container for batch translation configuration
+    """
+    def __init__(self, options : Options):
+        """
+        Initialize the batch job configuration with PySubtrans options.
+        """
+        self.options = options
+
+        self.source_path = self.options.get_str('source_path') or './subtitles'
+        self.destination_path = self.options.get_str('destination_path') or './translated'
+        self.log_path = self.options.get_str('log_path') or './batch_translate.log'
+        self.output_format = self.options.get_str('output_format')
+        self.target_language = self.options.get_str('target_language')
+        self.prompt = self.options.get_str('prompt')
+        self.provider = self.options.get_str('provider')
+        self.model = self.options.get_str('model')
 
 class BatchProcessor:
     """Coordinate discovery and translation of subtitle files."""
@@ -80,11 +98,11 @@ class BatchProcessor:
 
         self.logger.info("Starting batch translation from %s", source_root)
         self.logger.info("Writing translated files to %s", destination_root)
+        self.logger.info("Using provider: %s with model: %s", self.translation_provider.name, self.translation_provider.selected_model or "default")
+        self.logger.info("Prompt: %s", self.config.prompt)
 
-        if not self.options.target_language:
-            raise SubtitleError("No target language specified")
-
-        self.logger.info("Target language: %s", self.options.target_language)
+        if self.config.target_language:
+            self.logger.info("Target language: %s", self.config.target_language)
 
         if self.config.output_format is not None:
             self.logger.info("Output format: %s", self.config.output_format)
@@ -112,6 +130,7 @@ class BatchProcessor:
             try:
                 # init_subtitles loads and batches the file using the Options we prepared earlier.
                 subtitles = init_subtitles(filepath=str(source_file), options=self.options)
+
             except SubtitleError as exc:
                 self.logger.error("Failed to load %s: %s", source_file, exc)
                 stats.failed_files += 1
@@ -230,25 +249,6 @@ class BatchProcessor:
 
         return translation_provider
 
-class BatchJobConfig:
-    """
-    Container for batch translation configuration
-    """
-
-    def __init__(self, settings : SettingsType):
-        self.options = Options(settings)
-
-        self.source_path = self.options.get_str('source_path') or './subtitles'
-        self.destination_path = self.options.get_str('destination_path') or './translated'
-        self.log_path = self.options.get_str('log_path') or './batch_translate.log'
-
-        self.output_format = self.options.get_str('output_format')
-
-        self.options['source_path'] = self.source_path
-        self.options['destination_path'] = self.destination_path
-        self.options['log_path'] = self.log_path
-
-
 def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
     """Parse command line arguments."""
     parser = argparse.ArgumentParser(description="Batch translate subtitles with PySubtrans")
@@ -256,7 +256,7 @@ def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
     parser.add_argument("destination", nargs="?", help="Directory to write translated subtitles")
     parser.add_argument("--provider", help="Translation provider name")
     parser.add_argument("--model", help="Model identifier for the provider")
-    parser.add_argument("--api-key", dest="api_key", help="API key for the provider")
+    parser.add_argument("--apikey", dest="api_key", help="API key for the provider")
     parser.add_argument("--prompt", help="High level translation prompt")
     parser.add_argument("--target-language", dest="target_language", help="Target language for translation")
     parser.add_argument("--option", action="append", default=[], metavar="KEY=VALUE",
@@ -273,7 +273,7 @@ def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
 
 def build_config(args : argparse.Namespace) -> BatchJobConfig:
     """Combine DEFAULT_OPTIONS with command line arguments."""
-    settings = SettingsType(dict(DEFAULT_OPTIONS))
+    settings = SettingsType(DEFAULT_OPTIONS)
 
     if args.source:
         settings['source_path'] = args.source
@@ -301,9 +301,12 @@ def build_config(args : argparse.Namespace) -> BatchJobConfig:
         if '=' not in override:
             raise SubtitleError(f"Invalid option override '{override}', expected KEY=VALUE")
         key, value = override.split('=', 1)
-        settings[key] = parse_setting_value(value)
+        settings[key] = value
 
-    return BatchJobConfig(settings)
+    # Initialize an Options instance with the combined settings
+    options = init_options(**settings)
+
+    return BatchJobConfig(options)
 
 class BatchStatistics:
     """Summary of the batch processing run."""
@@ -480,8 +483,16 @@ def main(argv : list[str]|None = None) -> int:
     config = build_config(args)
     configure_logging(config.log_path, args.verbose)
 
+    if not config.provider:
+        logging.error("No translation provider specified.")
+        return 1
+
     logging.info("Source directory: %s", str(config.source_path))
     logging.info("Destination directory: %s", str(config.destination_path))
+    logging.info("Provider: %s", config.provider)
+    if config.model:
+        logging.info("Model: %s", config.model)
+    logging.info("Prompt: %s", config.options.GetInstructions().prompt or "unspecified")
     logging.info("Target language: %s", config.options.target_language or "unspecified")
     if config.output_format:
         logging.info("Output format override: %s", config.output_format)
@@ -495,18 +506,25 @@ def main(argv : list[str]|None = None) -> int:
         config.options.get_bool('preview')
     )
 
-    processor = BatchProcessor(config)
-
     try:
-        stats = processor.run()
-    except SubtitleError as exc:
-        logging.error("Batch processing failed: %s", exc)
-        return 1
-    except KeyboardInterrupt:
-        logging.warning("Batch processing interrupted by user")
-        return 130
 
-    logging.info(stats.as_message())
+        processor = BatchProcessor(config)
+
+        try:
+            stats = processor.run()
+        except SubtitleError as exc:
+            logging.error("Batch processing failed: %s", exc)
+            return 1
+        except KeyboardInterrupt:
+            logging.warning("Batch processing interrupted by user")
+            return 130
+
+        logging.info(stats.as_message())
+
+    except Exception as error:
+        message = error.message or str(error) if isinstance(error, SubtitleError) else str(error)
+        logging.exception("An error occurred: %s", message)
+        return 1
 
     return 0 if stats.failed_files == 0 else 1
 

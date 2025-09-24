@@ -114,7 +114,8 @@ class Options(SettingsType):
         self.update(deepcopy(default_settings))
 
         # Convert plain dict to SettingsType for type safety
-        settings = SettingsType(settings)
+        if not isinstance(settings, SettingsType):
+            settings = SettingsType(settings)
 
         if settings:
             # Remove None values from options and merge with defaults

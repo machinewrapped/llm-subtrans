@@ -203,7 +203,7 @@ gemini-subtrans <path_to_subtitle_file> --target_language <target_language>
 claude-subtrans <path_to_subtitle_file> --target_language <target_language>
 
 # Batch process files in a folder tree (activate the virtual environment first)
-python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --api-key sk-... --target-language Spanish
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --apikey sk-... --target-language Spanish
 ```
 
 The output format is inferred from file extensions. To convert between formats, provide an output path with the desired extension.
@@ -457,7 +457,7 @@ You can modify the `DEFAULT_OPTIONS` values directly in the script file, or use 
 python scripts/batch_translate.py --preview
 
 # Basic usage with command line arguments
-python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --api-key sk-... --target-language Spanish
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --apikey sk-... --target-language Spanish
 
 # Override output format
 python scripts/batch_translate.py ./subtitles ./translated --provider openai --output-format srt

@@ -33,7 +33,7 @@ def parse_arguments():
     parser.add_argument('--postprocess', action='store_true', default=None, help="Postprocess the subtitles after translation")
     parser.add_argument('--preprocess', action='store_true', default=None, help="Preprocess the subtitles before translation")
     parser.add_argument('--profile', action='store_true', help="Profile execution and write stats to the console")
-    parser.add_argument('--project', type=str, default="true", help="How to process the project file (read, write, preview, reload, reparse, retranslate)")
+    parser.add_argument('--preview', action='store_true', help="Run the translation pipeline without calling the translation provider (for testing)")
     parser.add_argument('--ratelimit', type=int, default=None, help="Maximum number of batches per minute to process")
     parser.add_argument('--scenethreshold', type=float, default=None, help="Number of seconds between lines to consider a new scene")
     parser.add_argument('--theme', type=str, default=None, help="Stylesheet to load")
@@ -56,6 +56,7 @@ def parse_arguments():
         'postprocess_translation': args.postprocess,
         'preprocess_subtitles': args.preprocess,
         'profile': args.profile,
+        'preview': args.preview,
         'provider': args.provider,
         'rate_limit': args.ratelimit,
         'scene_threshold': args.scenethreshold,
@@ -99,7 +100,6 @@ if __name__ == "__main__":
             logging.info(f"Loaded settings from {settings_path}")
 
     options.update(arguments)
-    options.InitialiseInstructions()
 
     # Initialize localization before creating GUI
     try:

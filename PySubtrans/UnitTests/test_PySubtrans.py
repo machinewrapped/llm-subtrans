@@ -330,6 +330,95 @@ class PySubtransConvenienceTests(unittest.TestCase):
         log_input_expected_result("scene processing completed", True, len(scene_events) > 0)
         self.assertGreater(len(scene_events), 0)
 
+    def test_explicit_prompt_overrides_instruction_file(self) -> None:
+        """Test that explicit prompts take precedence over instruction file prompts"""
+        # Create a temporary instruction file with a different prompt
+        with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False, encoding='utf-8') as handle:
+            handle.write("### prompt\nTranslate these subtitles from instruction file\n\n")
+            handle.write("### instructions\nDefault instructions from file\n\n")
+            handle.write("### retry_instructions\nDefault retry instructions from file\n")
+            instruction_file_path = handle.name
+
+        try:
+            explicit_prompt = "My explicit custom prompt"
+
+            # Test with explicit prompt - should override instruction file
+            options = init_options(
+                provider="Dummy Provider",
+                model="dummy-model",
+                prompt=explicit_prompt,
+                instruction_file=instruction_file_path
+            )
+
+            log_input_expected_result("explicit prompt used", explicit_prompt, options.get('prompt'))
+            self.assertEqual(options.get('prompt'), explicit_prompt)
+
+            # Test without explicit prompt - should use instruction file
+            options_no_prompt = init_options(
+                provider="Dummy Provider",
+                model="dummy-model",
+                instruction_file=instruction_file_path
+            )
+
+            log_input_expected_result("instruction file prompt used", "Translate these subtitles from instruction file", options_no_prompt.get('prompt'))
+            self.assertEqual(options_no_prompt.get('prompt'), "Translate these subtitles from instruction file")
+
+        finally:
+            if os.path.exists(instruction_file_path):
+                os.remove(instruction_file_path)
+
+    def test_init_translator_respects_user_modifications(self) -> None:
+        """Test that init_translator respects modifications made between init_options and init_translator"""
+        options = init_options(
+            provider="Dummy Provider",
+            model="dummy-model",
+            prompt="Original prompt"
+        )
+
+        # User modifies the prompt after init_options
+        user_modified_prompt = "User modified prompt after init_options"
+        options['prompt'] = user_modified_prompt
+
+        # init_translator should NOT call InitialiseInstructions and should preserve user changes
+        translator = init_translator(options)
+
+        log_input_expected_result("user modified prompt preserved", user_modified_prompt, translator.settings.get('prompt'))
+        self.assertEqual(translator.settings.get('prompt'), user_modified_prompt)
+
+    def test_instruction_file_without_explicit_prompt(self) -> None:
+        """Test that instruction file values are used when no explicit prompt is provided"""
+        # Create a temporary instruction file
+        with tempfile.NamedTemporaryFile('w', suffix='.txt', delete=False, encoding='utf-8') as handle:
+            handle.write("### prompt\nInstruction file prompt\n\n")
+            handle.write("### instructions\nInstruction file instructions\n\n")
+            handle.write("### target_language\nFrench\n\n")
+            handle.write("### task_type\nCustomTask\n")
+            instruction_file_path = handle.name
+
+        try:
+            # Test that all instruction file values are loaded when no explicit values provided
+            options = init_options(
+                provider="Dummy Provider",
+                model="dummy-model",
+                instruction_file=instruction_file_path
+            )
+
+            log_input_expected_result("instruction file prompt", "Instruction file prompt", options.get('prompt'))
+            self.assertEqual(options.get('prompt'), "Instruction file prompt")
+
+            log_input_expected_result("instruction file instructions", "Instruction file instructions", options.get('instructions'))
+            self.assertEqual(options.get('instructions'), "Instruction file instructions")
+
+            log_input_expected_result("instruction file target_language", "French", options.get('target_language'))
+            self.assertEqual(options.get('target_language'), "French")
+
+            log_input_expected_result("instruction file task_type", "CustomTask", options.get('task_type'))
+            self.assertEqual(options.get('task_type'), "CustomTask")
+
+        finally:
+            if os.path.exists(instruction_file_path):
+                os.remove(instruction_file_path)
+
 
 if __name__ == '__main__':
     unittest.main()

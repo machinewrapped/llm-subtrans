@@ -4,7 +4,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBo
 from GuiSubtrans.GuiHelpers import ClearForm, GetThemeNames
 
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget
-from PySubtrans.Instructions import GetInstructionsFiles, LoadInstructions
+from PySubtrans.Helpers.InstructionsHelpers import GetInstructionsFiles, LoadInstructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions

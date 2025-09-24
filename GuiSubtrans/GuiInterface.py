@@ -23,6 +23,7 @@ from GuiSubtrans.NewProjectSettings import NewProjectSettings
 from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.SettingsDialog import SettingsDialog
+from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import ProviderConfigurationError, SubtitleError
@@ -223,6 +224,9 @@ class GuiInterface(QObject):
             # Check if the translation provider is configured correctly
             self._check_provider_settings(options)
 
+            # Load instructions file
+            self._initialise_instructions(options)
+
             if filepath:
                 # Load file if we were opened with one
                 filepath = os.path.abspath(filepath)
@@ -233,6 +237,12 @@ class GuiInterface(QObject):
         # Check if there is a more recent version on Github (TODO: make this optional)
         if CheckIfUpdateCheckIsRequired():
             CheckIfUpdateAvailable()
+
+    def _initialise_instructions(self, options):
+        instructions_file = options.get_str('instruction_file') or "instructions.txt"
+        instructions = LoadInstructions(instructions_file)
+        options.InitialiseInstructions(instructions)
+        options.add('instruction_file', instructions_file)
 
     def _check_provider_settings(self, options : Options):
         self.action_handler.CheckProviderSettings(options)

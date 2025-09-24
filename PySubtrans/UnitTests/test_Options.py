@@ -477,21 +477,19 @@ class TestOptions(unittest.TestCase):
         expected = 'Translate to English subtitles'  # target_language defaults to English
         self.assertEqual(result, expected)
 
-    @patch('PySubtrans.Options.LoadInstructions')
-    def test_initialise_instructions_success(self, mock_load):
+    def test_initialise_instructions_success(self):
         """Test InitialiseInstructions success"""
-        mock_instructions = type('MockInstructions', (), {
+        mock_instructions = Instructions({
             'prompt': 'Test prompt',
-            'instructions': 'Test instructions', 
+            'instructions': 'Test instructions',
             'retry_instructions': 'Test retry',
             'target_language': None,
             'task_type': None
-        })()
-        mock_load.return_value = mock_instructions
-        
-        options = Options({'instruction_file': 'test.txt'})
-        options.InitialiseInstructions()
-        
+        })
+
+        options = Options()
+        options.InitialiseInstructions(mock_instructions)
+
         self.assertEqual(options.get('prompt'), 'Test prompt')
         self.assertEqual(options.get('instructions'), 'Test instructions')
         self.assertEqual(options.get('retry_instructions'), 'Test retry')

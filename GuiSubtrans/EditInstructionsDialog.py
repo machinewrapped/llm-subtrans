@@ -13,7 +13,8 @@ from PySide6.QtWidgets import (
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget
 
 from PySubtrans.Options import MULTILINE_OPTION, Options
-from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions, GetInstructionsFiles, GetInstructionsUserPath, LoadInstructions
+from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
+from PySubtrans.Helpers.InstructionsHelpers import GetInstructionsFiles, GetInstructionsUserPath, LoadInstructions, LoadInstructionsFile, SaveInstructions
 from PySubtrans.Helpers.Localization import _
 
 class EditInstructionsDialog(QDialog):
@@ -134,7 +135,7 @@ class EditInstructionsDialog(QDialog):
         file_name, dummy = QFileDialog.getOpenFileName(self, _("Load Instructions"), dir=path, filter=self.filters) # type: ignore[ignore-unused]
         if file_name:
             try:
-                self.instructions.LoadInstructionsFile(file_name)
+                self.instructions = LoadInstructionsFile(file_name)
 
                 self.prompt_edit.SetValue(self.instructions.prompt)
                 self.task_type_edit.SetValue(self.instructions.task_type)
@@ -155,7 +156,7 @@ class EditInstructionsDialog(QDialog):
                 self.instructions.instructions = self.instructions_edit.GetValue()
                 self.instructions.retry_instructions = self.retry_instructions_edit.GetValue()
 
-                self.instructions.SaveInstructions(file_name)
+                SaveInstructions(self.instructions, file_name)
 
             except Exception as e:
                 logging.error(f"Unable to write instruction file: {str(e)}")

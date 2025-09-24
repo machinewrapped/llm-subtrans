@@ -48,6 +48,7 @@ class FirstRunOptions(QDialog):
         settings = self.options.GetSettings()
         settings['provider'] = settings.get('provider') or "OpenRouter" if "OpenRouter" in options.available_providers else options.available_providers[0]
         settings['ui_language'] = settings.get('ui_language') or 'en'
+        settings['instruction_file'] = settings.get('instruction_file') or "instructions.txt"
 
         for key, option in self.OPTIONS.items():
             key_type, tooltip = option

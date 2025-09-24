@@ -30,6 +30,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from PySubtrans.Helpers import GetInputPath
+from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
@@ -92,7 +93,14 @@ def init_options(
 
     options = Options(settings)
 
-    options.InitialiseInstructions()
+    # Load and apply instructions if instruction file is specified
+    instruction_file = settings.get_str('instruction_file')
+    if instruction_file:
+        instructions = LoadInstructions(instruction_file)
+        # Override prompt with explicit value if provided
+        if prompt:
+            instructions.prompt = prompt
+        options.InitialiseInstructions(instructions)
 
     return options
 
@@ -271,8 +279,6 @@ def init_translator(
     if not translation_provider.ValidateSettings():
         message = translation_provider.validation_message or f"Invalid settings for provider {options.provider}"
         raise SubtitleError(message)
-
-    options.InitialiseInstructions()
 
     return SubtitleTranslator(options, translation_provider)
 

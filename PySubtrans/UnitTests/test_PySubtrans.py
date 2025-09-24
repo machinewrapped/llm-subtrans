@@ -307,8 +307,8 @@ class PySubtransConvenienceTests(unittest.TestCase):
             })
 
         # Subscribe to events
-        translator.events.batch_translated += on_batch_translated  # type: ignore
-        translator.events.scene_translated += on_scene_translated  # type: ignore
+        translator.events.batch_translated += on_batch_translated
+        translator.events.scene_translated += on_scene_translated
 
         # Execute translation
         translator.TranslateSubtitles(subtitles)

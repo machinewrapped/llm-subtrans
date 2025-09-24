@@ -1,19 +1,18 @@
-from json import JSONDecodeError
 import logging
-import time
-from typing import Any
-
-from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import ParseDelayFromHeader
-from PySubtrans.Options import SettingsType
-from PySubtrans.SubtitleError import TranslationResponseError
 
 try:
     import openai   # type: ignore
     import httpx
+    import time
+    from typing import Any
+
+    from json import JSONDecodeError
 
     from PySubtrans.Helpers import FormatMessages
-    from PySubtrans.SubtitleError import TranslationError, TranslationImpossibleError
+    from PySubtrans.Helpers.Localization import _
+    from PySubtrans.Helpers.Parse import ParseDelayFromHeader
+    from PySubtrans.Options import SettingsType
+    from PySubtrans.SubtitleError import TranslationError, TranslationImpossibleError, TranslationResponseError
     from PySubtrans.Translation import Translation
     from PySubtrans.TranslationClient import TranslationClient
     from PySubtrans.TranslationPrompt import TranslationPrompt

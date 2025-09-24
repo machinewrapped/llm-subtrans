@@ -2,17 +2,6 @@ import logging
 
 from PySubtrans.Options import SettingsType
 
-def _structure_messages(messages : list[dict[str,str]]) -> list[dict]:
-    """
-    Structure the messages to be sent to the API
-    """
-    return [
-        {
-            'role' : message['role'],
-            'content' : [{ 'text': message['content'] }]
-        }
-        for message in messages]
-
 try:
     import boto3 # type: ignore[import]
 
@@ -150,6 +139,17 @@ try:
                 raise TranslationImpossibleError(_("Error communicating with Bedrock: {error}").format(
                     error=str(e)
                 ), error=e)
+
+    def _structure_messages(messages : list[dict[str,str]]) -> list[dict]:
+        """
+        Structure the messages to be sent to the API
+        """
+        return [
+            {
+                'role' : message['role'],
+                'content' : [{ 'text': message['content'] }]
+            }
+            for message in messages]
 
 except ImportError:
     logging.debug("AWS Boto3 SDK not installed.")

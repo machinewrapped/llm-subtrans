@@ -1,8 +1,8 @@
 import logging
-import time
 
 try:
     import openai       # type: ignore
+    import time
 
     from PySubtrans.Helpers.Localization import _
     from PySubtrans.Helpers.Parse import ParseDelayFromHeader

@@ -70,7 +70,7 @@ class SubtitleProject:
 
     @property
     def target_language(self) -> str|None:
-        return self.subtitles.target_language if self.subtitles else None
+        return self.subtitles.settings.get_str('target_language') if self.subtitles else None
     
     @property
     def task_type(self) -> str|None:
@@ -94,6 +94,18 @@ class SubtitleProject:
     def translator(self) -> SubtitleTranslator|None:
         """Get the current translator instance"""
         return self._translator
+
+    @target_language.setter
+    def target_language(self, value : str|None) -> None:
+        self._set_project_setting('target_language', value)
+
+    @task_type.setter
+    def task_type(self, value : str|None) -> None:
+        self._set_project_setting('task_type', value)
+
+    @movie_name.setter
+    def movie_name(self, value : str|None) -> None:
+        self._set_project_setting('movie_name', value)
 
     def InitialiseProject(self, filepath : str, outputpath : str|None = None, reload_subtitles : bool = False):
         """
@@ -134,7 +146,7 @@ class SubtitleProject:
             if subtitles:
                 self.UpdateOutputPath()
 
-                outputpath = outputpath or GetOutputPath(self.projectfile, subtitles.target_language, subtitles.file_format)
+                outputpath = outputpath or GetOutputPath(self.projectfile, self.target_language, subtitles.file_format)
                 sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath               
                 logging.info(_("Project file loaded"))
 
@@ -424,10 +436,13 @@ class SubtitleProject:
         One-stop shop: Use the translation provider to translate a project, then save the translation.
         """
         if not self.subtitles:
-            raise Exception("No subtitles to translate")
+            raise Exception(_("No subtitles to translate"))
+
+        if not self.target_language:
+            raise Exception(_("No target language specified"))
 
         if not self._translator:
-            raise Exception("No translator initialized. Call InitialiseTranslator() first.")
+            raise Exception(_("Project translator is not initialized. Call InitialiseTranslator() first."))
 
         # Prime new project files
         self.UpdateProjectFile()
@@ -465,10 +480,13 @@ class SubtitleProject:
         Pass batches of subtitles to the translation engine.
         """
         if not self.subtitles:
-            raise Exception("No subtitles to translate")
+            raise Exception(_("No subtitles to translate"))
+
+        if not self.target_language:
+            raise Exception(_("No target language specified"))
 
         if not self._translator:
-            raise Exception("No translator initialized. Call InitialiseTranslator() first.")
+            raise Exception(_("Project translator is not initialized. Call InitialiseTranslator() first."))
 
         self._translator.events.preprocessed += self._on_preprocessed             # type: ignore
         self._translator.events.batch_translated += self._on_batch_translated     # type: ignore
@@ -503,6 +521,18 @@ class SubtitleProject:
         logging.debug("Scene translated")
         self.needs_writing = self.use_project_file
         self.events.scene_translated(scene)
+
+    def _set_project_setting(self, setting_name, value):
+        """
+        Set a project setting and mark the project as needing to be written if it changes
+        """
+        with self.lock:
+            if not self.subtitles:
+                raise SubtitleError(_("Cannot set {setting_name}, no subtitles loaded").format(setting_name=setting_name))
+
+            if self.subtitles.settings.get_str(setting_name) != value:
+                self.subtitles.settings[setting_name] = value
+                self.needs_writing = self.use_project_file
 
     def _update_compatibility(self, settings: SettingsType) -> None:
         """

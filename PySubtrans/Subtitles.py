@@ -39,10 +39,6 @@ class Subtitles:
         self.settings : SettingsType = SettingsType(deepcopy(settings)) if settings else SettingsType()
 
     @property
-    def target_language(self) -> str|None:
-        return self.settings.get_str('target_language')
-
-    @property
     def has_subtitles(self) -> bool:
         return self.linecount > 0 or self.scenecount > 0
 
@@ -213,7 +209,7 @@ class Subtitles:
             self.metadata = data.metadata
             self.file_format = data.detected_format
             if self.outputpath is None:
-                self.outputpath = GetOutputPath(self.sourcepath, self.target_language or "translated", self.file_format)
+                self.outputpath = GetOutputPath(self.sourcepath, "translated", self.file_format)
 
     def LoadSubtitlesFromString(self, subtitles_string: str, file_handler: SubtitleFileHandler) -> None:
         """
@@ -254,11 +250,12 @@ class Subtitles:
         Write translated subtitles to a file
         """
         outputpath = outputpath or self.outputpath
+        if not outputpath and self.sourcepath and os.path.exists(self.sourcepath):
+            outputpath = GetOutputPath(self.sourcepath, "translated", self.file_format)
+            logging.warning(_("No output path specified, saving to {}").format(str(outputpath)))
+            
         if not outputpath:
-            if self.sourcepath and os.path.exists(self.sourcepath):
-                outputpath = GetOutputPath(self.sourcepath, self.target_language or "translated", self.file_format)
-            if not outputpath:
-                raise SubtitleError(_("I don't know where to save the translated subtitles"))
+            raise SubtitleError(_("I don't know where to save the translated subtitles"))
 
         outputpath = os.path.normpath(outputpath)
 
@@ -288,7 +285,8 @@ class Subtitles:
             )
 
             data.metadata['Title'] = self.settings.get_str('movie_name', data.metadata.get('Title'))
-            data.metadata['Language'] = self.target_language
+            if self.settings.get_str('target_language'):
+                data.metadata['Language'] = self.settings.get_str('target_language')
             
             # Apply RTL markers if requested (handler will decide format-specific implementation)
             data.metadata['add_rtl_markers'] = self.settings.get('add_right_to_left_markers', False)

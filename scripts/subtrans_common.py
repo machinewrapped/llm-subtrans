@@ -202,7 +202,7 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     project.InitialiseTranslator(options)
 
     if not args.output:
-        output_path = GetOutputPath(project.subtitles.sourcepath, project.subtitles.target_language or options.provider, project.subtitles.file_format)
+        output_path = GetOutputPath(project.subtitles.sourcepath, project.target_language or options.provider, project.subtitles.file_format)
         if output_path:
             project.subtitles.outputpath = output_path
 

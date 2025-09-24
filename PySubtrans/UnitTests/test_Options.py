@@ -1,18 +1,14 @@
 import unittest
 from datetime import timedelta
+from typing import TypeVar
+from collections.abc import Mapping
 from unittest.mock import patch, mock_open
 
 from collections.abc import MutableMapping
 from PySubtrans.Options import Options, default_settings, standard_filler_words
 from PySubtrans.Instructions import Instructions
 from PySubtrans.Helpers.Tests import log_input_expected_error, log_input_expected_result, log_test_name, skip_if_debugger_attached
-from PySubtrans.Helpers.SettingsHelpers import (
-    GetBoolSetting, GetIntSetting, GetFloatSetting, GetStrSetting,
-    GetListSetting, GetStringListSetting, GetTimeDeltaSetting,
-    get_optional_setting, validate_setting_type, SettingsError
-)
-from PySubtrans.SettingsType import SettingsType
-
+from PySubtrans.SettingsType import SettingsType, SettingType, SettingsError
 
 class TestOptions(unittest.TestCase):
     """Unit tests for the Options class"""
@@ -890,21 +886,22 @@ class TestSettingsHelpers(unittest.TestCase):
         
         for key, expected in test_cases:
             with self.subTest(key=key):
-                result = GetBoolSetting(self.test_dict_settings, key)
+                result = self.test_dict_settings.get_bool(key)
                 log_input_expected_result(f"dict['{key}']", expected, result)
                 self.assertEqual(result, expected)
-                result_opts = GetBoolSetting(self.test_options_obj, key)
+                result_opts = self.test_options_obj.get_bool(key)
                 log_input_expected_result(f"Options['{key}']", expected, result_opts)
                 self.assertEqual(result_opts, expected)
         
         # Test custom default
-        result = GetBoolSetting(self.test_dict_settings, 'missing_key', True)
+        result = self.test_dict_settings.get_bool('missing_key', True)
         log_input_expected_result("missing key with default True", True, result)
         self.assertTrue(result)
         
         # Test None value
         settings_with_none = {'none_value': None}
-        result = GetBoolSetting(settings_with_none, 'none_value')
+        settings_with_none_obj = SettingsType(settings_with_none)
+        result = settings_with_none_obj.get_bool('none_value')
         log_input_expected_result("None value", False, result)
         self.assertFalse(result)
 
@@ -919,7 +916,7 @@ class TestSettingsHelpers(unittest.TestCase):
         for key in error_case_keys:
             with self.subTest(key=key):
                 with self.assertRaises(SettingsError) as cm:
-                    GetBoolSetting(self.test_dict_settings, key)
+                    self.test_dict_settings.get_bool(key)
                 log_input_expected_error(key, SettingsError, cm.exception)
 
     def test_get_int_setting(self):
@@ -930,18 +927,18 @@ class TestSettingsHelpers(unittest.TestCase):
             ('int_value', 42),
             ('int_str', 123),
             ('int_float', 45),
-            ('missing_key', 0),
+            ('missing_key', None),
         ]
         
         for key, expected in test_cases:
             with self.subTest(key=key):
-                result = GetIntSetting(self.test_dict_settings, key)
+                result = self.test_dict_settings.get_int(key)
                 log_input_expected_result(key, expected, result)
                 self.assertEqual(result, expected)
         
         # Test None handling
-        settings_with_none = {'none_value': None}
-        result = GetIntSetting(settings_with_none, 'none_value')
+        settings_with_none = SettingsType({'none_value': None})
+        result = settings_with_none.get_int('none_value')
         log_input_expected_result("None value", None, result)
         self.assertIsNone(result)
 
@@ -953,7 +950,7 @@ class TestSettingsHelpers(unittest.TestCase):
         log_test_name("GetIntSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
-            GetIntSetting(self.test_dict_settings, 'int_invalid')
+            self.test_dict_settings.get_int('int_invalid')
         log_input_expected_error('int_invalid', SettingsError, cm.exception)
 
     def test_get_float_setting(self):
@@ -968,12 +965,12 @@ class TestSettingsHelpers(unittest.TestCase):
         
         for key, expected in test_cases:
             with self.subTest(key=key):
-                result = GetFloatSetting(self.test_dict_settings, key)
+                result = self.test_dict_settings.get_float(key)
                 log_input_expected_result(key, expected, result)
                 self.assertEqual(result, expected)
         
         # Test None handling
-        result = GetFloatSetting(self.test_dict_settings, 'missing_key')
+        result = self.test_dict_settings.get_float('missing_key')
         log_input_expected_result("missing key", None, result)
         self.assertIsNone(result)
 
@@ -985,7 +982,7 @@ class TestSettingsHelpers(unittest.TestCase):
         log_test_name("GetFloatSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
-            GetFloatSetting(self.test_dict_settings, 'float_invalid')
+            self.test_dict_settings.get_float('float_invalid')
         log_input_expected_error('float_invalid', SettingsError, cm.exception)
 
     def test_get_str_setting(self):
@@ -1001,12 +998,12 @@ class TestSettingsHelpers(unittest.TestCase):
         
         for key, expected in test_cases:
             with self.subTest(key=key):
-                result = GetStrSetting(self.test_dict_settings, key)
+                result = self.test_dict_settings.get_str(key)
                 log_input_expected_result(key, expected, result)
                 self.assertEqual(result, expected)
         
         # Test None handling
-        result = GetStrSetting(self.test_dict_settings, 'missing_key')
+        result = self.test_dict_settings.get_str('missing_key')
         log_input_expected_result("missing key", None, result)
         self.assertIsNone(result)
 
@@ -1022,12 +1019,12 @@ class TestSettingsHelpers(unittest.TestCase):
         
         for key, expected in test_cases:
             with self.subTest(key=key):
-                result = GetListSetting(self.test_dict_settings, key)
+                result = self.test_dict_settings.get_list(key)
                 log_input_expected_result(key, expected, result)
                 self.assertEqual(result, expected)
         
         # Test missing key returns empty list
-        result = GetListSetting(self.test_dict_settings, 'missing_key')
+        result = self.test_dict_settings.get_list('missing_key')
         log_input_expected_result("missing key", [], result)
         self.assertEqual(result, [])
         
@@ -1039,7 +1036,7 @@ class TestSettingsHelpers(unittest.TestCase):
         log_test_name("GetListSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
-            GetListSetting(self.test_dict_settings, 'list_invalid')
+            self.test_dict_settings.get_list('list_invalid')
         log_input_expected_error('list_invalid', SettingsError, cm.exception)
 
     def test_get_string_list_setting(self):
@@ -1047,14 +1044,15 @@ class TestSettingsHelpers(unittest.TestCase):
         log_test_name("GetStringListSetting")
         
         # Test with valid string list
-        result = GetStringListSetting(self.test_dict_settings, 'list_value')
+        result = self.test_dict_settings.get_str_list('list_value')
         expected = ['apple', 'banana', 'cherry']
         log_input_expected_result("valid string list", expected, result)
         self.assertEqual(result, expected)
         
         # Test with mixed types (should convert to strings)
         mixed_settings = {'mixed_list': [1, 'two', True, None]}
-        result = GetStringListSetting(mixed_settings, 'mixed_list')
+        mixed_settings_obj = SettingsType(mixed_settings)
+        result = mixed_settings_obj.get_str_list('mixed_list')
         expected = ['1', 'two', 'True']
         log_input_expected_result("mixed types", expected, result)
         self.assertEqual(result, expected)
@@ -1071,13 +1069,14 @@ class TestSettingsHelpers(unittest.TestCase):
         
         for key, expected in test_cases:
             with self.subTest(key=key):
-                result = GetTimeDeltaSetting(self.test_dict_settings, key)
+                default = timedelta(minutes=1)  # Use a different default to distinguish from expected
+                result = self.test_dict_settings.get_timedelta(key, default)
                 log_input_expected_result(key, expected, result)
                 self.assertEqual(result, expected)
         
         # Test default value
         default = timedelta(minutes=5)
-        result = GetTimeDeltaSetting(self.test_dict_settings, 'missing_key', default)
+        result = self.test_dict_settings.get_timedelta('missing_key', default)
         log_input_expected_result("missing key with default", default, result)
         self.assertEqual(result, default)
 
@@ -1089,7 +1088,7 @@ class TestSettingsHelpers(unittest.TestCase):
         log_test_name("GetTimeDeltaSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
-            GetTimeDeltaSetting(self.test_dict_settings, 'timedelta_invalid')
+            self.test_dict_settings.get_timedelta('timedelta_invalid', timedelta(seconds=1))
         log_input_expected_error('timedelta_invalid', SettingsError, cm.exception)
 
     def test_get_optional_setting(self):
@@ -1169,6 +1168,55 @@ class TestSettingsHelpers(unittest.TestCase):
             validate_setting_type(self.test_dict_settings, 'missing_key', str, required=True)
         log_input_expected_error('missing_key', SettingsError, cm.exception)
 
+T = TypeVar('T')
+
+def get_optional_setting(settings: SettingsType|Mapping[str, SettingType], key: str, setting_type: type[T]) -> T | None:
+    """
+    Safely retrieve an optional setting that may not be present.
+    """
+    if key not in settings:
+        return None
+        
+    value = settings[key]
+    if value is None:
+        return None
+        
+    # Map types to appropriate getter functions
+    if setting_type == bool:
+        return settings.get_bool(key)  # type: ignore
+    elif setting_type == int:
+        return settings.get_int(key)  # type: ignore
+    elif setting_type == float:
+        return settings.get_float(key)  # type: ignore
+    elif setting_type == str:
+        return settings.get_str(key)  # type: ignore
+    elif setting_type == list:
+        return settings.get_list(key)  # type: ignore
+    else:
+        # For other types, try direct conversion
+        if isinstance(value, setting_type):
+            return value
+        else:
+            raise SettingsError(f"Cannot convert setting '{key}' of type {type(value).__name__} to {setting_type.__name__}")
+
+
+def validate_setting_type(settings: SettingsType|Mapping[str, SettingType], key: str, expected_type: type[T], required: bool = False) -> bool:
+    """
+    Validate that a setting can be converted to the expected type without actually converting it.
+    
+    Raises:
+        SettingsError: If validation fails
+    """
+    if key not in settings:
+        if required:
+            raise SettingsError(f"Required setting '{key}' is missing")
+        return True
+    
+    try:
+        get_optional_setting(settings, key, expected_type)
+        return True
+    except SettingsError:
+        return False
 
 if __name__ == '__main__':
     unittest.main()

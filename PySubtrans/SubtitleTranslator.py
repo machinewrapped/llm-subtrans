@@ -3,7 +3,6 @@ import logging
 import threading
 from typing import Any
 
-from PySubtrans.Helpers.SettingsHelpers import GetStrSetting
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtrans.Helpers.Localization import _, tr
@@ -187,7 +186,7 @@ class SubtitleTranslator:
                     break
 
             # Update the scene summary based on the best available information (we hope)
-            scene.summary = self._get_best_summary([scene.summary, GetStrSetting(context, 'scene'), GetStrSetting(context, 'summary')])
+            scene.summary = self._get_best_summary([scene.summary, context.get('scene'), context.get('summary')])
 
             # Notify observers the scene was translated
             self.events.scene_translated(scene)

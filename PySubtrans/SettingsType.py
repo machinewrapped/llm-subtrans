@@ -178,7 +178,7 @@ def redact_sensitive_values(settings : SettingsType) -> SettingsType:
     for key, value in settings.items():
         if isinstance(value, SettingsType):
             redacted[key] = redact_sensitive_values(value)
-        elif 'key' in key.lower() or 'token' in key.lower():
+        elif any(s in key.lower() for s in ('key', 'token', 'password', 'secret', 'auth', 'credential')):
             redacted[key] = '***'
         else:
             redacted[key] = value

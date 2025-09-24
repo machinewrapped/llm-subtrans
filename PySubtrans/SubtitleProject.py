@@ -392,10 +392,10 @@ class SubtitleProject:
         One-stop shop: Use *translator* to translate a project, then save the translation.
         """
         if not self.subtitles:
-            raise Exception("No subtitles to translate")
+            raise ValueError("No subtitles to translate")
 
         if not translator:
-            raise Exception("No translator supplied")
+            raise ValueError("No translator supplied")
 
         # Prime new project files
         self.UpdateProjectFile()
@@ -433,10 +433,10 @@ class SubtitleProject:
         Pass batches of subtitles to *translator* for translation.
         """
         if not self.subtitles:
-            raise Exception("No subtitles to translate")
+            raise ValueError("No subtitles to translate")
 
         if not translator:
-            raise Exception("No translator supplied")
+            raise ValueError("No translator supplied")
 
         translator.events.preprocessed += self._on_preprocessed             # type: ignore
         translator.events.batch_translated += self._on_batch_translated     # type: ignore

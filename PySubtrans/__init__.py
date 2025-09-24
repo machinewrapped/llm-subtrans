@@ -268,6 +268,8 @@ def init_translator(
     """
     options = Options(settings)
 
+    options.InitialiseInstructions()
+
     if translation_provider is None:
         translation_provider = TranslationProvider.get_provider(options)
     else:

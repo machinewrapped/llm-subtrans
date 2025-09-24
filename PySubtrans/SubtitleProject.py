@@ -425,7 +425,7 @@ class SubtitleProject:
 
         logging.info(f"Using translation provider {translation_provider.name}")
 
-        # Load the instructions
+        # Initialise the instructions
         options.InitialiseInstructions()
 
         with self.lock:

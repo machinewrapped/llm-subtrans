@@ -483,7 +483,9 @@ class TestOptions(unittest.TestCase):
         mock_instructions = type('MockInstructions', (), {
             'prompt': 'Test prompt',
             'instructions': 'Test instructions', 
-            'retry_instructions': 'Test retry'
+            'retry_instructions': 'Test retry',
+            'target_language': None,
+            'task_type': None
         })()
         mock_load.return_value = mock_instructions
         

@@ -317,9 +317,16 @@ class Options(SettingsType):
         if instruction_file:
             try:
                 instructions = LoadInstructions(instruction_file)
-                self['prompt'] = instructions.prompt
-                self['instructions'] = instructions.instructions
-                self['retry_instructions'] = instructions.retry_instructions
+                if instructions.prompt:
+                    self['prompt'] = instructions.prompt
+                if instructions.instructions:
+                    self['instructions'] = instructions.instructions
+                if instructions.retry_instructions:
+                    self['retry_instructions'] = instructions.retry_instructions
+                if instructions.target_language:
+                    self['target_language'] = instructions.target_language
+                if instructions.task_type:
+                    self['task_type'] = instructions.task_type
 
             except Exception as e:
                 logging.error(_("Unable to load instructions from {}: {}").format(instruction_file, e))

@@ -62,9 +62,9 @@ DEFAULT_OPTIONS = SettingsType({
 class BatchProcessor:
     """Coordinate discovery and translation of subtitle files."""
 
-    def __init__(self, config : BatchJobConfig, options : Options):
+    def __init__(self, config : BatchJobConfig):
         self.config = config
-        self.options = options
+        self.options = config.options
         self.logger = logging.getLogger(__name__)
         self.progress_display = ProgressDisplay()
         self.translation_provider = self._initialise_provider()
@@ -72,11 +72,22 @@ class BatchProcessor:
     def run(self) -> BatchStatistics:
         """Execute the batch translation workflow."""
         source_root = pathlib.Path(self.config.source_path).expanduser().resolve()
+        if not source_root.exists() or not source_root.is_dir():
+            raise SubtitleError(f"Source path '{source_root}' does not exist or is not a directory")
+
         destination_root = pathlib.Path(self.config.destination_path).expanduser().resolve()
         destination_root.mkdir(parents=True, exist_ok=True)
 
-        if not source_root.exists() or not source_root.is_dir():
-            raise SubtitleError(f"Source path '{source_root}' does not exist or is not a directory")
+        self.logger.info("Starting batch translation from %s", source_root)
+        self.logger.info("Writing translated files to %s", destination_root)
+
+        if not self.options.target_language:
+            raise SubtitleError("No target language specified")
+
+        self.logger.info("Target language: %s", self.options.target_language)
+
+        if self.config.output_format is not None:
+            self.logger.info("Output format: %s", self.config.output_format)
 
         # Ask PySubtrans for the list of recognised subtitle formats so our
         # discovery step only picks up files the library knows how to parse.
@@ -110,10 +121,7 @@ class BatchProcessor:
 
             try:
                 # Determine the final output path so language suffixes and format overrides are applied consistently.
-                destination_file = self._prepare_destination(
-                    output_base,
-                    subtitles.file_format,
-                )
+                destination_file = self._prepare_destination(output_base, subtitles.file_format)
 
             except SubtitleError as exc:
                 self.logger.error("Unable to determine output path for %s: %s", source_file, exc)
@@ -193,12 +201,10 @@ class BatchProcessor:
                 subtitle_files.append(path)
         return sorted(subtitle_files)
 
-    def _prepare_destination(
-        self,
-        base_output : pathlib.Path,
-        detected_format : str|None,
-    ) -> pathlib.Path:
-        """Return a destination file path honouring configured overrides."""
+    def _prepare_destination(self, base_output : pathlib.Path, detected_format : str|None, ) -> pathlib.Path:
+        """ 
+        Return a destination file path honouring configured overrides for language and format.
+        """
         language = self.options.target_language or self.options.provider
         extension = self.config.output_format or detected_format
 
@@ -211,21 +217,23 @@ class BatchProcessor:
         return destination_file
 
     def _initialise_provider(self) -> TranslationProvider:
+        """
+        Create and validate a translation provider instance based on the configured options
+        """
         provider_name = self.options.provider
         if not provider_name:
             raise SubtitleError("No translation provider configured. Set the 'provider' option.")
 
-        translation_provider = init_translation_provider(
-            provider_name,
-            self.options,
-        )
+        translation_provider = init_translation_provider(provider_name, self.options)
 
         self.logger.debug("Validated translation provider %s", translation_provider.name)
 
         return translation_provider
 
 class BatchJobConfig:
-    """Container for batch translation configuration derived from the options dictionary."""
+    """
+    Container for batch translation configuration
+    """
 
     def __init__(self, settings : SettingsType):
         self.options = Options(settings)
@@ -267,6 +275,15 @@ def build_config(args : argparse.Namespace) -> BatchJobConfig:
     """Combine DEFAULT_OPTIONS with command line arguments."""
     settings = SettingsType(dict(DEFAULT_OPTIONS))
 
+    if args.source:
+        settings['source_path'] = args.source
+    if args.destination:
+        settings['destination_path'] = args.destination
+    if args.output_format:
+        settings['output_format'] = args.output_format
+    if args.log_file:
+        settings['log_path'] = args.log_file
+
     if args.provider is not None:
         settings['provider'] = args.provider
     if args.model is not None:
@@ -285,15 +302,6 @@ def build_config(args : argparse.Namespace) -> BatchJobConfig:
             raise SubtitleError(f"Invalid option override '{override}', expected KEY=VALUE")
         key, value = override.split('=', 1)
         settings[key] = parse_setting_value(value)
-
-    if args.source:
-        settings['source_path'] = args.source
-    if args.destination:
-        settings['destination_path'] = args.destination
-    if args.output_format:
-        settings['output_format'] = args.output_format
-    if args.log_file:
-        settings['log_path'] = args.log_file
 
     return BatchJobConfig(settings)
 
@@ -474,20 +482,20 @@ def main(argv : list[str]|None = None) -> int:
 
     logging.info("Source directory: %s", str(config.source_path))
     logging.info("Destination directory: %s", str(config.destination_path))
+    logging.info("Target language: %s", config.options.target_language or "unspecified")
     if config.output_format:
         logging.info("Output format override: %s", config.output_format)
 
-    options = Options(config.options)
-    logging.debug("Effective options: %s", redact_sensitive_values(options))
-    model_name = options.model or options.get('model')
+    logging.debug("Effective options: %s", redact_sensitive_values(config.options))
+
     logging.info(
         "Using provider '%s' model '%s' (preview=%s)",
-        options.provider or 'unspecified',
-        model_name or 'unspecified',
-        options.get_bool('preview')
+        config.options.provider or 'unspecified',
+        config.options.model or 'unspecified',
+        config.options.get_bool('preview')
     )
 
-    processor = BatchProcessor(config, options)
+    processor = BatchProcessor(config)
 
     try:
         stats = processor.run()

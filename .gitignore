@@ -47,3 +47,5 @@ untranslated_msgids_*.txt
 /PySubtrans/build
 /PySubtrans/dist
 /PySubtrans/*.egg-info
+/subtitles
+/translated

@@ -8,7 +8,7 @@ from typing import Any
 import dotenv
 
 from PySubtrans.Helpers.Version import VersionNumberLessThan
-from PySubtrans.Instructions import Instructions, LoadInstructions, default_user_prompt
+from PySubtrans.Instructions import Instructions, default_user_prompt
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Resources import config_dir, old_config_dir
 from PySubtrans.Helpers.Text import standard_filler_words
@@ -52,7 +52,7 @@ default_settings = {
     'provider': env_str('PROVIDER', None),
     'provider_settings': SettingsType({}),
     'prompt': env_str('PROMPT', default_user_prompt),
-    'instruction_file': env_str('INSTRUCTION_FILE', "instructions.txt"),
+    'instruction_file': env_str('INSTRUCTION_FILE', None),
     'target_language': env_str('TARGET_LANGUAGE', 'English'),
     'include_original': env_bool('INCLUDE_ORIGINAL', False),
     'add_right_to_left_markers': env_bool('add_right_to_left_markers', False),
@@ -114,7 +114,8 @@ class Options(SettingsType):
         self.update(deepcopy(default_settings))
 
         # Convert plain dict to SettingsType for type safety
-        settings = SettingsType(settings)
+        if not isinstance(settings, SettingsType):
+            settings = SettingsType(settings)
 
         if settings:
             # Remove None values from options and merge with defaults
@@ -309,20 +310,23 @@ class Options(SettingsType):
 
         return prompt.strip()
 
-    def InitialiseInstructions(self):
+    def InitialiseInstructions(self, instructions : Instructions|None = None):
         """
-        Load options from instructions file if specified
+        Apply instructions to options
         """
-        instruction_file = self.get_str('instruction_file') or ''
-        if instruction_file:
-            try:
-                instructions = LoadInstructions(instruction_file)
-                self['prompt'] = instructions.prompt
-                self['instructions'] = instructions.instructions
-                self['retry_instructions'] = instructions.retry_instructions
+        if not instructions:
+            raise ValueError("Instructions cannot be None")
 
-            except Exception as e:
-                logging.error(_("Unable to load instructions from {}: {}").format(instruction_file, e))
+        if instructions.prompt:
+            self['prompt'] = instructions.prompt
+        if instructions.instructions:
+            self['instructions'] = instructions.instructions
+        if instructions.retry_instructions:
+            self['retry_instructions'] = instructions.retry_instructions
+        if instructions.target_language:
+            self['target_language'] = instructions.target_language
+        if instructions.task_type:
+            self['task_type'] = instructions.task_type
 
     def InitialiseProviderSettings(self, provider : str, settings : SettingsType) -> None:
         """

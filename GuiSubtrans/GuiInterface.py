@@ -23,6 +23,8 @@ from GuiSubtrans.NewProjectSettings import NewProjectSettings
 from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.SettingsDialog import SettingsDialog
+from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
+from PySubtrans.Instructions import Instructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import ProviderConfigurationError, SubtitleError
@@ -53,7 +55,6 @@ class GuiInterface(QObject):
 
         if not options:
             options = Options()
-            options.InitialiseInstructions()
             options.LoadSettings()
 
         options.add('available_providers', sorted(TranslationProvider.get_providers()))
@@ -216,6 +217,9 @@ class GuiInterface(QObject):
 
         LoadStylesheet(options.theme)
 
+        # Initialise instructions
+        self._initialise_instructions(options)
+
         if options.provider is None or options.get('firstrun'):
             # Configure critical settings
             self._first_run(options)
@@ -234,6 +238,15 @@ class GuiInterface(QObject):
         if CheckIfUpdateCheckIsRequired():
             CheckIfUpdateAvailable()
 
+    def _initialise_instructions(self, options : Options):
+        instructions_file = options.get_str('instruction_file') or "instructions.txt"
+        try:
+            instructions = LoadInstructions(instructions_file)
+            options.InitialiseInstructions(instructions)
+            options.add('instruction_file', instructions_file)
+        except Exception:
+            logging.error(_("Failed to load instructions from {instructions_file}").format(instructions_file=instructions_file))
+    
     def _check_provider_settings(self, options : Options):
         self.action_handler.CheckProviderSettings(options)
 

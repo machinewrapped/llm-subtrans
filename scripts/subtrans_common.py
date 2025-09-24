@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import ParseNames
-from PySubtrans import batch_subtitles, preprocess_subtitles
+from PySubtrans import batch_subtitles, preprocess_subtitles, init_options
 from PySubtrans.Options import Options, config_dir
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
@@ -112,13 +112,13 @@ def HandleFormatListing(args: Namespace) -> None:
 
 def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
     """ Create options with additional arguments """
-    options = {
+    settings = {
         'api_key': args.apikey,
         'description': args.description,
         'include_original': args.includeoriginal,
         'add_right_to_left_markers': args.addrtlmarkers,
         'instruction_args': args.instruction,
-        'instruction_file': args.instructionfile,
+        'instruction_file': args.instructionfile or "instructions.txt",
         'substitution_mode': "Partial Words" if args.matchpartialwords else "Auto",
         'max_batch_size': args.maxbatchsize,
         'max_context_summaries': args.maxsummaries,
@@ -133,7 +133,6 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'reparse': args.reparse,
         'retranslate': args.retranslate,
         'reload': args.reload,
-        'provider': provider,
         'rate_limit': args.ratelimit,
         'scene_threshold': args.scenethreshold,
         'substitutions': Substitutions.Parse(args.substitution),
@@ -143,10 +142,10 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
     }
 
     # Adding optional new keys from kwargs
-    for key, value in kwargs.items():
-        options[key] = value
+    settings.update(kwargs)
 
-    return Options(options)
+    # Use PySubtrans init_options for proper instruction file handling
+    return init_options(provider=provider, **settings)
 
 def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     """
@@ -197,7 +196,7 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     logging.info(f"Created {scene_count} scenes and {batch_count} batches for translation")
 
     if not args.output:
-        output_path = GetOutputPath(project.subtitles.sourcepath, project.subtitles.target_language or options.provider, project.subtitles.file_format)
+        output_path = GetOutputPath(project.subtitles.sourcepath, project.target_language or options.provider, project.subtitles.file_format)
         if output_path:
             project.subtitles.outputpath = output_path
 

@@ -24,8 +24,6 @@ class LoadSubtitleFile(Command):
             raise CommandError(_("No file path specified"), command=self)
 
         try:
-            self.options.InitialiseInstructions()
-
             project = SubtitleProject(persistent=self.options.use_project_file)
             project.InitialiseProject(self.filepath, reload_subtitles=self.reload_subtitles)
 

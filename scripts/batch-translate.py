@@ -31,7 +31,7 @@ EXAMPLES:
     python scripts/batch-translate.py ./subtitles ./translated --prompt "Translate these subtitles into Spanish"
 
     # With provider and model overrides on the command line
-    python scripts/batch-translate.py ./subtitles ./translated --target-language French \\
+    python scripts/batch-translate.py ./subtitles ./translated --language French \\
         --provider openai --model gpt-4o-mini --apikey sk-... 
 
 There are many more options available, some of which are provider-specific. 
@@ -276,7 +276,7 @@ def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
     parser.add_argument("--model", help="Model identifier for the provider")
     parser.add_argument("--apikey", dest="api_key", help="API key for the provider")
     parser.add_argument("--prompt", help="High level translation prompt")
-    parser.add_argument("--target-language", dest="target_language", help="Target language for translation")
+    parser.add_argument("--language", dest="target_language", help="Target language for translation")
     parser.add_argument("--option", action="append", default=[], metavar="KEY=VALUE",
                         help="Override additional Options settings (repeatable)")
     parser.add_argument("--output-format", dest="output_format", help="Override the output subtitle format (e.g. srt)")
@@ -423,12 +423,14 @@ class ProgressDisplay:
         self._processed_lines += batch.size
         self._last_batch_label = f"{batch.scene}.{batch.number}"
         self._last_batch_summary = batch.summary or ""
+        logging.info("Translated batch %s: %s", self._last_batch_label, batch.summary or "no summary")
         self._render()
 
     def _on_scene_translated(self, scene) -> None:
         self._completed_scenes += 1
         self._last_scene_label = str(scene.number)
         self._last_scene_summary = scene.summary or ""
+        logging.info("Completed scene %s: %s", self._last_scene_label, scene.summary or "no summary")
         self._render()
 
     def _render(self, final : bool = False) -> None:
@@ -443,8 +445,8 @@ class ProgressDisplay:
         ]
         if self._total_lines:
             parts.append(f"lines {self._processed_lines}/{self._total_lines}")
-        if self._last_batch_summary:
-            parts.append(f"last batch {self._last_batch_label}: {self._shorten(self._last_batch_summary)}")
+        # if self._last_batch_summary:
+        #     parts.append(f"last batch {self._last_batch_label}: {self._shorten(self._last_batch_summary)}")
         if self._last_scene_summary:
             parts.append(f"scene {self._last_scene_label}: {self._shorten(self._last_scene_summary)}")
         if self._preview:

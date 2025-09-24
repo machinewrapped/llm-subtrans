@@ -64,7 +64,7 @@ def init_options(**settings: SettingType) -> Options:
 
         Additional settings can be provided to customise the translation flow, e.g.
 
-        prompt = "Translate these subtitles into {target_language}", 
+        prompt = "Translate these subtitles into [target_language]", 
         target_language = "French",
         instruction_file = "instructions.txt",
         postprocess_translation = True
@@ -195,7 +195,7 @@ def init_translation_provider(
     options = init_options(
         model="gpt-5-mini",
         api_key="sk-...",
-        prompt="Translate these subtitles into {target_language}",
+        prompt="Translate these subtitles into [target_language]",
         target_language="French",
     )
     provider = init_translation_provider("OpenAI", options)

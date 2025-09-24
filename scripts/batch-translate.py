@@ -66,7 +66,7 @@ DEFAULT_OPTIONS = SettingsType({
     'provider': "OpenRouter",                       # Translation provider to use, e.g. "Gemini"
     'api_key': None,                                # Your API key for the selected provider
     'model': "deepseek/deepseek-chat-v3.1:free",    # Your preferred model name
-    'prompt': 'Translate these subtitles into {target_language}',       # High level prompt template
+    'prompt': 'Translate these subtitles into [target_language]',       # High level prompt template
     'instruction_file': 'instructions.txt',         # Optional file containing detailed instructions
     'scene_threshold': 60.0,                        # Scene detection threshold in seconds
     'max_batch_size': 100,                          # Maximum number of lines to include in each translation batch
@@ -154,7 +154,7 @@ class BatchProcessor:
                 stats.failed_files += 1
                 continue
 
-            self.logger.info("Detected format %s", subtitles.file_format or "unknown")
+            self.logger.debug("Detected format %s", subtitles.file_format or "unknown")
 
             try:
                 # Determine the final output path so language suffixes and format overrides are applied consistently.

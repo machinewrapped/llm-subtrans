@@ -95,7 +95,7 @@ def WritePackageToml(
         if init_file.parent != package_dir:  # Skip the root __init__.py
             relative_path = init_file.parent.relative_to(package_dir)
             # Convert path separators to dots for Python package names
-            package_name = f"PySubtrans.{str(relative_path).replace('\\', '.').replace('/', '.')}"
+            package_name = f"PySubtrans.{'.'.join(relative_path.parts)}"
             # Exclude unit tests from distribution
             if not package_name.startswith("PySubtrans.UnitTests"):
                 packages.append(package_name)

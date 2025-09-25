@@ -414,9 +414,9 @@ class SubtitleProject:
 
         save_translation : bool = self.write_translation and not translator.preview
 
-        translator.events.preprocessed += self._on_preprocessed # type: ignore
-        translator.events.batch_translated += self._on_batch_translated # type: ignore
-        translator.events.scene_translated += self._on_scene_translated # type: ignore
+        translator.events.preprocessed.connect(self._on_preprocessed) # type: ignore
+        translator.events.batch_translated.connect(self._on_batch_translated) # type: ignore
+        translator.events.scene_translated.connect(self._on_scene_translated) # type: ignore
 
         try:
             translator.TranslateSubtitles(self.subtitles)
@@ -436,9 +436,9 @@ class SubtitleProject:
             raise
 
         finally:
-            translator.events.preprocessed -= self._on_preprocessed # type: ignore
-            translator.events.batch_translated -= self._on_batch_translated # type: ignore
-            translator.events.scene_translated -= self._on_scene_translated # type: ignore
+            translator.events.preprocessed.disconnect(self._on_preprocessed) # type: ignore
+            translator.events.batch_translated.disconnect(self._on_batch_translated) # type: ignore
+            translator.events.scene_translated.disconnect(self._on_scene_translated) # type: ignore
 
     def TranslateScene(self, translator : SubtitleTranslator, scene_number : int, batch_numbers : list[int]|None = None, line_numbers : list[int]|None = None) -> SubtitleScene|None:
         """
@@ -450,8 +450,8 @@ class SubtitleProject:
         if not translator:
             raise ValueError("No translator supplied")
 
-        translator.events.preprocessed += self._on_preprocessed             # type: ignore
-        translator.events.batch_translated += self._on_batch_translated     # type: ignore
+        translator.events.preprocessed.connect(self._on_preprocessed)             # type: ignore
+        translator.events.batch_translated.connect(self._on_batch_translated)     # type: ignore
 
         try:
             scene : SubtitleScene = self.subtitles.GetScene(scene_number)
@@ -466,23 +466,23 @@ class SubtitleProject:
             pass
 
         finally:
-            translator.events.preprocessed -= self._on_preprocessed # type: ignore
-            translator.events.batch_translated -= self._on_batch_translated # type: ignore
+            translator.events.preprocessed.disconnect(self._on_preprocessed) # type: ignore
+            translator.events.batch_translated.disconnect(self._on_batch_translated) # type: ignore
 
 
-    def _on_preprocessed(self, scenes) -> None:
+    def _on_preprocessed(self, sender, scenes) -> None:
         logging.debug("Pre-processing finished")
-        self.events.preprocessed(scenes)
+        self.events.preprocessed.send(self, scenes=scenes)
 
-    def _on_batch_translated(self, batch) -> None:
+    def _on_batch_translated(self, sender, batch) -> None:
         logging.debug("Batch translated")
         self.needs_writing = self.use_project_file
-        self.events.batch_translated(batch)
+        self.events.batch_translated.send(self, batch=batch)
 
-    def _on_scene_translated(self, scene) -> None:
+    def _on_scene_translated(self, sender, scene) -> None:
         logging.debug("Scene translated")
         self.needs_writing = self.use_project_file
-        self.events.scene_translated(scene)
+        self.events.scene_translated.send(self, scene=scene)
 
     def _set_project_setting(self, setting_name, value):
         """

@@ -128,7 +128,7 @@ By default `init_subtitles` preprocesses and batches subtitles to be ready for t
 
 If you want to validate provider credentials and connection details before starting work, call `init_translation_provider` first and pass the resulting provider into `init_translator`. This pattern lets you fail fast when credentials are missing or incorrect and reuse the same provider instance across multiple translators.
 
-Instantiating your own `SubtitleTranslator` allows you to have more fine-grained control over the translation process, e.g. translating individual scenes or batches. You can subscribe to `events` to receive notifications when individual scenes or batches have been translated to provide realtime feedback or further processing.
+Instantiating your own `SubtitleTranslator` allows you to have more fine-grained control over the translation process, e.g. translating individual scenes or batches. You can subscribe to `events` to receive notifications when individual scenes or batches have been translated to provide realtime feedback or further processing. Event handlers follow the [blinker](https://pythonhosted.org/blinker/) convention, receiving the sender object plus named keyword arguments like `scene` or `batch` that describe the update.
 
 Subtitles must be batched prior to translation.
 
@@ -140,7 +140,7 @@ from PySubtrans import init_options, init_translator, init_translation_provider
 options = init_options(provider="gemini", api_key="your-key")
 provider = init_translation_provider("gemini", options)
 translator = init_translator(options, translation_provider=provider)
-translator.events.scene_translated += on_scene_translated  # Subscribe to events
+translator.events.scene_translated.connect(on_scene_translated)  # Subscribe to events
 translator.TranslateSubtitles(subtitles)
 ```
 
@@ -383,18 +383,18 @@ if not translation_provider.ValidateSettings():
 translator = SubtitleTranslator(options, translation_provider)
 
 # Set up event handlers for real-time feedback
-def on_batch_translated(batch):
+def on_batch_translated(sender, batch):
     print(f"Translated batch {batch.number} in scene {batch.scene} ({batch.size} lines)")
     if batch.summary:
         print(f"  Summary: {batch.summary}")
 
-def on_scene_translated(scene):
+def on_scene_translated(sender, scene):
     print(f"Completed scene {scene.number}: {scene.summary}")
     print(f"   Total: {scene.linecount} lines in {scene.size} batches")
 
 # Subscribe to translation events
-translator.events.batch_translated += on_batch_translated
-translator.events.scene_translated += on_scene_translated
+translator.events.batch_translated.connect(on_batch_translated)
+translator.events.scene_translated.connect(on_scene_translated)
 
 # Execute translation with progress feedback
 print(f"Starting translation of {subtitles.linecount} lines...")

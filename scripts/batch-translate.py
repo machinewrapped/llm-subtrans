@@ -381,29 +381,27 @@ class ProgressDisplay:
         self._last_batch_summary = ""
         self._last_scene_label = ""
         self._last_scene_summary = ""
-        translator.events.preprocessed += self._on_preprocessed
-        translator.events.batch_translated += self._on_batch_translated
-        translator.events.scene_translated += self._on_scene_translated
+        translator.events.preprocessed.connect(self._on_preprocessed)
+        translator.events.batch_translated.connect(self._on_batch_translated)
+        translator.events.scene_translated.connect(self._on_scene_translated)
 
     def _detach(self, translator : SubtitleTranslator) -> None:
         try:
-            translator.events.preprocessed -= self._on_preprocessed
-            translator.events.batch_translated -= self._on_batch_translated
-            translator.events.scene_translated -= self._on_scene_translated
-        except ValueError:
-            pass
+            translator.events.preprocessed.disconnect(self._on_preprocessed)
+            translator.events.batch_translated.disconnect(self._on_batch_translated)
+            translator.events.scene_translated.disconnect(self._on_scene_translated)
         finally:
             self._render(final=True)
             self._current_file = None
             self._preview = False
 
-    def _on_preprocessed(self, scenes : list) -> None:
+    def _on_preprocessed(self, _sender, scenes : list) -> None:
         self._total_scenes = len(scenes)
         self._total_batches = sum(len(scene.batches) for scene in scenes)
         self._total_lines = sum(scene.linecount for scene in scenes)
         self._render()
 
-    def _on_batch_translated(self, batch) -> None:
+    def _on_batch_translated(self, _sender, batch) -> None:
         self._completed_batches += 1
         self._processed_lines += batch.size
         self._last_batch_label = f"{batch.scene}.{batch.number}"
@@ -411,7 +409,7 @@ class ProgressDisplay:
         logging.info("Translated batch %s: %s", self._last_batch_label, batch.summary or "no summary")
         self._render()
 
-    def _on_scene_translated(self, scene) -> None:
+    def _on_scene_translated(self, _sender, scene) -> None:
         self._completed_scenes += 1
         self._last_scene_label = str(scene.number)
         self._last_scene_summary = scene.summary or ""

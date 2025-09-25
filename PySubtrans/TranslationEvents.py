@@ -1,17 +1,15 @@
-from events import Events # type: ignore
-from typing import Any, Protocol
+from blinker import Signal
 
-class EventProtocol(Protocol):
-    """Protocol for event objects that support both += and function calls"""
-    def __call__(self, *args: Any) -> None: ...
-    def __iadd__(self, handler: Any) -> 'EventProtocol': ...
-    def __isub__(self, handler: Any) -> 'EventProtocol': ...
 
-class TranslationEvents(Events):
-    __events__ = ( "preprocessed", "batch_translated", "scene_translated" )
+class TranslationEvents:
+    """Container for blinker signals emitted during translation."""
 
-    # Type annotations for dynamic event attributes created by Events base class
-    preprocessed: EventProtocol
-    batch_translated: EventProtocol
-    scene_translated: EventProtocol
+    preprocessed: Signal
+    batch_translated: Signal
+    scene_translated: Signal
+
+    def __init__(self):
+        self.preprocessed = Signal("translation-preprocessed")
+        self.batch_translated = Signal("translation-batch-translated")
+        self.scene_translated = Signal("translation-scene-translated")
 

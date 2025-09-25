@@ -106,7 +106,7 @@ class SubtitleTranslator:
 
         logging.info(_("Translating {linecount} lines in {scenecount} scenes").format(linecount=subtitles.linecount, scenecount=subtitles.scenecount))
 
-        self.events.preprocessed(subtitles.scenes)
+        self.events.preprocessed.send(self, scenes=subtitles.scenes)
 
         # Iterate over each subtitle scene and request translation
         for scene in subtitles.scenes:
@@ -172,7 +172,7 @@ class SubtitleTranslator:
                     return
 
                 # Notify observers the batch was translated
-                self.events.batch_translated(batch)
+                self.events.batch_translated.send(self, batch=batch)
 
                 if batch.errors:
                     logging.warning(_("Errors encountered translating scene {scene} batch {batch}").format(scene=batch.scene, batch=batch.number))
@@ -189,7 +189,7 @@ class SubtitleTranslator:
             scene.summary = self._get_best_summary([scene.summary, context.get('scene'), context.get('summary')])
 
             # Notify observers the scene was translated
-            self.events.scene_translated(scene)
+            self.events.scene_translated.send(self, scene=scene)
 
         except (TranslationAbortedError, TranslationImpossibleError) as e:
             raise

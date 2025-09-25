@@ -279,7 +279,7 @@ class PySubtransConvenienceTests(unittest.TestCase):
         batch_events = []
         scene_events = []
 
-        def on_batch_translated(batch):
+        def on_batch_translated(_sender, batch):
             batch_events.append({
                 'scene': batch.scene,
                 'batch': batch.number,
@@ -287,7 +287,7 @@ class PySubtransConvenienceTests(unittest.TestCase):
                 'summary': batch.summary
             })
 
-        def on_scene_translated(scene):
+        def on_scene_translated(_sender, scene):
             scene_events.append({
                 'scene': scene.number,
                 'summary': scene.summary,
@@ -296,8 +296,8 @@ class PySubtransConvenienceTests(unittest.TestCase):
             })
 
         # Subscribe to events
-        translator.events.batch_translated += on_batch_translated
-        translator.events.scene_translated += on_scene_translated
+        translator.events.batch_translated.connect(on_batch_translated)
+        translator.events.scene_translated.connect(on_scene_translated)
 
         # Execute translation
         translator.TranslateSubtitles(subtitles)

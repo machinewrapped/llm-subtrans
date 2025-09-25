@@ -16,7 +16,7 @@ dependencies = [
     "regex",
     "babel",
     "appdirs",
-    "events",
+    "blinker",
     "requests",
     "setuptools",
     "httpx",

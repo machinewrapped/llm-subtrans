@@ -527,7 +527,7 @@ Translation providers:
 
 For the GUI:
 - pyside6 (https://wiki.qt.io/Qt_for_Python)
-- events (https://pypi.org/project/Events/)
+- blinker (https://pythonhosted.org/blinker/)
 - darkdetect (https://github.com/albertosottile/darkdetect)
 - appdirs (https://github.com/ActiveState/appdirs)
 

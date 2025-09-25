@@ -17,7 +17,7 @@ else:
         from google.api_core.exceptions import FailedPrecondition
 
         from PySubtrans.Helpers.Localization import _
-        from PySubtrans.Providers.Gemini.GeminiClient import GeminiClient
+        from PySubtrans.Providers.Clients.GeminiClient import GeminiClient
         from PySubtrans.TranslationClient import TranslationClient
         from PySubtrans.TranslationProvider import TranslationProvider
 

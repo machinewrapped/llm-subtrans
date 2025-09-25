@@ -15,7 +15,7 @@ else:
         from PySubtrans.Helpers.Localization import _
 
 
-        from PySubtrans.Providers.Bedrock.BedrockClient import BedrockClient
+        from PySubtrans.Providers.Clients.BedrockClient import BedrockClient
         from PySubtrans.TranslationClient import TranslationClient
         from PySubtrans.TranslationProvider import TranslationProvider
 

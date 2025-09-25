@@ -1,6 +1,7 @@
+import logging
 from typing import Any
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Providers.OpenAI.OpenAIClient import OpenAIClient
+from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import TranslationError, TranslationResponseError
 from PySubtrans.TranslationPrompt import TranslationPrompt
@@ -144,3 +145,4 @@ class OpenAIReasoningClient(OpenAIClient):
         """Normalize finish reason to legacy format"""
         finish = getattr(result, 'stop_reason', None) or getattr(result, 'finish_reason', None)
         return 'length' if finish == 'max_output_tokens' else finish
+

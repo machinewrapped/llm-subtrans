@@ -13,8 +13,8 @@ else:
         import openai   # type: ignore
 
         from PySubtrans.Helpers.Localization import _
-        from PySubtrans.Providers.OpenAI.ChatGPTClient import ChatGPTClient
-        from PySubtrans.Providers.OpenAI.OpenAIReasoningClient import OpenAIReasoningClient
+        from PySubtrans.Providers.Clients.ChatGPTClient import ChatGPTClient
+        from PySubtrans.Providers.Clients.OpenAIReasoningClient import OpenAIReasoningClient
         from PySubtrans.SubtitleError import ProviderError
         from PySubtrans.TranslationClient import TranslationClient
         from PySubtrans.TranslationProvider import TranslationProvider

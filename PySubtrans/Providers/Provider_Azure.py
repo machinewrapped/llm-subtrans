@@ -11,7 +11,7 @@ else:
     try:
         import openai   # type: ignore
 
-        from PySubtrans.Providers.Azure.AzureOpenAIClient import AzureOpenAIClient
+        from PySubtrans.Providers.Clients.AzureOpenAIClient import AzureOpenAIClient
         from PySubtrans.TranslationClient import TranslationClient
         from PySubtrans.TranslationProvider import TranslationProvider
 

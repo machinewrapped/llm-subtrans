@@ -1,6 +1,4 @@
-import importlib
 import logging
-import pkgutil
 from typing import cast
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
@@ -111,11 +109,8 @@ class TranslationProvider:
         Return a dictionary of all available providers
         """
         if not cls.__subclasses__():
-            try:
-                cls.import_providers(f"{__package__}.Providers")
-
-            except Exception as e:
-                logging.error(f"Error importing providers: {str(e)}")
+            # Import the providers package, which will trigger explicit imports
+            from . import Providers  # type: ignore[ignore-unused]
 
         providers = { cast(TranslationProvider, provider).name : provider for provider in cls.__subclasses__() }
 
@@ -151,15 +146,6 @@ class TranslationProvider:
 
         raise ValueError(f"Unknown translation provider: {name}")
 
-    @classmethod
-    def import_providers(cls, package_name):
-        """
-        Dynamically import all modules in the providers package.
-        """
-        package = importlib.import_module(package_name)
-        for loader, module_name, is_pkg in pkgutil.iter_modules(package.__path__, package.__name__ + '.'): # type: ignore[ignore-unused]
-            logging.debug(f"Importing provider: {module_name}")
-            importlib.import_module(module_name)
 
     @classmethod
     def get_available_models(cls, options : Options):

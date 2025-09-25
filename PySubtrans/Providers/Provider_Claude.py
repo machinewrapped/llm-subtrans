@@ -15,7 +15,7 @@ else:
         from copy import deepcopy
 
         from PySubtrans.Helpers.Localization import _
-        from PySubtrans.Providers.Anthropic.AnthropicClient import AnthropicClient
+        from PySubtrans.Providers.Clients.AnthropicClient import AnthropicClient
         from PySubtrans.TranslationClient import TranslationClient
         from PySubtrans.TranslationProvider import TranslationProvider
         from PySubtrans.Options import SettingsType

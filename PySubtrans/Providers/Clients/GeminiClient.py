@@ -1,4 +1,5 @@
 import logging
+
 import time
 from typing import Any
 
@@ -22,7 +23,6 @@ from PySubtrans.Options import SettingsType
 from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
-
 from PySubtrans.TranslationPrompt import TranslationPrompt
 
 class GeminiClient(TranslationClient):
@@ -224,4 +224,3 @@ class GeminiClient(TranslationClient):
             info_parts.append("Google content policy violation (copyright or censorship). Try another provider.")
         
         return "; ".join(info_parts) if info_parts else "Unknown blocking reason"
-

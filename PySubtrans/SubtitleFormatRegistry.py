@@ -1,7 +1,5 @@
-import importlib
 import logging
 import os
-import pkgutil
 
 import pysubs2
 
@@ -19,10 +17,10 @@ class SubtitleFormatRegistry:
     """
     Manages discovery and lookup of subtitle file handlers.
 
-    Uses lazy discovery to find all subclasses of SubtitleFileHandler in the Formats package.
+    Uses lazy loading to find all subclasses of SubtitleFileHandler in the Formats package.
     Handlers are registered by their supported file extensions and priorities.
 
-    Provides methods to create handler instances based on file extensions or filenames.    
+    Provides methods to create handler instances based on file extensions or filenames.
     """
     _handlers : dict[str, type[SubtitleFileHandler]] = {}
     _priorities : dict[str, int] = {}
@@ -86,24 +84,22 @@ class SubtitleFormatRegistry:
 
     @classmethod
     def disable_autodiscovery(cls) -> None:
-        """ Disable automatic discovery of subtitle formats (for testing) """
+        """ Disable automatic loading of subtitle formats (for testing) """
         cls.clear()
         cls._discovered = True
 
     @classmethod
     def enable_autodiscovery(cls) -> None:
-        """ Enable automatic discovery of subtitle formats (for testing) """
+        """ Enable automatic loading of subtitle formats (for testing) """
         cls._discovered = False
 
     @classmethod
     def discover(cls) -> None:
         """
-        Discover and register all subtitle file handlers using reflection.
+        Load and register all subtitle file handlers using reflection.
         """
-        package = importlib.import_module('PySubtrans.Formats')
-        for loader, module_name, is_pkg in pkgutil.iter_modules(package.__path__, package.__name__ + '.'): # type: ignore[ignore-unused]
-            logging.debug(f"Importing format handler: {module_name}")
-            importlib.import_module(module_name)
+        # Import the formats package, which will trigger explicit imports
+        from . import Formats  # type: ignore[ignore-unused]
 
         for handler_class in SubtitleFileHandler.__subclasses__():
             cls.register_handler(handler_class)

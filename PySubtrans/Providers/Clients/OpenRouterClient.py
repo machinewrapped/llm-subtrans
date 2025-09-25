@@ -1,6 +1,5 @@
-from typing import Any
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Providers.Custom.CustomClient import CustomClient
+from PySubtrans.Providers.Clients.CustomClient import CustomClient
 from PySubtrans.SettingsType import SettingsType
 
 class OpenRouterClient(CustomClient):

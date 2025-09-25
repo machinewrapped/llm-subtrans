@@ -1,4 +1,33 @@
 #!/usr/bin/env python3
+"""
+PySubtrans Package Publisher
+
+This script builds and publishes the PySubtrans package to PyPI or TestPyPI.
+
+Usage:
+    # Publish to PyPI (production)
+    python scripts/publish_package.py
+
+    # Publish to TestPyPI (for testing)
+    python scripts/publish_package.py --repository testpypi
+
+    # Build only (skip upload)
+    python scripts/publish_package.py --skip-upload
+
+    # Skip confirmation prompts
+    python scripts/publish_package.py --yes
+
+Prerequisites:
+    - pip install build twine
+    - Configure ~/.pypirc with your API tokens for PyPI/TestPyPI
+
+The script will:
+1. Generate a dedicated pyproject.toml for the PySubtrans package
+2. Display package configuration summary
+3. Clean previous build artifacts
+4. Build wheel and source distributions
+5. Upload to the specified repository (unless --skip-upload)
+"""
 from __future__ import annotations
 
 import argparse
@@ -53,9 +82,26 @@ def WritePackageToml(
     dependencies: list[str],
     optional_dependencies: dict[str, list[str]],
     requires_python: str,
+    package_dir: Path,
 ) -> None:
     """Write the dedicated PySubtrans pyproject file."""
     dependencies_block = FormatTomlList(dependencies)
+
+    # Dynamically discover all packages (directories with __init__.py)
+    packages = ["PySubtrans"]  # Root package
+
+    # Find all subdirectory packages (excluding UnitTests)
+    for init_file in package_dir.rglob("__init__.py"):
+        if init_file.parent != package_dir:  # Skip the root __init__.py
+            relative_path = init_file.parent.relative_to(package_dir)
+            # Convert path separators to dots for Python package names
+            package_name = f"PySubtrans.{'.'.join(relative_path.parts)}"
+            # Exclude unit tests from distribution
+            if not package_name.startswith("PySubtrans.UnitTests"):
+                packages.append(package_name)
+
+    packages.sort()
+    packages_block = FormatTomlList(packages)
 
     lines: list[str] = [
         "[build-system]",
@@ -88,11 +134,8 @@ def WritePackageToml(
             f'Issues = "{ISSUES_URL}"',
             "",
             "[tool.setuptools]",
-            'package-dir = {"" = ".."}',
-            "",
-            "[tool.setuptools.packages.find]",
-            'where = [".."]',
-            'include = ["PySubtrans*"]',
+            f"packages = {packages_block}",
+            'package-dir = {"PySubtrans" = "."}',
             "",
         ]
     )
@@ -180,6 +223,27 @@ def UploadPackage(dist_dir: Path, repository: str|None = None) -> None:
     subprocess.run(command, check=True)
 
 
+def GetPackageVersion(package_dir: Path) -> str:
+    """Extract version from PySubtrans/version.py."""
+    version_file = package_dir / "version.py"
+    if not version_file.exists():
+        raise FileNotFoundError(f"Version file {version_file} does not exist")
+
+    # Read and parse the version file
+    version_content = version_file.read_text(encoding="utf-8")
+    for line in version_content.splitlines():
+        line = line.strip()
+        if line.startswith("__version__"):
+            # Extract version string from __version__ = "vX.Y.Z" format
+            version = line.split("=", 1)[1].strip().strip('"').strip("'")
+            # Remove 'v' prefix if present
+            if version.startswith('v'):
+                version = version[1:]
+            return version
+
+    raise ValueError("Could not find __version__ in version.py")
+
+
 def Main() -> None:
     """Entrypoint for the publish helper."""
     args = ParseArguments()
@@ -198,7 +262,7 @@ def Main() -> None:
     root_config = LoadToml(root_pyproject)
     project_config = root_config.get("project", {})
 
-    version = str(project_config.get("version", "0.0.0"))
+    version = GetPackageVersion(package_dir)
     requires_python = str(project_config.get("requires-python", ">=3.10"))
     dependencies = list(project_config.get("dependencies", []))
 
@@ -208,7 +272,7 @@ def Main() -> None:
         if name != "gui"
     }
 
-    WritePackageToml(package_pyproject, version, dependencies, optional, requires_python)
+    WritePackageToml(package_pyproject, version, dependencies, optional, requires_python, package_dir)
     PrintSummary(version, dependencies, optional)
 
     try:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pysubtrans"
-version = "1.4.0"
+version = "1.4.7"
 description = "Core subtitle translation toolkit used by LLM-Subtrans"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -51,8 +51,11 @@ Source = "https://github.com/machinewrapped/llm-subtrans"
 Issues = "https://github.com/machinewrapped/llm-subtrans/issues"
 
 [tool.setuptools]
-package-dir = {"" = ".."}
-
-[tool.setuptools.packages.find]
-where = [".."]
-include = ["PySubtrans*"]
+packages = [
+    "PySubtrans",
+    "PySubtrans.Formats",
+    "PySubtrans.Helpers",
+    "PySubtrans.Providers",
+    "PySubtrans.Providers.Clients"
+]
+package-dir = {"PySubtrans" = "."}

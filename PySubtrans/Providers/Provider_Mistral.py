@@ -13,7 +13,7 @@ else:
         import mistralai
 
         from PySubtrans.Helpers.Localization import _
-        from PySubtrans.Providers.Mistral.MistralClient import MistralClient
+        from PySubtrans.Providers.Clients.MistralClient import MistralClient
         from PySubtrans.TranslationClient import TranslationClient
         from PySubtrans.TranslationProvider import TranslationProvider
 

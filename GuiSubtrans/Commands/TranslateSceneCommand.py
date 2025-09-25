@@ -56,7 +56,7 @@ class TranslateSceneCommand(Command):
 
         self.translator = SubtitleTranslator(options, translation_provider, resume=self.resume)
 
-        self.translator.events.batch_translated.connect(self._on_batch_translated) # type: ignore
+        self.translator.events.batch_translated.connect(self._on_batch_translated)
 
         try:
             scene = project.subtitles.GetScene(self.scene_number)
@@ -94,7 +94,7 @@ class TranslateSceneCommand(Command):
                 self.terminal = True
 
         if self.translator:
-            self.translator.events.batch_translated.disconnect(self._on_batch_translated) # type: ignore
+            self.translator.events.batch_translated.disconnect(self._on_batch_translated)
 
         return True
 

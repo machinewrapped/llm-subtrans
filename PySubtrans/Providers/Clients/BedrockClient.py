@@ -1,155 +1,151 @@
 import logging
 
+import boto3 # type: ignore[import]
+
+from PySubtrans.Helpers import FormatMessages
+from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import SettingsType
 
-try:
-    import boto3 # type: ignore[import]
+from PySubtrans.Translation import Translation
+from PySubtrans.TranslationClient import TranslationClient
+from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
 
-    from PySubtrans.Helpers import FormatMessages
-    from PySubtrans.Helpers.Localization import _
-    from PySubtrans.Translation import Translation
-    from PySubtrans.TranslationClient import TranslationClient
-    from PySubtrans.TranslationPrompt import TranslationPrompt
-    from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
+class BedrockClient(TranslationClient):
+    """
+    Handles communication with Amazon Bedrock to request translations
+    """
+    def __init__(self, settings : SettingsType):
+        super().__init__(settings)
 
-    class BedrockClient(TranslationClient):
+        logging.info(_("Translating with Bedrock model {model_id}, using region: {aws_region}").format(
+            model_id=self.model_id, aws_region=self.aws_region
+        ))
+
+        self.client = boto3.client(
+            'bedrock-runtime',
+            aws_access_key_id=self.access_key,
+            aws_secret_access_key=self.secret_access_key,
+            region_name=self.aws_region
+        )
+
+    @property
+    def access_key(self) -> str|None:
+        return self.settings.get_str( 'access_key')
+
+    @property
+    def secret_access_key(self) -> str|None:
+        return self.settings.get_str( 'secret_access_key')
+
+    @property
+    def aws_region(self) -> str|None:
+        return self.settings.get_str( 'aws_region')
+
+    @property
+    def model_id(self) -> str|None:
+        return self.settings.get_str( 'model')
+
+    @property
+    def max_tokens(self) -> int:
+        return self.settings.get_int( 'max_tokens') or 4096
+
+    def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
         """
-        Handles communication with Amazon Bedrock to request translations
+        Request a translation based on the provided prompt
         """
-        def __init__(self, settings : SettingsType):
-            super().__init__(settings)
+        if not self.access_key:
+            raise TranslationImpossibleError(_("Access key must be set in .env or provided as an argument"))
 
-            logging.info(_("Translating with Bedrock model {model_id}, using region: {aws_region}").format(
-                model_id=self.model_id, aws_region=self.aws_region
-            ))
+        if not self.secret_access_key:
+            raise TranslationImpossibleError(_("Secret access key must be set in .env or provided as an argument"))
 
-            self.client = boto3.client(
-                'bedrock-runtime',
-                aws_access_key_id=self.access_key,
-                aws_secret_access_key=self.secret_access_key,
-                region_name=self.aws_region
-            )
+        if not self.aws_region:
+            raise TranslationImpossibleError(_("AWS region must be set in .env or provided as an argument"))
 
-        @property
-        def access_key(self) -> str|None:
-            return self.settings.get_str( 'access_key')
+        if not self.model_id:
+            raise TranslationImpossibleError(_("Model ID must be provided as an argument"))
 
-        @property
-        def secret_access_key(self) -> str|None:
-            return self.settings.get_str( 'secret_access_key')
+        if not prompt.system_prompt:
+            raise TranslationImpossibleError(_("No system prompt provided"))
 
-        @property
-        def aws_region(self) -> str|None:
-            return self.settings.get_str( 'aws_region')
+        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
 
-        @property
-        def model_id(self) -> str|None:
-            return self.settings.get_str( 'model')
+        content = _structure_messages(prompt.messages)
 
-        @property
-        def max_tokens(self) -> int:
-            return self.settings.get_int( 'max_tokens') or 4096
+        if not content or not isinstance(prompt.content, list):
+            raise TranslationImpossibleError(_("No content provided for translation"))
 
-        def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
-            """
-            Request a translation based on the provided prompt
-            """
-            if not self.access_key:
-                raise TranslationImpossibleError(_("Access key must be set in .env or provided as an argument"))
+        reponse = self._send_messages(prompt.system_prompt, content, temperature=temperature)
 
-            if not self.secret_access_key:
-                raise TranslationImpossibleError(_("Secret access key must be set in .env or provided as an argument"))
+        translation = Translation(reponse) if reponse else None
 
-            if not self.aws_region:
-                raise TranslationImpossibleError(_("AWS region must be set in .env or provided as an argument"))
+        return translation
 
-            if not self.model_id:
-                raise TranslationImpossibleError(_("Model ID must be provided as an argument"))
+    def _send_messages(self, system_prompt : str, messages : list[dict], temperature : float|None = None) -> dict|None:
+        """
+        Make a request to the Amazon Bedrock API to provide a translation
+        """
+        if self.aborted:
+            return None
 
-            if not prompt.system_prompt:
-                raise TranslationImpossibleError(_("No system prompt provided"))
+        try:
+            inference_config = {
+                    'temperature' : temperature or 0.0,
+                    'maxTokens' : self.max_tokens
+                }
 
-            logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
+            if self.supports_system_prompt and system_prompt:
+                result = self.client.converse(
+                    modelId=self.model_id,
+                    messages=messages,
+                    system = [{ 'text' : system_prompt }],
+                    inferenceConfig = inference_config
+                    )
+            else:
+                result = self.client.converse(
+                    modelId=self.model_id,
+                    messages=messages,
+                    inferenceConfig = inference_config
+                    )
 
-            content = _structure_messages(prompt.messages)
-
-            if not content or not isinstance(prompt.content, list):
-                raise TranslationImpossibleError(_("No content provided for translation"))
-
-            reponse = self._send_messages(prompt.system_prompt, content, temperature=temperature)
-
-            translation = Translation(reponse) if reponse else None
-
-            return translation
-
-        def _send_messages(self, system_prompt : str, messages : list[dict], temperature : float|None = None) -> dict|None:
-            """
-            Make a request to the Amazon Bedrock API to provide a translation
-            """
             if self.aborted:
                 return None
 
-            try:
-                inference_config = {
-                        'temperature' : temperature or 0.0,
-                        'maxTokens' : self.max_tokens
-                    }
+            output = result.get('output')
 
-                if self.supports_system_prompt and system_prompt:
-                    result = self.client.converse(
-                        modelId=self.model_id,
-                        messages=messages,
-                        system = [{ 'text' : system_prompt }],
-                        inferenceConfig = inference_config
-                        )
-                else:
-                    result = self.client.converse(
-                        modelId=self.model_id,
-                        messages=messages,
-                        inferenceConfig = inference_config
-                        )
+            if not output:
+                raise TranslationResponseError(_("No output returned in the response"), response=result)
 
-                if self.aborted:
-                    return None
+            response = {}
 
-                output = result.get('output')
+            if 'stopReason' in result:
+                response['finish_reason'] = result['stopReason']
 
-                if not output:
-                    raise TranslationResponseError(_("No output returned in the response"), response=result)
+            if 'usage' in result:
+                response['prompt_tokens'] = result['usage'].get('inputTokens')
+                response['output_tokens'] = result['usage'].get('outputTokens')
+                response['total_tokens'] = result['usage'].get('totalTokens')
 
-                response = {}
+            message = output.get('message')
+            if message and message.get('role') == 'assistant':
+                text = [ content.get('text') for content in message.get('content',[]) ]
+                response['text'] = '\n'.join(text)
 
-                if 'stopReason' in result:
-                    response['finish_reason'] = result['stopReason']
+            # Return the response if the API call succeeds
+            return response
 
-                if 'usage' in result:
-                    response['prompt_tokens'] = result['usage'].get('inputTokens')
-                    response['output_tokens'] = result['usage'].get('outputTokens')
-                    response['total_tokens'] = result['usage'].get('totalTokens')
+        except Exception as e:
+            raise TranslationImpossibleError(_("Error communicating with Bedrock: {error}").format(
+                error=str(e)
+            ), error=e)
 
-                message = output.get('message')
-                if message and message.get('role') == 'assistant':
-                    text = [ content.get('text') for content in message.get('content',[]) ]
-                    response['text'] = '\n'.join(text)
-
-                # Return the response if the API call succeeds
-                return response
-
-            except Exception as e:
-                raise TranslationImpossibleError(_("Error communicating with Bedrock: {error}").format(
-                    error=str(e)
-                ), error=e)
-
-    def _structure_messages(messages : list[dict[str,str]]) -> list[dict]:
-        """
-        Structure the messages to be sent to the API
-        """
-        return [
-            {
-                'role' : message['role'],
-                'content' : [{ 'text': message['content'] }]
-            }
-            for message in messages]
-
-except ImportError:
-    logging.debug("AWS Boto3 SDK not installed.")
+def _structure_messages(messages : list[dict[str,str]]) -> list[dict]:
+    """
+    Structure the messages to be sent to the API
+    """
+    return [
+        {
+            'role' : message['role'],
+            'content' : [{ 'text': message['content'] }]
+        }
+        for message in messages]

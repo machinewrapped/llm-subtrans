@@ -93,8 +93,9 @@ class TranslateSceneCommand(Command):
             if self.translator and self.translator.stop_on_error:
                 self.terminal = True
 
-        if self.translator:
-            self.translator.events.batch_translated.disconnect(self._on_batch_translated)
+        finally:
+            if self.translator:
+                self.translator.events.batch_translated.disconnect(self._on_batch_translated)
 
         return True
 

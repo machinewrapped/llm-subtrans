@@ -386,14 +386,13 @@ class ProgressDisplay:
         translator.events.scene_translated.connect(self._on_scene_translated)
 
     def _detach(self, translator : SubtitleTranslator) -> None:
-        try:
-            translator.events.preprocessed.disconnect(self._on_preprocessed)
-            translator.events.batch_translated.disconnect(self._on_batch_translated)
-            translator.events.scene_translated.disconnect(self._on_scene_translated)
-        finally:
-            self._render(final=True)
-            self._current_file = None
-            self._preview = False
+        translator.events.preprocessed.disconnect(self._on_preprocessed)
+        translator.events.batch_translated.disconnect(self._on_batch_translated)
+        translator.events.scene_translated.disconnect(self._on_scene_translated)
+
+        self._render(final=True)
+        self._current_file = None
+        self._preview = False
 
     def _on_preprocessed(self, _sender, scenes : list) -> None:
         self._total_scenes = len(scenes)

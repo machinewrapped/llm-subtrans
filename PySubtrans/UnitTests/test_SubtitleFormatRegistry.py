@@ -327,12 +327,12 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         
         SubtitleFormatRegistry.clear()
         SubtitleFormatRegistry.discover()
-        handlers_after_first = dict(SubtitleFormatRegistry._handlers)
-        priorities_after_first = dict(SubtitleFormatRegistry._priorities)
-        
+        handlers_after_first = SubtitleFormatRegistry._handlers.copy()
+        priorities_after_first = SubtitleFormatRegistry._priorities.copy()
+
         SubtitleFormatRegistry.discover()
-        handlers_after_second = dict(SubtitleFormatRegistry._handlers)
-        priorities_after_second = dict(SubtitleFormatRegistry._priorities)
+        handlers_after_second = SubtitleFormatRegistry._handlers.copy()
+        priorities_after_second = SubtitleFormatRegistry._priorities.copy()
         
         log_input_expected_result("handlers unchanged after double discovery", handlers_after_first, handlers_after_second)
         self.assertEqual(handlers_after_first, handlers_after_second)

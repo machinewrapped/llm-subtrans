@@ -422,20 +422,11 @@ class SubtitleTranslator:
                 return
 
             try:
-                # Create a temporary copy of the batch for partial processing
-                temp_batch = SubtitleBatch({
-                    'scene': batch.scene,
-                    'number': batch.number,
-                    'originals': batch.originals.copy(),
-                    'translated': batch.translated.copy() if batch.translated else [],
-                    'context': batch.context.copy()
-                })
-
                 # Process the partial translation (without validation)
-                self._process_partial_translation(temp_batch, partial_translation, line_numbers)
+                self._process_partial_translation(batch, partial_translation, line_numbers)
 
                 # Emit batch_updated event with the updated batch
-                self.events.batch_updated.send(self, batch=temp_batch, partial=True)
+                self.events.batch_updated.send(self, batch=batch)
 
             except Exception as e:
                 logging.warning(f"Error processing streaming update for scene {batch.scene} batch {batch.number}: {e}")
@@ -459,6 +450,8 @@ class SubtitleTranslator:
         # Assign the translated lines to the batch
         if line_numbers:
             translated = [line for line in translated if line.number in line_numbers]
+
+        # Todo: we should use a SubtitleEditor to merge changes properly
 
         # Merge with existing translations (MergeTranslations is already imported at top)
         batch._translated = MergeTranslations(batch.translated or [], translated)

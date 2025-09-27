@@ -146,6 +146,21 @@ translator.TranslateSubtitles(subtitles)
 
 Note that different providers may require different settings. See the [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/) documentation for details on supported providers.
 
+#### Translation Events
+
+`SubtitleTranslator` emits events during the translation process using the [blinker](https://pythonhosted.org/blinker/) signal library.
+
+**Core Translation Events:**
+- `batch_translated`: Emitted when a batch completes translation
+- `batch_updated`: Emitted during streaming responses for partial updates
+- `scene_translated`: Emitted when an entire scene is translated
+- `preprocessed`: Emitted when subtitle preprocessing completes
+
+**Logging Hooks:**
+- `error`: Critical errors that stop translation
+- `warning`: Non-critical issues encountered during translation
+- `info`: General information messages
+
 ### Configuration with `init_options`
 
 `init_options` creates an `Options` instance and accepts additional keyword arguments for any of the fields documented in `Options.default_settings`. 
@@ -184,6 +199,44 @@ Note that there are a number of options which are only used by the GUI-Subtrans 
 ## Advanced workflows
 
 PySubtrans is designed to be modular. The helper functions above are convenient entry points, but you are free to use lower-level components directly when you need more control:
+
+### Streaming responses
+Translations can be streamed for real-time updates rather than waiting for complete batches.
+
+**Supported Providers:**
+- OpenAI (Reasoning Models only)
+- Claude
+- Google Gemini
+- OpenRouter
+- DeepSeek
+
+**Enabling Streaming:**
+```python
+from PySubtrans import init_options, init_translator
+
+options = init_options(
+    provider="Gemini",
+    model="gemini-2.5-flash-latest",
+    api_key="your-key",
+    stream_responses=True
+)
+
+translator = init_translator(options)
+
+# Subscribe to streaming events for real-time updates
+def on_batch_updated(sender, scene=None, batch=None, translations=None):
+    """Called for partial translation updates during streaming"""
+    print(f"Scene {scene.number}, Batch {batch.number} translated {len(translations)} lines")
+
+def on_batch_translated(sender, scene=None, batch=None):
+    """Called when batch translation completes"""
+    print(f"Completed: Scene {scene.number}, Batch {batch.number}")
+
+translator.events.batch_updated.connect(on_batch_updated)
+translator.events.batch_translated.connect(on_batch_translated)
+
+translator.TranslateSubtitles(subtitles)
+```
 
 ### Explicitly initialising a `TranslationProvider`
 

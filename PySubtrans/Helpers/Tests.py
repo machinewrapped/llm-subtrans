@@ -1,7 +1,9 @@
 from collections.abc import Callable
+import functools
 import logging
 import os
 import sys
+import unittest
 from datetime import datetime
 from typing import Any
 
@@ -65,6 +67,28 @@ def skip_if_debugger_attached(test_name : str) -> bool:
         print(f"\nSkipping {test_name} when debugger is attached")
         return True
     return False
+
+
+def skip_if_debugger_attached_decorator(test_method):
+    """
+    Decorator version of skip_if_debugger_attached that skips the test method when debugger is attached.
+    Use this to skip tests that raise expected exceptions when debugging.
+
+    Usage:
+        @skip_if_debugger_attached_decorator
+        def test_some_exception_handling(self):
+            # Test that raises exceptions
+            pass
+    """
+    @functools.wraps(test_method)
+    def wrapper(self):
+        if sys.gettrace() is not None:
+            test_name = test_method.__name__
+            print(f"\nSkipping {test_name} when debugger is attached")
+            self.skipTest(f"Skipped {test_name} when debugger is attached")
+        else:
+            return test_method(self)
+    return wrapper
 
 def create_logfile(results_dir : str, log_name : str, log_level = logging.DEBUG) -> logging.FileHandler:
     """

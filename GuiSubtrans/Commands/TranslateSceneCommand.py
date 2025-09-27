@@ -59,6 +59,9 @@ class TranslateSceneCommand(Command):
 
         self.translator.events.batch_translated.connect(self._on_batch_translated)
         self.translator.events.batch_updated.connect(self._on_batch_updated)
+        self.translator.events.error.connect(self._on_error)
+        self.translator.events.warning.connect(self._on_warning)
+        self.translator.events.info.connect(self._on_info)
 
         try:
             scene = project.subtitles.GetScene(self.scene_number)
@@ -99,6 +102,9 @@ class TranslateSceneCommand(Command):
             if self.translator:
                 self.translator.events.batch_translated.disconnect(self._on_batch_translated)
                 self.translator.events.batch_updated.disconnect(self._on_batch_updated)
+                self.translator.events.error.disconnect(self._on_error)
+                self.translator.events.warning.disconnect(self._on_warning)
+                self.translator.events.info.disconnect(self._on_info)
 
         return True
 
@@ -142,4 +148,16 @@ class TranslateSceneCommand(Command):
                 'lines' : new_lines
             })
             self.datamodel.UpdateViewModel(update)
+
+    def _on_error(self, _sender, message : str):
+        """Handle error events from translator"""
+        logging.error(message)
+
+    def _on_warning(self, _sender, message : str):
+        """Handle warning events from translator"""
+        logging.warning(message)
+
+    def _on_info(self, _sender, message : str):
+        """Handle info events from translator"""
+        logging.info(message)
 

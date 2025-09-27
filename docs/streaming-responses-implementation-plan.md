@@ -100,10 +100,10 @@ This document outlines the implementation plan for adding streaming response sup
 ### Phase 6: Documentation, Testing & Validation
 **Goal**: Comprehensive documentation and testing of streaming functionality
 
-#### Step 6.1: Unit Tests
+#### Step 6.1: Documentation
 - [ ] Update architecture.md to summarise the support for streaming responses in TranslationClient and subclasses (OpenAIReasoning, Anthropic, Gemini, CustomClient)
 - [ ] Update PySubtrans README to include a section on streaming responses in Advanced Workflows
-- [ ] Update project wiki with a section on streaming responses
+- [ ] Update project wiki on Github with a section on streaming responses
 
 #### Step 6.2: Unit Tests
 - [ ] Create unit tests for streaming event handling
@@ -147,11 +147,10 @@ SubtitleTranslator.TranslateBatch()
 2. **No Validation**: Skip validation on partial updates to avoid false failures
 3. **Event Segregation**: Separate `batch_updated` (streaming) from `batch_translated` (completion) events. batch_updated is only used for partial updates.
 4. **Tracking**: Command tracks processed lines to avoid redundant GUI updates
-5. **Fallback**: Non-streaming clients continue to work unchanged
 
 ### Configuration
 
-New settings in Provider_OpenAI:
+New settings in providers that have streaming clients:
 - `stream_responses` (bool): Enable streaming mode for supported models
 - Setting will appear in GUI options when streaming is supported
 
@@ -161,17 +160,6 @@ Each phase includes specific tests to validate functionality:
 1. **Unit Tests**: Test individual components in isolation
 2. **Integration Tests**: Test component interactions
 3. **Regression Tests**: Ensure existing functionality remains intact
-4. **Performance Tests**: Verify streaming doesn't degrade performance
-
-## Progress Tracking
-
-- [x] Phase 1: Core Infrastructure
-- [x] Phase 2.1: OpenAI Reasoning Client Streaming
-- [x] Phase 2.2: Provider Settings
-- [x] Phase 3.1: Update TranslateSceneCommand
-- [X] Phase 3.2: Update ViewModelUpdate Processing
-- [ ] Phase 4: Error Handling & Edge Cases
-- [ ] Phase 5: Testing & Validation
 
 ## Implementation Notes
 

@@ -189,9 +189,19 @@ Commands can send incremental UI updates during execution via `ModelUpdate` obje
 For example, `TranslateSceneCommand` subscribes to `SubtitleTranslator` events. Each time a batch completes, it emits a `ModelUpdate` with the translation data.
 
 1. Command creates `ModelUpdate` and sends to `ProjectDataModel`
-2. `ProjectDataModel` queues update and emits `updatesPending` signal  
+2. `ProjectDataModel` queues update and emits `updatesPending` signal
 3. `ProjectViewModel.ProcessUpdates()` applies changes on main thread
 4. Views automatically reflect updated data through Qt's model/view system
+
+#### Streaming Translation Updates
+For providers that support streaming responses, the update pattern is enhanced:
+
+- **`batch_updated` events** are emitted for partial translations as they arrive
+- **Line tracking** prevents duplicate updates by tracking `(scene, batch, line)` tuples already processed
+- **Partial ModelUpdates** contain only newly translated lines, excluding summary/context data
+- **Expansion state preservation** in `ScenesView` by avoiding unnecessary `layoutChanged` signals for data-only updates
+
+The streaming system maintains backward compatibility - non-streaming translations continue to work via the existing `batch_translated` event pattern.
 
 This pattern enables real-time feedback during long operations while maintaining thread safety and separation between business logic and UI.
 
@@ -205,12 +215,38 @@ Each `TranslationProvider` subclass serves as the registry entry for a translati
 - **GetTranslationClient**: creates an appropriate client for API communication
 - **GetOptions**: Defines provider-specific options (API key, endpoints, etc.)
 
-### TranslationClient (Communication Layer)  
+### TranslationClient (Communication Layer)
 The `TranslationClient` defines the API communication interface:
 
 - **`BuildTranslationPrompt()`** – constructs the prompt sent to the translation service
 - **`RequestTranslation()`** – handles the API call and returns a `Translation` object
 - **`GetParser()`** – returns a `TranslationParser` to extract translated text from the response
+- **`supports_streaming`** – property indicating if the client supports streaming responses
+
+#### Streaming Response Support
+Several translation clients support streaming responses for real-time translation updates:
+
+**Supported Providers:**
+- **OpenAI (Reasoning Models)** (`OpenAIReasoningClient`) - Uses OpenAI's streaming API with event-based response handling
+- **Claude** (`AnthropicClient`) - Supports streaming via Anthropic's streaming API
+- **Gemini** (`GeminiClient`) - Uses Google's streaming response format
+- **Custom Server** (`CustomClient`) - Handles Server-Sent Events (SSE) with robust parsing
+- **OpenRouter/DeepSeek** (`OpenRouterClient`, `DeepSeekClient`) - `CustomClient` with streaming support
+
+**Streaming Architecture:**
+- **`TranslationRequest`** class encapsulates streaming state and logic to maintain stateless clients
+- **Event-driven updates** via `batch_updated` signal for partial translations
+- **Delta accumulation** processes streaming text chunks and detects complete line groups
+
+**Key Methods:**
+- **`ProcessStreamingDelta(delta_text)`** – processes incoming streaming text chunks
+- **`_emit_partial_update()`** – emits partial translation updates to the GUI
+- **`_has_complete_line_group()`** – detects when enough content has accumulated for an update
+
+**Configuration:**
+Streaming can be enabled via provider settings:
+- `stream_responses` (bool) setting appears in provider options for supported clients
+- Streaming is opt-in and gracefully falls back to non-streaming for unsupported models
 
 ### Adding New Providers
 To add a new provider:

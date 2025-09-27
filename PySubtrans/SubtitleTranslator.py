@@ -101,12 +101,12 @@ class SubtitleTranslator:
             raise TranslationImpossibleError(_("No subtitles to translate"))
 
         if subtitles.scenes and self.resume:
-            logging.info(_("Resuming translation"))
+            self._emit_info(_("Resuming translation"))
 
         if not subtitles.scenes:
             raise TranslationImpossibleError(_("Subtitles must be batched before translation"))
 
-        logging.info(_("Translating {linecount} lines in {scenecount} scenes").format(linecount=subtitles.linecount, scenecount=subtitles.scenecount))
+        self._emit_info(_("Translating {linecount} lines in {scenecount} scenes").format(linecount=subtitles.linecount, scenecount=subtitles.scenecount))
 
         self.events.preprocessed.send(self, scenes=subtitles.scenes)
 
@@ -119,7 +119,7 @@ class SubtitleTranslator:
                 break
 
             if self.resume and scene.all_translated:
-                logging.info(_("Scene {scene} already translated {linecount} lines...").format(scene=scene.number, linecount=scene.linecount))
+                self._emit_info(_("Scene {scene} already translated {linecount} lines...").format(scene=scene.number, linecount=scene.linecount))
                 continue
 
             logging.debug(f"Translating scene {scene.number} of {subtitles.scenecount}")
@@ -128,23 +128,23 @@ class SubtitleTranslator:
             self.TranslateScene(subtitles, scene, batch_numbers=batch_numbers)
 
             if self.errors and self.stop_on_error:
-                logging.error(_("Failed to translate scene {scene}... stopping translation").format(scene=scene.number))
+                self._emit_error(_("Failed to translate scene {scene}... stopping translation").format(scene=scene.number))
                 return
 
         if self.aborted:
-            logging.info(_("Translation aborted"))
+            self._emit_info(_("Translation aborted"))
             return
 
         # Linearise the translated scenes
         originals, translations, untranslated = UnbatchScenes(subtitles.scenes)
 
         if translations:
-            logging.info(_("Successfully translated {count} lines!").format(count=len(translations)))
+            self._emit_info(_("Successfully translated {count} lines!").format(count=len(translations)))
 
         if untranslated and not self.max_lines and not self.preview:
             logging.warning(_("Failed to translate {count} lines:").format(count=len(untranslated)))
             for line in untranslated:
-                logging.info(_("Untranslated > {number}. {text}").format(number=line.number, text=line.text))
+                self._emit_info(_("Untranslated > {number}. {text}").format(number=line.number, text=line.text))
 
         subtitles.originals = originals
         subtitles.translated = translations
@@ -170,7 +170,7 @@ class SubtitleTranslator:
                     raise
 
                 except TranslationError as e:
-                    logging.warning(_("Error translating scene {scene} batch {batch}: {error}").format(scene=batch.scene, batch=batch.number, error=str(e)))
+                    self._emit_warning(_("Error translating scene {scene} batch {batch}: {error}").format(scene=batch.scene, batch=batch.number, error=str(e)))
                     batch.errors.append(e)
 
                 if self.aborted:
@@ -180,14 +180,14 @@ class SubtitleTranslator:
                 self.events.batch_translated.send(self, batch=batch)
 
                 if batch.errors:
-                    logging.warning(_("Errors encountered translating scene {scene} batch {batch}").format(scene=batch.scene, batch=batch.number))
+                    self._emit_warning(_("Errors encountered translating scene {scene} batch {batch}").format(scene=batch.scene, batch=batch.number))
                     scene.errors.extend(batch.errors)
                     self.errors.extend(batch.errors)
                     if self.stop_on_error:
                         return
 
                 if self.max_lines and self.lines_processed >= self.max_lines:
-                    logging.info(_("Reached max_lines limit of ({lines} lines)... finishing").format(lines=self.max_lines))
+                    self._emit_info(_("Reached max_lines limit of ({lines} lines)... finishing").format(lines=self.max_lines))
                     break
 
             # Update the scene summary based on the best available information (we hope)
@@ -207,12 +207,12 @@ class SubtitleTranslator:
             return
 
         if self.reparse and batch.translation:
-            logging.info(_("Reparsing scene {scene} batch {batch} with {count} lines...").format(scene=batch.scene, batch=batch.number, count=len(batch.originals)))
+            self._emit_info(_("Reparsing scene {scene} batch {batch} with {count} lines...").format(scene=batch.scene, batch=batch.number, count=len(batch.originals)))
             self.ProcessBatchTranslation(batch, batch.translation, line_numbers)
             return
 
         if self.resume and not self.retranslate and batch.all_translated:
-            logging.info(_("Scene {scene} batch {batch} already translated {lines} lines...").format(scene=batch.scene, batch=batch.number, lines=batch.size))
+            self._emit_info(_("Scene {scene} batch {batch} already translated {lines} lines...").format(scene=batch.scene, batch=batch.number, lines=batch.size))
             return
 
         originals, context = self.PreprocessBatch(batch, context)
@@ -280,7 +280,7 @@ class SubtitleTranslator:
 
         if replacements:
             replaced : list[str] = [f"{Linearise(k)} -> {Linearise(v)}" for k,v in replacements.items()]
-            logging.info(_("Made substitutions in input:\n{replaced}").format(replaced=linesep.join(replaced)))
+            self._emit_info(_("Made substitutions in input:\n{replaced}").format(replaced=linesep.join(replaced)))
             batch.AddContext('replacements', replaced)
 
         # Filter out empty lines
@@ -291,7 +291,7 @@ class SubtitleTranslator:
             line_count = min(self.max_lines - self.lines_processed, len(originals)) if self.max_lines else len(originals)
             self.lines_processed += line_count
             if len(originals) > line_count:
-                logging.info(_("Truncating batch to remain within max_lines"))
+                self._emit_info(_("Truncating batch to remain within max_lines"))
                 originals = originals[:line_count] if line_count > 0 else []
 
         return originals, context
@@ -326,7 +326,7 @@ class SubtitleTranslator:
         batch.errors = [err for err in parser.errors if isinstance(err, str) or isinstance(err, SubtitleError)]
 
         if batch.untranslated and not self.max_lines:
-            logging.warning(_("Unable to match {count} lines with a source line").format(count=len(unmatched)))
+            self._emit_warning(_("Unable to match {count} lines with a source line").format(count=len(unmatched)))
             batch.AddContext('untranslated_lines', [f"{item.number}. {item.text}" for item in batch.untranslated])
 
         # Apply any word/phrase substitutions to the translation
@@ -334,7 +334,7 @@ class SubtitleTranslator:
 
         if replacements:
             replaced = [f"{k} -> {v}" for k,v in replacements.items()]
-            logging.info(_("Made substitutions in output:\n{replaced}").format(replaced=linesep.join(replaced)))
+            self._emit_info(_("Made substitutions in output:\n{replaced}").format(replaced=linesep.join(replaced)))
 
         # Perform substitutions on the output
         translation.PerformSubstitutions(self.substitutions)
@@ -343,7 +343,7 @@ class SubtitleTranslator:
         if self.postprocessor:
             batch._translated = self.postprocessor.PostprocessSubtitles(batch.translated)
 
-            logging.info(_("Scene {scene} batch {batch}: {translated} lines and {untranslated} untranslated.").format(
+            self._emit_info(_("Scene {scene} batch {batch}: {translated} lines and {untranslated} untranslated.").format(
                 scene=batch.scene, 
                 batch=batch.number, 
                 translated=len(batch.translated or []), 
@@ -351,7 +351,7 @@ class SubtitleTranslator:
                 )
 
         if translation.summary and translation.summary.strip():
-            logging.info(_("Summary: {summary}").format(summary=translation.summary))
+            self._emit_info(_("Summary: {summary}").format(summary=translation.summary))
 
     def RequestRetranslation(self, batch : SubtitleBatch, line_numbers : list[int]|None = None, context : dict[str, str]|None = None):
         """
@@ -394,9 +394,9 @@ class SubtitleTranslator:
         self.ProcessBatchTranslation(batch, retranslation, line_numbers)
 
         if batch.errors:
-            logging.warning(_("Retry failed validation: {errors}").format(errors=FormatErrorMessages(batch.errors)))
+            self._emit_warning(_("Retry failed validation: {errors}").format(errors=FormatErrorMessages(batch.errors)))
         else:
-            logging.info(_("Retry passed validation"))
+            self._emit_info(_("Retry passed validation"))
 
     def _get_best_summary(self, candidates : list[str|None]) -> str|None:
         """
@@ -413,7 +413,7 @@ class SubtitleTranslator:
             sanitised = SanitiseSummary(candidate, movie_name, max_length)
             if sanitised:
                 if len(sanitised) < len(candidate):
-                    logging.info(_("Summary was truncated from {original} to {truncated} characters").format(original=len(candidate), truncated=len(sanitised)))
+                    self._emit_info(_("Summary was truncated from {original} to {truncated} characters").format(original=len(candidate), truncated=len(sanitised)))
                 return sanitised
 
         return None
@@ -465,3 +465,15 @@ class SubtitleTranslator:
 
         except Exception:
             pass
+
+    def _emit_error(self, message : str):
+        """Emit an error event"""
+        self.events.error.send(self, message=message)
+
+    def _emit_warning(self, message : str):
+        """Emit a warning event"""
+        self.events.warning.send(self, message=message)
+
+    def _emit_info(self, message : str):
+        """Emit an info event"""
+        self.events.info.send(self, message=message)

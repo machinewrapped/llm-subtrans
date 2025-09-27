@@ -78,20 +78,14 @@ This document outlines the implementation plan for adding streaming response sup
 **Goal**: Robust error handling for streaming scenarios
 
 #### Step 4.1: Error Handling
-- [ ] Handle streaming interruptions gracefully
-- [ ] Ensure partial translations are preserved on error
-- [ ] Add proper abortion handling for streaming requests
-- [ ] Test: Network interruption during streaming
-- [ ] Test: User abort during streaming
-- [ ] Test: API errors during streaming
+- [X] Handle streaming interruptions gracefully
+- [X] Ensure partial translations are preserved on error
+- [X] Add proper abortion handling for streaming requests
 
 #### Step 4.2: Edge Cases
-- [ ] Handle empty or malformed streaming responses
-- [ ] Handle responses that don't contain line breaks
-- [ ] Ensure proper cleanup on completion/error
-- [ ] Test: Various malformed streaming responses
-- [ ] Test: Streaming with very short responses
-- [ ] Test: Streaming with very long responses
+- [X] Handle empty or malformed streaming responses
+- [X] Handle responses that don't contain line breaks
+- [X] Ensure proper cleanup on completion/error
 
 ### Phase 5: Testing & Validation
 **Goal**: Comprehensive testing of streaming functionality
@@ -106,13 +100,10 @@ This document outlines the implementation plan for adding streaming response sup
 - [ ] Create integration tests with real OpenAI streaming
 - [ ] Test streaming with various batch sizes
 - [ ] Test streaming with different content types
+- [ ] Test: Network interruption during streaming
+- [X] Test: User abort during streaming
+- [ ] Test: API errors during streaming
 - [ ] Test: End-to-end streaming workflow
-
-#### Step 5.3: Performance Testing
-- [ ] Measure streaming vs non-streaming performance
-- [ ] Test with large batches and long responses
-- [ ] Verify memory usage is reasonable
-- [ ] Test: Performance regression analysis
 
 ## Technical Details
 
@@ -163,7 +154,7 @@ Each phase includes specific tests to validate functionality:
 - [x] Phase 2.1: OpenAI Reasoning Client Streaming
 - [x] Phase 2.2: Provider Settings
 - [x] Phase 3.1: Update TranslateSceneCommand
-- [ ] Phase 3.2: Update ViewModelUpdate Processing
+- [X] Phase 3.2: Update ViewModelUpdate Processing
 - [ ] Phase 4: Error Handling & Edge Cases
 - [ ] Phase 5: Testing & Validation
 
@@ -202,7 +193,7 @@ Each phase includes specific tests to validate functionality:
 - GUI updates should be efficient to avoid performance issues
 - Testing should cover both happy path and edge cases thoroughly
 
-### Phase 3.1 Implementation Notes
+### Phase 3 Implementation Notes
 
 #### TranslateSceneCommand Updates
 - **File**: `GuiSubtrans/Commands/TranslateSceneCommand.py`

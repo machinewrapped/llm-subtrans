@@ -10,6 +10,7 @@ class DeepSeekClient(CustomClient):
         settings['supports_system_messages'] = True
         settings['supports_conversation'] = True
         settings['supports_reasoning'] = True
+        settings['supports_streaming'] = True
         settings.setdefault('server_address', settings.get_str('api_base', 'https://api.deepseek.com'))
         settings.setdefault('endpoint', '/v1/chat/completions')
         super().__init__(settings)

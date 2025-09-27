@@ -33,6 +33,7 @@ class DeepSeekProvider(TranslationProvider):
             'rate_limit': settings.get_float('rate_limit', env_float('DEEPSEEK_RATE_LIMIT')),
             'reuse_client': settings.get_bool('reuse_client', False),
             'endpoint': settings.get_str('endpoint', '/v1/chat/completions'),
+            'stream_responses': settings.get_bool('stream_responses', True),
         }))
         self.refresh_when_changed = ['api_key', 'api_base', 'model', 'endpoint']
 
@@ -64,10 +65,11 @@ class DeepSeekProvider(TranslationProvider):
             if models:
                 options.update({
                     'model': (models, _("AI model to use as the translator")),
+                    'stream_responses': (bool, _("Enable streaming responses for real-time translation updates")),
                     'reuse_client': (bool, _("Reuse connection for multiple requests (otherwise a new connection is established for each)")),
                     'max_tokens': (int, _("Maximum number of output tokens to return in the response.")),
                     'temperature': (float, _("Amount of random variance to add to translations. Generally speaking, none is best")),
-                    'rate_limit': (float, _("Maximum API requests per minute."))
+                    'rate_limit': (float, _("Maximum API requests per minute.")),
                 })
             else:
                 options['model'] = (["Unable to retrieve models"], _("Check API key and base URL and try again"))

@@ -92,6 +92,9 @@ class TranslationClient:
         """
         start_time = time.monotonic()
 
+        if self.aborted:
+            return None
+
         # Create a translation request to encapsulate the operation
         request = TranslationRequest(prompt, streaming_callback)
 

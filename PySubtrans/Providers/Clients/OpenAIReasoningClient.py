@@ -35,10 +35,15 @@ class OpenAIReasoningClient(OpenAIClient):
             'system_role': 'developer'
         })
         super().__init__(settings)
+        self._is_streaming = False
 
     @property
     def reasoning_effort(self) -> str:
         return self.settings.get_str( 'reasoning_effort') or "low"
+
+    @property
+    def is_streaming(self) -> bool:
+        return self._is_streaming
     
     def _send_messages(self, request: TranslationRequest, temperature: float|None) -> dict[str, Any] | None:
         """
@@ -142,6 +147,18 @@ class OpenAIReasoningClient(OpenAIClient):
 
         return {k: v for k, v in info.items() if v is not None}
 
+    def _abort(self) -> None:
+        """
+        Override abort to avoid closing client socket during streaming.
+        For non-streaming requests, use normal abort behavior.
+        """
+        if self.is_streaming:
+            # Don't close the client - let the streaming loop handle it gracefully
+            pass
+        else:
+            # Normal abort behavior for non-streaming requests
+            super()._abort()
+
     def _normalize_finish_reason(self, result):
         """Normalize finish reason to legacy format"""
         finish = getattr(result, 'stop_reason', None) or getattr(result, 'finish_reason', None)
@@ -162,10 +179,11 @@ class OpenAIReasoningClient(OpenAIClient):
             stream=True
         )
 
+        self._is_streaming = True
         try:
             for event in stream:
                 if self.aborted:
-                    break
+                    return
 
                 # Handle relevant streaming events
                 if isinstance(event, ResponseTextDeltaEvent):
@@ -179,6 +197,9 @@ class OpenAIReasoningClient(OpenAIClient):
 
         except Exception as e:
             logging.warning(f"Error during streaming: {e}")
+
+        finally:
+            self._is_streaming = False
 
         # If we get here without a completion event, something went wrong
         raise TranslationResponseError(_("Streaming did not complete successfully"), response=None)

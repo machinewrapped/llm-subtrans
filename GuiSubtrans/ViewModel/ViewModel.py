@@ -29,6 +29,7 @@ class ProjectViewModel(QStandardItemModel):
         self.update_lock = QRecursiveMutex()
         self.debug_view : bool = os.environ.get("DEBUG_MODE") == "1"
         self.task_type : str = DEFAULT_TASK_TYPE
+        self.structural_changes_pending : bool = False
 
     def getRootItem(self) -> QStandardItem:
         return self.invisibleRootItem()
@@ -41,6 +42,8 @@ class ProjectViewModel(QStandardItemModel):
 
     def ProcessUpdates(self):
         """ While there are updates in the queue, process them in sequence """
+        self.structural_changes_pending = False  # Reset structural change tracking
+
         while True:
             with QMutexLocker(self.update_lock):
                 # Pop the next update from the queue until there are none left
@@ -57,7 +60,12 @@ class ProjectViewModel(QStandardItemModel):
                 logging.error(f"Error updating view model: {e}")
                 # break?
 
-        self.layoutChanged.emit()
+        # Only emit layoutChanged if there were structural changes
+        if self.structural_changes_pending:
+            logging.debug("Emitting layoutChanged due to structural changes")
+            self.layoutChanged.emit()
+        else:
+            logging.debug("Skipping layoutChanged - only data changes occurred")
 
     def ApplyUpdate(self, update_function : Callable[[ProjectViewModel], None]) -> None:
         """
@@ -65,10 +73,6 @@ class ProjectViewModel(QStandardItemModel):
         """
         if not callable(update_function):
             raise ViewModelError(f"Expected a callable, got a {type(update_function).__name__}")
-
-        # TODO: Don't reset the model if it can be avoided
-        self.beginResetModel()
-        self.blockSignals(True)
 
         try:
             update_function(self)
@@ -78,8 +82,6 @@ class ProjectViewModel(QStandardItemModel):
 
         finally:
             self.Remap()
-            self.blockSignals(False)
-            self.endResetModel()
 
     def CreateModel(self, data : Subtitles, task_type : str|None = None) -> None:
         if not isinstance(data, Subtitles):
@@ -222,6 +224,7 @@ class ProjectViewModel(QStandardItemModel):
         if not isinstance(scene, SubtitleScene):
             raise ViewModelError(f"Wrong type for AddScene ({type(scene).__name__})")
 
+        self.structural_changes_pending = True  # Mark structural change
         scene_item = self.CreateSceneItem(scene)
 
         root_item = self.getRootItem()
@@ -252,6 +255,8 @@ class ProjectViewModel(QStandardItemModel):
         logging.debug(f"Replacing scene {scene.number}")
         if not isinstance(scene, SubtitleScene):
             raise ViewModelError(f"Wrong type for ReplaceScene ({type(scene).__name__})")
+
+        self.structural_changes_pending = True  # Mark structural change
 
         root_item = self.getRootItem()
         scene_item = self.CreateSceneItem(scene)
@@ -294,6 +299,8 @@ class ProjectViewModel(QStandardItemModel):
         if scene_number not in self.model.keys():
             raise ViewModelError(f"Scene number {scene_number} does not exist")
 
+        self.structural_changes_pending = True  # Mark structural change
+
         root_item = self.getRootItem()
         scene_item = self.model.get(scene_number)
         if not scene_item:
@@ -311,6 +318,8 @@ class ProjectViewModel(QStandardItemModel):
         logging.debug(f"Adding new batch ({batch.scene}, {batch.number})")
         if not isinstance(batch, SubtitleBatch):
             raise ViewModelError(f"Wrong type for AddBatch ({type(batch).__name__})")
+
+        self.structural_changes_pending = True  # Mark structural change
 
         batch_item : BatchItem = self.CreateBatchItem(batch.scene, batch)
 
@@ -331,6 +340,8 @@ class ProjectViewModel(QStandardItemModel):
         logging.debug(f"Replacing batch ({batch.scene}, {batch.number})")
         if not isinstance(batch, SubtitleBatch):
             raise ViewModelError(f"Wrong type for ReplaceBatch ({type(batch).__name__})")
+
+        self.structural_changes_pending = True  # Mark structural change
 
         scene_item : SceneItem = self.model[batch.scene]
         scene_index = self.indexFromItem(scene_item)
@@ -364,13 +375,13 @@ class ProjectViewModel(QStandardItemModel):
             logging.error(f"Model update for unknown batch, scene {scene_number} batch {batch_number}")
             return False
 
+        if batch_update.get('lines'):
+            self.UpdateLines(scene_number, batch_number, batch_update['lines'])
+
         batch_item.Update(batch_update)
 
         if batch_update.get('number'):
             batch_item.number = batch_update['number']
-
-        if batch_update.get('lines'):
-            self.UpdateLines(scene_number, batch_number, batch_update['lines'])
 
         batch_index = self.indexFromItem(batch_item)
         self.setData(batch_index, batch_item, Qt.ItemDataRole.UserRole)
@@ -383,6 +394,8 @@ class ProjectViewModel(QStandardItemModel):
         scene_item = self.model.get(scene_number)
         if not scene_item:
             raise ViewModelError(f"Scene {scene_number} not found")
+
+        self.structural_changes_pending = True  # Mark structural change
 
         if batch_number not in scene_item.batches.keys():
             raise ViewModelError(f"Scene {scene_number} batch {batch_number} does not exist")
@@ -412,6 +425,7 @@ class ProjectViewModel(QStandardItemModel):
             raise ViewModelError(f"Wrong type for AddLine ({type(line).__name__})")
 
         logging.debug(f"Adding line ({scene_number}, {batch_number}, {line.number})")
+        self.structural_changes_pending = True  # Mark structural change
 
         scene_item = self.model.get(scene_number)
         if not scene_item:
@@ -491,8 +505,12 @@ class ProjectViewModel(QStandardItemModel):
                 line.translation = line_update.get('translation')
                 self.AddLine(scene_number, batch_number, line)
 
+        # Emit signal so SubtitleView repaints the updated lines
+        batch_item.emitDataChanged()
+
     def RemoveLine(self, scene_number: int, batch_number: int, line_number: int) -> None:
         logging.debug(f"Removing line ({scene_number}, {batch_number}, {line_number})")
+        self.structural_changes_pending = True  # Mark structural change
 
         scene_item = self.model.get(scene_number)
         if not scene_item:
@@ -511,6 +529,7 @@ class ProjectViewModel(QStandardItemModel):
 
     def RemoveLines(self, scene_number: int, batch_number: int, line_numbers: list[int]) -> None:
         logging.debug(f"Removing lines in ({scene_number}, {batch_number})")
+        self.structural_changes_pending = True  # Mark structural change
 
         unfound_lines = []
         scene_item = self.model.get(scene_number)

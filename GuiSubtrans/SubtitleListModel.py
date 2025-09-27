@@ -23,6 +23,7 @@ class SubtitleListModel(QAbstractProxyModel):
         if self.viewmodel:
             self.setSourceModel(self.viewmodel)
             self.viewmodel.layoutChanged.connect(self._update_visible_batches)
+            self.viewmodel.dataChanged.connect(self._on_data_changed)
 
     def ShowSelection(self, selection : ProjectSelection):
         if selection.selected_batches:
@@ -178,6 +179,22 @@ class SubtitleListModel(QAbstractProxyModel):
             self.ShowSelection(ProjectSelection())
 
         self.layoutChanged.emit()
+
+    def _on_data_changed(self, top_left, bottom_right, roles=None):
+        """
+        Forward dataChanged signals from ProjectViewModel to SubtitleView
+        Map source model indices to proxy model indices using visible_row_map
+        """
+        # Get the item that changed from the source model
+        source_item = self.viewmodel.itemFromIndex(top_left)
+
+        if isinstance(source_item, LineItem):
+            # Find this line's row in our proxy model using the visible_row_map
+            proxy_row = self.visible_row_map.get(source_item.number)
+            if proxy_row is not None:
+                # Emit dataChanged for this specific row in the proxy model
+                proxy_index = self.index(proxy_row, 0)
+                self.dataChanged.emit(proxy_index, proxy_index, roles or [])
 
     def _reset_visible_batches(self):
         self.ShowSelection(ProjectSelection())

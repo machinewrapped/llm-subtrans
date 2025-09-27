@@ -215,3 +215,14 @@ Each phase includes specific tests to validate functionality:
   - Tracks processed lines to ensure each translation appears only once in GUI
 - **Event Cleanup**: Properly disconnects `batch_updated` event in finally block
 - **Backward Compatibility**: Non-streaming translations continue to work unchanged via existing `_on_batch_translated()` method
+
+#### ScenesView Expansion Collapse Fix
+- **Problem**: `ProjectViewModel.ProcessUpdates()` called `layoutChanged.emit()` after every update batch, causing QTreeView to reset expansion states
+- **Root Cause**: Data-only updates (like streaming line translations) don't require structural layout changes but were triggering full layout refresh
+- **Solution**: Implemented selective signaling in `ProjectViewModel`:
+  - Added `structural_changes_pending` flag to track when layout actually changes
+  - Modified all structural operations (`AddScene`, `RemoveScene`, `AddBatch`, etc.) to set flag
+  - Changed `ProcessUpdates()` to only emit `layoutChanged` when structural changes occurred
+  - Data-only updates (like `UpdateLines`) skip `layoutChanged` emission entirely
+- **Result**: Streaming updates now preserve ScenesView expansion states while maintaining proper signaling for structural changes
+- **Testing**: Verified with test script - data-only updates emit no `layoutChanged`, structural updates emit `layoutChanged` as expected

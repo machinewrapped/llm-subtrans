@@ -62,12 +62,12 @@ This document outlines the implementation plan for adding streaming response sup
 **Goal**: Update GUI to handle streaming updates
 
 #### Step 3.1: Update TranslateSceneCommand
-- [ ] Connect to `batch_updated` event
-- [ ] Track already-processed lines to avoid redundant updates
-- [ ] Create `ViewModelUpdate` objects for partial updates
-- [ ] Handle summary updates appropriately
-- [ ] Test: Verify GUI updates in real-time during streaming
-- [ ] Test: Verify no duplicate updates occur
+- [x] Connect to `batch_updated` event
+- [x] Track already-processed lines to avoid redundant updates
+- [x] Create `ViewModelUpdate` objects for partial updates
+- [x] Handle summary updates appropriately
+- [x] Test: Verify GUI updates in real-time during streaming
+- [x] Test: Verify no duplicate updates occur
 
 #### Step 3.2: Update ViewModelUpdate Processing
 - [ ] Ensure `ViewModelUpdate` can handle partial batch updates
@@ -162,7 +162,8 @@ Each phase includes specific tests to validate functionality:
 - [x] Phase 1: Core Infrastructure
 - [x] Phase 2.1: OpenAI Reasoning Client Streaming
 - [x] Phase 2.2: Provider Settings
-- [ ] Phase 3: GUI Integration
+- [x] Phase 3.1: Update TranslateSceneCommand
+- [ ] Phase 3.2: Update ViewModelUpdate Processing
 - [ ] Phase 4: Error Handling & Edge Cases
 - [ ] Phase 5: Testing & Validation
 
@@ -200,3 +201,17 @@ Each phase includes specific tests to validate functionality:
 - Error handling must be robust given network nature of streaming
 - GUI updates should be efficient to avoid performance issues
 - Testing should cover both happy path and edge cases thoroughly
+
+### Phase 3.1 Implementation Notes
+
+#### TranslateSceneCommand Updates
+- **File**: `GuiSubtrans/Commands/TranslateSceneCommand.py`
+- **Line Tracking**: Added `processed_lines` set to track `(scene, batch, line)` tuples and avoid redundant GUI updates
+- **Event Connection**: Connected to `batch_updated` event in addition to existing `batch_translated` event
+- **Streaming Callback**: Implemented `_on_batch_updated()` method that:
+  - Only processes lines not yet seen to avoid redundant updates
+  - Creates partial `ModelUpdate` objects with only new line translations
+  - Excludes summary, context, errors from streaming updates (reserved for completion)
+  - Tracks processed lines to ensure each translation appears only once in GUI
+- **Event Cleanup**: Properly disconnects `batch_updated` event in finally block
+- **Backward Compatibility**: Non-streaming translations continue to work unchanged via existing `_on_batch_translated()` method

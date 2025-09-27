@@ -451,11 +451,8 @@ class SubtitleTranslator:
         if line_numbers:
             translated = [line for line in translated if line.number in line_numbers]
 
-        # Todo: we should use a SubtitleEditor to merge changes properly
-
         # Merge with existing translations (MergeTranslations is already imported at top)
-        batch._translated = MergeTranslations(batch.translated or [], translated)
+        # Todo: we should use a SubtitleEditor to merge changes 
+        batch.translated = MergeTranslations(batch.translated or [], translated)
 
-        # Update batch metadata
-        batch.translation = translation
         # Note: We don't set errors for partial translations to avoid false validation failures

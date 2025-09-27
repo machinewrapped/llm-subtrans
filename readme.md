@@ -39,7 +39,7 @@ Gemini 2.5 Flash is perhaps the leading model for translation speed and fluency 
 
 You will need a Google Gemini API key from https://ai.google.dev/ or from a project created on https://console.cloud.google.com/. You must ensure that Generative AI is enabled for the api key and project.
 
-Unfortunately Gemini has some censorship and will refuse to translate content that contains certain words or phrases, even with minimal safety settings. If you hit this you will need to use another provider.
+Unfortunately Gemini will refuse to translate content that contains certain words or phrases, even with minimal safety settings. If you hit this you will need to use another provider or split the batch and manually translate the offending lines.
 
 ### OpenAI
 https://openai.com/policies/privacy-policy
@@ -167,24 +167,24 @@ During the installing process, you can choose to input an API key for each selec
     ```
 
 ## Usage
-The program works by dividing the subtitles up into small batches and sending each one to the translation service in turn. It is likely to take time to complete, and can potentially make many API calls for each subtitle file.
+The program works by dividing the subtitles up into batches and sending each one to the translation service in turn. 
+
+It can potentially make many API calls for each subtitle file, depending on the batch size. Speed heavily depends on the selected model.
 
 By default The translated subtitles will be written to a new file in the same directory with the target langugage appended to the original filename.
 
 ### GUI
-The [Subtrans GUI](https://github.com/machinewrapped/llm-subtrans/wiki/GUI#gui-subtrans) is the best and easiest way to use the program. After installation, launch the GUI with the `gui-subtrans` command or shell script, and hopefully the rest should be self-explanatory.
+The [Subtrans GUI](https://github.com/machinewrapped/llm-subtrans/wiki/GUI#gui-subtrans) is the best and easiest way to use the program. 
+
+After installation, launch the GUI with the `gui-subtrans` command or shell script, and hopefully the rest should be self-explanatory.
 
 See the project wiki for further details on how to use the program.
 
 ### Command Line
-
 LLM-Subtrans can be used as a console command or shell script. The install scripts create a cmd or sh file in the project root for each provider, which will take care of activating the virtual environment and calling the corresponding translation script.
 
 The most basic usage is:
 ```sh
-# List supported subtitle formats
-llm-subtrans --list-formats
-
 # Use OpenRouter with automatic model selection
 llm-subtrans --auto -l <language> <path_to_subtitle_file>
 
@@ -198,9 +198,12 @@ llm-subtrans -l <language> -o output.srt input.ass
 llm-subtrans -s <server_address> -e <endpoint> -k <api_key> -l <language> <path_to_subtitle_file>
 
 # Use specific providers
-gpt-subtrans <path_to_subtitle_file> --target_language <target_language>
-gemini-subtrans <path_to_subtitle_file> --target_language <target_language>
-claude-subtrans <path_to_subtitle_file> --target_language <target_language>
+gpt-subtrans --model gpt-5-mini --target_language <target_language> <path_to_subtitle_file>
+gemini-subtrans --model gemini-2.5-flash-latest --target_language <target_language> <path_to_subtitle_file>
+claude-subtrans --model claude-3-5-haiku-latest --target_language <target_language> <path_to_subtitle_file>
+
+# List supported subtitle formats
+llm-subtrans --list-formats
 
 # Batch process files in a folder tree (activate the virtual environment first)
 python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --apikey sk-... --language Spanish

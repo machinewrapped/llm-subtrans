@@ -54,9 +54,9 @@ This document outlines the implementation plan for adding streaming response sup
 - [x] Test: Verify fallback to non-streaming for unsupported models
 
 #### Step 2.2: Provider Settings
-- [ ] Add `enable_streaming_responses` setting to `Provider_OpenAI`
-- [ ] Add GUI option for streaming responses
-- [ ] Test: Verify setting can be toggled and persists
+- [x] Add `enable_streaming_responses` setting to `Provider_OpenAI`
+- [x] Add GUI option for streaming responses (automatic with Provider GetOptions() method)
+- [x] Test: Verify setting can be toggled and persists
 
 ### Phase 3: GUI Integration
 **Goal**: Update GUI to handle streaming updates
@@ -139,7 +139,7 @@ SubtitleTranslator.TranslateBatch()
 
 1. **Partial Processing**: Only process accumulated response up to complete line groups (detected by blank lines in delta)
 2. **No Validation**: Skip validation on partial updates to avoid false failures
-3. **Event Segregation**: Separate `batch_updated` (streaming) from `batch_translated` (completion) events
+3. **Event Segregation**: Separate `batch_updated` (streaming) from `batch_translated` (completion) events. batch_updated is only used for partial updates.
 4. **Tracking**: Command tracks processed lines to avoid redundant GUI updates
 5. **Fallback**: Non-streaming clients continue to work unchanged
 
@@ -161,7 +161,7 @@ Each phase includes specific tests to validate functionality:
 
 - [x] Phase 1: Core Infrastructure
 - [x] Phase 2.1: OpenAI Reasoning Client Streaming
-- [ ] Phase 2.2: Provider Settings
+- [x] Phase 2.2: Provider Settings
 - [ ] Phase 3: GUI Integration
 - [ ] Phase 4: Error Handling & Edge Cases
 - [ ] Phase 5: Testing & Validation

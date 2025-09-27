@@ -24,6 +24,7 @@ class TranslationClient:
         self.settings: SettingsType = SettingsType(settings)
         self.instructions: str|None = settings.get_str('instructions')
         self.retry_instructions: str|None = settings.get_str('retry_instructions')
+        self.enable_streaming: bool = settings.get_bool('enable_streaming_responses', False) and self.supports_streaming
         self.aborted: bool = False
 
         if not self.instructions:

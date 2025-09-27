@@ -229,7 +229,7 @@ class SubtitleTranslator:
             return
 
         # Ask the client to do the translation
-        streaming_callback = self._create_streaming_callback(batch, line_numbers) if self.client.supports_streaming else None
+        streaming_callback = self._create_streaming_callback(batch, line_numbers) if self.client.enable_streaming else None
         translation : Translation|None = self.client.RequestTranslation(batch.prompt, streaming_callback=streaming_callback)
 
         if (translation and translation.reached_token_limit) and not self.aborted:

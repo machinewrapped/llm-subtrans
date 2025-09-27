@@ -70,9 +70,9 @@ This document outlines the implementation plan for adding streaming response sup
 - [x] Test: Verify no duplicate updates occur
 
 #### Step 3.2: Update ViewModelUpdate Processing
-- [ ] Ensure `ViewModelUpdate` can handle partial batch updates
-- [ ] Add logic to merge partial line updates efficiently
-- [ ] Test: Verify partial updates don't break view model consistency
+- [X] Ensure `ViewModelUpdate` can handle partial batch updates
+- [X] Add logic to merge partial line updates efficiently
+- [X] Test: Verify partial updates don't break view model consistency
 
 ### Phase 4: Error Handling & Edge Cases
 **Goal**: Robust error handling for streaming scenarios
@@ -87,16 +87,22 @@ This document outlines the implementation plan for adding streaming response sup
 - [X] Handle responses that don't contain line breaks
 - [X] Ensure proper cleanup on completion/error
 
-### Phase 5: Testing & Validation
+# Phase 5: Add streaming support to more providers
+- [X] Add streaming response support for AnthropicClient
+- [X] Add streaming response support for GeminiClient
+- [X] Add streaming response support for OpenRouterClient / CustomClient
+- [ ] Add streaming response support for DeepSeekClient
+
+### Phase 6: Testing & Validation
 **Goal**: Comprehensive testing of streaming functionality
 
-#### Step 5.1: Unit Tests
+#### Step 6.1: Unit Tests
 - [ ] Create unit tests for streaming event handling
 - [ ] Create unit tests for partial response processing
 - [ ] Create mock streaming client for testing
 - [ ] Test: All streaming components in isolation
 
-#### Step 5.2: Integration Tests
+#### Step 6.2: Integration Tests
 - [ ] Create integration tests with real OpenAI streaming
 - [ ] Test streaming with various batch sizes
 - [ ] Test streaming with different content types

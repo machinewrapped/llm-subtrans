@@ -163,7 +163,6 @@ class GeminiClient(TranslationClient):
         last_candidate: Candidate | None = None
         last_usage: GenerateContentResponseUsageMetadata | None = None
         first_prompt_feedback = None  # when blocked, this can be set only on the first chunk
-        finish_reason = None
         accumulated_thoughts = ""
 
         for chunk in stream:

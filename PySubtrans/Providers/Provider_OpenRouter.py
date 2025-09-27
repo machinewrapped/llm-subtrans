@@ -30,6 +30,7 @@ class OpenRouterProvider(TranslationProvider):
             'api_key': settings.get_str('api_key', os.getenv('OPENROUTER_API_KEY')),
             'use_default_model': settings.get_bool('use_default_model', False),
             "server_address": settings.get_str('server_address', os.getenv('OPENROUTER_SERVER_ADDRESS', "https://openrouter.ai/api/")),
+            'stream_responses': settings.get_bool('stream_responses', os.getenv('OPENROUTER_STREAM_RESPONSES', "True") == "True"),
             'model_family': settings.get_str('model_family', os.getenv('OPENROUTER_MODEL_FAMILY', "Google")),
             'only_translation_models': settings.get_bool('only_translation_models', True),
             "model": settings.get_str('model', os.getenv('OPENROUTER_MODEL', "Gemini 2.5 Flash Lite")),
@@ -142,6 +143,7 @@ class OpenRouterProvider(TranslationProvider):
 
         if self.use_default_model or self.available_models:
             options.update({
+                'stream_responses': (bool, _( "Stream translations in realtime as they are generated")),
                 'max_tokens': (int, _( "Maximum number of output tokens to return in the response.")),
                 'temperature': (float, _( "Amount of random variance to add to translations. Generally speaking, none is best")),
                 'rate_limit': (float, _( "Maximum API requests per minute.")),

@@ -9,6 +9,7 @@ class OpenRouterClient(CustomClient):
     def __init__(self, settings: SettingsType):
         settings.setdefault('supports_system_messages', True)
         settings.setdefault('supports_conversation', True)
+        settings.setdefault('supports_streaming', True)
         settings.setdefault('server_address', 'https://openrouter.ai/api/')
         settings.setdefault('endpoint', '/v1/chat/completions')
         settings.setdefault('additional_headers', {

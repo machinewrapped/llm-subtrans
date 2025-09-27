@@ -26,32 +26,32 @@ This document outlines the implementation plan for adding streaming response sup
 **Goal**: Extend base classes to support streaming concepts
 
 #### Step 1.1: Extend TranslationEvents
-- [ ] Add `batch_updated` signal to `TranslationEvents`
-- [ ] Test: Verify new signal can be created and connected
+- [x] Add `batch_updated` signal to `TranslationEvents`
+- [x] Test: Verify new signal can be created and connected
 
 #### Step 1.2: Extend TranslationClient Base Class
-- [ ] Add `supports_streaming` property to `TranslationClient`
-- [ ] Add streaming callback parameter to `RequestTranslation()` and `_request_translation()`
-- [ ] Update method signatures to support optional streaming callbacks
-- [ ] Test: Verify base class changes don't break existing functionality
+- [x] Add `supports_streaming` property to `TranslationClient`
+- [x] Add streaming callback parameter to `RequestTranslation()` and `_request_translation()`
+- [x] Update method signatures to support optional streaming callbacks
+- [x] Test: Verify base class changes don't break existing functionality
 
 #### Step 1.3: Update SubtitleTranslator
-- [ ] Add streaming callback handler to `TranslateBatch()`
-- [ ] Implement partial response processing logic
-- [ ] Add logic to emit `batch_updated` events for complete line groups
-- [ ] Ensure validation only occurs on complete responses
-- [ ] Test: Verify non-streaming translations still work correctly
+- [x] Add streaming callback handler to `TranslateBatch()`
+- [x] Implement partial response processing logic
+- [x] Add logic to emit `batch_updated` events for complete line groups
+- [x] Ensure validation only occurs on complete responses
+- [x] Test: Verify non-streaming translations still work correctly
 
 ### Phase 2: OpenAI Streaming Implementation
 **Goal**: Implement streaming for OpenAI Reasoning Client
 
 #### Step 2.1: OpenAI Reasoning Client Streaming
-- [ ] Add streaming support detection to `OpenAIReasoningClient`
-- [ ] Implement `_get_client_response()` method to handle streaming vs non-streaming
-- [ ] Add delta accumulation and processing logic to detect complete line groups
-- [ ] Implement partial translation creation and final response formatting
-- [ ] Test: Verify streaming requests work with OpenAI API
-- [ ] Test: Verify fallback to non-streaming for unsupported models
+- [x] Add streaming support detection to `OpenAIReasoningClient`
+- [x] Implement `_get_client_response()` method to handle streaming vs non-streaming
+- [x] Add delta accumulation and processing logic to detect complete line groups
+- [x] Implement partial translation creation and final response formatting
+- [x] Test: Verify streaming requests work with OpenAI API
+- [x] Test: Verify fallback to non-streaming for unsupported models
 
 #### Step 2.2: Provider Settings
 - [ ] Add `enable_streaming_responses` setting to `Provider_OpenAI`
@@ -159,15 +159,43 @@ Each phase includes specific tests to validate functionality:
 
 ## Progress Tracking
 
-- [ ] Phase 1: Core Infrastructure
-- [ ] Phase 2: OpenAI Streaming Implementation
+- [x] Phase 1: Core Infrastructure
+- [x] Phase 2.1: OpenAI Reasoning Client Streaming
+- [ ] Phase 2.2: Provider Settings
 - [ ] Phase 3: GUI Integration
 - [ ] Phase 4: Error Handling & Edge Cases
 - [ ] Phase 5: Testing & Validation
 
-## Notes
+## Implementation Notes
 
-- Implementation should maintain backward compatibility
+### Completed Architecture
+
+#### TranslationRequest Pattern
+- **File**: `PySubtrans/TranslationRequest.py`
+- **Purpose**: Encapsulates request state and streaming logic to avoid stateful clients
+- **Key Methods**:
+  - `ProcessStreamingDelta(delta_text)` - Main entry point for processing streaming deltas
+  - `_emit_partial_update()` - Consolidated method that emits updates and marks processed
+  - `_has_complete_line_group()` - Detects complete line groups via `\n\n` threshold
+
+#### Event-Driven Streaming
+- **Signal**: `batch_updated` in `TranslationEvents`
+- **Flow**: delta → TranslationRequest → partial Translation → batch_updated event
+- **Threshold**: Only emit for complete line groups (blank line separated)
+
+#### OpenAI Responses API Integration
+- **Events Used**: `response.output_text.delta`, `response.completed`, `response.failed`
+- **Structure**: `event.response.output[0].content[0].text` for final response
+- **Delta**: `event.delta` for streaming text chunks
+
+#### Code Standards Applied
+- **Naming**: PascalCase for public methods, `_snake_case` for private
+- **Type Hints**: Proper spacing around colons (`param : str`)
+- **Consolidation**: Eliminated duplicate `rfind('\n\n')` logic across methods
+
+### Development Notes
+
+- Implementation maintains backward compatibility
 - Streaming should be opt-in via settings
 - Error handling must be robust given network nature of streaming
 - GUI updates should be efficient to avoid performance issues

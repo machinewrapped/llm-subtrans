@@ -15,7 +15,8 @@ from google.genai.types import (
     HarmBlockThreshold,
     HarmCategory,
     Part,
-    SafetySetting
+    SafetySetting,
+    ThinkingConfig
 )
 
 from PySubtrans.Helpers import FormatMessages
@@ -47,6 +48,15 @@ class GeminiClient(TranslationClient):
         ]
 
         self.automatic_function_calling: AutomaticFunctionCallingConfig = AutomaticFunctionCallingConfig(disable=True, maximum_remote_calls=None)
+
+        # Configure reasoning parameters
+        enable_thinking = settings.get_bool('enable_thinking', False)
+        thinking_budget = settings.get_int('thinking_budget', 100)
+        include_thoughts = False # Gemini appends thoughts to the text if this is true, breaking the parser
+
+        self.thinking_config: ThinkingConfig|None = ThinkingConfig(
+            include_thoughts=include_thoughts, thinking_budget=thinking_budget
+            ) if enable_thinking else None
 
     @property
     def api_key(self) -> str|None:
@@ -126,6 +136,7 @@ class GeminiClient(TranslationClient):
             temperature=temperature,
             system_instruction=prompt.system_prompt,
             safety_settings=self.safety_settings,
+            thinking_config=self.thinking_config,
             automatic_function_calling=self.automatic_function_calling,
             max_output_tokens=None,
             response_modalities=[]
@@ -149,26 +160,56 @@ class GeminiClient(TranslationClient):
         )
 
         last_chunk = None
+        last_candidate: Candidate | None = None
+        last_usage: GenerateContentResponseUsageMetadata | None = None
+        first_prompt_feedback = None  # when blocked, this can be set only on the first chunk
+        finish_reason = None
+        accumulated_thoughts = ""
+
         for chunk in stream:
             if self.aborted:
                 return None
 
-            text = getattr(chunk, 'text', None)
-            if text:
-                request.ProcessStreamingDelta(text)
+            chunk_text = ""
+            for candidate in chunk.candidates or []:
+                if candidate.content and candidate.content.parts:
+                    last_candidate = candidate
+                    for part in candidate.content.parts:
+                        if part.text:
+                            if part.thought:
+                                accumulated_thoughts += part.text
+                            else:
+                                if part.text.find("**") >= 0:
+                                    logging.error("Gemini returned content with ** in the text content")
 
-            last_chunk = chunk
-            
-        # Construct a final response from the accumulated text
-        accumulated_text_part = Part.from_text(text = request.accumulated_text)
+                                chunk_text += part.text
+
+            if chunk_text:
+                request.ProcessStreamingDelta(chunk_text)
+
+            if chunk.usage_metadata:
+                last_usage = chunk.usage_metadata
+            if chunk.prompt_feedback and first_prompt_feedback is None:
+                first_prompt_feedback = chunk.prompt_feedback
+
+        # Build a synthetic response that keeps metadata but replaces content parts with accumulated text
+        parts = [Part.from_text(text = request.accumulated_text)]
+
+        if accumulated_thoughts:
+            thought_part = Part.from_text(text = accumulated_thoughts)
+            thought_part.thought = True
+            parts.append(thought_part)
+
+        synthetic_candidate = Candidate(
+            content=Content(role="model", parts=parts),
+            finish_reason = getattr(last_candidate, "finish_reason", None) or getattr(last_chunk, "finish_reason", None),
+            safety_ratings = getattr(last_candidate, "safety_ratings", None)
+        )
+
         response = GenerateContentResponse(
-            candidates=[
-                Candidate(
-                    content=Content(role="model", parts=[accumulated_text_part]),
-                    finish_reason=getattr(last_chunk, "finish_reason", None),
-                    safety_ratings=getattr(last_chunk, "safety_ratings", None),
-                )
-            ]
+            candidates=[synthetic_candidate],
+            usage_metadata=last_usage,
+            prompt_feedback=first_prompt_feedback
         )
 
         return self._process_gemini_response(response)

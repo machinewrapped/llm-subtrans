@@ -11,6 +11,7 @@ from PySubtrans.SubtitleError import TranslationError, TranslationResponseError,
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 
 linesep = '\n'
 
@@ -51,7 +52,7 @@ class AnthropicClient(TranslationClient):
         
         return anthropic.NOT_GIVEN
 
-    def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
+    def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
         Request a translation based on the provided prompt
         """
@@ -69,20 +70,20 @@ class AnthropicClient(TranslationClient):
         except Exception as e:
             raise TranslationImpossibleError(_("Failed to initialize Anthropic client"), error=e)
 
-        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
+        logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
 
         temperature = temperature or self.temperature
 
-        if prompt.system_prompt is None:
+        if request.prompt.system_prompt is None:
             raise TranslationError(_("System prompt is required"))
 
-        if not prompt.content or not isinstance(prompt.content, list):
+        if not request.prompt.content or not isinstance(request.prompt.content, list):
             raise TranslationError(_("No content provided for translation"))
 
-        if not isinstance(prompt.content, list):
+        if not isinstance(request.prompt.content, list):
             raise TranslationError(_("Content must be a list of messages"))
 
-        response = self._send_messages(prompt.system_prompt, prompt.content, temperature)
+        response = self._send_messages(request.prompt.system_prompt, request.prompt.content, temperature)
 
         translation = Translation(response) if response else None
 

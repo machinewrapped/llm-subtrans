@@ -16,6 +16,7 @@ from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 from PySubtrans.TranslationProvider import TranslationProvider
 
 class SubtitleTestCase(unittest.TestCase):
@@ -212,8 +213,8 @@ class DummyTranslationClient(TranslationClient):
 
         return prompt
 
-    def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
+    def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         for user_prompt, text in self.response_map.items():
-            if user_prompt == prompt.user_prompt:
+            if user_prompt == request.prompt.user_prompt:
                 text = text.replace("\\n", "\n")
                 return Translation({'text': text})

@@ -229,7 +229,8 @@ class SubtitleTranslator:
             return
 
         # Ask the client to do the translation
-        translation : Translation|None = self.client.RequestTranslation(batch.prompt)
+        streaming_callback = self._create_streaming_callback(batch, line_numbers) if self.client.supports_streaming else None
+        translation : Translation|None = self.client.RequestTranslation(batch.prompt, streaming_callback=streaming_callback)
 
         if (translation and translation.reached_token_limit) and not self.aborted:
             # Try again without the context to keep the tokens down
@@ -237,7 +238,7 @@ class SubtitleTranslator:
             logging.warning(_("Hit API token limit, retrying batch without context..."))
             batch.prompt.GenerateMessages(instructions, batch.originals, {})
 
-            translation = self.client.RequestTranslation(batch.prompt)
+            translation = self.client.RequestTranslation(batch.prompt, streaming_callback=streaming_callback)
 
         if not self.aborted:
             if not translation:
@@ -411,3 +412,57 @@ class SubtitleTranslator:
                 return sanitised
 
         return None
+
+    def _create_streaming_callback(self, batch : SubtitleBatch, line_numbers : list[int]|None):
+        """
+        Create a streaming callback that processes partial translations and emits batch_updated events
+        """
+        def streaming_callback(partial_translation : Translation):
+            if self.aborted or not partial_translation:
+                return
+
+            try:
+                # Create a temporary copy of the batch for partial processing
+                temp_batch = SubtitleBatch({
+                    'scene': batch.scene,
+                    'number': batch.number,
+                    'originals': batch.originals.copy(),
+                    'translated': batch.translated.copy() if batch.translated else [],
+                    'context': batch.context.copy()
+                })
+
+                # Process the partial translation (without validation)
+                self._process_partial_translation(temp_batch, partial_translation, line_numbers)
+
+                # Emit batch_updated event with the updated batch
+                self.events.batch_updated.send(self, batch=temp_batch, partial=True)
+
+            except Exception as e:
+                logging.warning(f"Error processing streaming update for scene {batch.scene} batch {batch.number}: {e}")
+
+        return streaming_callback
+
+    def _process_partial_translation(self, batch : SubtitleBatch, translation : Translation, line_numbers : list[int]|None):
+        """
+        Process a partial translation without validation (streaming updates only)
+        """
+        if not translation or not translation.has_translation:
+            return
+
+        # Apply the translation to the subtitles
+        parser = self.client.GetParser(self.task_type)
+        parser.ProcessTranslation(translation)
+
+        # Try to match the translations with the original lines
+        translated, _ = parser.MatchTranslations(batch.originals)
+
+        # Assign the translated lines to the batch
+        if line_numbers:
+            translated = [line for line in translated if line.number in line_numbers]
+
+        # Merge with existing translations (MergeTranslations is already imported at top)
+        batch._translated = MergeTranslations(batch.translated or [], translated)
+
+        # Update batch metadata
+        batch.translation = translation
+        # Note: We don't set errors for partial translations to avoid false validation failures

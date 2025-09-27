@@ -9,6 +9,7 @@ from PySubtrans.Options import SettingsType
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
 
 class BedrockClient(TranslationClient):
@@ -49,7 +50,7 @@ class BedrockClient(TranslationClient):
     def max_tokens(self) -> int:
         return self.settings.get_int( 'max_tokens') or 4096
 
-    def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
+    def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
         Request a translation based on the provided prompt
         """
@@ -65,17 +66,17 @@ class BedrockClient(TranslationClient):
         if not self.model_id:
             raise TranslationImpossibleError(_("Model ID must be provided as an argument"))
 
-        if not prompt.system_prompt:
+        if not request.prompt.system_prompt:
             raise TranslationImpossibleError(_("No system prompt provided"))
 
-        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
+        logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
 
-        content = _structure_messages(prompt.messages)
+        content = _structure_messages(request.prompt.messages)
 
-        if not content or not isinstance(prompt.content, list):
+        if not content or not isinstance(request.prompt.content, list):
             raise TranslationImpossibleError(_("No content provided for translation"))
 
-        reponse = self._send_messages(prompt.system_prompt, content, temperature=temperature)
+        reponse = self._send_messages(request.prompt.system_prompt, content, temperature=temperature)
 
         translation = Translation(reponse) if reponse else None
 

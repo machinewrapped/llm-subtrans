@@ -12,6 +12,7 @@ from PySubtrans.SubtitleError import TranslationError, TranslationImpossibleErro
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 
 class MistralClient(TranslationClient):
     """
@@ -42,14 +43,14 @@ class MistralClient(TranslationClient):
     def model(self) -> str|None:
         return self.settings.get_str( 'model')
 
-    def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
+    def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
         Request a translation based on the provided prompt
         """
-        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
+        logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
 
-        content = prompt.content
-        if not content or not isinstance(prompt.content, list):
+        content = request.prompt.content
+        if not content or not isinstance(request.prompt.content, list):
             raise TranslationImpossibleError(_("No content provided for translation"))
 
         content = [message for message in content if message]

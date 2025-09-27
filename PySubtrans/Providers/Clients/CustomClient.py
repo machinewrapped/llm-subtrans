@@ -11,6 +11,7 @@ from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResp
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 
 class CustomClient(TranslationClient):
     """
@@ -65,14 +66,14 @@ class CustomClient(TranslationClient):
     def timeout(self) -> int:
         return self.settings.get_int( 'timeout') or 300
 
-    def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
+    def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
         Request a translation based on the provided prompt
         """
-        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
+        logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
 
         temperature = temperature or self.temperature
-        response = self._make_request(prompt, temperature)
+        response = self._make_request(request, temperature)
 
         translation = Translation(response) if response else None
 
@@ -83,7 +84,7 @@ class CustomClient(TranslationClient):
             self.client.close()
         return super()._abort()
 
-    def _make_request(self, prompt : TranslationPrompt, temperature: float|None) -> dict[str, Any]|None:
+    def _make_request(self, request: TranslationRequest, temperature: float|None) -> dict[str, Any]|None:
         """
         Make a request to the server to provide a translation
         """
@@ -94,7 +95,7 @@ class CustomClient(TranslationClient):
                 return None
 
             try:
-                request_body = self._generate_request_body(prompt, temperature)
+                request_body = self._generate_request_body(request, temperature)
                 logging.debug(f"Request Body:\n{request_body}")
 
                 if self.server_address is None or self.endpoint is None:
@@ -197,7 +198,7 @@ class CustomClient(TranslationClient):
             ))
             time.sleep(sleep_time)
 
-    def _generate_request_body(self, prompt: TranslationPrompt, temperature: float|None) -> dict[str, Any]:
+    def _generate_request_body(self, request: TranslationRequest, temperature: float|None) -> dict[str, Any]:
         request_body = {
             'temperature': temperature,
             'stream': False
@@ -213,9 +214,9 @@ class CustomClient(TranslationClient):
             request_body['model'] = self.model
 
         if self.supports_conversation:
-            request_body['messages'] = prompt.messages
+            request_body['messages'] = request.prompt.messages
         else:
-            request_body['prompt'] = prompt.content
+            request_body['prompt'] = request.prompt.content
 
         return request_body
 

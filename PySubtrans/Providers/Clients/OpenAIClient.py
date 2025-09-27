@@ -15,6 +15,7 @@ from PySubtrans.SubtitleError import TranslationError, TranslationImpossibleErro
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 
 class OpenAIClient(TranslationClient):
     """
@@ -54,16 +55,16 @@ class OpenAIClient(TranslationClient):
     def reuse_client(self) -> bool:
         return self.settings.get_bool( 'reuse_client', True)
 
-    def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
+    def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
         Request a translation based on the provided prompt
         """
-        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
+        logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
 
         # If we're using a new client for each request, create it here
         temperature = temperature or self.temperature
 
-        response = self._try_send_messages(prompt, temperature)
+        response = self._try_send_messages(request, temperature)
 
         translation = Translation(response) if response else None
 
@@ -76,7 +77,7 @@ class OpenAIClient(TranslationClient):
 
         return translation
 
-    def _send_messages(self, prompt: TranslationPrompt, temperature : float) -> dict[str, Any]|None:
+    def _send_messages(self, request: TranslationRequest, temperature: float) -> dict[str, Any]|None:
         """
         Communicate with the API
         """
@@ -87,7 +88,7 @@ class OpenAIClient(TranslationClient):
             self.client.close()
         return super()._abort()
     
-    def _try_send_messages(self, prompt : TranslationPrompt, temperature: float) -> dict[str, Any]|None:
+    def _try_send_messages(self, request: TranslationRequest, temperature: float) -> dict[str, Any]|None:
         for retry in range(self.max_retries + 1):
             if self.aborted:
                 return None
@@ -98,7 +99,7 @@ class OpenAIClient(TranslationClient):
                 if not self.client or not self.reuse_client:
                     self._create_client()
 
-                response = self._send_messages(prompt, temperature)
+                response = self._send_messages(request, temperature)
 
                 return response
             

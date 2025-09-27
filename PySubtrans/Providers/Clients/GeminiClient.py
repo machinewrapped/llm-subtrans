@@ -24,6 +24,7 @@ from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResp
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 
 class GeminiClient(TranslationClient):
     """
@@ -58,20 +59,20 @@ class GeminiClient(TranslationClient):
     def rate_limit(self) -> float|None:
         return self.settings.get_float( 'rate_limit')
 
-    def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
+    def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
         Request a translation based on the provided prompt
         """
-        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
+        logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
 
-        if not isinstance(prompt.system_prompt, str):
+        if not isinstance(request.prompt.system_prompt, str):
             raise TranslationImpossibleError(_("System prompt is required"))
 
-        if not isinstance(prompt.content, str) or not prompt.content.strip():
+        if not isinstance(request.prompt.content, str) or not request.prompt.content.strip():
             raise TranslationImpossibleError(_("No content provided for translation"))
             
         temperature = temperature or self.temperature
-        response = self._send_messages(prompt.system_prompt, prompt.content, temperature)
+        response = self._send_messages(request.prompt.system_prompt, request.prompt.content, temperature)
 
         return Translation(response) if response else None
 

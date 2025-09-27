@@ -8,6 +8,7 @@ from PySubtrans.Options import SettingsType
 from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SubtitleError import TranslationError, TranslationResponseError
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 
 linesep = '\n'
 
@@ -22,7 +23,7 @@ class ChatGPTClient(OpenAIClient):
         })
         super().__init__(settings)
 
-    def _send_messages(self, prompt: TranslationPrompt, temperature: float|None) -> dict[str, Any]|None:
+    def _send_messages(self, request: TranslationRequest, temperature: float|None) -> dict[str, Any]|None:
         """
         Make a request to an OpenAI-compatible API to provide a translation
         """
@@ -34,11 +35,13 @@ class ChatGPTClient(OpenAIClient):
         if not self.model:
             raise TranslationError(_("No model specified"))
 
-        if not prompt.content or not isinstance(prompt.content, list):
+        if not request.prompt.content or not isinstance(request.prompt.content, list):
             raise TranslationError(_("No content provided for translation"))
 
-        messages: list[dict] = prompt.content # type: ignore[arg-type]
+        messages: list[dict] = request.prompt.content # type: ignore[arg-type]
 
+        assert self.client is not None
+        assert self.model is not None
         result : ChatCompletion = self.client.chat.completions.create(
             model=self.model,
             messages=messages,      # type: ignore[arg-type]

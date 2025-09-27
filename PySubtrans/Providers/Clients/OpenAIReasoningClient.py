@@ -4,7 +4,9 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import TranslationError, TranslationResponseError
+from PySubtrans.Translation import Translation
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 
 linesep = '\n'
 
@@ -18,6 +20,7 @@ class OpenAIReasoningClient(OpenAIClient):
             'supports_conversation': True,
             'supports_reasoning': True,
             'supports_system_prompt': True,
+            'supports_streaming': True,
             'system_role': 'developer'
         })
         super().__init__(settings)
@@ -26,7 +29,7 @@ class OpenAIReasoningClient(OpenAIClient):
     def reasoning_effort(self) -> str:
         return self.settings.get_str( 'reasoning_effort') or "low"
     
-    def _send_messages(self, prompt: TranslationPrompt, temperature: float|None) -> dict[str, Any] | None:
+    def _send_messages(self, request: TranslationRequest, temperature: float|None) -> dict[str, Any] | None:
         """
         Make a request to OpenAI Responses API for translation
         """
@@ -36,15 +39,10 @@ class OpenAIReasoningClient(OpenAIClient):
         if not self.model:
             raise TranslationError(_("No model specified"))
 
-        if not prompt.content or not isinstance(prompt.content, list):
+        if not request.prompt.content or not isinstance(request.prompt.content, list):
             raise TranslationError(_("No content provided for translation"))
 
-        result = self.client.responses.create(
-            model=self.model,
-            input=prompt.content, # type: ignore[arg-type]
-            instructions=prompt.system_prompt,
-            reasoning={"effort": self.reasoning_effort}  # type: ignore[arg-type]
-        )
+        result = self._get_client_response(request)
         
         if self.aborted:
             return None
@@ -64,50 +62,19 @@ class OpenAIReasoningClient(OpenAIClient):
         return response
             
     def _extract_text_content(self, result):
-        """Extract text content with cleaner fallback logic"""        
+        """Extract text content from OpenAI Responses API structure"""
         if hasattr(result, 'output') and result.output:
-            return self._parse_structured_output(result.output)
-
-        if hasattr(result, 'output_text') and result.output_text:
-            return result.output_text, None
+            # Standard response structure: response.output[0].content[0].text
+            if len(result.output) > 0:
+                output_item = result.output[0]
+                if hasattr(output_item, 'content') and output_item.content:
+                    if len(output_item.content) > 0:
+                        content_item = output_item.content[0]
+                        if hasattr(content_item, 'text') and content_item.text:
+                            return content_item.text, None
 
         raise TranslationResponseError(_("No text content found in response"), response=result)
 
-    def _parse_structured_output(self, output_blocks):
-        """Parse structured output blocks"""
-        text_parts = []
-        reasoning_parts = []
-        
-        for block in output_blocks:
-            content = getattr(block, 'content', [])
-            if content is None:
-                continue
-
-            if isinstance(content, str):
-                text_parts.append(content)
-                continue
-                
-            for item in content:
-                if hasattr(item, 'text') and item.text:
-                    if getattr(item, 'type', None) == 'reasoning':
-                        reasoning_parts.append(item.text)
-                    else:
-                        text_parts.append(item.text)
-                elif isinstance(item, dict):
-                    if item.get('text'):
-                        if item.get('type') == 'reasoning':
-                            reasoning_parts.append(item['text'])
-                        else:
-                            text_parts.append(item['text'])
-
-                    # Handle nested reasoning structure
-                    if item.get('type') == 'reasoning':
-                        r_text = (item.get('reasoning') or {}).get('text')
-                        if r_text:
-                            reasoning_parts.append(r_text)
-        
-        return ('\n'.join(text_parts) or None, 
-                '\n'.join(reasoning_parts) or None)
 
     def _extract_usage_info(self, result):
         """Extract token usage information"""
@@ -145,4 +112,67 @@ class OpenAIReasoningClient(OpenAIClient):
         """Normalize finish reason to legacy format"""
         finish = getattr(result, 'stop_reason', None) or getattr(result, 'finish_reason', None)
         return 'length' if finish == 'max_output_tokens' else finish
+
+    def _get_client_response(self, request: TranslationRequest):
+        """
+        Handle both streaming and non-streaming API calls
+        """
+        if not request.is_streaming:
+            # Non-streaming: simple call and return
+            assert self.client is not None
+            assert self.model is not None
+            return self.client.responses.create(
+                model=self.model,
+                input=request.prompt.content,
+                instructions=request.prompt.system_prompt,
+                reasoning={"effort": self.reasoning_effort}
+            )
+        else:
+            # Streaming: complex event loop with delta accumulation
+            return self._handle_streaming_response(request)
+
+    def _handle_streaming_response(self, request: TranslationRequest):
+        """
+        Handle streaming response with delta accumulation and partial updates
+        """
+        assert self.client is not None
+        assert self.model is not None
+        stream = self.client.responses.create(
+            model=self.model,
+            input=request.prompt.content,
+            instructions=request.prompt.system_prompt,
+            reasoning={"effort": self.reasoning_effort}, #type: ignore
+            stream=True
+        )
+
+        try:
+            for event in stream:
+                if self.aborted:
+                    break
+
+                event_type = getattr(event, 'type', None)
+
+                # Handle delta events for streaming updates
+                if event_type == 'response.output_text.delta':
+                    delta_content = getattr(event, 'delta', None)
+                    if delta_content:
+                        request.ProcessStreamingDelta(delta_content)
+
+                # Handle completion - return the actual complete response
+                elif event_type == 'response.completed':
+                    return event.response
+
+                # Handle failures
+                elif event_type in ('response.failed', 'response.incomplete'):
+                    return event.response
+
+        except Exception as e:
+            logging.warning(f"Error during streaming: {e}")
+
+        # If we get here without a completion event, something went wrong
+        return None
+
+
+
+
 

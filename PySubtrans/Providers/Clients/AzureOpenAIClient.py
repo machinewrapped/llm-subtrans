@@ -8,6 +8,7 @@ from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.TranslationRequest import TranslationRequest
 from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
 from PySubtrans.Options import SettingsType
 
@@ -61,14 +62,14 @@ class AzureOpenAIClient(TranslationClient):
     def rate_limit(self) -> float|None:
         return self.settings.get_float( 'rate_limit')
 
-    def _request_translation(self, prompt : TranslationPrompt, temperature : float|None = None) -> Translation|None:
+    def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
         Request a translation based on the provided prompt
         """
-        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
+        logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
 
         temperature = temperature or self.temperature
-        reponse = self._send_messages(prompt.messages, temperature)
+        reponse = self._send_messages(request.prompt.messages, temperature)
 
         translation = Translation(reponse) if reponse else None
 

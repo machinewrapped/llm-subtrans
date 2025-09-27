@@ -193,18 +193,6 @@ For example, `TranslateSceneCommand` subscribes to `SubtitleTranslator` events. 
 3. `ProjectViewModel.ProcessUpdates()` applies changes on main thread
 4. Views automatically reflect updated data through Qt's model/view system
 
-#### Streaming Translation Updates
-For providers that support streaming responses, the update pattern is enhanced:
-
-- **`batch_updated` events** are emitted for partial translations as they arrive
-- **Line tracking** prevents duplicate updates by tracking `(scene, batch, line)` tuples already processed
-- **Partial ModelUpdates** contain only newly translated lines, excluding summary/context data
-- **Expansion state preservation** in `ScenesView` by avoiding unnecessary `layoutChanged` signals for data-only updates
-
-The streaming system maintains backward compatibility - non-streaming translations continue to work via the existing `batch_translated` event pattern.
-
-This pattern enables real-time feedback during long operations while maintaining thread safety and separation between business logic and UI.
-
 ## Translation Provider Architecture
 The application supports multiple translation services through a provider system.
 

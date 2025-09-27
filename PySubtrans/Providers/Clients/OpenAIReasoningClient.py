@@ -1,10 +1,21 @@
 import logging
+
+from openai.types import responses as responses_types
+from openai.types.responses import (
+    ResponseStreamEvent,
+    ResponseTextDeltaEvent,
+    ResponseCompletedEvent,
+    ResponseFailedEvent,
+    ResponseIncompleteEvent,
+    ResponseUsage
+)
+from openai.types.completion_usage import CompletionTokensDetails
+
 from typing import Any
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import TranslationError, TranslationResponseError
-from PySubtrans.Translation import Translation
 from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 
@@ -39,21 +50,18 @@ class OpenAIReasoningClient(OpenAIClient):
         if not self.model:
             raise TranslationError(_("No model specified"))
 
-        if not request.prompt.content or not isinstance(request.prompt.content, list):
-            raise TranslationError(_("No content provided for translation"))
-
-        result = self._get_client_response(request)
+        openai_response = self._get_client_response(request)
         
-        if self.aborted:
+        if self.aborted or not openai_response:
             return None
         
         # Build response with usage info and content
-        response = self._extract_usage_info(result)
-        text, reasoning = self._extract_text_content(result)
+        response = self._extract_usage_info(openai_response)
+        text, reasoning = self._extract_text_content(openai_response)
         
         response.update({
             'text': text,
-            'finish_reason': self._normalize_finish_reason(result)
+            'finish_reason': self._normalize_finish_reason(openai_response)
         })
         
         if reasoning:
@@ -61,51 +69,77 @@ class OpenAIReasoningClient(OpenAIClient):
             
         return response
             
-    def _extract_text_content(self, result):
+    def _get_client_response(self, request: TranslationRequest):
+        """
+        Handle both streaming and non-streaming API calls
+        """
+        assert self.client is not None
+        assert self.model is not None
+        prompt : TranslationPrompt = request.prompt
+
+        if not prompt or not prompt.content or not isinstance(prompt.content, list):
+            raise TranslationError(_("No content provided for translation"))
+
+        if request.is_streaming:
+            # Streaming: complex event loop with delta accumulation
+            return self._handle_streaming_response(request)
+
+        return self.client.responses.create(
+            model=self.model,
+            input=prompt.content, # type: ignore[arg-type]
+            instructions=request.prompt.system_prompt,
+            reasoning={"effort": self.reasoning_effort} #type: ignore[arg-type]
+        )
+
+    def _extract_text_content(self, openai_response : responses_types.Response):
         """Extract text content from OpenAI Responses API structure"""
-        if hasattr(result, 'output') and result.output:
-            # Standard response structure: response.output[0].content[0].text
-            if len(result.output) > 0:
-                output_item = result.output[0]
-                if hasattr(output_item, 'content') and output_item.content:
-                    if len(output_item.content) > 0:
-                        content_item = output_item.content[0]
-                        if hasattr(content_item, 'text') and content_item.text:
-                            return content_item.text, None
+        # Standard response structure: response.output[0].content[0].text
+        output = getattr(openai_response, 'output', None)
+        if output and len(output) > 0:
+            text = None
+            reasoning = None
+            for output_item in openai_response.output:
+                content = getattr(output_item, 'content', None)
+                if content and len(content) > 0:
+                    content_item = content[0]
+                    text = getattr(content_item, 'text', None) or text
+                    reasoning = getattr(content_item, 'reasoning', None) or reasoning
 
-        raise TranslationResponseError(_("No text content found in response"), response=result)
+            if text is not None:
+                return text, reasoning
+
+        raise TranslationResponseError(_("No text content found in response"), response=openai_response)
 
 
-    def _extract_usage_info(self, result):
-        """Extract token usage information"""
-        usage = getattr(result, 'usage', None)
+    def _extract_usage_info(self, openai_response : responses_types.Response) -> dict[str, Any]:
+        """Extract token usage information with proper type safety"""
+        usage = openai_response.usage
         if not usage:
-            return {'response_time': getattr(result, 'response_ms', 0)}
-        
+            return {'response_time': getattr(openai_response, 'response_ms', 0)}
+
         info = {
-            'prompt_tokens': getattr(usage, 'input_tokens', None) or getattr(usage, 'prompt_tokens', None),
-            'output_tokens': getattr(usage, 'output_tokens', None) or getattr(usage, 'completion_tokens', None),
-            'response_time': getattr(result, 'response_ms', 0)
+            'prompt_tokens': usage.input_tokens,
+            'output_tokens': usage.output_tokens,
+            'total_tokens': usage.total_tokens,
+            'response_time': getattr(openai_response, 'response_ms', 0)
         }
-        
-        # Calculate total if not provided
-        if info['prompt_tokens'] and info['output_tokens']:
-            info['total_tokens'] = info['prompt_tokens'] + info['output_tokens']
-        
-        # Add reasoning-specific tokens
-        details = getattr(usage, 'output_tokens_details', None) or getattr(usage, 'completion_tokens_details', None)
-        if details:
-            reasoning_tokens = getattr(details, 'reasoning_tokens', None)
-            accepted_tokens = getattr(details, 'accepted_prediction_tokens', None)
-            rejected_tokens = getattr(details, 'rejected_prediction_tokens', None)
-            
-            if reasoning_tokens is not None:
-                info['reasoning_tokens'] = reasoning_tokens
-            if accepted_tokens is not None:
-                info['accepted_prediction_tokens'] = accepted_tokens
-            if rejected_tokens is not None:
-                info['rejected_prediction_tokens'] = rejected_tokens
-        
+
+        # Add reasoning-specific tokens from output details
+        if hasattr(usage, 'output_tokens_details') and usage.output_tokens_details:
+            details = usage.output_tokens_details
+            if hasattr(details, 'reasoning_tokens'):
+                info['reasoning_tokens'] = details.reasoning_tokens
+
+        # Handle legacy completion token details for backward compatibility
+        legacy_details = getattr(usage, 'completion_tokens_details', None)
+        if isinstance(legacy_details, CompletionTokensDetails):
+            if legacy_details.reasoning_tokens is not None:
+                info['reasoning_tokens'] = legacy_details.reasoning_tokens
+            if legacy_details.accepted_prediction_tokens is not None:
+                info['accepted_prediction_tokens'] = legacy_details.accepted_prediction_tokens
+            if legacy_details.rejected_prediction_tokens is not None:
+                info['rejected_prediction_tokens'] = legacy_details.rejected_prediction_tokens
+
         return {k: v for k, v in info.items() if v is not None}
 
     def _normalize_finish_reason(self, result):
@@ -113,35 +147,18 @@ class OpenAIReasoningClient(OpenAIClient):
         finish = getattr(result, 'stop_reason', None) or getattr(result, 'finish_reason', None)
         return 'length' if finish == 'max_output_tokens' else finish
 
-    def _get_client_response(self, request: TranslationRequest):
-        """
-        Handle both streaming and non-streaming API calls
-        """
-        if not request.is_streaming:
-            # Non-streaming: simple call and return
-            assert self.client is not None
-            assert self.model is not None
-            return self.client.responses.create(
-                model=self.model,
-                input=request.prompt.content,
-                instructions=request.prompt.system_prompt,
-                reasoning={"effort": self.reasoning_effort}
-            )
-        else:
-            # Streaming: complex event loop with delta accumulation
-            return self._handle_streaming_response(request)
-
-    def _handle_streaming_response(self, request: TranslationRequest):
+    def _handle_streaming_response(self, request: TranslationRequest) -> responses_types.Response|None:
         """
         Handle streaming response with delta accumulation and partial updates
         """
         assert self.client is not None
         assert self.model is not None
+
         stream = self.client.responses.create(
             model=self.model,
-            input=request.prompt.content,
+            input=request.prompt.content, # type: ignore[arg-type]
             instructions=request.prompt.system_prompt,
-            reasoning={"effort": self.reasoning_effort}, #type: ignore
+            reasoning={"effort": self.reasoning_effort}, #type: ignore[arg-type]
             stream=True
         )
 
@@ -150,27 +167,21 @@ class OpenAIReasoningClient(OpenAIClient):
                 if self.aborted:
                     break
 
-                event_type = getattr(event, 'type', None)
+                # Handle relevant streaming events
+                if isinstance(event, ResponseTextDeltaEvent):
+                    request.ProcessStreamingDelta(event.delta)
 
-                # Handle delta events for streaming updates
-                if event_type == 'response.output_text.delta':
-                    delta_content = getattr(event, 'delta', None)
-                    if delta_content:
-                        request.ProcessStreamingDelta(delta_content)
-
-                # Handle completion - return the actual complete response
-                elif event_type == 'response.completed':
+                elif isinstance(event, ResponseCompletedEvent):
                     return event.response
 
-                # Handle failures
-                elif event_type in ('response.failed', 'response.incomplete'):
+                elif isinstance(event, (ResponseFailedEvent, ResponseIncompleteEvent)):
                     return event.response
 
         except Exception as e:
             logging.warning(f"Error during streaming: {e}")
 
         # If we get here without a completion event, something went wrong
-        return None
+        raise TranslationResponseError(_("Streaming did not complete successfully"), response=None)
 
 
 

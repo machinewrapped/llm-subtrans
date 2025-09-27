@@ -39,6 +39,7 @@ else:
                 super().__init__(self.name, SettingsType({
                     "api_key": settings.get_str('api_key') or os.getenv('CLAUDE_API_KEY'),
                     "model": settings.get_str('model') or os.getenv('CLAUDE_MODEL', self.default_model),
+                    'stream_responses': settings.get_bool('stream_responses', os.getenv('CLAUDE_STREAM_RESPONSES') == "True"),
                     "thinking": settings.get_bool('thinking', False),
                     "max_tokens": settings.get_int('max_tokens') or env_int('CLAUDE_MAX_TOKENS', 4096),
                     "max_thinking_tokens": settings.get_int('max_thinking_tokens') or env_int('CLAUDE_MAX_THINKING_TOKENS', 1024),
@@ -72,6 +73,7 @@ else:
                 client_settings.update(settings)
                 client_settings.update({
                     'model': self._get_model_id(self.selected_model) if self.selected_model else None,
+                    'supports_streaming': True,
                     'supports_conversation': True,
                     'supports_system_messages': False,
                     'supports_system_prompt': True
@@ -108,6 +110,7 @@ else:
                 if self.available_models:
                     options.update({
                         'model': (self.available_models, _("The model to use for translations")),
+                        'stream_responses': (bool, _("Stream translations in realtime as they are generated")),
                         'temperature': (float, _("The temperature to use for translations (default 0.0)")),
                         'rate_limit': (float, _("The rate limit to use for translations (default 60.0)")),
                         'max_tokens': (int, _("The maximum number of tokens to use for translations")),

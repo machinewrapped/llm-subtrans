@@ -12,6 +12,7 @@ from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
+from PySubtrans.SubtitleValidator import SubtitleValidator
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationParser import TranslationParser
@@ -86,6 +87,7 @@ class SubtitleTranslator:
             raise ProviderError(_("Unable to create translation client"), translation_provider)
 
         self.postprocessor = SubtitleProcessor(settings) if settings.get('postprocess_translation') else None
+        self.validator = SubtitleValidator(settings)
 
     def StopTranslating(self):
         self.aborted = True
@@ -162,6 +164,9 @@ class SubtitleTranslator:
                     self.TranslateBatch(batch, line_numbers, context)
 
                 except TranslationImpossibleError as e:
+                    # If batch has any translated lines from streaming, validate them before re-raising
+                    if batch.any_translated:
+                        self.validator.ValidateBatch(batch)
                     raise
 
                 except TranslationError as e:
@@ -442,17 +447,21 @@ class SubtitleTranslator:
 
         # Apply the translation to the subtitles
         parser = self.client.GetParser(self.task_type)
-        parser.ProcessTranslation(translation)
+        try:
+            parser.ProcessTranslation(translation)
 
-        # Try to match the translations with the original lines
-        translated, _ = parser.MatchTranslations(batch.originals)
+            # Try to match the translations with the original lines
+            translated, _ = parser.MatchTranslations(batch.originals)
 
-        # Assign the translated lines to the batch
-        if line_numbers:
-            translated = [line for line in translated if line.number in line_numbers]
+            # Assign the translated lines to the batch
+            if line_numbers:
+                translated = [line for line in translated if line.number in line_numbers]
 
-        # Merge with existing translations (MergeTranslations is already imported at top)
-        # Todo: we should use a SubtitleEditor to merge changes 
-        batch.translated = MergeTranslations(batch.translated or [], translated)
+            # Merge with existing translations (MergeTranslations is already imported at top)
+            # Todo: we should use a SubtitleEditor to merge changes 
+            batch.translated = MergeTranslations(batch.translated or [], translated)
 
-        # Note: We don't set errors for partial translations to avoid false validation failures
+            # Note: We don't set errors for partial translations to avoid false validation failures
+
+        except Exception:
+            pass

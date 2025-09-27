@@ -70,20 +70,21 @@ class AnthropicClient(TranslationClient):
         except Exception as e:
             raise TranslationImpossibleError(_("Failed to initialize Anthropic client"), error=e)
 
-        logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
+        prompt: TranslationPrompt = request.prompt
+        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
 
         temperature = temperature or self.temperature
 
-        if request.prompt.system_prompt is None:
+        if prompt.system_prompt is None:
             raise TranslationError(_("System prompt is required"))
 
-        if not request.prompt.content or not isinstance(request.prompt.content, list):
+        if not prompt.content or not isinstance(prompt.content, list):
             raise TranslationError(_("No content provided for translation"))
 
-        if not isinstance(request.prompt.content, list):
+        if not isinstance(prompt.content, list):
             raise TranslationError(_("Content must be a list of messages"))
 
-        response = self._send_messages(request.prompt.system_prompt, request.prompt.content, temperature)
+        response = self._send_messages(request, temperature)
 
         translation = Translation(response) if response else None
 
@@ -96,60 +97,81 @@ class AnthropicClient(TranslationClient):
 
         return translation
 
-    def _send_messages(self, system_prompt : str, messages : list, temperature: float) -> dict[str, Any]|None:
+    def _send_messages(self, request: TranslationRequest, temperature: float) -> dict[str, Any]|None:
         """
         Make a request to the LLM to provide a translation
         """
+        if not self.client:
+            raise TranslationImpossibleError(_("Client is not initialized"))
+
+        api_response = self._get_client_response(request, temperature)
+
+        if self.aborted or not api_response:
+            return None
+
+        # Process the response
         result = {}
+
+        if api_response.stop_reason == 'max_tokens':
+            result['finish_reason'] = "length"
+        else:
+            result['finish_reason'] = api_response.stop_reason
+
+        if api_response.usage:
+            result['prompt_tokens'] = getattr(api_response.usage, 'input_tokens')
+            result['output_tokens'] = getattr(api_response.usage, 'output_tokens')
+
+        for piece in api_response.content:
+            if piece.type == 'thinking':
+                result['reasoning'] = piece.thinking
+            elif piece.type == 'redacted_thinking':
+                result['reasoning'] = "Reasoning redacted by API"
+            elif piece.type == 'text':
+                result['text'] = piece.text
+                break
+
+        return result
+
+    def _get_client_response(self, request: TranslationRequest, temperature: float):
+        """
+        Handle both streaming and non-streaming API calls with retry logic
+        """
+        if self.model is None:
+            raise TranslationError(_("No model specified"))
 
         for retry in range(self.max_retries + 1):
             if self.aborted:
                 return None
 
-            if not self.client:
-                raise TranslationImpossibleError(_("Client is not initialized"))
-
-            if self.model is None:
-                raise TranslationError(_("No model specified"))
-            
             try:
-                api_response = self.client.messages.create(
-                    model=self.model,
-                    thinking=self.thinking,     # type: ignore
-                    messages=messages,          # type: ignore
-                    system=system_prompt,
-                    temperature=temperature if not self.allow_thinking else 1,
-                    max_tokens=self.max_tokens
-                )
+                prompt: TranslationPrompt = request.prompt
+                if prompt.system_prompt is None:
+                    raise TranslationError(_("System prompt is required"))
 
-                if self.aborted:
-                    return None
+                if request.is_streaming and self.enable_streaming:
+                    with self.client.messages.stream(
+                        model=self.model,
+                        thinking=self.thinking,     # type: ignore
+                        messages=prompt.content,          # type: ignore
+                        system=prompt.system_prompt,
+                        temperature=temperature if not self.allow_thinking else 1,
+                        max_tokens=self.max_tokens
+                    ) as stream:
+                        for text in stream.text_stream:
+                            if self.aborted:
+                                return None
+                            request.ProcessStreamingDelta(text)
 
-                if not api_response.content:
-                    raise TranslationResponseError(_("No choices returned in the response"), response=api_response)
-
-                # response['response_time'] = getattr(response, 'response_ms', 0)
-
-                if api_response.stop_reason == 'max_tokens':
-                    result['finish_reason'] = "length"
+                        return stream.get_final_message()
                 else:
-                    result['finish_reason'] = api_response.stop_reason
-
-                if api_response.usage:
-                    result['prompt_tokens'] = getattr(api_response.usage, 'input_tokens')
-                    result['output_tokens'] = getattr(api_response.usage, 'output_tokens')
-
-                for piece in api_response.content:
-                    if piece.type == 'thinking':
-                        result['reasoning'] = piece.thinking
-                    elif piece.type == 'redacted_thinking':
-                        result['reasoning'] = "Reasoning redacted by API"
-                    elif piece.type == 'text':
-                        result['text'] = piece.text
-                        break
-
-                # Return the response if the API call succeeds
-                return result
+                    return self.client.messages.create(
+                        model=self.model,
+                        thinking=self.thinking,     # type: ignore
+                        messages=prompt.content,          # type: ignore
+                        system=prompt.system_prompt,
+                        temperature=temperature if not self.allow_thinking else 1,
+                        max_tokens=self.max_tokens
+                    )
 
             except (anthropic.APITimeoutError, anthropic.RateLimitError) as e:
                 if retry < self.max_retries and not self.aborted:

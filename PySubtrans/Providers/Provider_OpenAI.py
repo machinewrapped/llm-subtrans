@@ -50,7 +50,7 @@ else:
                     'max_instruct_tokens': settings.get_int('max_instruct_tokens', int(os.getenv('MAX_INSTRUCT_TOKENS', '2048'))),
                     'use_httpx': settings.get_bool('use_httpx', os.getenv('OPENAI_USE_HTTPX', "False") == "True"),
                     'reasoning_effort': settings.get_str('reasoning_effort', os.getenv('OPENAI_REASONING_EFFORT', "low")),
-                    'enable_streaming_responses': settings.get_bool('enable_streaming_responses', os.getenv('OPENAI_ENABLE_STREAMING') == "True"),
+                    'stream_responses': settings.get_bool('stream_responses', os.getenv('OPENAI_STREAM_RESPONSES', "True") == "True"),
                 }))
 
                 self.refresh_when_changed = ['api_key', 'api_base', 'model']
@@ -107,7 +107,7 @@ else:
 
                         if self.is_reasoning_model:
                             options['reasoning_effort'] = (["minimal", "low", "medium", "high"], _("The level of reasoning effort to use for the model"))
-                            options['enable_streaming_responses'] = (bool, _("Enable streaming responses for real-time translation updates"))
+                            options['stream_responses'] = (bool, _("Stream translations in realtime as they are generated"))
                         else:
                             options['temperature'] = (float, _("Amount of random variance to add to translations. Generally speaking, none is best"))
 

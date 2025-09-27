@@ -14,7 +14,6 @@ from PySubtrans.Options import SettingsType
 from PySubtrans.SubtitleError import TranslationError, TranslationImpossibleError, TranslationResponseError
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
-from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 
 class OpenAIClient(TranslationClient):

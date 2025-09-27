@@ -54,7 +54,7 @@ This document outlines the implementation plan for adding streaming response sup
 - [x] Test: Verify fallback to non-streaming for unsupported models
 
 #### Step 2.2: Provider Settings
-- [x] Add `enable_streaming_responses` setting to `Provider_OpenAI`
+- [x] Add `stream_responses` setting to `Provider_OpenAI`
 - [x] Add GUI option for streaming responses (automatic with Provider GetOptions() method)
 - [x] Test: Verify setting can be toggled and persists
 
@@ -137,7 +137,7 @@ SubtitleTranslator.TranslateBatch()
 ### Configuration
 
 New settings in Provider_OpenAI:
-- `enable_streaming_responses` (bool): Enable streaming mode for supported models
+- `stream_responses` (bool): Enable streaming mode for supported models
 - Setting will appear in GUI options when streaming is supported
 
 ### Testing Strategy

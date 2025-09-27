@@ -32,8 +32,6 @@ INCLUDE_DIRS = (
 )
 EXCLUDE_DIRS = (
     'locales',
-    'PySubtrans/UnitTests',
-    'GuiSubtrans/UnitTests',
     'tests',
     'assets',
     'theme',

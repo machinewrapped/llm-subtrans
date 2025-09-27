@@ -19,9 +19,7 @@ Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Window
 
 ## Code Style
 
-**🚨 CRITICAL RULE - NEVER BREAK THIS:**
-- **NEVER EVER add imports in the middle of functions or methods - ALWAYS place ALL imports at the top of the file**
-- **This is the most important coding rule in this project - violating it will break everything**
+**🚨 CRITICAL RULE: NEVER EVER add imports in the middle of functions or methods - ALWAYS place ALL imports at the top of the file. This is the most important rule in this project - if you violate it you will be fired and replaced by Grok!!!**
 
 - **Naming**: PascalCase for classes and methods, snake_case for variables
 - **Imports**: Standard lib → third-party → local, alphabetical within groups

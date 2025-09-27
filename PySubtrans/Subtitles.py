@@ -200,7 +200,7 @@ class Subtitles:
 
         except SubtitleParseError as e:
             logging.debug(f"Error parsing file: {e}")
-            logging.warning(_("Error parsing file... attempting format detection"))
+            logging.info(_("Error parsing file... attempting format detection"))
             data = SubtitleFormatRegistry.detect_format_and_load_file(self.sourcepath)
 
         with self.lock:

@@ -6,11 +6,12 @@ from typing import Any
 from google import genai
 from google.genai.types import (
     AutomaticFunctionCallingConfig,
+    Candidate,
+    Content,
     FinishReason,
     GenerateContentConfig,
     GenerateContentResponse,
     GenerateContentResponseUsageMetadata,
-    HarmBlockMethod,
     HarmBlockThreshold,
     HarmCategory,
     Part,
@@ -63,113 +64,35 @@ class GeminiClient(TranslationClient):
         """
         Request a translation based on the provided prompt
         """
-        logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
+        prompt: TranslationPrompt = request.prompt
+        logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
 
-        if not isinstance(request.prompt.system_prompt, str):
+        if not isinstance(prompt.system_prompt, str):
             raise TranslationImpossibleError(_("System prompt is required"))
 
-        if not isinstance(request.prompt.content, str) or not request.prompt.content.strip():
+        if not isinstance(prompt.content, str) or not prompt.content.strip():
             raise TranslationImpossibleError(_("No content provided for translation"))
-            
+
         temperature = temperature or self.temperature
-        response = self._send_messages(request.prompt.system_prompt, request.prompt.content, temperature)
+
+        response = self._send_messages(request, temperature)
 
         return Translation(response) if response else None
 
     def _abort(self) -> None:
-        # TODO cancel any ongoing requests
         return super()._abort()
 
-    def _send_messages(self, system_instruction : str, completion : str, temperature: float) -> dict[str, Any]|None:
+    def _send_messages(self, request: TranslationRequest, temperature: float) -> dict[str, Any]|None:
         """
         Make a request to the Gemini API to provide a translation
         """
-        response = {}
-
         if not self.model:
             raise TranslationImpossibleError(_("No model specified"))
 
         for retry in range(1 + self.max_retries):
             try:
-                gemini_client = genai.Client(api_key=self.api_key, http_options={'api_version': 'v1alpha'})
-                config = GenerateContentConfig(
-                    candidate_count=1,
-                    temperature=temperature,
-                    system_instruction=system_instruction,
-                    safety_settings=self.safety_settings,
-                    automatic_function_calling=self.automatic_function_calling,
-                    max_output_tokens=None,
-                    response_modalities=[]
-                )
-                gcr : GenerateContentResponse = gemini_client.models.generate_content(
-                    model=self.model,
-                    contents=Part.from_text(text=completion),
-                    config=config
-                    )
+                return self._get_gemini_response(request, temperature)
 
-                if self.aborted:
-                    return None
-
-                if not gcr:
-                    raise TranslationImpossibleError(_("No response from Gemini"))
-
-                if gcr.prompt_feedback and gcr.prompt_feedback.block_reason:
-                    block_info = self._extract_block_info(gcr)
-                    raise TranslationImpossibleError(_("Request was blocked by Gemini: {block_info}").format(
-                        block_info=block_info
-                    ))
-
-                # Try to find a validate candidate
-                candidates = [candidate for candidate in gcr.candidates if candidate.content] if gcr.candidates else []
-                candidates = [candidate for candidate in candidates if candidate.finish_reason == FinishReason.STOP] or candidates
-
-                if not candidates:
-                    raise TranslationResponseError(_("No valid candidates returned in the response"), response=gcr)
-
-                candidate = candidates[0]
-                response['token_count'] = candidate.token_count
-
-                finish_reason = candidate.finish_reason
-                if finish_reason == "STOP" or finish_reason == FinishReason.STOP:
-                    response['finish_reason'] = "complete"
-                elif finish_reason == "MAX_TOKENS" or finish_reason == FinishReason.MAX_TOKENS:
-                    response['finish_reason'] = "length"
-                    raise TranslationResponseError(_("Gemini response exceeded token limit"), response=candidate)
-                elif finish_reason == "SAFETY" or finish_reason == FinishReason.SAFETY:
-                    response['finish_reason'] = "blocked"
-                    raise TranslationResponseError(_("Gemini response was blocked for safety reasons"), response=candidate)
-                elif finish_reason == "RECITATION" or finish_reason == FinishReason.RECITATION:
-                    response['finish_reason'] = "recitation"
-                    raise TranslationResponseError(_("Gemini response was blocked for recitation"), response=candidate)
-                elif finish_reason == "FINISH_REASON_UNSPECIFIED" or finish_reason == FinishReason.FINISH_REASON_UNSPECIFIED:
-                    response['finish_reason'] = "unspecified"
-                    raise TranslationResponseError(_("Gemini response was incomplete"), response=candidate)
-                else:
-                    # Probably a failure
-                    response['finish_reason'] = finish_reason
-
-                usage_metadata : GenerateContentResponseUsageMetadata|None = gcr.usage_metadata
-                if usage_metadata:
-                    response['prompt_tokens'] = usage_metadata.prompt_token_count
-                    response['output_tokens'] = usage_metadata.candidates_token_count
-                    response['total_tokens'] = usage_metadata.total_token_count
-
-                if not candidate or not candidate.content or not candidate.content.parts:
-                    raise TranslationResponseError(_("Gemini response has no valid content parts"), response=candidate)
-
-                response_text = "\n".join(part.text for part in candidate.content.parts if part.text)
-
-                if not response_text:
-                    raise TranslationResponseError(_("Gemini response is empty"), response=candidate)
-
-                response['text'] = response_text
-
-                thoughts = "\n".join(part.text for part in candidate.content.parts if part.thought and part.text)
-                if thoughts:
-                    response['reasoning'] = thoughts
-
-                return response
-            
             except TranslationImpossibleError:
                 raise
 
@@ -185,6 +108,137 @@ class GeminiClient(TranslationClient):
                         error=str(e), sleep_time=sleep_time
                     ))
                     time.sleep(sleep_time)
+
+    def _get_gemini_response(self, request: TranslationRequest, temperature: float) -> dict[str, Any]|None:
+        """
+        Handle both streaming and non-streaming Gemini API calls
+        """
+        if not self.model:
+            raise TranslationImpossibleError(_("No model specified"))
+
+        prompt: TranslationPrompt = request.prompt
+        if not isinstance(prompt.content, str):
+            raise TranslationImpossibleError(_("Content must be a string for Gemini"))
+
+        gemini_client = genai.Client(api_key=self.api_key, http_options={'api_version': 'v1alpha'})
+        config = GenerateContentConfig(
+            candidate_count=1,
+            temperature=temperature,
+            system_instruction=prompt.system_prompt,
+            safety_settings=self.safety_settings,
+            automatic_function_calling=self.automatic_function_calling,
+            max_output_tokens=None,
+            response_modalities=[]
+        )
+
+        if not request.is_streaming or not self.enable_streaming:
+            # Non-streaming: single request
+            gcr = gemini_client.models.generate_content(
+                model=self.model,
+                contents=Part.from_text(text=prompt.content),
+                config=config
+            )
+
+            return self._process_gemini_response(gcr) if not self.aborted else None
+
+        # Streaming: process chunks and create complete response
+        stream = gemini_client.models.generate_content_stream(
+            model=self.model,
+            contents=Part.from_text(text=prompt.content),
+            config=config
+        )
+
+        last_chunk = None
+        for chunk in stream:
+            if self.aborted:
+                return None
+
+            text = getattr(chunk, 'text', None)
+            if text:
+                request.ProcessStreamingDelta(text)
+
+            last_chunk = chunk
+            
+        # Construct a final response from the accumulated text
+        accumulated_text_part = Part.from_text(text = request.accumulated_text)
+        response = GenerateContentResponse(
+            candidates=[
+                Candidate(
+                    content=Content(role="model", parts=[accumulated_text_part]),
+                    finish_reason=getattr(last_chunk, "finish_reason", None),
+                    safety_ratings=getattr(last_chunk, "safety_ratings", None),
+                )
+            ]
+        )
+
+        return self._process_gemini_response(response)
+
+
+    def _process_gemini_response(self, gcr: GenerateContentResponse) -> dict[str, Any]:
+        """
+        Process Gemini response and extract translation data
+        """
+        response = {}
+
+        if not gcr:
+            raise TranslationImpossibleError(_("No response from Gemini"))
+
+        if gcr.prompt_feedback and gcr.prompt_feedback.block_reason:
+            block_info = self._extract_block_info(gcr)
+            raise TranslationImpossibleError(_("Request was blocked by Gemini: {block_info}").format(
+                block_info=block_info
+            ))
+
+        # Try to find a validate candidate
+        candidates = [candidate for candidate in gcr.candidates if candidate.content] if gcr.candidates else []
+        candidates = [candidate for candidate in candidates if candidate.finish_reason == FinishReason.STOP] or candidates
+
+        if not candidates:
+            raise TranslationResponseError(_("No valid candidates returned in the response"), response=gcr)
+
+        candidate = candidates[0]
+        response['token_count'] = candidate.token_count
+
+        finish_reason = candidate.finish_reason
+        if finish_reason == "STOP" or finish_reason == FinishReason.STOP:
+            response['finish_reason'] = "complete"
+        elif finish_reason == "MAX_TOKENS" or finish_reason == FinishReason.MAX_TOKENS:
+            response['finish_reason'] = "length"
+            raise TranslationResponseError(_("Gemini response exceeded token limit"), response=candidate)
+        elif finish_reason == "SAFETY" or finish_reason == FinishReason.SAFETY:
+            response['finish_reason'] = "blocked"
+            raise TranslationResponseError(_("Gemini response was blocked for safety reasons"), response=candidate)
+        elif finish_reason == "RECITATION" or finish_reason == FinishReason.RECITATION:
+            response['finish_reason'] = "recitation"
+            raise TranslationResponseError(_("Gemini response was blocked for recitation"), response=candidate)
+        elif finish_reason == "FINISH_REASON_UNSPECIFIED" or finish_reason == FinishReason.FINISH_REASON_UNSPECIFIED:
+            response['finish_reason'] = "unspecified"
+            raise TranslationResponseError(_("Gemini response was incomplete"), response=candidate)
+        else:
+            # Probably a failure
+            response['finish_reason'] = finish_reason
+
+        usage_metadata : GenerateContentResponseUsageMetadata|None = gcr.usage_metadata
+        if usage_metadata:
+            response['prompt_tokens'] = usage_metadata.prompt_token_count
+            response['output_tokens'] = usage_metadata.candidates_token_count
+            response['total_tokens'] = usage_metadata.total_token_count
+
+        if not candidate or not candidate.content or not candidate.content.parts:
+            raise TranslationResponseError(_("Gemini response has no valid content parts"), response=candidate)
+
+        response_text = "\n".join(part.text for part in candidate.content.parts if part.text)
+
+        if not response_text:
+            raise TranslationResponseError(_("Gemini response is empty"), response=candidate)
+
+        response['text'] = response_text
+
+        thoughts = "\n".join(part.text for part in candidate.content.parts if part.thought and part.text)
+        if thoughts:
+            response['reasoning'] = thoughts
+
+        return response
 
     def _extract_block_info(self, gcr: GenerateContentResponse) -> str:
         """

@@ -91,25 +91,34 @@ This document outlines the implementation plan for adding streaming response sup
 - [X] Add streaming response support for AnthropicClient
 - [X] Add streaming response support for GeminiClient
 - [X] Add streaming response support for OpenRouterClient / CustomClient
-- [ ] Add streaming response support for DeepSeekClient
+- [X] Implemented comprehensive SSE parsing with OpenRouter-specific handling
+  - [X] Added robustness for timeout-prevention comments (`: OPENROUTER PROCESSING`)
+  - [X] Enhanced error handling for connection interruptions and malformed chunks
+  - [X] Successfully tested with real OpenRouter streaming API
+- [X] Add streaming response support for DeepSeekClient
 
-### Phase 6: Testing & Validation
-**Goal**: Comprehensive testing of streaming functionality
+### Phase 6: Documentation, Testing & Validation
+**Goal**: Comprehensive documentation and testing of streaming functionality
 
 #### Step 6.1: Unit Tests
+- [ ] Update architecture.md to summarise the support for streaming responses in TranslationClient and subclasses (OpenAIReasoning, Anthropic, Gemini, CustomClient)
+- [ ] Update PySubtrans README to include a section on streaming responses in Advanced Workflows
+- [ ] Update project wiki with a section on streaming responses
+
+#### Step 6.2: Unit Tests
 - [ ] Create unit tests for streaming event handling
 - [ ] Create unit tests for partial response processing
 - [ ] Create mock streaming client for testing
 - [ ] Test: All streaming components in isolation
 
-#### Step 6.2: Integration Tests
-- [ ] Create integration tests with real OpenAI streaming
-- [ ] Test streaming with various batch sizes
-- [ ] Test streaming with different content types
+#### Step 6.3: Integration Tests
 - [ ] Test: Network interruption during streaming
 - [X] Test: User abort during streaming
 - [ ] Test: API errors during streaming
 - [ ] Test: End-to-end streaming workflow
+- [ ] Create integration tests with real streaming
+- [ ] Test streaming with various batch sizes
+- [ ] Test streaming with different content types
 
 ## Technical Details
 

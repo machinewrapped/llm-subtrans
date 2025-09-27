@@ -414,9 +414,16 @@ class SubtitleProject:
 
         save_translation : bool = self.write_translation and not translator.preview
 
+        log_error = lambda msg: logging.error(msg)
+        log_warning = lambda msg: logging.warning(msg)
+        log_info = lambda msg: logging.info(msg)
+
         translator.events.preprocessed.connect(self._on_preprocessed)
         translator.events.batch_translated.connect(self._on_batch_translated)
         translator.events.scene_translated.connect(self._on_scene_translated)
+        translator.events.error.connect(log_error)
+        translator.events.warning.connect(log_warning)
+        translator.events.info.connect(log_info)
 
         try:
             translator.TranslateSubtitles(self.subtitles)
@@ -439,6 +446,10 @@ class SubtitleProject:
             translator.events.preprocessed.disconnect(self._on_preprocessed)
             translator.events.batch_translated.disconnect(self._on_batch_translated)
             translator.events.scene_translated.disconnect(self._on_scene_translated)
+            translator.events.error.disconnect(log_error)
+            translator.events.warning.disconnect(log_warning)
+            translator.events.info.disconnect(log_info)
+
 
     def TranslateScene(self, translator : SubtitleTranslator, scene_number : int, batch_numbers : list[int]|None = None, line_numbers : list[int]|None = None) -> SubtitleScene|None:
         """

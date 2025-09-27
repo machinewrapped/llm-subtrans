@@ -39,7 +39,7 @@ else:
                 super().__init__(self.name, SettingsType({
                     "api_key": settings.get_str('api_key') or os.getenv('CLAUDE_API_KEY'),
                     "model": settings.get_str('model') or os.getenv('CLAUDE_MODEL', self.default_model),
-                    'stream_responses': settings.get_bool('stream_responses', os.getenv('CLAUDE_STREAM_RESPONSES') == "True"),
+                    'stream_responses': settings.get_bool('stream_responses', os.getenv('CLAUDE_STREAM_RESPONSES', "True") == "True"),
                     "thinking": settings.get_bool('thinking', False),
                     "max_tokens": settings.get_int('max_tokens') or env_int('CLAUDE_MAX_TOKENS', 4096),
                     "max_thinking_tokens": settings.get_int('max_thinking_tokens') or env_int('CLAUDE_MAX_THINKING_TOKENS', 1024),

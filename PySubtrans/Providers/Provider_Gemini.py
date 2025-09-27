@@ -40,6 +40,7 @@ else:
                 super().__init__(self.name, SettingsType({
                     "api_key": settings.get_str('api_key') or os.getenv('GEMINI_API_KEY'),
                     "model": settings.get_str('model') or os.getenv('GEMINI_MODEL'),
+                    'stream_responses': settings.get_bool('stream_responses', os.getenv('GEMINI_STREAM_RESPONSES', "True") == "True"),
                     'temperature': settings.get_float('temperature', env_float('GEMINI_TEMPERATURE', 0.0)),
                     'rate_limit': settings.get_float('rate_limit', env_float('GEMINI_RATE_LIMIT', 60.0))
                 }))
@@ -56,6 +57,7 @@ else:
                 client_settings.update(settings)
                 client_settings.update({
                     'model': self._get_true_name(self.selected_model),
+                    'supports_streaming': True,
                     'supports_conversation': False,         # Actually it does support conversation
                     'supports_system_messages': False,       # This is what it doesn't support
                     'supports_system_prompt': True
@@ -73,6 +75,7 @@ else:
                         if models:
                             options.update({
                                 'model': (models, "AI model to use as the translator" if models else "Unable to retrieve models"),
+                                'stream_responses': (bool, _("Stream translations in realtime as they are generated")),
                                 'temperature': (float, _("Amount of random variance to add to translations. Generally speaking, none is best")),
                                 'rate_limit': (float, _("Maximum API requests per minute."))
                             })

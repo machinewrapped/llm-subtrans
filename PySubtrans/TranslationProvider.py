@@ -97,6 +97,14 @@ class TranslationProvider:
             if k in self.settings:
                 self.settings[k] = v
 
+    def GetCombinedSettings(self, overrides : SettingsType) -> SettingsType:
+        """
+        Merge saved settings with default settings to ensure all keys are present
+        """
+        combined_settings = SettingsType(self.settings.copy())
+        combined_settings.update(overrides)
+        return combined_settings
+
     def _allow_multithreaded_translation(self) -> bool:
         """
         Returns True if the provider supports multithreaded translation

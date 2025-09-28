@@ -11,6 +11,13 @@ from GuiSubtrans.ViewModel.ViewModelItem import ViewModelItem
 from GuiSubtrans.Widgets.Widgets import LineItemView
 
 class SubtitleListModel(QAbstractProxyModel):
+    """
+    A proxy model that filters subtitle lines to only show selected scenes or batches from the ProjectViewModel.
+
+    The model maintains a list of visible lines based on the selected batches in the ProjectSelection.
+
+    The model maps indices from the proxy model to the source model and vice versa.
+    """
     def __init__(self, viewmodel : ProjectViewModel, parent : QWidget|None = None):
         super().__init__(parent)
         self.viewmodel : ProjectViewModel = viewmodel
@@ -193,6 +200,9 @@ class SubtitleListModel(QAbstractProxyModel):
             self._update_visible_batches()
 
     def _update_visible_batches(self):
+        """
+        Refresh the visible subtitles based on the currently selected batches
+        """
         visible_batches = self._get_valid_batches(self.selected_batch_numbers)
         if visible_batches:
             self.ShowSelectedBatches(visible_batches)

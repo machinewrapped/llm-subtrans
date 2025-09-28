@@ -347,12 +347,12 @@ class ProjectViewModel(QStandardItemModel):
         scene_item = self.model.get(scene_number)
         if not scene_item:
             logging.error(f"Model update for unknown batch, scene {scene_number} batch {batch_number}")
-            return False
+            return
             
         batch_item = scene_item.batches.get(batch_number)
         if not batch_item:
             logging.error(f"Model update for unknown batch, scene {scene_number} batch {batch_number}")
-            return False
+            return
 
         if batch_update.get('lines'):
             self.UpdateLines(scene_number, batch_number, batch_update['lines'])

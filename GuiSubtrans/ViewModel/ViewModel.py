@@ -148,7 +148,7 @@ class ProjectViewModel(QStandardItemModel):
 
                     if not isinstance(line_item_qt, LineItem):
                         logging.error(f"Expected LineItem at scene {scene_item.number} batch {batch_item.number} row {line_row}, got {type(line_item_qt).__name__}")
-                        return None
+                        continue
 
                     line_item: LineItem = line_item_qt
                     if line_item.number == line_number:

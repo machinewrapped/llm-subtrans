@@ -174,12 +174,47 @@ class SubtitleListModel(QAbstractProxyModel):
         return None
 
     def _update_visible_batches(self):
-        if self.selected_batch_numbers:
-            self.ShowSelectedBatches(self.selected_batch_numbers)
+        visible_batches = self._get_visible_batches(self.selected_batch_numbers)
+        if visible_batches:
+            self.ShowSelectedBatches(visible_batches)
         else:
             self.ShowSelection(ProjectSelection())
 
         self.layoutChanged.emit()
+
+    def _get_visible_batches(self, selected_batch_numbers):
+        """
+        Get batches to display, falling back intelligently if selections don't exist
+        """
+        if not self.selected_batch_numbers:
+            return []
+
+        available_batches = set(self.viewmodel.GetBatchNumbers())
+
+        # No batches available at all... this doesn't bode well
+        if not available_batches:
+            return []
+
+        # First try to show the originally selected batches
+        existing_selections = [batch for batch in selected_batch_numbers if batch in available_batches]
+        if existing_selections:
+            return existing_selections
+
+        # None of the selected batches exist anymore, find a smart fallback
+        max_scene = max(scene_num for scene_num, _ in self.selected_batch_numbers)
+
+        # Try to select the next scene (where selected content most likely moved)
+        next_scene_batches = [(s, b) for s, b in available_batches if s == max_scene + 1]
+        if next_scene_batches:
+            return next_scene_batches
+
+        # Fallback: all batches from the current scene
+        current_scene_batches = [(s, b) for s, b in available_batches if s == max_scene]
+        if current_scene_batches:
+            return current_scene_batches
+
+        # Last resort: show all available batches
+        return available_batches
 
     def _on_data_changed(self, top_left, bottom_right, roles=None):
         """
@@ -200,8 +235,5 @@ class SubtitleListModel(QAbstractProxyModel):
             # When a batch changes (e.g., lines added/removed), refresh the visible list
             # This handles cases like line deletion where the visible list becomes stale
             self._update_visible_batches()
-
-    def _reset_visible_batches(self):
-        self.ShowSelection(ProjectSelection())
 
 

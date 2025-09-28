@@ -29,6 +29,7 @@ class ProjectViewModel(QStandardItemModel):
         self.update_lock = QRecursiveMutex()
         self.debug_view : bool = os.environ.get("DEBUG_MODE") == "1"
         self.task_type : str = DEFAULT_TASK_TYPE
+        self._needs_layout_changed : bool = False
 
     def getRootItem(self) -> QStandardItem:
         return self.invisibleRootItem()
@@ -212,6 +213,11 @@ class ProjectViewModel(QStandardItemModel):
 
                 batch_item.lines = { item.number: item for item in line_items }
 
+        # Emit layoutChanged if flagged during updates
+        if self._needs_layout_changed:
+            self._needs_layout_changed = False
+            self.layoutChanged.emit()
+
     #############################################################################
 
     def AddScene(self, scene : SubtitleScene):
@@ -244,6 +250,8 @@ class ProjectViewModel(QStandardItemModel):
         self.model = {item.number: item for item in scene_items}
 
         self.endInsertRows()
+
+        self._needs_layout_changed = True
 
     def ReplaceScene(self, scene : SubtitleScene):
         logging.debug(f"Replacing scene {scene.number}")

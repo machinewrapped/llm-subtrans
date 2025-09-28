@@ -101,16 +101,39 @@ class OpenAIReasoningClient(OpenAIClient):
         # Standard response structure: response.output[0].content[0].text
         output = getattr(openai_response, 'output', None)
         if output and len(output) > 0:
-            text = None
-            reasoning = None
+            text_parts : list[str] = []
+            reasoning_parts : list[str] = []
+
             for output_item in openai_response.output:
                 content = getattr(output_item, 'content', None)
-                if content and len(content) > 0:
-                    content_item = content[0]
-                    text = getattr(content_item, 'text', None) or text
-                    reasoning = getattr(content_item, 'reasoning', None) or reasoning
+                if not content:
+                    continue
 
-            if text is not None:
+                for content_item in content:
+                    text_value = getattr(content_item, 'text', None)
+                    if text_value:
+                        text_parts.append(text_value)
+
+                    reasoning_value = getattr(content_item, 'reasoning', None)
+                    if not reasoning_value:
+                        continue
+
+                    if isinstance(reasoning_value, list):
+                        for reasoning_part in reasoning_value:
+                            if isinstance(reasoning_part, str):
+                                reasoning_parts.append(reasoning_part)
+                            elif hasattr(reasoning_part, 'text') and getattr(reasoning_part, 'text'):
+                                reasoning_parts.append(getattr(reasoning_part, 'text'))
+                            else:
+                                reasoning_parts.append(str(reasoning_part))
+                    elif isinstance(reasoning_value, str):
+                        reasoning_parts.append(reasoning_value)
+                    else:
+                        reasoning_parts.append(str(reasoning_value))
+
+            if text_parts:
+                text = linesep.join(text_parts)
+                reasoning = linesep.join(reasoning_parts) if reasoning_parts else None
                 return text, reasoning
 
         raise TranslationResponseError(_("No text content found in response"), response=openai_response)

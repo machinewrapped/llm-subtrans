@@ -178,6 +178,8 @@ class GeminiClient(TranslationClient):
                             if part.thought:
                                 accumulated_thoughts += part.text
                             else:
+                                # Gemini may emit markdown emphasis markers (**) that break downstream parsers.
+                                # Log occurrences so we can diagnose problematic responses.
                                 if part.text.find("**") >= 0:
                                     logging.error("Gemini returned content with ** in the text content")
 

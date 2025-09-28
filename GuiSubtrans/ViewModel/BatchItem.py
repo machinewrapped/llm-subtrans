@@ -180,7 +180,6 @@ class BatchItem(ViewModelItem):
 
         self._invalidate_first_and_last()
         self.setData(self.batch_model, Qt.ItemDataRole.UserRole)
-        self.emitDataChanged()
 
     def AddTranslation(self, line_number : int, translation_text : str|None):
         """

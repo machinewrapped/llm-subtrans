@@ -59,7 +59,7 @@ class SubtitleListModel(QAbstractProxyModel):
                 if (scene_item.number, batch_item.number) in batch_numbers:
                     lines = batch_item.lines
                     visible_lines = [ (scene_item.number, batch_item.number, line) for line in lines.keys() ]
-                    visible.extend(visible_lines)
+                    visible.extend(sorted(visible_lines))
 
         self.visible = visible
         self.visible_row_map = { item[2] : row for row, item in enumerate(self.visible) }

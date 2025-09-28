@@ -173,8 +173,27 @@ class SubtitleListModel(QAbstractProxyModel):
 
         return None
 
+    def _on_data_changed(self, top_left, bottom_right, roles=None):
+        """
+        Forward dataChanged signals from ProjectViewModel to SubtitleView
+        Map source model indices to proxy model indices using visible_row_map
+        """
+        # Get the item that changed from the source model
+        source_item = self.viewmodel.itemFromIndex(top_left)
+
+        if isinstance(source_item, LineItem):
+            # Emit dataChanged for the corresponding index in the proxy model
+            proxy_row = self.visible_row_map.get(source_item.number)
+            if proxy_row is not None:
+                proxy_index = self.index(proxy_row, 0)
+                self.dataChanged.emit(proxy_index, proxy_index, roles or [])
+
+        elif isinstance(source_item, BatchItem):
+            # When a batch is updated, refresh the visible lines list to force a remap of the indices
+            self._update_visible_batches()
+
     def _update_visible_batches(self):
-        visible_batches = self._get_visible_batches(self.selected_batch_numbers)
+        visible_batches = self._get_valid_batches(self.selected_batch_numbers)
         if visible_batches:
             self.ShowSelectedBatches(visible_batches)
         else:
@@ -182,11 +201,11 @@ class SubtitleListModel(QAbstractProxyModel):
 
         self.layoutChanged.emit()
 
-    def _get_visible_batches(self, selected_batch_numbers):
+    def _get_valid_batches(self, selected_batch_numbers : list[tuple[int, int]]) -> list[tuple[int, int]]:
         """
         Get batches to display, falling back intelligently if selections don't exist
         """
-        if not self.selected_batch_numbers:
+        if not selected_batch_numbers:
             return []
 
         available_batches = set(self.viewmodel.GetBatchNumbers())
@@ -214,26 +233,5 @@ class SubtitleListModel(QAbstractProxyModel):
             return current_scene_batches
 
         # Last resort: show all available batches
-        return available_batches
-
-    def _on_data_changed(self, top_left, bottom_right, roles=None):
-        """
-        Forward dataChanged signals from ProjectViewModel to SubtitleView
-        Map source model indices to proxy model indices using visible_row_map
-        """
-        # Get the item that changed from the source model
-        source_item = self.viewmodel.itemFromIndex(top_left)
-
-        if isinstance(source_item, LineItem):
-            # Find this line's row in our proxy model using the visible_row_map
-            proxy_row = self.visible_row_map.get(source_item.number)
-            if proxy_row is not None:
-                # Emit dataChanged for this specific row in the proxy model
-                proxy_index = self.index(proxy_row, 0)
-                self.dataChanged.emit(proxy_index, proxy_index, roles or [])
-        elif isinstance(source_item, BatchItem):
-            # When a batch changes (e.g., lines added/removed), refresh the visible list
-            # This handles cases like line deletion where the visible list becomes stale
-            self._update_visible_batches()
-
+        return list(available_batches)
 

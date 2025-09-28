@@ -230,7 +230,7 @@ class SubtitleListModel(QAbstractProxyModel):
             return existing_selections
 
         # None of the selected batches exist anymore, find a smart fallback
-        max_scene = max(scene_num for scene_num, _ in self.selected_batch_numbers)
+        max_scene = max(scene_num for scene_num, _ in selected_batch_numbers)
 
         # Try to select the next scene (where selected content most likely moved)
         next_scene_batches = [(s, b) for s, b in available_batches if s == max_scene + 1]

@@ -20,6 +20,7 @@ class SubtitleListModel(QAbstractProxyModel):
     """
     def __init__(self, viewmodel : ProjectViewModel, parent : QWidget|None = None):
         super().__init__(parent)
+
         self.viewmodel : ProjectViewModel = viewmodel
         self.selected_batch_numbers = []
         self.visible = []
@@ -27,12 +28,18 @@ class SubtitleListModel(QAbstractProxyModel):
         self.size_map : dict = {}
 
         # Connect signals to update mapping when source model changes
+        # TODO: what other signals should we connect to?
         if self.viewmodel:
             self.setSourceModel(self.viewmodel)
             self.viewmodel.layoutChanged.connect(self._update_visible_batches)
             self.viewmodel.dataChanged.connect(self._on_data_changed)
 
     def ShowSelection(self, selection : ProjectSelection):
+        """
+        Update the model to show lines from the selected batches or scenes.
+
+        If no selection is made, show all lines.
+        """
         if selection.selected_batches:
             batch_numbers = [(batch.scene, batch.number) for batch in selection.selected_batches]
         elif selection.selected_scenes:
@@ -42,7 +49,12 @@ class SubtitleListModel(QAbstractProxyModel):
 
         self.ShowSelectedBatches(batch_numbers)
 
-    def ShowSelectedBatches(self, batch_numbers):
+    def ShowSelectedBatches(self, batch_numbers : list[tuple[int, int]]):
+        """
+        Filter the model to only show lines from the selected batches.
+
+        Builds a list of visible lines and a mapping from line numbers to model rows for efficient index mapping.
+        """
         self.selected_batch_numbers = batch_numbers
         viewmodel = self.viewmodel
         visible = []

@@ -76,6 +76,7 @@ class ProjectViewModel(QStandardItemModel):
             self.Remap()
 
             # Emit layoutChanged after remap if required by updates
+            # TODO: should we wait until all pending updates are processed?
             if self._layout_changed:
                 self._layout_changed = False
                 self.layoutChanged.emit()

@@ -36,7 +36,6 @@ class ModelUpdate:
         # If there are any additions or removals, we need to reset the model (nuclear option)
         if self.needs_model_reset:
             viewmodel.beginResetModel()
-            viewmodel._layout_changed = True
 
         """ Apply the updates to the viewmodel """
         for scene_number, scene in self.scenes.replacements.items():
@@ -118,6 +117,7 @@ class ModelUpdate:
 
         if self.needs_model_reset:
             viewmodel.endResetModel()
+            viewmodel.SetLayoutChanged()
 
     def GetRemovedLinesInBatches(self):
         """

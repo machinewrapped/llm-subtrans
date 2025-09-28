@@ -80,7 +80,14 @@ class ProjectViewModel(QStandardItemModel):
                 self._layout_changed = False
                 self.layoutChanged.emit()
 
+    def SetLayoutChanged(self) -> None:
+        """ Mark the model as needing a layoutChanged emit """
+        self._layout_changed = True
+
     def CreateModel(self, data : Subtitles, task_type : str|None = None) -> None:
+        """
+        Create the model from the given subtitles data
+        """
         if not isinstance(data, Subtitles):
             raise ValueError(_("Can only model subtitle files"))
 
@@ -251,8 +258,6 @@ class ProjectViewModel(QStandardItemModel):
         self.model = {item.number: item for item in scene_items}
 
         self.endInsertRows()
-
-        self._layout_changed = True
 
     def ReplaceScene(self, scene : SubtitleScene):
         logging.debug(f"Replacing scene {scene.number}")

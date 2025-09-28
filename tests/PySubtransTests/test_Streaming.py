@@ -1,23 +1,20 @@
 import threading
-import time
 
 from copy import deepcopy
+from datetime import timedelta
 
-from PySubtrans.Helpers.TestCases import SubtitleTestCase, PrepareSubtitles, DummyTranslationClient
+from PySubtrans.Helpers.TestCases import SubtitleTestCase, DummyTranslationClient
 from PySubtrans.Helpers.Tests import log_test_name, log_input_expected_result, log_info, skip_if_debugger_attached_decorator
 from PySubtrans.SettingsType import SettingsType, SettingType
 from PySubtrans.SubtitleBatch import SubtitleBatch
-from PySubtrans.SubtitleBatcher import SubtitleBatcher
-from PySubtrans.SubtitleEditor import SubtitleEditor
+from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleError import TranslationError
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
+from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.TranslationRequest import TranslationRequest
-
-from ..TestData.chinese_dinner import chinese_dinner_data
-
 
 class MockStreamingTranslationClient(DummyTranslationClient):
     """Mock streaming client for testing streaming functionality"""
@@ -100,9 +97,6 @@ class StreamingTests(SubtitleTestCase):
         log_test_name("Streaming event handling tests")
 
         # Build controlled test subtitles using SubtitleBuilder
-        from PySubtrans.SubtitleBuilder import SubtitleBuilder
-        from datetime import timedelta
-
         subtitles = (SubtitleBuilder(max_batch_size=10)
             .AddScene(summary="Test scene for streaming")
             .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "First line")
@@ -190,7 +184,6 @@ class StreamingTests(SubtitleTestCase):
         log_test_name("Partial response processing tests")
 
         # Create a mock translation request
-        from PySubtrans.TranslationPrompt import TranslationPrompt
         prompt = TranslationPrompt("Test prompt", True)
         request = TranslationRequest(prompt)
 
@@ -240,9 +233,6 @@ class StreamingTests(SubtitleTestCase):
         log_test_name("Network interruption handling tests")
 
         # Use controlled data instead of unpredictable chinese_dinner_data
-        from PySubtrans.SubtitleBuilder import SubtitleBuilder
-        from datetime import timedelta
-
         subtitles = (SubtitleBuilder(max_batch_size=10)
             .AddScene(summary="Test scene for network error")
             .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test line 1")
@@ -301,9 +291,6 @@ class StreamingTests(SubtitleTestCase):
         log_test_name("API error handling tests")
 
         # Use controlled data instead of unpredictable chinese_dinner_data
-        from PySubtrans.SubtitleBuilder import SubtitleBuilder
-        from datetime import timedelta
-
         subtitles = (SubtitleBuilder(max_batch_size=10)
             .AddScene(summary="Test scene for API error")
             .BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test line 1")
@@ -367,9 +354,6 @@ class StreamingTests(SubtitleTestCase):
         log_test_name("Concurrent streaming requests tests")
 
         # Use controlled data for predictable results
-        from PySubtrans.SubtitleBuilder import SubtitleBuilder
-        from datetime import timedelta
-
         def create_streaming_translator(thread_id):
             subtitles = (SubtitleBuilder(max_batch_size=10)
                 .AddScene(summary=f"Thread {thread_id} scene")

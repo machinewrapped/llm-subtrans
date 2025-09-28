@@ -9,7 +9,7 @@ from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.TranslationParser import TranslationParser
 from PySubtrans.TranslationPrompt import TranslationPrompt, default_prompt_template
 from PySubtrans.Translation import Translation
-from PySubtrans.TranslationRequest import TranslationRequest
+from PySubtrans.TranslationRequest import TranslationRequest, StreamingCallback
 
 linesep = '\n'
 
@@ -87,7 +87,7 @@ class TranslationClient:
         prompt.GenerateMessages(instructions, lines, context)
         return prompt
 
-    def RequestTranslation(self, prompt : TranslationPrompt, temperature : float|None = None, streaming_callback = None) -> Translation|None:
+    def RequestTranslation(self, prompt : TranslationPrompt, temperature : float|None = None, streaming_callback : StreamingCallback = None) -> Translation|None:
         """
         Generate the messages to request a translation
         """

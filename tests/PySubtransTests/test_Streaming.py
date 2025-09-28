@@ -14,7 +14,7 @@ from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationProvider import TranslationProvider
-from PySubtrans.TranslationRequest import TranslationRequest
+from PySubtrans.TranslationRequest import TranslationRequest, StreamingCallback
 
 class MockStreamingTranslationClient(DummyTranslationClient):
     """Mock streaming client for testing streaming functionality"""
@@ -197,7 +197,7 @@ class StreamingTests(SubtitleTestCase):
 
         # Track partial updates
         partial_updates = []
-        def mock_callback(translation):
+        def mock_callback(translation : Translation) -> None:
             partial_updates.append(translation)
             log_info(f"Partial update received: {type(translation).__name__}")
 

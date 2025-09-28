@@ -26,6 +26,7 @@ from PySubtrans.SubtitleScene import SubtitleScene, UnbatchScenes
 from PySubtrans.TranslationEvents import TranslationEvents
 from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationProvider import TranslationProvider
+from PySubtrans.TranslationRequest import StreamingCallback
 
 class SubtitleTranslator:
     """
@@ -418,7 +419,7 @@ class SubtitleTranslator:
 
         return None
 
-    def _create_streaming_callback(self, batch : SubtitleBatch, line_numbers : list[int]|None):
+    def _create_streaming_callback(self, batch : SubtitleBatch, line_numbers : list[int]|None) -> StreamingCallback:
         """
         Create a streaming callback that processes partial translations and emits batch_updated events
         """

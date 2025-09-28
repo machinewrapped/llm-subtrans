@@ -1,15 +1,17 @@
 from collections.abc import Callable
-from typing import Any
+from typing import Any, TypeAlias
 from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.Translation import Translation
+
+StreamingCallback: TypeAlias = Callable[[Translation], None]|None
 
 class TranslationRequest:
     """
     Encapsulates a translation request with its prompt, callback, and tracking data
     """
-    def __init__(self, prompt : TranslationPrompt, streaming_callback : Callable[[Translation], None]|None = None):
+    def __init__(self, prompt : TranslationPrompt, streaming_callback : StreamingCallback = None):
         self.prompt : TranslationPrompt = prompt
-        self.streaming_callback : Callable[[Translation], None]|None = streaming_callback
+        self.streaming_callback : StreamingCallback = streaming_callback
 
         # Progress tracking
         self.accumulated_text : str = ""

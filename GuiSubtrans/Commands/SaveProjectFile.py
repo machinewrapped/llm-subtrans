@@ -5,7 +5,7 @@ from PySubtrans.SubtitleProject import SubtitleProject
 class SaveProjectFile(Command):
     def __init__(self, project : SubtitleProject, filepath : str|None = None):
         super().__init__()
-        self.can_undo = False
+        self.skip_undo = True
         self.is_blocking = True
         self.mark_project_dirty = False
         self.project : SubtitleProject = project

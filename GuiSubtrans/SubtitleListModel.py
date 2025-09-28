@@ -255,5 +255,5 @@ class SubtitleListModel(QAbstractProxyModel):
             return current_scene_batches
 
         # Last resort: show all available batches
-        return list(available_batches)
+        return sorted(available_batches)
 

@@ -81,7 +81,7 @@ class LineItem(QStandardItem):
     @property
     def gap(self) -> str:
         if 'gap' not in self.line_model:
-            raise ViewModelError(f"Line model does not contain a valid 'gap' field: {self.line_model}")
+            return ""
 
         gap = self.line_model['gap']
         if not isinstance(gap, str):

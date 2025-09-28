@@ -150,6 +150,7 @@ class SubtitleListModel(QAbstractProxyModel):
                     logging.debug(f"Invalid item in source model found for index {index.row()}, {index.column()}: {type(qItem).__name__}")
                 else:
                     logging.debug(f"No item in source model found for index {index.row()}, {index.column()}")
+                return None
 
         if not item:
             item = LineItem(-1, { 'start' : "0:00:00,000", 'end' : "0:00:00,000",  'text' : "Invalid index" })

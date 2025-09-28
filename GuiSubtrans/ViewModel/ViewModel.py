@@ -140,11 +140,16 @@ class ProjectViewModel(QStandardItemModel):
                 if first_line is not None and first_line > line_number:
                     return None
 
-                for line_row in range(0, batch_item.rowCount()):
+                batch_item_rows = batch_item.rowCount()
+                for line_row in range(0, batch_item_rows):
                     line_item_qt = batch_item.child(line_row, 0)
+                    if not line_item_qt:
+                        continue
+
                     if not isinstance(line_item_qt, LineItem):
                         logging.error(f"Expected LineItem at scene {scene_item.number} batch {batch_item.number} row {line_row}, got {type(line_item_qt).__name__}")
-                        continue
+                        return None
+
                     line_item: LineItem = line_item_qt
                     if line_item.number == line_number:
                         return line_item
@@ -427,7 +432,7 @@ class ProjectViewModel(QStandardItemModel):
                     f"Expected LineItem for line {previous_line_number} in scene {scene_number} batch {batch_number}, got {type(previous_line_item).__name__ if previous_line_item is not None else 'None'}"
                 )
 
-        self.beginInsertRows(self.indexFromItem(batch_item), line.number - 1, line.number - 1)
+        # self.beginInsertRows(self.indexFromItem(batch_item), ??, ??)
         batch_item.AddLineItem(line.number, {
                 'scene': scene_number,
                 'batch': batch_number,
@@ -442,7 +447,7 @@ class ProjectViewModel(QStandardItemModel):
         if line.translation:
             batch_item.AddTranslation(line.number, line.translation)
 
-        self.endInsertRows()
+        # self.endInsertRows()
 
         batch_item.emitDataChanged()
 

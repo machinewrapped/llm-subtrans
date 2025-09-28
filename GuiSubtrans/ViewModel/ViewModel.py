@@ -20,6 +20,22 @@ from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Helpers.Localization import _
 
 class ProjectViewModel(QStandardItemModel):
+    """
+    The view model for a GuiSubtrans project.
+
+    This maintains a PySide6 hierarchical model that represents the project data with the following structure:
+    - SceneItem (SubtitleScene)
+        - BatchItem (SubtitleBatch)
+            - LineItem (SubtitleLine)
+
+    PySide6 viewmodel updates must be processed on the main thread, so all updates to the viewmodel should be performed
+    via the AddUpdate method, which queues the update and signals the main thread to process it.
+
+    The ViewModel maintains a map of model items to viewmodel items based on their .number property for fast lookup.
+
+    Any updates that modify the structure of the model (additions/removals) should invoke .SetLayoutChanged() to trigger a remap
+    of the viewmodel and emit a layoutChanged signal to update depenedent views after the updates are processed.
+    """
     updatesPending = Signal()
 
     def __init__(self):

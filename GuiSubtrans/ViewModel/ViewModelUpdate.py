@@ -49,7 +49,8 @@ class ModelUpdate:
 
         This ensures a predictable order of operations. If it doesn't fit your use case, you can always queue multiple updates in sequence.
         """
-        # If there are any additions or removals, we need to reset the model (nuclear option)
+        # If there are any additions or removals, we need to reset the model 
+        # (nuclear option to prevent Qt native code crashing with dangling indexes)
         if self.needs_model_reset:
             viewmodel.beginResetModel()
 

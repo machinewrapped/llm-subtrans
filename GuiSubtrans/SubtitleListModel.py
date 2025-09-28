@@ -213,7 +213,7 @@ class SubtitleListModel(QAbstractProxyModel):
 
     def _get_valid_batches(self, selected_batch_numbers : list[tuple[int, int]]) -> list[tuple[int, int]]:
         """
-        Get batches to display, falling back intelligently if selections don't exist
+        Get valid batch selections, using smart fallbacks if the selected batches are no longer available.
         """
         if not selected_batch_numbers:
             return []

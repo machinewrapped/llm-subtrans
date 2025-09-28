@@ -29,7 +29,7 @@ class ProjectViewModel(QStandardItemModel):
         self.update_lock = QRecursiveMutex()
         self.debug_view : bool = os.environ.get("DEBUG_MODE") == "1"
         self.task_type : str = DEFAULT_TASK_TYPE
-        self._needs_layout_changed : bool = False
+        self._layout_changed : bool = False
 
     def getRootItem(self) -> QStandardItem:
         return self.invisibleRootItem()
@@ -72,7 +72,13 @@ class ProjectViewModel(QStandardItemModel):
             logging.error(f"Error updating viewmodel: {e}")
 
         finally:
+            # Rebuild the model map
             self.Remap()
+
+            # Emit layoutChanged after remap if required by updates
+            if self._layout_changed:
+                self._layout_changed = False
+                self.layoutChanged.emit()
 
     def CreateModel(self, data : Subtitles, task_type : str|None = None) -> None:
         if not isinstance(data, Subtitles):
@@ -213,11 +219,6 @@ class ProjectViewModel(QStandardItemModel):
 
                 batch_item.lines = { item.number: item for item in line_items }
 
-        # Emit layoutChanged if flagged during updates
-        if self._needs_layout_changed:
-            self._needs_layout_changed = False
-            self.layoutChanged.emit()
-
     #############################################################################
 
     def AddScene(self, scene : SubtitleScene):
@@ -251,7 +252,7 @@ class ProjectViewModel(QStandardItemModel):
 
         self.endInsertRows()
 
-        self._needs_layout_changed = True
+        self._layout_changed = True
 
     def ReplaceScene(self, scene : SubtitleScene):
         logging.debug(f"Replacing scene {scene.number}")

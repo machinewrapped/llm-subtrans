@@ -261,7 +261,7 @@ class ProjectViewModel(QStandardItemModel):
 
         self.getRootItem().emitDataChanged()
 
-    def UpdateScene(self, scene_number: int, scene_update : dict) -> bool:
+    def UpdateScene(self, scene_number: int, scene_update : dict) -> None:
         logging.debug(f"Updating scene {scene_number}")
         scene_item = self.model.get(scene_number)
         if not scene_item:
@@ -278,8 +278,6 @@ class ProjectViewModel(QStandardItemModel):
 
         scene_index = self.indexFromItem(scene_item)
         self.setData(scene_index, scene_item, Qt.ItemDataRole.UserRole)
-
-        return True
 
     def RemoveScene(self, scene_number: int) -> None:
         logging.debug(f"Removing scene {scene_number}")
@@ -319,7 +317,7 @@ class ProjectViewModel(QStandardItemModel):
 
         scene_item.emitDataChanged()
 
-    def ReplaceBatch(self, batch):
+    def ReplaceBatch(self, batch) -> None:
         logging.debug(f"Replacing batch ({batch.scene}, {batch.number})")
         if not isinstance(batch, SubtitleBatch):
             raise ViewModelError(f"Wrong type for ReplaceBatch ({type(batch).__name__})")
@@ -341,7 +339,7 @@ class ProjectViewModel(QStandardItemModel):
         scene_item.batches[batch.number] = batch_item
         scene_item.emitDataChanged()
 
-    def UpdateBatch(self, scene_number: int, batch_number: int, batch_update : dict) -> bool:
+    def UpdateBatch(self, scene_number: int, batch_number: int, batch_update : dict) -> None:
         logging.debug(f"Updating batch ({scene_number}, {batch_number})")
         if not isinstance(batch_update, dict):
             raise ViewModelError(_("Expected a patch dictionary"))
@@ -368,7 +366,6 @@ class ProjectViewModel(QStandardItemModel):
         self.setData(batch_index, batch_item, Qt.ItemDataRole.UserRole)
 
         scene_item.emitDataChanged()
-        return True
 
     def RemoveBatch(self, scene_number: int, batch_number: int) -> None:
         logging.debug(f"Removing batch ({scene_number}, {batch_number})")
@@ -396,6 +393,7 @@ class ProjectViewModel(QStandardItemModel):
 
         scene_item.Remap()
         scene_item.UpdateStartAndEnd()
+        scene_item.emitDataChanged()
 
     #############################################################################
 
@@ -446,6 +444,8 @@ class ProjectViewModel(QStandardItemModel):
 
         self.endInsertRows()
 
+        batch_item.emitDataChanged()
+
     def UpdateLine(self, scene_number : int, batch_number : int, line_number : int, line_update : dict) -> None:
         logging.debug(f"Updating line ({scene_number}, {batch_number}, {line_number})")
         if not isinstance(line_update, dict):
@@ -460,6 +460,8 @@ class ProjectViewModel(QStandardItemModel):
 
         line_item : LineItem = batch_item.lines[line_number]
         line_item.Update(line_update)
+
+        batch_item.emitDataChanged()
 
     def UpdateLines(self, scene_number : int, batch_number : int, lines : dict) -> None:
         logging.debug(f"Updating lines in ({scene_number}, {batch_number})")

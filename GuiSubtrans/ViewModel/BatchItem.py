@@ -182,6 +182,7 @@ class BatchItem(ViewModelItem):
                 row_item.number = row_item.number + 1
                 self.lines[row_item.number] = row_item
 
+        self.setData(self.batch_model, Qt.ItemDataRole.UserRole)
         self._invalidate_first_and_last()
 
     def AddTranslation(self, line_number : int, translation_text : str|None):

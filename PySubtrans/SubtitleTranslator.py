@@ -326,6 +326,10 @@ class SubtitleTranslator:
         batch.translation = translation
         batch.errors = [err for err in parser.errors if isinstance(err, str) or isinstance(err, SubtitleError)]
 
+        # Emit any warnings from the parser
+        for warning in parser.warnings:
+            self._emit_warning(warning)
+
         if batch.untranslated and not self.max_lines:
             self._emit_warning(_("Unable to match {count} lines with a source line").format(count=len(unmatched)))
             batch.AddContext('untranslated_lines', [f"{item.number}. {item.text}" for item in batch.untranslated])

@@ -5,6 +5,7 @@ import regex
 
 from PySubtrans.Instructions import DEFAULT_TASK_TYPE
 from PySubtrans.Options import Options
+from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtrans.Helpers.Text import IsTextContentEqual
 from PySubtrans.SubtitleLine import SubtitleLine
@@ -39,6 +40,7 @@ class TranslationParser:
         self.translations : dict[int|str, SubtitleLine] = {}
         self.translated : list[SubtitleLine] = []
         self.errors : list[Exception] = []
+        self.warnings : list[str] = []
         self.metatags : list[str] = ["summary", "scene"]
         self.task_type : str = task_type
         self.regex_patterns : list[regex.Pattern[Any]] = self.GetRegularExpressionPatterns(task_type)
@@ -169,7 +171,7 @@ class TranslationParser:
 
         if possible_matches:
             for item, translation in possible_matches:
-                logging.warning(f"Found fuzzy match for line {item.number} in translations")
+                self.warnings.append(_("Found fuzzy match for line {number} in translations").format(number=item.number))
                 item.translation = f"#Fuzzy: {translation.text}"
                 #unmatched.remove(item)
 
@@ -198,7 +200,7 @@ class TranslationParser:
         for match in re_opening.finditer(last_line.text):
             tag = match.group(1)
             if not regex.search(rf"</{tag}>", last_line.text):
-                logging.warning(f"Found unclosed tag {tag} in translation: {tag}")
+                self.warnings.append(_("Found unclosed tag {tag} in translation").format(tag=tag))
                 last_line.text = last_line.text[:match.start()]
                 break
             

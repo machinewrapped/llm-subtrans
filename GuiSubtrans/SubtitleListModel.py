@@ -195,6 +195,10 @@ class SubtitleListModel(QAbstractProxyModel):
                 # Emit dataChanged for this specific row in the proxy model
                 proxy_index = self.index(proxy_row, 0)
                 self.dataChanged.emit(proxy_index, proxy_index, roles or [])
+        elif isinstance(source_item, BatchItem):
+            # When a batch changes (e.g., lines added/removed), refresh the visible list
+            # This handles cases like line deletion where the visible list becomes stale
+            self._update_visible_batches()
 
     def _reset_visible_batches(self):
         self.ShowSelection(ProjectSelection())

@@ -28,7 +28,9 @@ class SubtitleListModel(QAbstractProxyModel):
         self.size_map : dict = {}
 
         # Connect signals to update mapping when source model changes
-        # TODO: what other signals should we connect to?
+        # TODO: investigate whether any other signals on the base model should be handled to trigger a refresh of the proxy model.
+        # layoutChanged is a pretty high-level signal that should cover most cases,
+        # but perhaps we can be more granular to avoid a complete refresh of the view.
         if self.viewmodel:
             self.setSourceModel(self.viewmodel)
             self.viewmodel.layoutChanged.connect(self._update_visible_batches)

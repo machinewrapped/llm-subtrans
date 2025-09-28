@@ -15,7 +15,29 @@ class ModelUpdate:
         """ Returns True if there are any updates """
         return self.scenes.has_updates or self.batches.has_updates or self.lines.has_updates
 
+    @property
+    def has_additions(self) -> bool:
+        """ Returns True if there are any add operations """
+        return bool(self.scenes.additions or self.batches.additions or self.lines.additions)
+
+    @property
+    def has_removals(self) -> bool:
+        """ Returns True if there are any remove operations """
+        return bool(self.scenes.removals or self.batches.removals or self.lines.removals)
+
+    @property
+    def needs_model_reset(self) -> bool:
+        """ Returns True if the model needs to be reset (nuclear option) """
+        return self.has_additions or self.has_removals
+
     def ApplyToViewModel(self, viewmodel : ProjectViewModel):
+        """ Applies the updates to the given viewmodel """
+
+        # If there are any additions or removals, we need to reset the model (nuclear option)
+        if self.needs_model_reset:
+            viewmodel.beginResetModel()
+            viewmodel._layout_changed = True
+
         """ Apply the updates to the viewmodel """
         for scene_number, scene in self.scenes.replacements.items():
             if not isinstance(scene, SubtitleScene):
@@ -93,6 +115,9 @@ class ModelUpdate:
             if line_number != line.number:
                 raise ValueError(f"Line number mismatch: {line_number} != {line.number}")
             viewmodel.AddLine(scene_number, batch_number, line)
+
+        if self.needs_model_reset:
+            viewmodel.endResetModel()
 
     def GetRemovedLinesInBatches(self):
         """

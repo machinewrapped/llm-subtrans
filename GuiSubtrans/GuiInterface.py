@@ -363,7 +363,7 @@ class GuiInterface(QObject):
         # Schedule autosave if the command queue is empty and the project has changed
         if not self.command_queue.has_commands:
             if self.datamodel and self.datamodel.autosave_enabled and self.datamodel.project and self.datamodel.project.needs_writing:
-                self._autosave_timer.start(20000)
+                self._autosave_timer.start(30000)
 
         self.commandComplete.emit(command)
 

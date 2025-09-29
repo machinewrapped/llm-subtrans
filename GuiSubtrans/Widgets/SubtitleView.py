@@ -25,6 +25,9 @@ class SubtitleView(QListView):
 
         self.doubleClicked.connect(self._on_double_click, Qt.ConnectionType.QueuedConnection)
 
+        # Track previous batch numbers to detect when batch selection changes
+        self.previous_batch_numbers = []
+
     def SetViewModel(self, viewmodel : ProjectViewModel):
         model = SubtitleListModel(viewmodel)
         self.setModel(model)
@@ -32,9 +35,15 @@ class SubtitleView(QListView):
 
     def ShowSelection(self, selection : ProjectSelection):
         model = self.model()
+
         if model and isinstance(model, SubtitleListModel):
             model.ShowSelection(selection)
-            return
+
+            # Reset scroll position if the visible batches have changed
+            if self._has_visibility_changed(model) and not self._has_same_first_batch(model):
+                self.scrollToTop()
+
+            self.previous_batch_numbers = model.selected_batch_numbers
 
     def GetSelectedLines(self):
         model = self.model()
@@ -133,3 +142,9 @@ class SubtitleView(QListView):
         else:
             # Call the base class method to handle other key events
             super().keyPressEvent(event)
+   
+    def _has_visibility_changed(self, model : SubtitleListModel) -> bool:
+        return self.previous_batch_numbers != model.selected_batch_numbers
+
+    def _has_same_first_batch(self, model : SubtitleListModel) -> bool:
+        return bool(self.previous_batch_numbers and model.selected_batch_numbers and model.selected_batch_numbers[0] == self.previous_batch_numbers[0])

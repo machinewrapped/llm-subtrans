@@ -1,3 +1,4 @@
+import logging
 from GuiSubtrans.ViewModel.ViewModelUpdateSection import ModelUpdateSection
 from GuiSubtrans.ViewModel.ViewModel import ProjectViewModel
 from PySubtrans.SubtitleBatch import SubtitleBatch
@@ -51,7 +52,9 @@ class ModelUpdate:
         """
         # If there are any additions or removals, we need to reset the model 
         # (nuclear option to prevent Qt native code crashing with dangling indexes)
-        if self.needs_model_reset:
+        reset_model = self.needs_model_reset
+        if reset_model:
+            logging.debug("Update contains additions or removals, triggering model reset")
             viewmodel.beginResetModel()
 
         try:
@@ -134,7 +137,8 @@ class ModelUpdate:
 
         finally:
             # Make sure we end the reset if we began it and tell the model it needs to refresh its layout
-            if self.needs_model_reset:
+            if reset_model:
+                logging.debug("Update complete, ending model reset")
                 viewmodel.endResetModel()
                 viewmodel.SetLayoutChanged()
 

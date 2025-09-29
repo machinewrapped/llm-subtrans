@@ -49,3 +49,4 @@ untranslated_msgids_*.txt
 /PySubtrans/*.egg-info
 /subtitles
 /translated
+batch-translate.sh

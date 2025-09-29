@@ -49,6 +49,13 @@ class ScenesView(QTreeView):
         self.setModel(model)
         self.selectionModel().selectionChanged.connect(self._item_selected)
 
+        # Track expansion state changes
+        self.expanded.connect(lambda index: self._set_item_expanded(index, True))
+        self.collapsed.connect(lambda index: self._set_item_expanded(index, False))
+
+        # Connect to layout changes to restore expansion states
+        model.layoutChanged.connect(self._restore_expanded_states)
+
     def SelectAll(self):
         model = self.model()
         if not model:
@@ -151,3 +158,29 @@ class ScenesView(QTreeView):
 
     def UpdateUiLanguage(self):
         self.Populate(self.viewmodel)
+
+    def _set_item_expanded(self, index, expanded: bool):
+        """ Track when an item is expanded or collapsed """
+        model = self.model()
+        if model:
+            scene_item = model.data(index, Qt.ItemDataRole.UserRole)
+            if isinstance(scene_item, SceneItem):
+                scene_item.expanded = expanded
+
+    def _restore_expanded_states(self):
+        """ Restore the expanded states from SceneItem objects after layout changes """
+        model = self.model()
+        if not model:
+            return
+
+        try:
+            for row in range(model.rowCount()):
+                index = model.index(row, 0)
+                if index.isValid():
+                    scene_item = model.data(index, Qt.ItemDataRole.UserRole)
+                    if isinstance(scene_item, SceneItem) and scene_item.expanded:
+                        self.expand(index)
+
+        except Exception as e:
+            logging.error(f"Error restoring expanded states: {e}")
+

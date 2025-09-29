@@ -49,7 +49,8 @@ class SubtitleListModel(QAbstractProxyModel):
         else:
             batch_numbers = self.viewmodel.GetBatchNumbers()
 
-        self.ShowSelectedBatches(batch_numbers)
+        if sorted(batch_numbers) != self.selected_batch_numbers:
+            self.ShowSelectedBatches(batch_numbers)
 
     def ShowSelectedBatches(self, batch_numbers : list[tuple[int, int]]):
         """
@@ -57,7 +58,7 @@ class SubtitleListModel(QAbstractProxyModel):
 
         Builds a list of visible lines and a mapping from line numbers to model rows for efficient index mapping.
         """
-        self.selected_batch_numbers = batch_numbers
+        self.selected_batch_numbers = sorted(batch_numbers)
         viewmodel = self.viewmodel
         visible = []
 
@@ -106,7 +107,7 @@ class SubtitleListModel(QAbstractProxyModel):
             return QModelIndex()
 
         row = index.row()
-        if row > len(self.visible):
+        if row >= len(self.visible):
             logging.debug(f"Tried to map an unknown row to source model: {row}")
             return QModelIndex()
 

@@ -50,8 +50,8 @@ class ScenesView(QTreeView):
         self.selectionModel().selectionChanged.connect(self._item_selected)
 
         # Track expansion state changes
-        self.expanded.connect(self._on_item_expanded)
-        self.collapsed.connect(self._on_item_collapsed)
+        self.expanded.connect(lambda index: self._set_item_expanded(index, True))
+        self.collapsed.connect(lambda index: self._set_item_expanded(index, False))
 
         # Connect to layout changes to restore expansion states
         model.layoutChanged.connect(self._restore_expanded_states)

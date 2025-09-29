@@ -49,6 +49,13 @@ class ScenesView(QTreeView):
         self.setModel(model)
         self.selectionModel().selectionChanged.connect(self._item_selected)
 
+        # Track expansion state changes
+        self.expanded.connect(self._on_item_expanded)
+        self.collapsed.connect(self._on_item_collapsed)
+
+        # Connect to layout changes to restore expansion states
+        model.layoutChanged.connect(self._restore_expanded_states)
+
     def SelectAll(self):
         model = self.model()
         if not model:
@@ -151,3 +158,44 @@ class ScenesView(QTreeView):
 
     def UpdateUiLanguage(self):
         self.Populate(self.viewmodel)
+
+    def _on_item_expanded(self, index):
+        """ Track when an item is expanded """
+        model = self.model()
+        if not model:
+            return
+
+        scene_item = model.data(index, Qt.ItemDataRole.UserRole)
+        if isinstance(scene_item, SceneItem):
+            if not scene_item.expanded:
+                scene_item.expanded = True
+
+    def _on_item_collapsed(self, index):
+        """ Track when an item is collapsed """
+        model = self.model()
+        if not model:
+            return
+
+        scene_item = model.data(index, Qt.ItemDataRole.UserRole)
+        if isinstance(scene_item, SceneItem):
+            if scene_item.expanded:
+                scene_item.expanded = False
+
+    def _restore_expanded_states(self):
+        """ Restore the expanded states from SceneItem objects after layout changes """
+        model = self.model()
+        if not model:
+            return
+
+        try:
+            for row in range(model.rowCount()):
+                index = model.index(row, 0)
+                if not index.isValid():
+                    continue
+                scene_item = model.data(index, Qt.ItemDataRole.UserRole)
+                if isinstance(scene_item, SceneItem) and scene_item.expanded:
+                    self.expand(index)
+
+        except Exception as e:
+            logging.error(f"Error restoring expanded states: {e}")
+

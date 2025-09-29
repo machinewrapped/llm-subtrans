@@ -29,6 +29,9 @@ class SceneItem(ViewModelItem):
         self._first_line_num: int|None = None
         self._last_line_num: int|None = None
 
+        # Track expansion state for persistence across model resets
+        self.expanded: bool = False
+
         self.setText(_("Scene {num}").format(num=scene.number))
         self.setData(self.scene_model, Qt.ItemDataRole.UserRole)
 

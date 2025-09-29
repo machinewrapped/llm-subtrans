@@ -394,7 +394,6 @@ class ChineseDinnerTests(SubtitleTestCase):
         self.assertEqual(line.text, "どうして俺を殺すのか.")
         self.assertEqual(line.translation, "Why are you going to kill me?")
 
-    @skip_if_debugger_attached_decorator
     def test_SubtitleEditor_UpdateLine(self):
         """
         Test SubtitleEditor.UpdateLine functionality with real subtitle data
@@ -555,23 +554,34 @@ class ChineseDinnerTests(SubtitleTestCase):
                 log_input_expected_result("No-change update returned False", False, result)
                 self.assertFalse(result)
 
-        with self.subTest("Error handling"):
-            log_test_name("Error handling")
+    @skip_if_debugger_attached_decorator
+    def test_SubtitleEditor_UpdateLine_error_handling(self):
+        """Tests error handling paths for SubtitleEditor.UpdateLine"""
+        subtitles = PrepareSubtitles(chinese_dinner_data)
+
+        batcher = SubtitleBatcher(self.options)
+        with SubtitleEditor(subtitles) as editor:
+            editor.AutoBatch(batcher)
+
+        with self.subTest("Non-existent line"):
+            log_test_name("UpdateLine error: non-existent line")
 
             with SubtitleEditor(subtitles) as editor:
-                # Test non-existent line
                 with self.assertRaises(ValueError) as context:
                     editor.UpdateLine(999, {'text': 'Should fail'})
 
-                error_message = str(context.exception)
-                log_input_expected_result("Error mentions line not found", True, "not found" in error_message.lower())
-                self.assertIn("not found", error_message.lower())
+            error_message = str(context.exception)
+            log_input_expected_result("Error mentions line not found", True, "not found" in error_message.lower())
+            self.assertIn("not found", error_message.lower())
 
-                # Test invalid timing
+        with self.subTest("Invalid timing"):
+            log_test_name("UpdateLine error: invalid timing")
+
+            with SubtitleEditor(subtitles) as editor:
                 with self.assertRaises(ValueError) as context:
                     editor.UpdateLine(1, {'start': 'invalid time format'})
 
-                error_message = str(context.exception)
-                log_input_expected_result("Error mentions invalid time", True, "invalid" in error_message.lower())
-                self.assertIn("invalid", error_message.lower())
+            error_message = str(context.exception)
+            log_input_expected_result("Error mentions invalid time", True, "invalid" in error_message.lower())
+            self.assertIn("invalid", error_message.lower())
 

@@ -7,20 +7,20 @@ from unittest.mock import patch, mock_open
 from collections.abc import MutableMapping
 from PySubtrans.Options import Options, default_settings, standard_filler_words
 from PySubtrans.Instructions import Instructions
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
     log_input_expected_result,
-    log_test_name,
     skip_if_debugger_attached_decorator,
 )
 from PySubtrans.SettingsType import SettingsType, SettingType, SettingsError
 
-class TestOptions(unittest.TestCase):
+class TestOptions(LoggedTestCase):
     """Unit tests for the Options class"""
 
     def setUp(self):
+        super().setUp()
         """Set up test fixtures"""
-        log_test_name(self._testMethodName)
         self.test_options = {
             'provider': 'Test Provider',
             'target_language': 'Spanish',
@@ -531,12 +531,12 @@ class TestOptions(unittest.TestCase):
         self.assertEqual(options.get('version'), default_settings['version'])
 
 
-class TestSettingsType(unittest.TestCase):
+class TestSettingsType(LoggedTestCase):
     """Unit tests for the SettingsType typed getter methods"""
 
     def setUp(self):
+        super().setUp()
         """Set up test fixtures"""
-        log_test_name(self._testMethodName)
         self.test_settings = SettingsType({
             'bool_true': True,
             'bool_false': False,
@@ -828,12 +828,12 @@ class TestSettingsType(unittest.TestCase):
                 log_input_expected_result("current provider update propagated", 'current_value', updated_current['current_test'])
                 self.assertEqual(updated_current['current_test'], 'current_value')
 
-class TestSettingsHelpers(unittest.TestCase):
+class TestSettingsHelpers(LoggedTestCase):
     """Unit tests for Settings helper functions"""
 
     def setUp(self):
+        super().setUp()
         """Set up test fixtures with known values"""
-        log_test_name(self._testMethodName)
         self.test_dict_settings = SettingsType({
             'bool_true': True,
             'bool_false': False,

@@ -4,14 +4,13 @@ from datetime import timedelta
 
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Helpers.Text import split_sequences, standard_filler_words
-from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name
+from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import log_info, log_input_expected_result
 from PySubtrans.Helpers.SubtitleHelpers import MergeSubtitles, MergeTranslations, FindSplitPoint, GetProportionalDuration
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 
-class TestSubtitles(unittest.TestCase):
 
-    def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+class TestSubtitles(LoggedTestCase):
 
     example_line_1 = SubtitleLine("1\n00:00:01,000 --> 00:00:02,000\nThis is line 1")
     example_line_2 = SubtitleLine("2\n00:00:02,500 --> 00:00:03,500\nThis is line 2")
@@ -135,10 +134,7 @@ class TestSubtitles(unittest.TestCase):
                 log_input_expected_result((line.text, characters, min_duration.total_seconds()), expected_duration, result)
                 self.assertEqual(result, expected_duration)
 
-class SubtitleProcessorTests(unittest.TestCase):
-
-    def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+class SubtitleProcessorTests(LoggedTestCase):
     example_line_1 = "1\n00:00:01,000 --> 00:00:02,000\nThis is line 1"
     example_line_2 = "2\n00:00:02,500 --> 00:00:03,500\nThis is line 2"
     example_line_3 = "3\n00:00:31,000 --> 00:00:35,000\nThird test subtitle.\nBreak after newline, not after the comma even though it is central."

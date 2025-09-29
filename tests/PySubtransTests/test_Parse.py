@@ -3,11 +3,11 @@ from enum import Enum
 
 from PySubtrans.Helpers import GetValueName, GetValueFromName
 from PySubtrans.Helpers.Parse import ParseDelayFromHeader, ParseNames
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
+from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import log_input_expected_result
 
-class TestParseDelayFromHeader(unittest.TestCase):
-    def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+
+class TestParseDelayFromHeader(LoggedTestCase):
     test_cases = [
         ("5", 5.0),
         ("10s", 10.0),
@@ -25,9 +25,7 @@ class TestParseDelayFromHeader(unittest.TestCase):
                 self.assertEqual(result, expected)
 
 
-class TestParseNames(unittest.TestCase):
-    def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+class TestParseNames(LoggedTestCase):
     test_cases = [
         ("John, Jane, Alice", ["John", "Jane", "Alice"]),
         (["John", "Jane", "Alice"], ["John", "Jane", "Alice"]),
@@ -44,9 +42,7 @@ class TestParseNames(unittest.TestCase):
                 log_input_expected_result(value, expected, result)
                 self.assertSequenceEqual(result, expected)
 
-class TestParseValues(unittest.TestCase):
-    def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+class TestParseValues(LoggedTestCase):
     class TestEnum(Enum):
         Test1 = 1
         Test2 = 2

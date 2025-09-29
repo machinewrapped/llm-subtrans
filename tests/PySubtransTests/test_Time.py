@@ -4,6 +4,8 @@ from PySubtrans.Helpers.Tests import log_input_expected_error, log_input_expecte
 from PySubtrans.Helpers.Time import GetTimeDelta, TimedeltaToText
 
 class TestTimeHelpers(unittest.TestCase):
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
     get_timedelta_cases = [
         (timedelta(hours=1, minutes=30, seconds=45), timedelta(hours=1, minutes=30, seconds=45)),
         ("01:30:45,000", timedelta(hours=1, minutes=30, seconds=45)),
@@ -22,7 +24,6 @@ class TestTimeHelpers(unittest.TestCase):
     ]
 
     def test_GetTimeDelta(self):
-        log_test_name("GetTimeDelta")
         for value, expected in self.get_timedelta_cases:
             with self.subTest(value=value):
                 error_expected = (expected == ValueError)
@@ -72,7 +73,6 @@ class TestTimeHelpers(unittest.TestCase):
     ]
 
     def test_TimeDeltaToText(self):
-        log_test_name("TimeDeltaToText")
         for value, expected, include_milliseconds in self.timedelta_to_text_cases:
             with self.subTest(value=value):
                 result = TimedeltaToText(value, include_milliseconds=include_milliseconds)

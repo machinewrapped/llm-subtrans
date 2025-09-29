@@ -4,7 +4,12 @@ from datetime import timedelta
 
 from PySubtrans.Helpers.TestCases import PrepareSubtitles, SubtitleTestCase
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
-from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name, skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import (
+    log_info,
+    log_input_expected_result,
+    log_test_name,
+    skip_if_debugger_attached_decorator,
+)
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleEditor import SubtitleEditor
@@ -22,7 +27,6 @@ class ChineseDinnerTests(SubtitleTestCase):
         })
 
     def test_ChineseDinner(self):
-        log_test_name("Chinese Dinner Tests")
 
         subtitles : Subtitles = Subtitles()
 
@@ -80,7 +84,6 @@ class ChineseDinnerTests(SubtitleTestCase):
         """
         Test subtitle batcher, batch context and batch merging
         """
-        log_test_name("Test batch subtitles")
         scene_count = 4
         scene_lengths = [30, 25, 6, 3]
         first_lines = [
@@ -368,7 +371,6 @@ class ChineseDinnerTests(SubtitleTestCase):
         """
         Test fetching and modifying a subtitle line
         """
-        log_test_name("Subtitle line tests")
         subtitles = PrepareSubtitles(chinese_dinner_data)
 
         line : SubtitleLine|None = subtitles.GetOriginalLine(36)
@@ -392,11 +394,11 @@ class ChineseDinnerTests(SubtitleTestCase):
         self.assertEqual(line.text, "どうして俺を殺すのか.")
         self.assertEqual(line.translation, "Why are you going to kill me?")
 
+    @skip_if_debugger_attached_decorator
     def test_SubtitleEditor_UpdateLine(self):
         """
         Test SubtitleEditor.UpdateLine functionality with real subtitle data
         """
-        log_test_name("SubtitleEditor UpdateLine tests")
         subtitles = PrepareSubtitles(chinese_dinner_data)
 
         batcher = SubtitleBatcher(self.options)
@@ -556,21 +558,20 @@ class ChineseDinnerTests(SubtitleTestCase):
         with self.subTest("Error handling"):
             log_test_name("Error handling")
 
-            if not skip_if_debugger_attached("Error handling"):
-                with SubtitleEditor(subtitles) as editor:
-                    # Test non-existent line
-                    with self.assertRaises(ValueError) as context:
-                        editor.UpdateLine(999, {'text': 'Should fail'})
+            with SubtitleEditor(subtitles) as editor:
+                # Test non-existent line
+                with self.assertRaises(ValueError) as context:
+                    editor.UpdateLine(999, {'text': 'Should fail'})
 
-                    error_message = str(context.exception)
-                    log_input_expected_result("Error mentions line not found", True, "not found" in error_message.lower())
-                    self.assertIn("not found", error_message.lower())
+                error_message = str(context.exception)
+                log_input_expected_result("Error mentions line not found", True, "not found" in error_message.lower())
+                self.assertIn("not found", error_message.lower())
 
-                    # Test invalid timing
-                    with self.assertRaises(ValueError) as context:
-                        editor.UpdateLine(1, {'start': 'invalid time format'})
+                # Test invalid timing
+                with self.assertRaises(ValueError) as context:
+                    editor.UpdateLine(1, {'start': 'invalid time format'})
 
-                    error_message = str(context.exception)
-                    log_input_expected_result("Error mentions invalid time", True, "invalid" in error_message.lower())
-                    self.assertIn("invalid", error_message.lower())
+                error_message = str(context.exception)
+                log_input_expected_result("Error mentions invalid time", True, "invalid" in error_message.lower())
+                self.assertIn("invalid", error_message.lower())
 

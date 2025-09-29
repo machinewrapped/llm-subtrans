@@ -15,8 +15,9 @@ from PySubtrans.SubtitleError import (
 
 
 class TestSubtitleValidator(unittest.TestCase):
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
     def test_ValidateTranslations_empty(self):
-        log_test_name("ValidateTranslationsEmpty")
         validator = SubtitleValidator(Options())
         errors = validator.ValidateTranslations([])
         log_input_expected_result("error_count", 1, len(errors))
@@ -25,7 +26,6 @@ class TestSubtitleValidator(unittest.TestCase):
         self.assertEqual(type(errors[0]), UntranslatedLinesError)
 
     def test_ValidateTranslations_detects_errors(self):
-        log_test_name("ValidateTranslationsDetectsErrors")
         options = Options({'max_characters': 10, 'max_newlines': 1})
         validator = SubtitleValidator(options)
 
@@ -45,7 +45,6 @@ class TestSubtitleValidator(unittest.TestCase):
         self.assertEqual(actual_error_types, expected_error_types)
 
     def test_ValidateBatch_adds_untranslated_error(self):
-        log_test_name("ValidateBatchAddsUntranslatedError")
         validator = SubtitleValidator(Options())
 
         orig1 = SubtitleLine({'number': 1, 'start': '00:00:00,000', 'end': '00:00:01,000', 'text': 'original1'})
@@ -60,7 +59,6 @@ class TestSubtitleValidator(unittest.TestCase):
         self.assertEqual(type(batch.errors[0]), UntranslatedLinesError)
 
     def test_ValidateBatch_includes_translation_errors(self):
-        log_test_name("ValidateBatchIncludesTranslationErrors")
         options = Options({'max_characters': 10})
         validator = SubtitleValidator(options)
 

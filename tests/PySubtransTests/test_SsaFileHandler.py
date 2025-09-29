@@ -7,13 +7,19 @@ from PySubtrans.Formats.SSAFileHandler import SSAFileHandler
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleData import SubtitleData
 from PySubtrans.SubtitleError import SubtitleParseError
-from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name, skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import (
+    log_info,
+    log_input_expected_result,
+    log_test_name,
+    skip_if_debugger_attached_decorator,
+)
 
 class TestSSAFileHandler(unittest.TestCase):
     """Test cases for SSA file handler."""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
+        log_test_name(self._testMethodName)
         self.handler = SSAFileHandler()
         
         # Sample SSA content for testing
@@ -86,7 +92,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_get_file_extensions(self):
         """Test that the handler returns correct file extensions."""
-        log_test_name("SSAFileHandler.get_file_extensions")
         
         expected = ['.ass', '.ssa']
         result = self.handler.get_file_extensions()
@@ -96,7 +101,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_parse_string_basic(self):
         """Test parsing of basic SSA content."""
-        log_test_name("SSAFileHandler.parse_string - basic parsing")
         
         data = self.handler.parse_string(self.sample_ssa_content)
         lines = data.lines
@@ -115,7 +119,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_load_file(self):
         """Test parsing from file path."""
-        log_test_name("SSAFileHandler.load_file")
 
         with tempfile.NamedTemporaryFile('w', delete=False, suffix='.ass', encoding='utf-8') as f:
             f.write(self.sample_ssa_content)
@@ -134,7 +137,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_compose_lines_basic(self):
         """Test basic line composition to SSA format."""
-        log_test_name("SSAFileHandler.compose_lines - basic")
         
         lines = [
             SubtitleLine.Construct(
@@ -163,7 +165,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_compose_lines_with_line_breaks(self):
         """Test composition with line breaks."""
-        log_test_name("SSAFileHandler.compose_lines - line breaks")
         
         lines = [
             SubtitleLine.Construct(
@@ -186,7 +187,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
     
     def test_parse_empty_events_section(self):
         """Test parsing SSA file with no events."""
-        log_test_name("SSAFileHandler.parse_string - no events")
         
         content_no_events = """[Script Info]
 Title: Test
@@ -205,12 +205,9 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         log_input_expected_result("SSA with no dialogue lines", 0, len(lines))
         self.assertEqual(len(lines), 0)
     
+    @skip_if_debugger_attached_decorator
     def test_parse_invalid_ssa_content(self):
         """Test error handling for invalid SSA content."""
-        if skip_if_debugger_attached("test_parse_invalid_ssa_content"):
-            return
-            
-        log_test_name("SSAFileHandler.parse_string - invalid content")
         
         invalid_content = """This is not SSA format content"""
         
@@ -224,7 +221,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
     
     def test_round_trip_conversion(self):
         """Test that parsing and composing results in similar content."""
-        log_test_name("SSAFileHandler round-trip conversion")
         
         # Parse the sample content
         original_data = self.handler.parse_string(self.sample_ssa_content)
@@ -255,7 +251,6 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 
     def test_detect_ssa_format(self):
         """Ensure SSA files retain their format information."""
-        log_test_name("SSAFileHandler SSA format detection")
 
         sample_ssa = """[Script Info]
 ScriptType: v4.00
@@ -278,7 +273,6 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
     
     def test_subtitle_line_to_pysubs2_time_conversion(self):
         """Test that _subtitle_line_to_pysubs2 correctly converts timedelta to pysubs2 milliseconds."""
-        log_test_name("SSAFileHandler._subtitle_line_to_pysubs2 - time conversion")
         
         # Test various time formats with precise timedelta values
         test_cases = [
@@ -310,7 +304,6 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
     
     def test_ssa_to_html_formatting_conversion(self):
         """Test SSA tag to HTML conversion."""
-        log_test_name("SSAFileHandler._ssa_to_html - formatting conversion")
         
         # Test cases: (input_ass, expected_html)
         test_cases = [
@@ -335,7 +328,6 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
     
     def test_html_to_ssa_formatting_conversion(self):
         """Test HTML tag to SSA conversion."""
-        log_test_name("SSAFileHandler._html_to_ass - formatting conversion")
         
         # Test cases: (input_html, expected_ass)
         test_cases = [
@@ -359,7 +351,6 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
     
     def test_formatting_round_trip_preservation(self):
         """Test that formatting is preserved through round-trip conversion."""
-        log_test_name("SSAFileHandler formatting round-trip")
         
         # Sample SSA content with formatting
         formatted_ssa_content = """[Script Info]
@@ -414,7 +405,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Normal text with\\Nline break
     
     def test_comprehensive_ssa_tag_preservation(self):
         """Test that comprehensive SSA override tags are preserved in metadata."""
-        log_test_name("SSAFileHandler comprehensive SSA tag preservation")
         
         # Sample SSA content with various tag types
         complex_ssa_content = """[Script Info]
@@ -508,7 +498,6 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
     
     def test_tag_extraction_functions(self):
         """Test SSA tag extraction and restoration functions."""
-        log_test_name("SSAFileHandler tag extraction functions")
         
         # Test extraction function
         extraction_cases = [
@@ -568,7 +557,6 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
     
     def test_composite_tags_with_basic_formatting(self):
         """Test that basic formatting tags within composite blocks are preserved."""
-        log_test_name("SSAFileHandler composite tags with basic formatting")
         
         # Test cases for composite blocks containing basic formatting
         test_cases = [

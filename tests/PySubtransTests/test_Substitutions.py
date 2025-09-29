@@ -3,6 +3,8 @@ from PySubtrans.Substitutions import Substitutions
 from PySubtrans.Helpers.Tests import log_test_name, log_input_expected_result
 
 class TestSubstitutions(unittest.TestCase):
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
     parse_cases = [
         ([], {}),
         ("", {}),
@@ -12,7 +14,6 @@ class TestSubstitutions(unittest.TestCase):
     ]
 
     def test_ParseSubstitutions(self):
-        log_test_name("ParseSubstitutions")
         for value, expected in self.parse_cases:
             with self.subTest(value=value):
                 result = Substitutions.Parse(value)
@@ -33,7 +34,6 @@ class TestSubstitutions(unittest.TestCase):
     ]
 
     def test_PerformSubstitutions(self):
-        log_test_name("PerformSubstitutions")
         for substitutions, value, expected, mode in self.perform_cases:
             with self.subTest(value=value):
                 helper = Substitutions(substitutions, mode)
@@ -42,7 +42,6 @@ class TestSubstitutions(unittest.TestCase):
                 self.assertEqual(result, expected)
 
     def test_PerformSubstitutionsAuto(self):
-        log_test_name("PerformSubstitutions2")
         for substitutions, value, expected, _ in self.perform_cases:
             with self.subTest(value=value):
                 helper = Substitutions(substitutions, Substitutions.Mode.Auto)

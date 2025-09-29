@@ -18,7 +18,7 @@ from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.Helpers.Tests import (
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached,
+    skip_if_debugger_attached_decorator,
 )
 
 
@@ -42,7 +42,9 @@ class DummyHandler(SubtitleFileHandler):
 
 
 class TestSubtitleProjectFormats(unittest.TestCase):
-    def setUp(self):
+
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
         SubtitleFormatRegistry.register_handler(DummyHandler)
 
     def _create_temp_file(self, content: str, suffix: str) -> str:
@@ -54,7 +56,6 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         return temp_path
 
     def test_AutoDetectSrt(self):
-        log_test_name("AutoDetectSrt")
         
         srt_content = "1\n00:00:01,000 --> 00:00:02,000\nHello World\n"
         path = self._create_temp_file(srt_content, ".srt")
@@ -70,7 +71,6 @@ class TestSubtitleProjectFormats(unittest.TestCase):
         self.assertEqual(project.subtitles.linecount, 1)
 
     def test_AutoDetectAss(self):
-        log_test_name("AutoDetectAss")
         
         ass_content = """[Script Info]
 Title: Test Script
@@ -97,7 +97,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         self.assertEqual(project.subtitles.linecount, 1)
 
     def test_ProjectFileRoundtripPreservesHandler(self):
-        log_test_name("ProjectFileRoundtripPreservesHandler")
         
         srt_content = "1\n00:00:01,000 --> 00:00:02,000\nHello World\n"
         path = self._create_temp_file(srt_content, ".srt")
@@ -124,7 +123,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         self.assertEqual(reopened_project.subtitles.file_format, ".srt")
 
     def test_SrtHandlerBasicFunctionality(self):
-        log_test_name("SrtHandlerBasicFunctionality")
         
         srt_content = "1\n00:00:01,000 --> 00:00:03,000\nHello <b>World</b>!\n"
         
@@ -146,7 +144,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         self.assertEqual(line.end.total_seconds(), 3.0)
 
     def test_AssHandlerBasicFunctionality(self):
-        log_test_name("AssHandlerBasicFunctionality")
         
         ass_content = """[Script Info]
 Title: Test Script
@@ -185,7 +182,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\b1}Hello{\\b0} World!
         self.assertEqual(line.start.total_seconds(), 1.0)
 
     def test_AssColorHandling(self):
-        log_test_name("AssColorHandling")
         
         ass_content = """[Script Info]
 Title: Test Script
@@ -224,7 +220,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test line
         self.assertEqual(primary_color.b, 255)
 
     def test_AssInlineFormatting(self):
-        log_test_name("AssInlineFormatting")
         
         ass_content = """[Script Info]
 Title: Test Script
@@ -249,7 +244,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\i1}Italic{\\i0} and {\\b1}b
         self.assertEqual(line.text, "<i>Italic</i> and <b>bold</b> text")
 
     def test_AssOverrideTags(self):
-        log_test_name("AssOverrideTags")
         
         ass_content = """[Script Info]
 Title: Test Script
@@ -286,7 +280,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Bold text 
         self.assertEqual(line.text, expected_text)
 
     def test_AssRoundtripPreservation(self):
-        log_test_name("AssRoundtripPreservation")
         
         ass_content = """[Script Info]
 Title: Test Script
@@ -320,7 +313,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,{\\pos(100,200)\\b1}Test{\\b0}
         self.assertTrue(has_bold_tags)
 
     def test_JsonSerializationRoundtrip(self):
-        log_test_name("JsonSerializationRoundtrip")
         
         ass_content = """[Script Info]
 Title: Serialization Test
@@ -363,11 +355,8 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test serialization
         else:
             self.skipTest("Colors not found in metadata, cannot test serialization")
 
+    @skip_if_debugger_attached_decorator
     def test_AssLineBreaksHandling(self):
-        if skip_if_debugger_attached("AssLineBreaksHandling"):
-            return
-            
-        log_test_name("AssLineBreaksHandling")
         
         ass_content = """[Script Info]
 Title: Line Breaks Test
@@ -403,7 +392,6 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hard\\Nbreak and\\nsoft break
         self.assertEqual(line.text, expected_text)
 
     def test_AssToSrtConversion(self):
-        log_test_name("AssToSrtConversion")
         
         ass_content = """[Script Info]
 Title: Sample ASS
@@ -456,7 +444,6 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         self.addCleanup(os.remove, out_path)
 
     def test_SrtToAssConversion(self):
-        log_test_name("SrtToAssConversion")
         
         srt_content = "1\n00:00:01,000 --> 00:00:02,000\nHello SRT!\n"
         
@@ -498,7 +485,6 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         self.addCleanup(os.remove, out_path)
 
     def test_ConversionWithProjectSerialization(self):
-        log_test_name("ConversionWithProjectSerialization")
         
         srt_content = "1\n00:00:01,000 --> 00:00:02,000\nHello SRT!\n"
         

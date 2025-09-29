@@ -23,6 +23,8 @@ from PySubtrans.Helpers.Text import (
     )
 
 class TestTextHelpers(unittest.TestCase):
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
     dialog_marker = "- "
 
     linearise_cases = [
@@ -33,7 +35,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_Linearise(self):
-        log_test_name("Linearise")
         for input, expected in self.linearise_cases:
             with self.subTest():
                 result = Linearise(input)
@@ -47,7 +48,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_RemoveWhitespaceAndPunctuation(self):
-        log_test_name("RemoveWhitespaceAndPunctuation")
         for text, expected in self.remove_whitespace_and_punctuation_cases:
             with self.subTest(text=text):
                 result = RemoveWhitespaceAndPunctuation(text)
@@ -65,7 +65,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_IsTextContentEqual(self):
-        log_test_name("IsTextContentEqual")
         for text1, text2, expected in self.is_text_content_equal_cases:
             with self.subTest(text1=text1, text2=text2):
                 result = IsTextContentEqual(text1, text2)
@@ -83,7 +82,6 @@ class TestTextHelpers(unittest.TestCase):
     }
 
     def test_NormaliseDialogTags(self):
-        log_test_name("NormaliseDialogTags")
         for text, expected in self.normalise_tags_cases.items():
             with self.subTest(text=text):
                 result = NormaliseDialogTags(text, self.dialog_marker)
@@ -100,7 +98,6 @@ class TestTextHelpers(unittest.TestCase):
     }
 
     def test_BreakDialogOnOneLine(self):
-        log_test_name("BreakDialogOnOneLine")
         compiled_pattern = CompileDialogSplitPattern(self.dialog_marker)
         for text, expected in self.break_dialog_on_one_line_cases.items():
             with self.subTest(text=text):
@@ -130,7 +127,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_BreakLongLines(self):
-        log_test_name("BreakLongLines")
         break_patterns = [regex.compile(sequence) for sequence in break_sequences]
 
         for text, max_length, min_length, expected in self.break_long_line_cases:
@@ -155,7 +151,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_LimitTextLength(self):
-        log_test_name("LimitTextLength")
         for text, limit, expected in self.limit_text_length_cases:
             with self.subTest(text=text):
                 result = LimitTextLength(text, limit)
@@ -176,7 +171,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_ContainsTags(self):
-        log_test_name("ContainsTags")
         for text, expected in self.contains_tags_cases:
             with self.subTest(text=text):
                 result = ContainsTags(text)
@@ -192,7 +186,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_ExtractTag(self):
-        log_test_name("ExtractTag")
         for text, tagname, expected in self.extract_tag_cases:
             with self.subTest(text=text):
                 result = ExtractTag(tagname, text)
@@ -207,7 +200,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_ExtractTaglist(self):
-        log_test_name("ExtractTaglist")
         for text, tagname, expected in self.extract_taglist_cases:
             with self.subTest(text=text):
                 result = ExtractTagList(tagname, text)
@@ -224,7 +216,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_SanitiseSummary(self):
-        log_test_name("SanitiseSummary")
         for text, movie_name, max_length, expected in self.sanitise_summary_cases:
             with self.subTest(text=text):
                 result = SanitiseSummary(text, movie_name, max_length)
@@ -240,7 +231,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_RemoveFillerWords(self):
-        log_test_name("RemoveFillerWords")
         filler_patterns = CompileFillerWordsPattern(standard_filler_words)
         if not filler_patterns:
             log_input_expected_result("Filler patterns", "list", filler_patterns)
@@ -266,7 +256,6 @@ class TestTextHelpers(unittest.TestCase):
     ]
 
     def test_EnsureFullWidthPunctuation(self):
-        log_test_name("EnsureFullWidthPunctuation")
         for text, expected in self.fullwidth_punctuation_cases:
             with self.subTest(text=text):
                 result = EnsureFullWidthPunctuation(text)

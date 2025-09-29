@@ -19,7 +19,7 @@ from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached,
+    skip_if_debugger_attached_decorator,
 )
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError, TranslationImpossibleError
@@ -49,6 +49,7 @@ class PySubtransConvenienceTests(unittest.TestCase):
         options.provider_settings['Dummy Provider'] = SettingsType({'data': {'names': ['Alice', 'Bob']}})
         return options
 
+    @skip_if_debugger_attached_decorator
     def test_batch_subtitles_required_for_translation(self) -> None:
         options = self._create_options()
         manual_options = init_options(preprocess_subtitles=False)
@@ -67,9 +68,6 @@ class PySubtransConvenienceTests(unittest.TestCase):
         }))
 
         translator = init_translator(options)
-
-        if skip_if_debugger_attached("test_batch_subtitles_required_for_translation"):
-            return
 
         with self.assertRaises(TranslationImpossibleError) as exc:
             translator.TranslateSubtitles(subtitles)

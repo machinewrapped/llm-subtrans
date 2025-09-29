@@ -11,7 +11,6 @@ from ..TestData.chinese_dinner import chinese_dinner_data
 class DataModelTests(SubtitleTestCase):
     def test_ProjectOptionsDecoupling(self):
         """Test that project options and global options remain properly decoupled"""
-        log_test_name("Testing project options decoupling")
         
         # Create global options with a specific provider and model
         global_options = Options({
@@ -93,7 +92,6 @@ class DataModelTests(SubtitleTestCase):
         
     def test_UpdateProjectSettings(self):
         """Test that updating project settings works correctly"""
-        log_test_name("Testing project settings update")
         
         datamodel = CreateTestDataModel(chinese_dinner_data, self.options)
         if not datamodel.project:
@@ -131,7 +129,6 @@ class DataModelTests(SubtitleTestCase):
         
     def test_ProjectOptionsIsolation(self):
         """Test that multiple projects maintain separate option states"""
-        log_test_name("Testing project options isolation")
         
         # Use shared global options to test that global settings propagate correctly
         global_options = Options({
@@ -222,7 +219,6 @@ class DataModelTests(SubtitleTestCase):
         
     def test_ProviderSettingsIsolation(self):
         """Test that provider settings remain isolated between project and global options"""
-        log_test_name("Testing provider settings isolation")
         
         global_options = Options({
             'provider': 'Dummy GPT',
@@ -270,7 +266,6 @@ class DataModelTests(SubtitleTestCase):
         
     def test_UpdateSettingsWithNoneProject(self):
         """Test UpdateSettings behavior when no project is loaded"""
-        log_test_name("Testing UpdateSettings with no project")
         
         global_options = Options({
             'provider': 'Dummy GPT',

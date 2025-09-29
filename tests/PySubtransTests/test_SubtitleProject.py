@@ -3,7 +3,11 @@ import tempfile
 import unittest
 
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name, skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import (
+    log_input_expected_result,
+    log_test_name,
+    skip_if_debugger_attached_decorator,
+)
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleProject import SubtitleProject
@@ -581,11 +585,9 @@ Modified subtitle line 2
         log_input_expected_result("needs_writing after edit", True, project.needs_writing)
         self.assertTrue(project.needs_writing)
 
+    @skip_if_debugger_attached_decorator
     def test_get_editor_exception_does_not_mark_project_dirty(self):
         """GetEditor should not mark the project dirty if the edit fails"""
-        if skip_if_debugger_attached(self._testMethodName):
-            return
-
         project = SubtitleProject(persistent=True)
 
         with self.assertRaises(ValueError):

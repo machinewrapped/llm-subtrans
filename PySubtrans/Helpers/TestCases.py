@@ -4,6 +4,7 @@ from typing import Any
 
 import regex
 
+from PySubtrans.Helpers.Tests import log_test_name
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatch import SubtitleBatch
@@ -47,6 +48,9 @@ class SubtitleTestCase(unittest.TestCase):
         self.options = Options(options)
 
         self.assertIn("Dummy Provider", self.options.provider_settings, "Dummy Provider settings should exist")
+
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
 
     def _assert_same_as_reference(self, subtitles : Subtitles, reference_subtitles: Subtitles):
         """

@@ -13,7 +13,7 @@ from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached,
+    skip_if_debugger_attached_decorator,
 )
 
 
@@ -34,39 +34,33 @@ class DummySrtHandler(SubtitleFileHandler):
 
 
 class TestSubtitleFormatRegistry(unittest.TestCase):
-    def setUp(self):
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
         SubtitleFormatRegistry.clear()
         SubtitleFormatRegistry.discover()
 
     def test_AutoDiscovery(self):
-        log_test_name("AutoDiscovery")
         handler = SubtitleFormatRegistry.get_handler_by_extension('.srt')
         log_input_expected_result('.srt', SrtFileHandler, handler)
         self.assertIs(handler, SrtFileHandler)
 
+    @skip_if_debugger_attached_decorator
     def test_UnknownExtension(self):
-        if skip_if_debugger_attached("UnknownExtension"):
-            return
-
-        log_test_name("UnknownExtension")
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.get_handler_by_extension('.unknown')
         log_input_expected_error('.unknown', ValueError, e.exception)
 
     def test_EnumerateFormats(self):
-        log_test_name("EnumerateFormats")
         formats = SubtitleFormatRegistry.enumerate_formats()
         log_input_expected_result('contains .srt', True, '.srt' in formats)
         self.assertIn('.srt', formats)
 
     def test_CreateHandler(self):
-        log_test_name("CreateHandler")
         handler = SubtitleFormatRegistry.create_handler('.srt')
         log_input_expected_result('.srt', SrtFileHandler, type(handler))
         self.assertIsInstance(handler, SrtFileHandler)
 
     def test_DuplicateRegistrationPriority(self):
-        log_test_name("DuplicateRegistrationPriority")
 
         SubtitleFormatRegistry.disable_autodiscovery()
 
@@ -83,47 +77,35 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         SubtitleFormatRegistry.clear()
 
     def test_CreateHandlerWithFilename(self):
-        log_test_name("CreateHandlerWithFilename")
         handler = SubtitleFormatRegistry.create_handler(filename="test.srt")
         log_input_expected_result("test.srt", SrtFileHandler, type(handler))
         self.assertIsInstance(handler, SrtFileHandler)
 
+    @skip_if_debugger_attached_decorator
     def test_CreateHandlerWithNoExtensionOrFilename(self):
-        if skip_if_debugger_attached("CreateHandlerWithNoExtensionOrFilename"):
-            return
-            
-        log_test_name("CreateHandlerWithNoExtensionOrFilename")
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.create_handler()
         log_input_expected_error("None", ValueError, e.exception)
 
+    @skip_if_debugger_attached_decorator
     def test_CreateHandlerWithEmptyExtension(self):
-        if skip_if_debugger_attached("CreateHandlerWithEmptyExtension"):
-            return
-            
-        log_test_name("CreateHandlerWithEmptyExtension")
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.create_handler(extension="")
         log_input_expected_error('""', ValueError, e.exception)
 
+    @skip_if_debugger_attached_decorator
     def test_CreateHandlerWithInvalidFilename(self):
-        if skip_if_debugger_attached("CreateHandlerWithInvalidFilename"):
-            return
-            
-        log_test_name("CreateHandlerWithInvalidFilename")
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.create_handler(filename="test")
         log_input_expected_error("test", ValueError, e.exception)
 
     def test_ListAvailableFormats(self):
-        log_test_name("ListAvailableFormats")
         formats = SubtitleFormatRegistry.list_available_formats()
         log_input_expected_result("contains .srt", True, ".srt" in formats)
         self.assertIn(".srt", formats)
         self.assertIsInstance(formats, str)
 
     def test_ListAvailableFormatsEmpty(self):
-        log_test_name("ListAvailableFormatsEmpty")
         SubtitleFormatRegistry.disable_autodiscovery()
         formats = SubtitleFormatRegistry.list_available_formats()
         log_input_expected_result("empty registry", "None", formats)
@@ -131,7 +113,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         SubtitleFormatRegistry.discover()
 
     def test_GetFormatFromFilename(self):
-        log_test_name("GetFormatFromFilename")
         
         extension = SubtitleFormatRegistry.get_format_from_filename("test.srt")
         log_input_expected_result("test.srt", ".srt", extension)
@@ -150,7 +131,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         self.assertEqual(".vtt", extension)
 
     def test_DetectFormatAndLoadFile(self):
-        log_test_name("DetectFormatAndLoadFile")
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.srt', delete=False, encoding='utf-8') as f:
             f.write("1\n00:00:01,000 --> 00:00:02,000\nTest subtitle\n")
@@ -165,23 +145,17 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
             os.unlink(temp_path)
 
     @patch('pysubs2.load')
+    @skip_if_debugger_attached_decorator
     def test_DetectFormatAndLoadFileError(self, mock_load):
-        if skip_if_debugger_attached("DetectFormatAndLoadFileError"):
-            return
-            
-        log_test_name("DetectFormatAndLoadFileError")
         mock_load.side_effect = Exception("Parse error")
-        
+
         with self.assertRaises(SubtitleParseError) as e:
             SubtitleFormatRegistry.detect_format_and_load_file("nonexistent.srt")
         log_input_expected_error("nonexistent.srt", SubtitleParseError, e.exception)
 
     @patch('pysubs2.load')
+    @skip_if_debugger_attached_decorator
     def test_DetectFormatAndLoadFileUnicodeError(self, mock_load):
-        if skip_if_debugger_attached("DetectFormatAndLoadFileUnicodeError"):
-            return
-
-        log_test_name("DetectFormatAndLoadFileUnicodeError")
         
         mock_subs = MagicMock()
         mock_subs.format = "srt"
@@ -199,7 +173,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
             self.assertIsInstance(data, SubtitleData)
 
     def test_ClearMethod(self):
-        log_test_name("ClearMethod")
         
         SubtitleFormatRegistry.discover()
         formats_before = len(SubtitleFormatRegistry.enumerate_formats())
@@ -214,7 +187,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         SubtitleFormatRegistry.discover()
 
     def test_DiscoverMethod(self):
-        log_test_name("DiscoverMethod")
         
         SubtitleFormatRegistry.disable_autodiscovery()
         formats_before = len(SubtitleFormatRegistry.enumerate_formats())
@@ -227,7 +199,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         self.assertGreater(formats_after, 0)
 
     def test_EnsureDiscoveredBehavior(self):
-        log_test_name("EnsureDiscoveredBehavior")
         
         SubtitleFormatRegistry.disable_autodiscovery()
         formats_before = len(SubtitleFormatRegistry._handlers)
@@ -247,7 +218,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         self.assertTrue(SubtitleFormatRegistry._discovered)
 
     def test_RegisterHandlerWithLowerPriority(self):
-        log_test_name("RegisterHandlerWithLowerPriority")
         
         class LowerPrioritySrtHandler(SubtitleFileHandler):
             SUPPORTED_EXTENSIONS = {'.srt': 1}
@@ -278,7 +248,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         SubtitleFormatRegistry.clear()
 
     def test_CaseInsensitiveExtensions(self):
-        log_test_name("CaseInsensitiveExtensions")
         
         handler_lower = SubtitleFormatRegistry.get_handler_by_extension('.srt')
         handler_upper = SubtitleFormatRegistry.get_handler_by_extension('.SRT')
@@ -289,7 +258,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         self.assertEqual(handler_upper, handler_mixed)
 
     def test_DisableAutodiscovery(self):
-        log_test_name("DisableAutodiscovery")
         
         SubtitleFormatRegistry.discover()
         formats_before = len(SubtitleFormatRegistry.enumerate_formats())
@@ -308,7 +276,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         SubtitleFormatRegistry.discover()
 
     def test_EnableAutodiscovery(self):
-        log_test_name("EnableAutodiscovery")
         
         SubtitleFormatRegistry.disable_autodiscovery()
         discovered_flag_before = SubtitleFormatRegistry._discovered
@@ -323,7 +290,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         SubtitleFormatRegistry.discover()
 
     def test_DoubleDiscoveryBehavior(self):
-        log_test_name("DoubleDiscoveryBehavior")
         
         SubtitleFormatRegistry.clear()
         SubtitleFormatRegistry.discover()
@@ -342,7 +308,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
 
     # Phase 6: Enhanced Format Detection Tests
     def test_DetectSrtFormatWithTxtExtension(self):
-        log_test_name("DetectSrtFormatWithTxtExtension")
         
         srt_content = "1\n00:00:01,000 --> 00:00:02,000\nTest subtitle\n\n2\n00:00:03,000 --> 00:00:04,000\nAnother line\n"
         
@@ -362,7 +327,6 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
             os.unlink(temp_path)
 
     def test_DetectAssFormatWithTxtExtension(self):
-        log_test_name("DetectAssFormatWithTxtExtension")
         
         ass_content = """[Script Info]
 Title: Test
@@ -394,7 +358,6 @@ Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
             os.unlink(temp_path)
 
     def test_DetectSsaFormatWithAssExtension(self):
-        log_test_name("DetectSsaFormatWithAssExtension")
         
         ssa_content = """[Script Info]
 Title: Test SSA
@@ -426,11 +389,8 @@ Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
         finally:
             os.unlink(temp_path)
 
+    @skip_if_debugger_attached_decorator
     def test_FormatDetectionWithMalformedFile(self):
-        if skip_if_debugger_attached("FormatDetectionWithMalformedFile"):
-            return
-            
-        log_test_name("FormatDetectionWithMalformedFile")
         
         malformed_content = "This is not a valid subtitle file\nJust random text\nWith no format\n"
         
@@ -449,11 +409,8 @@ Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
         finally:
             os.unlink(temp_path)
 
+    @skip_if_debugger_attached_decorator
     def test_FormatDetectionWithEmptyFile(self):
-        if skip_if_debugger_attached("FormatDetectionWithEmptyFile"):
-            return
-            
-        log_test_name("FormatDetectionWithEmptyFile")
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
             f.write("")  # Empty file
@@ -466,11 +423,8 @@ Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
         finally:
             os.unlink(temp_path)
 
+    @skip_if_debugger_attached_decorator
     def test_FormatDetectionWithBinaryFile(self):
-        if skip_if_debugger_attached("FormatDetectionWithBinaryFile"):
-            return
-            
-        log_test_name("FormatDetectionWithBinaryFile")
         
         # Create a binary file that's definitely not a subtitle
         with tempfile.NamedTemporaryFile(mode='wb', suffix='.txt', delete=False) as f:
@@ -485,7 +439,6 @@ Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
             os.unlink(temp_path)
 
     def test_FormatDetectionPreservesOriginalMetadata(self):
-        log_test_name("FormatDetectionPreservesOriginalMetadata")
         
         # Use ASS format since it has rich metadata
         ass_content = """[Script Info]
@@ -524,22 +477,16 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
         finally:
             os.unlink(temp_path)
 
+    @skip_if_debugger_attached_decorator
     def test_FormatDetectionNonexistentFile(self):
-        if skip_if_debugger_attached("FormatDetectionNonexistentFile"):
-            return
-            
-        log_test_name("FormatDetectionNonexistentFile")
         
         filename = "nonexistent_file.txt"
         with self.assertRaises(SubtitleParseError) as e:
             SubtitleFormatRegistry.detect_format_and_load_file(filename)
         log_input_expected_error(f"filename={filename}", SubtitleParseError, e.exception)
 
+    @skip_if_debugger_attached_decorator
     def test_FormatDetectionWithNonUtf8SrtFile(self):
-        if skip_if_debugger_attached("FormatDetectionWithNonUtf8SrtFile"):
-            return
-
-        log_test_name("FormatDetectionWithNonUtf8SrtFile")
         
         # SRT content with non-ASCII characters (French accents)
         srt_content = "1\n00:00:01,000 --> 00:00:02,000\nCafé à Paris\n\n2\n00:00:03,000 --> 00:00:04,000\nHôtel très cher\n"
@@ -563,11 +510,8 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
         finally:
             os.unlink(temp_path)
 
+    @skip_if_debugger_attached_decorator
     def test_FormatDetectionWithNonUtf8AssFile(self):
-        if skip_if_debugger_attached("FormatDetectionWithNonUtf8AssFile"):
-            return
-
-        log_test_name("FormatDetectionWithNonUtf8AssFile")
         
         # ASS content with non-ASCII characters
         ass_content = """[Script Info]

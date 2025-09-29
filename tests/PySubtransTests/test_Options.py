@@ -7,7 +7,12 @@ from unittest.mock import patch, mock_open
 from collections.abc import MutableMapping
 from PySubtrans.Options import Options, default_settings, standard_filler_words
 from PySubtrans.Instructions import Instructions
-from PySubtrans.Helpers.Tests import log_input_expected_error, log_input_expected_result, log_test_name, skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import (
+    log_input_expected_error,
+    log_input_expected_result,
+    log_test_name,
+    skip_if_debugger_attached_decorator,
+)
 from PySubtrans.SettingsType import SettingsType, SettingType, SettingsError
 
 class TestOptions(unittest.TestCase):
@@ -15,6 +20,7 @@ class TestOptions(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures"""
+        log_test_name(self._testMethodName)
         self.test_options = {
             'provider': 'Test Provider',
             'target_language': 'Spanish',
@@ -25,7 +31,6 @@ class TestOptions(unittest.TestCase):
 
     def test_default_initialization(self):
         """Test that Options initializes with default values"""
-        log_test_name("Default Options Initialization")
         
         options = Options()
         
@@ -72,7 +77,6 @@ class TestOptions(unittest.TestCase):
 
     def test_initialization_with_dict(self):
         """Test Options initialization with a dictionary"""
-        log_test_name("Options Initialization with Dict")
         
         options = Options(self.test_options)
         
@@ -105,7 +109,6 @@ class TestOptions(unittest.TestCase):
 
     def test_initialization_with_options_object(self):
         """Test Options initialization with another Options object"""
-        log_test_name("Options Initialization with Options Object")
         
         original = Options(self.test_options)
         copy_options = Options(original)
@@ -137,7 +140,6 @@ class TestOptions(unittest.TestCase):
 
     def test_initialization_with_kwargs(self):
         """Test Options initialization with keyword arguments"""
-        log_test_name("Options Initialization with Kwargs")
         
         options = Options(
             provider='Kwargs Provider',
@@ -159,7 +161,6 @@ class TestOptions(unittest.TestCase):
 
     def test_initialization_dict_and_kwargs(self):
         """Test Options initialization with both dict and kwargs (kwargs should override)"""
-        log_test_name("Options Initialization with Dict and Kwargs")
         
         options = Options(
             self.test_options,
@@ -193,7 +194,6 @@ class TestOptions(unittest.TestCase):
 
     def test_none_values_filtered(self):
         """Test that None values in input options are filtered out"""
-        log_test_name("None Values Filtering")
         
         options_with_none = {
             'provider': 'Test Provider',
@@ -224,7 +224,6 @@ class TestOptions(unittest.TestCase):
 
     def test_get_method(self):
         """Test the get method with default values"""
-        log_test_name("Options Get Method")
         
         options = Options(self.test_options)
         
@@ -537,6 +536,7 @@ class TestSettingsType(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures"""
+        log_test_name(self._testMethodName)
         self.test_settings = SettingsType({
             'bool_true': True,
             'bool_false': False,
@@ -561,7 +561,6 @@ class TestSettingsType(unittest.TestCase):
 
     def test_get_bool(self):
         """Test SettingsType.get_bool method"""
-        log_test_name("SettingsType.get_bool")
         
         test_cases = [
             ('bool_true', True),
@@ -585,7 +584,6 @@ class TestSettingsType(unittest.TestCase):
 
     def test_get_int(self):
         """Test SettingsType.get_int method"""
-        log_test_name("SettingsType.get_int")
         
         test_cases = [
             ('int_value', 42),
@@ -607,7 +605,6 @@ class TestSettingsType(unittest.TestCase):
 
     def test_get_float(self):
         """Test SettingsType.get_float method"""
-        log_test_name("SettingsType.get_float")
         
         test_cases = [
             ('float_value', 3.14),
@@ -630,7 +627,6 @@ class TestSettingsType(unittest.TestCase):
 
     def test_get_str(self):
         """Test SettingsType.get_str method"""
-        log_test_name("SettingsType.get_str")
         
         test_cases = [
             ('str_value', 'hello world'),
@@ -652,7 +648,6 @@ class TestSettingsType(unittest.TestCase):
 
     def test_get_timedelta(self):
         """Test SettingsType.get_timedelta method"""
-        log_test_name("SettingsType.get_timedelta")
         
         default_td = timedelta(minutes=5)
         
@@ -669,7 +664,6 @@ class TestSettingsType(unittest.TestCase):
 
     def test_get_str_list(self):
         """Test SettingsType.get_str_list method"""
-        log_test_name("SettingsType.get_str_list")
         
         test_cases = [
             ('str_list', ['apple', 'banana', 'cherry']),
@@ -691,7 +685,6 @@ class TestSettingsType(unittest.TestCase):
 
     def test_get_list(self):
         """Test SettingsType.get_list method"""
-        log_test_name("SettingsType.get_list")
         
         test_cases = [
             ('str_list', ['apple', 'banana', 'cherry']),
@@ -713,7 +706,6 @@ class TestSettingsType(unittest.TestCase):
 
     def test_get_dict(self):
         """Test SettingsType.get_dict method and nested dict functionality"""
-        log_test_name("SettingsType.get_dict")
         
         # Test getting nested dict
         result = self.test_settings.get_dict('nested_dict')
@@ -753,7 +745,6 @@ class TestSettingsType(unittest.TestCase):
 
     def test_provider_settings_nested_updates(self):
         """Test that provider_settings properly handles nested updates"""
-        log_test_name("Provider Settings Nested Updates")
         
         # Create Options with provider settings
         options = Options({
@@ -842,6 +833,7 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def setUp(self):
         """Set up test fixtures with known values"""
+        log_test_name(self._testMethodName)
         self.test_dict_settings = SettingsType({
             'bool_true': True,
             'bool_false': False,
@@ -874,7 +866,6 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_bool_setting(self):
         """Test GetBoolSetting with various input types"""
-        log_test_name("GetBoolSetting")
         
         test_cases = [
             ('bool_true', True),
@@ -905,12 +896,9 @@ class TestSettingsHelpers(unittest.TestCase):
         log_input_expected_result("None value", False, result)
         self.assertFalse(result)
 
+    @skip_if_debugger_attached_decorator
     def test_get_bool_setting_errors(self):
         """Test GetBoolSetting error cases"""
-        if skip_if_debugger_attached("test_get_bool_setting_errors"):
-            return
-
-        log_test_name("GetBoolSetting Expected Failures")
         
         error_case_keys = ['bool_str_invalid', 'int_value']
         for key in error_case_keys:
@@ -921,7 +909,6 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_int_setting(self):
         """Test GetIntSetting with various input types"""
-        log_test_name("GetIntSetting")
         
         test_cases = [
             ('int_value', 42),
@@ -942,12 +929,9 @@ class TestSettingsHelpers(unittest.TestCase):
         log_input_expected_result("None value", None, result)
         self.assertIsNone(result)
 
+    @skip_if_debugger_attached_decorator
     def test_get_int_setting_errors(self):
         """Test GetIntSetting error cases"""
-        if skip_if_debugger_attached("test_get_int_setting_errors"):
-            return
-
-        log_test_name("GetIntSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
             self.test_dict_settings.get_int('int_invalid')
@@ -955,7 +939,6 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_float_setting(self):
         """Test GetFloatSetting with various input types"""
-        log_test_name("GetFloatSetting")
         
         test_cases = [
             ('float_value', 3.14),
@@ -974,12 +957,9 @@ class TestSettingsHelpers(unittest.TestCase):
         log_input_expected_result("missing key", None, result)
         self.assertIsNone(result)
 
+    @skip_if_debugger_attached_decorator
     def test_get_float_setting_errors(self):
         """Test GetFloatSetting error cases"""
-        if skip_if_debugger_attached("test_get_float_setting_errors"):
-            return
-        
-        log_test_name("GetFloatSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
             self.test_dict_settings.get_float('float_invalid')
@@ -987,7 +967,6 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_str_setting(self):
         """Test GetStrSetting with various input types"""
-        log_test_name("GetStrSetting")
         
         test_cases = [
             ('str_value', 'hello world'),
@@ -1009,7 +988,6 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_list_setting(self):
         """Test GetListSetting with various input types"""
-        log_test_name("GetListSetting")
         
         test_cases = [
             ('list_value', ['apple', 'banana', 'cherry']),
@@ -1028,12 +1006,9 @@ class TestSettingsHelpers(unittest.TestCase):
         log_input_expected_result("missing key", [], result)
         self.assertEqual(result, [])
         
+    @skip_if_debugger_attached_decorator
     def test_get_list_setting_errors(self):
         """Test GetListSetting error cases"""
-        if skip_if_debugger_attached("test_get_list_setting_errors"):
-            return
-
-        log_test_name("GetListSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
             self.test_dict_settings.get_list('list_invalid')
@@ -1041,7 +1016,6 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_string_list_setting(self):
         """Test GetStringListSetting function"""
-        log_test_name("GetStringListSetting")
         
         # Test with valid string list
         result = self.test_dict_settings.get_str_list('list_value')
@@ -1059,7 +1033,6 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_timedelta_setting(self):
         """Test GetTimeDeltaSetting function"""
-        log_test_name("GetTimeDeltaSetting")
         
         test_cases = [
             ('timedelta_seconds', timedelta(seconds=30.5)),
@@ -1080,12 +1053,9 @@ class TestSettingsHelpers(unittest.TestCase):
         log_input_expected_result("missing key with default", default, result)
         self.assertEqual(result, default)
 
+    @skip_if_debugger_attached_decorator
     def test_get_timedelta_setting_errors(self):
         """Test GetTimeDeltaSetting error cases"""
-        if skip_if_debugger_attached("test_get_timedelta_setting_errors"):
-            return
-
-        log_test_name("GetTimeDeltaSetting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
             self.test_dict_settings.get_timedelta('timedelta_invalid', timedelta(seconds=1))
@@ -1093,7 +1063,6 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_get_optional_setting(self):
         """Test get_optional_setting function"""
-        log_test_name("get_optional_setting")
         
         test_cases = [
             ('bool_true', bool, True),
@@ -1119,12 +1088,9 @@ class TestSettingsHelpers(unittest.TestCase):
         log_input_expected_result("Options object", True, result)
         self.assertTrue(result)
 
+    @skip_if_debugger_attached_decorator
     def test_get_optional_setting_errors(self):
         """Test get_optional_setting error cases"""
-        if skip_if_debugger_attached("test_get_optional_setting_errors"):
-            return
-
-        log_test_name("get_optional_setting Expected Failures")
         
         with self.assertRaises(SettingsError) as cm:
             get_optional_setting(self.test_dict_settings, 'bool_str_invalid', bool)
@@ -1132,7 +1098,6 @@ class TestSettingsHelpers(unittest.TestCase):
 
     def test_validate_setting_type(self):
         """Test validate_setting_type function"""
-        log_test_name("validate_setting_type")
         
         valid_cases = [
             ('bool_true', bool, True),
@@ -1146,12 +1111,9 @@ class TestSettingsHelpers(unittest.TestCase):
                 log_input_expected_result(f"'{key}' as {setting_type.__name__}", expected, result)
                 self.assertEqual(result, expected)
         
+    @skip_if_debugger_attached_decorator
     def test_validate_setting_type_errors(self):
         """Test validate_setting_type error cases"""
-        if skip_if_debugger_attached("test_validate_setting_type_errors"):
-            return
-
-        log_test_name("validate_setting_type Expected Failures")
         
         # Test missing optional setting
         result = validate_setting_type(self.test_dict_settings, 'missing_key', str, required=False)

@@ -104,7 +104,6 @@ class StartTranslationCommandTests(SubtitleTestCase):
         })
 
     def test_StartTranslationCommand(self):
-        log_test_name("StartTranslation tests")
 
         for case in test_cases:
             data : dict = deepcopy(case.get('data') or {})

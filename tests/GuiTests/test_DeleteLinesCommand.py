@@ -44,7 +44,6 @@ class DeleteLinesCommandTest(SubtitleTestCase):
 
 
     def test_DeleteLinesCommand(self):
-        log_test_name("DeleteLinesCommand")
 
         data = deepcopy(chinese_dinner_data)
 

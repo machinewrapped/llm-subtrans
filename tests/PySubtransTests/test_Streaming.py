@@ -94,7 +94,6 @@ class StreamingTests(SubtitleTestCase):
 
     def test_streaming_event_handling(self):
         """Test that streaming events are properly emitted and handled"""
-        log_test_name("Streaming event handling tests")
 
         # Build controlled test subtitles using SubtitleBuilder
         subtitles = (SubtitleBuilder(max_batch_size=10)
@@ -181,7 +180,6 @@ class StreamingTests(SubtitleTestCase):
 
     def test_partial_response_processing(self):
         """Test that partial responses are processed correctly"""
-        log_test_name("Partial response processing tests")
 
         # Create a mock translation request
         prompt = TranslationPrompt("Test prompt", True)
@@ -230,7 +228,6 @@ class StreamingTests(SubtitleTestCase):
     @skip_if_debugger_attached_decorator
     def test_network_interruption_handling(self):
         """Test handling of network interruptions during streaming"""
-        log_test_name("Network interruption handling tests")
 
         # Use controlled data instead of unpredictable chinese_dinner_data
         subtitles = (SubtitleBuilder(max_batch_size=10)
@@ -288,7 +285,6 @@ class StreamingTests(SubtitleTestCase):
     @skip_if_debugger_attached_decorator
     def test_api_error_handling(self):
         """Test handling of API errors during streaming"""
-        log_test_name("API error handling tests")
 
         # Use controlled data instead of unpredictable chinese_dinner_data
         subtitles = (SubtitleBuilder(max_batch_size=10)
@@ -351,7 +347,6 @@ class StreamingTests(SubtitleTestCase):
 
     def test_concurrent_streaming_requests(self):
         """Test handling of multiple concurrent streaming requests"""
-        log_test_name("Concurrent streaming requests tests")
 
         # Use controlled data for predictable results
         def create_streaming_translator(thread_id):

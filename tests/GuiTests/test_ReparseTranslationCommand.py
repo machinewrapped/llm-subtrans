@@ -28,7 +28,6 @@ class ReparseTranslationsCommandTest(SubtitleTestCase):
     ]
 
     def test_ReparseTranslationsCommand(self):
-        log_test_name("ReparseTranslationsCommand")
 
         for test_case in self.reparse_test_cases:
             data = test_case['data']

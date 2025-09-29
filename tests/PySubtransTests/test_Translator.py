@@ -19,7 +19,6 @@ class SubtitleTranslatorTests(SubtitleTestCase):
         })
 
     def test_SubtitleTranslator(self):
-        log_test_name("Subtitle translator tests")
 
         test_data = [ chinese_dinner_data ]
 
@@ -98,7 +97,6 @@ class SubtitleTranslatorTests(SubtitleTestCase):
 
 
     def test_PostProcessTranslation(self):
-        log_test_name("Post process translation tests")
 
         test_data = [ chinese_dinner_data ]
 

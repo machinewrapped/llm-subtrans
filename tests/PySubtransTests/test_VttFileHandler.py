@@ -7,13 +7,18 @@ from PySubtrans.Formats.VttFileHandler import VttFileHandler
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleData import SubtitleData
 from PySubtrans.SubtitleError import SubtitleParseError
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name, skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import (
+    log_input_expected_result,
+    log_test_name,
+    skip_if_debugger_attached_decorator,
+)
 
 class TestVttFileHandler(unittest.TestCase):
     """Test cases for WebVTT file handler."""
     
-    def setUp(self):
+    def setUp(self) -> None:
         """Set up test fixtures."""
+        log_test_name(self._testMethodName)
         self.handler = VttFileHandler()
         
         # Sample VTT content for testing
@@ -57,7 +62,6 @@ Third subtitle line with <i>formatting</i>
     
     def test_get_file_extensions(self):
         """Test that the handler returns correct file extensions."""
-        log_test_name("VttFileHandler.get_file_extensions")
         
         expected = ['.vtt']
         result = self.handler.get_file_extensions()
@@ -67,7 +71,6 @@ Third subtitle line with <i>formatting</i>
     
     def test_parse_string_basic(self):
         """Test parsing of basic WebVTT content."""
-        log_test_name("VttFileHandler.parse_string - basic parsing")
         
         data = self.handler.parse_string(self.sample_vtt_content)
         lines = data.lines
@@ -85,7 +88,6 @@ Third subtitle line with <i>formatting</i>
     
     def test_load_file(self):
         """Test parsing from file path."""
-        log_test_name("VttFileHandler.load_file")
 
         with tempfile.NamedTemporaryFile('w', delete=False, suffix='.vtt', encoding='utf-8') as f:
             f.write(self.sample_vtt_content)
@@ -103,7 +105,6 @@ Third subtitle line with <i>formatting</i>
 
     def test_composition_variations(self):
         """Test composition of various WebVTT scenarios."""
-        log_test_name("VttFileHandler composition variations")
         
         test_cases = [
             {
@@ -198,12 +199,9 @@ Third subtitle line with <i>formatting</i>
                     log_input_expected_result(expected_content, True, contains_content)
                     self.assertIn(expected_content, result)
     
+    @skip_if_debugger_attached_decorator
     def test_parse_invalid_vtt_content(self):
         """Test error handling for invalid WebVTT content."""
-        if skip_if_debugger_attached("test_parse_invalid_vtt_content"):
-            return
-            
-        log_test_name("VttFileHandler.parse_string - invalid content")
         
         invalid_content = """This is not WebVTT format content"""
         
@@ -216,7 +214,6 @@ Third subtitle line with <i>formatting</i>
     
     def test_round_trip_conversion(self):
         """Test that parsing and composing results in similar content."""
-        log_test_name("VttFileHandler round-trip conversion")
         
         # Parse the sample content
         original_data = self.handler.parse_string(self.sample_vtt_content)
@@ -244,7 +241,6 @@ Third subtitle line with <i>formatting</i>
 
     def test_detect_vtt_format(self):
         """Ensure VTT files retain their format information."""
-        log_test_name("VttFileHandler WebVTT format detection")
 
         data = self.handler.parse_string(self.sample_vtt_content)
 
@@ -257,7 +253,6 @@ Third subtitle line with <i>formatting</i>
     
     def test_timestamp_formatting_conversion(self):
         """Test that timestamp formatting works correctly."""
-        log_test_name("VttFileHandler timestamp formatting")
         
         # Test various time formats with precise timedelta values
         test_cases = [
@@ -282,7 +277,6 @@ Third subtitle line with <i>formatting</i>
     
     def test_vtt_cue_id_preservation(self):
         """Test that WebVTT cue IDs are preserved when present."""
-        log_test_name("VttFileHandler cue ID preservation")
         
         # WebVTT with cue identifiers
         vtt_with_cues = """WEBVTT
@@ -428,7 +422,6 @@ Where did he go?
 
     def test_note_block_without_inline_text(self):
         """Ensure NOTE blocks starting with just 'NOTE' are preserved."""
-        log_test_name("VttFileHandler NOTE block without inline text")
 
         vtt_content = """WEBVTT
 
@@ -449,7 +442,6 @@ Subtitle
     
     def test_cue_settings_preservation(self):
         """Test that cue settings are preserved in metadata."""
-        log_test_name("VttFileHandler cue settings preservation")
         
         vtt_with_settings = """WEBVTT
 
@@ -487,7 +479,6 @@ I think he went down this lane.
     
     def test_style_blocks_preservation(self):
         """Test that STYLE blocks are preserved in file metadata."""
-        log_test_name("VttFileHandler STYLE blocks preservation")
         
         vtt_with_styles = """WEBVTT
 
@@ -540,7 +531,6 @@ Styled subtitle
     
     def test_speaker_voice_tags(self):
         """Test that speaker voice tags are handled correctly."""
-        log_test_name("VttFileHandler speaker voice tags")
         
         vtt_with_speakers = """WEBVTT
 
@@ -605,7 +595,6 @@ Styled subtitle
     
     def test_voice_tag_stripping(self):
         """Test that all voice tag variations are completely stripped."""
-        log_test_name("VttFileHandler voice tag stripping")
         
         for vtt_text, expected_clean in self.voice_tag_cases.items():
             with self.subTest(vtt_text=vtt_text):
@@ -626,7 +615,6 @@ Styled subtitle
     
     def test_voice_tag_metadata_extraction(self):
         """Test that voice tag metadata is correctly extracted."""
-        log_test_name("VttFileHandler voice tag metadata extraction")
         
         for vtt_text, expected_metadata in self.voice_metadata_cases.items():
             with self.subTest(vtt_text=vtt_text):
@@ -636,7 +624,6 @@ Styled subtitle
     
     def test_voice_tag_round_trip(self):
         """Test that voice tags are preserved through parse/compose cycle."""
-        log_test_name("VttFileHandler voice tag round-trip")
         
         test_vtt = """WEBVTT
 

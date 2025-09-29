@@ -29,7 +29,6 @@ class MergeLinesCommandTest(SubtitleTestCase):
     ]
 
     def test_MergeLinesCommand(self):
-        log_test_name("MergeLinesCommand")
 
         data = deepcopy(chinese_dinner_data)
 

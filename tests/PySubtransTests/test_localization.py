@@ -1,7 +1,11 @@
 import sys
 import unittest
 
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name, skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import (
+    log_input_expected_result,
+    log_test_name,
+    skip_if_debugger_attached_decorator,
+)
 from PySubtrans.Helpers.Localization import (
     initialize_localization,
     set_language,
@@ -13,8 +17,10 @@ from PySubtrans.Helpers.Localization import (
 
 
 class TestLocalization(unittest.TestCase):
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
+
     def test_initialize_default_english(self):
-        log_test_name("Localization: initialize_default_english")
         initialize_localization("en")
         text = "Cancel"
         result = _(text)
@@ -27,7 +33,6 @@ class TestLocalization(unittest.TestCase):
         self.assertEqual(ctx_result, text)
 
     def test_switch_to_spanish_and_back(self):
-        log_test_name("Localization: switch_to_spanish_and_back")
         # Switch to Spanish and verify a commonly-translated label
         initialize_localization("es")
         es_result = _("Cancel")
@@ -45,11 +50,8 @@ class TestLocalization(unittest.TestCase):
         log_input_expected_result("Cancel", "Cancel", en_result)
         self.assertEqual(en_result, "Cancel")
 
+    @skip_if_debugger_attached_decorator
     def test_missing_language_fallback(self):
-        if skip_if_debugger_attached(self._testMethodName):
-            return
-            
-        log_test_name("Localization: missing_language_fallback")
         initialize_localization("zz")  # non-existent locale
         # Should gracefully fall back to identity translation
         result = _("Cancel")
@@ -57,7 +59,6 @@ class TestLocalization(unittest.TestCase):
         self.assertEqual(result, "Cancel")
 
     def test_placeholder_formatting(self):
-        log_test_name("Localization: placeholder_formatting")
         initialize_localization("es")
         # This msgid has a Spanish translation with the same {file} placeholder
         msgid = "Executing LoadSubtitleFile {file}"
@@ -71,7 +72,6 @@ class TestLocalization(unittest.TestCase):
         self.assertIn("ABC.srt", formatted)
 
     def test_available_locales_and_display_name(self):
-        log_test_name("Localization: available_locales_and_display_name")
         locales = get_available_locales()
         # Expect at least English and Spanish present in repo
         self.assertIn("en", locales)

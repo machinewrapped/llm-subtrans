@@ -81,13 +81,13 @@ def skip_if_debugger_attached_decorator(test_method):
             pass
     """
     @functools.wraps(test_method)
-    def wrapper(self):
+    def wrapper(self, *args, **kwargs):
         if sys.gettrace() is not None:
             test_name = test_method.__name__
             print(f"\nSkipping {test_name} when debugger is attached")
             self.skipTest(f"Skipped {test_name} when debugger is attached")
         else:
-            return test_method(self)
+            return test_method(self, *args, **kwargs)
     return wrapper
 
 def create_logfile(results_dir : str, log_name : str, log_level = logging.DEBUG) -> logging.FileHandler:

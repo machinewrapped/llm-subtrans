@@ -6,6 +6,8 @@ from PySubtrans.Helpers.Parse import ParseDelayFromHeader, ParseNames
 from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
 
 class TestParseDelayFromHeader(unittest.TestCase):
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
     test_cases = [
         ("5", 5.0),
         ("10s", 10.0),
@@ -16,7 +18,6 @@ class TestParseDelayFromHeader(unittest.TestCase):
     ]
 
     def test_ParseDelayFromHeader(self):
-        log_test_name("ParseDelayFromHeader")
         for value, expected in self.test_cases:
             with self.subTest(value=value):
                 result = ParseDelayFromHeader(value)
@@ -25,6 +26,8 @@ class TestParseDelayFromHeader(unittest.TestCase):
 
 
 class TestParseNames(unittest.TestCase):
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
     test_cases = [
         ("John, Jane, Alice", ["John", "Jane", "Alice"]),
         (["John", "Jane", "Alice"], ["John", "Jane", "Alice"]),
@@ -35,7 +38,6 @@ class TestParseNames(unittest.TestCase):
     ]
 
     def test_ParseNames(self):
-        log_test_name("ParseNames")
         for value, expected in self.test_cases:
             with self.subTest(value=value):
                 result = ParseNames(value)
@@ -43,6 +45,8 @@ class TestParseNames(unittest.TestCase):
                 self.assertSequenceEqual(result, expected)
 
 class TestParseValues(unittest.TestCase):
+    def setUp(self) -> None:
+        log_test_name(self._testMethodName)
     class TestEnum(Enum):
         Test1 = 1
         Test2 = 2
@@ -67,7 +71,6 @@ class TestParseValues(unittest.TestCase):
     ]
 
     def test_GetValueName(self):
-        log_test_name("GetValueName")
         for value, expected in self.get_value_name_cases:
             with self.subTest(value=value):
                 result = GetValueName(value)
@@ -83,7 +86,6 @@ class TestParseValues(unittest.TestCase):
     ]
 
     def test_GetValueFromName(self):
-        log_test_name("GetValueFromName")
         for value, names, default, expected in self.get_value_from_name_cases:
             with self.subTest(value=value):
                 result = GetValueFromName(value, names, default)

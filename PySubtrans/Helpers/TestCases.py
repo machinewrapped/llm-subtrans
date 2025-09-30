@@ -1,4 +1,5 @@
 from copy import deepcopy
+from datetime import timedelta
 import unittest
 from typing import Any
 
@@ -145,6 +146,66 @@ def AddResponsesFromMap(subtitles : Subtitles, test_data : dict):
         batch_number = int(re_match.group(2))
         batch = subtitles.GetBatch(scene_number, batch_number)
         batch.translation = Translation({'text': response_text})
+
+
+def BuildSubtitlesFromLineCounts(line_counts : list[list[int]]) -> Subtitles:
+    """Generate deterministic subtitles directly from line counts."""
+
+    subtitles = Subtitles()
+    if not line_counts:
+        return subtitles
+
+    within_batch_gap = timedelta(seconds=1)
+    between_batch_gap = timedelta(seconds=2)
+    scene_gap = timedelta(seconds=15)
+    line_duration = timedelta(seconds=1)
+
+    current_time = timedelta(seconds=0)
+    line_number = 1
+    scenes : list[SubtitleScene] = []
+
+    for scene_index, batch_counts in enumerate(line_counts, start=1):
+        scene = SubtitleScene({'scene': scene_index, 'number': scene_index})
+        scene.summary = f"Scene {scene_index}"
+
+        batches : list[SubtitleBatch] = []
+        for batch_index, line_count in enumerate(batch_counts, start=1):
+            batch_lines : list[SubtitleLine] = []
+
+            for line_offset in range(1, line_count + 1):
+                start_time = current_time
+                end_time = start_time + line_duration
+
+                batch_lines.append(
+                    SubtitleLine.Construct(
+                        line_number,
+                        start_time,
+                        end_time,
+                        f"Scene {scene_index} Batch {batch_index} Line {line_offset}"
+                    )
+                )
+
+                line_number += 1
+                current_time = end_time + within_batch_gap
+
+            batches.append(SubtitleBatch({
+                'scene': scene_index,
+                'number': batch_index,
+                'summary': f"Scene {scene_index} Batch {batch_index}",
+                'originals': batch_lines
+            }))
+
+            if batch_index < len(batch_counts):
+                current_time += between_batch_gap
+
+        scene.batches = batches
+        scenes.append(scene)
+
+        if scene_index < len(line_counts):
+            current_time += scene_gap
+
+    subtitles.scenes = scenes
+    return subtitles
 
 class DummyProvider(TranslationProvider):
     name = "Dummy Provider"

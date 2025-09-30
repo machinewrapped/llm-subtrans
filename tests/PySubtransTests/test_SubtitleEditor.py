@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from datetime import timedelta
 
-from PySubtrans.Helpers.TestCases import SubtitleTestCase
+from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, SubtitleTestCase
 from PySubtrans.Helpers.Tests import (
     log_input_expected_result,
     log_test_name,
@@ -33,13 +33,18 @@ class SubtitleEditorTests(SubtitleTestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.test_srt_file = os.path.join(self.temp_dir, "test.srt")
 
-        # Create test subtitles with some realistic timing
+        self.line_structure = [[4, 3], [3, 3], [4]]
+        structured_subtitles = BuildSubtitlesFromLineCounts(self.line_structure)
+
         self.test_lines = [
-            SubtitleLine.Construct(1, timedelta(seconds=1), timedelta(seconds=3), "First line", {}),
-            SubtitleLine.Construct(2, timedelta(seconds=4), timedelta(seconds=6), "Second line", {}),
-            SubtitleLine.Construct(3, timedelta(seconds=7), timedelta(seconds=9), "Third line", {}),
-            SubtitleLine.Construct(4, timedelta(seconds=15), timedelta(seconds=17), "Fourth line (new scene)", {}),
-            SubtitleLine.Construct(5, timedelta(seconds=18), timedelta(seconds=20), "Fifth line", {}),
+            SubtitleLine.Construct(
+                line.number,
+                line.start,
+                line.end,
+                line.text or "",
+                dict(line.metadata)
+            )
+            for line in structured_subtitles.originals or []
         ]
 
         # Write test SRT content
@@ -146,9 +151,8 @@ class SubtitleEditorTests(SubtitleTestCase):
             log_input_expected_result("scene count after batching > 0", True, scene_count > 0)
             self.assertGreater(scene_count, 0)
 
-            # With our test data and 5-second threshold, should have 2 scenes
-            # Lines 1-3 (gaps of 1s, 1s) and line 4-5 (gap of 8s between line 3 and 4)
-            expected_scenes = 2
+            # With our structured test data and 5-second threshold, helper creates three scenes
+            expected_scenes = len(self.line_structure)
             log_input_expected_result("expected scene count", expected_scenes, scene_count)
             self.assertEqual(scene_count, expected_scenes)
 
@@ -465,13 +469,16 @@ class SubtitleEditorTests(SubtitleTestCase):
     def test_merge_scenes(self):
         """Test MergeScenes combines sequential scenes"""
 
-        # Create subtitles with wider scene gaps to ensure multiple scenes
+        merge_structure = BuildSubtitlesFromLineCounts([[2], [2], [1]])
         wide_gap_lines = [
-            SubtitleLine.Construct(1, timedelta(seconds=1), timedelta(seconds=3), "Scene 1 line 1", {}),
-            SubtitleLine.Construct(2, timedelta(seconds=4), timedelta(seconds=6), "Scene 1 line 2", {}),
-            SubtitleLine.Construct(3, timedelta(seconds=20), timedelta(seconds=22), "Scene 2 line 1", {}), # 14s gap
-            SubtitleLine.Construct(4, timedelta(seconds=23), timedelta(seconds=25), "Scene 2 line 2", {}),
-            SubtitleLine.Construct(5, timedelta(seconds=40), timedelta(seconds=42), "Scene 3 line 1", {}), # 15s gap
+            SubtitleLine.Construct(
+                line.number,
+                line.start,
+                line.end,
+                line.text or "",
+                dict(line.metadata)
+            )
+            for line in merge_structure.originals or []
         ]
 
         self.subtitles.originals = wide_gap_lines

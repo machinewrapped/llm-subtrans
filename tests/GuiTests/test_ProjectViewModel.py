@@ -87,6 +87,48 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         return cast(LineItem, line_item_qt)
 
+    def _create_batch(self, scene_number : int, batch_number : int, line_count : int, start_line_number : int, start_time : timedelta) -> SubtitleBatch:
+        """
+        Helper to create a SubtitleBatch with the specified number of lines.
+        """
+        lines = [
+            SubtitleLine.Construct(
+                start_line_number + i,
+                start_time + timedelta(seconds=i*2),
+                start_time + timedelta(seconds=i*2 + 1),
+                f"Scene {scene_number} Batch {batch_number} Line {start_line_number + i}",
+                {}
+            )
+            for i in range(line_count)
+        ]
+
+        return SubtitleBatch({
+            'scene': scene_number,
+            'number': batch_number,
+            'summary': f"Scene {scene_number} Batch {batch_number}",
+            'originals': lines
+        })
+
+    def _create_scene(self, scene_number : int, batch_line_counts : list[int], start_line_number : int, start_time : timedelta) -> SubtitleScene:
+        """
+        Helper to create a SubtitleScene with batches containing the specified line counts.
+        """
+        batches = []
+        line_number = start_line_number
+        current_time = start_time
+
+        for batch_index, line_count in enumerate(batch_line_counts, start=1):
+            batch = self._create_batch(scene_number, batch_index, line_count, line_number, current_time)
+            batches.append(batch)
+            line_number += line_count
+            current_time += timedelta(seconds=line_count * 2)
+
+        return SubtitleScene({
+            'number': scene_number,
+            'context': {'summary': f"Scene {scene_number}"},
+            'batches': batches
+        })
+
     def test_create_model_from_helper_subtitles(self):
         line_counts = [[3, 2], [1, 1, 2]]
         subtitles = BuildSubtitlesFromLineCounts(line_counts)
@@ -296,17 +338,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_batch_number = len(subtitles.GetScene(1).batches) + 1
 
-        new_lines = [
-            SubtitleLine.Construct(next_line_number, timedelta(seconds=120), timedelta(seconds=121), f"Line {next_line_number}", {}),
-            SubtitleLine.Construct(next_line_number + 1, timedelta(seconds=122), timedelta(seconds=123), f"Line {next_line_number + 1}", {})
-        ]
-
-        new_batch = SubtitleBatch({
-            'scene': 1,
-            'number': new_batch_number,
-            'summary': f"Scene 1 Batch {new_batch_number}",
-            'originals': new_lines
-        })
+        new_batch = self._create_batch(1, new_batch_number, 2, next_line_number, timedelta(seconds=120))
 
         update = ModelUpdate()
         update.batches.add((1, new_batch.number), new_batch)
@@ -361,25 +393,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_scene_number = initial_scene_count + 1
 
-        batch1 = SubtitleBatch({
-            'scene': new_scene_number,
-            'number': 1,
-            'summary': f"Scene {new_scene_number} Batch 1",
-            'originals': [SubtitleLine.Construct(next_line_number, timedelta(seconds=180), timedelta(seconds=181), f"Line {next_line_number}", {})]
-        })
-
-        batch2 = SubtitleBatch({
-            'scene': new_scene_number,
-            'number': 2,
-            'summary': f"Scene {new_scene_number} Batch 2",
-            'originals': [SubtitleLine.Construct(next_line_number + 1, timedelta(seconds=182), timedelta(seconds=183), f"Line {next_line_number + 1}", {})]
-        })
-
-        new_scene = SubtitleScene({
-            'number': new_scene_number,
-            'context': {'summary': f"Scene {new_scene_number}"},
-            'batches': [batch1, batch2]
-        })
+        new_scene = self._create_scene(new_scene_number, [1, 1], next_line_number, timedelta(seconds=180))
 
         update = ModelUpdate()
         update.scenes.add(new_scene.number, new_scene)

@@ -10,7 +10,9 @@ from GuiSubtrans.ViewModel.ViewModel import ProjectViewModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, SubtitleTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_result
+from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleLine import SubtitleLine
+from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.Subtitles import Subtitles
 
 
@@ -292,19 +294,19 @@ class ProjectViewModelTests(SubtitleTestCase):
         viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
-        new_batch_scene = BuildSubtitlesFromLineCounts([[2]])
-        new_batch = new_batch_scene.GetScene(1).GetBatch(1)
-        self.assertIsNotNone(new_batch)
-        assert new_batch is not None
+        new_batch_number = len(subtitles.GetScene(1).batches) + 1
 
-        new_batch.scene = 1
-        new_batch.number = len(subtitles.GetScene(1).batches) + 1
-        new_batch.summary = f"Scene 1 Batch {new_batch.number}"
-        for line in new_batch.originals:
-            line.number = next_line_number
-            line.start = line.start + timedelta(seconds=120)
-            line.end = line.end + timedelta(seconds=120)
-            next_line_number += 1
+        new_lines = [
+            SubtitleLine.Construct(next_line_number, timedelta(seconds=120), timedelta(seconds=121), f"Line {next_line_number}", {}),
+            SubtitleLine.Construct(next_line_number + 1, timedelta(seconds=122), timedelta(seconds=123), f"Line {next_line_number + 1}", {})
+        ]
+
+        new_batch = SubtitleBatch({
+            'scene': 1,
+            'number': new_batch_number,
+            'summary': f"Scene 1 Batch {new_batch_number}",
+            'originals': new_lines
+        })
 
         update = ModelUpdate()
         update.batches.add((1, new_batch.number), new_batch)
@@ -357,19 +359,27 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(initial_scene_count, len(base_counts))
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
-        extra_scene_subtitles = BuildSubtitlesFromLineCounts([[1, 1]])
-        new_scene = extra_scene_subtitles.GetScene(1)
-        new_scene.number = initial_scene_count + 1
-        new_scene.summary = f"Scene {new_scene.number}"
-        for batch_index, batch in enumerate(new_scene.batches, start=1):
-            batch.scene = new_scene.number
-            batch.number = batch_index
-            batch.summary = f"Scene {new_scene.number} Batch {batch_index}"
-            for line in batch.originals:
-                line.number = next_line_number
-                line.start = line.start + timedelta(seconds=180)
-                line.end = line.end + timedelta(seconds=180)
-                next_line_number += 1
+        new_scene_number = initial_scene_count + 1
+
+        batch1 = SubtitleBatch({
+            'scene': new_scene_number,
+            'number': 1,
+            'summary': f"Scene {new_scene_number} Batch 1",
+            'originals': [SubtitleLine.Construct(next_line_number, timedelta(seconds=180), timedelta(seconds=181), f"Line {next_line_number}", {})]
+        })
+
+        batch2 = SubtitleBatch({
+            'scene': new_scene_number,
+            'number': 2,
+            'summary': f"Scene {new_scene_number} Batch 2",
+            'originals': [SubtitleLine.Construct(next_line_number + 1, timedelta(seconds=182), timedelta(seconds=183), f"Line {next_line_number + 1}", {})]
+        })
+
+        new_scene = SubtitleScene({
+            'number': new_scene_number,
+            'context': {'summary': f"Scene {new_scene_number}"},
+            'batches': [batch1, batch2]
+        })
 
         update = ModelUpdate()
         update.scenes.add(new_scene.number, new_scene)
@@ -380,15 +390,9 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("final scene count", initial_scene_count + 1, final_scene_count)
         self.assertEqual(final_scene_count, initial_scene_count + 1)
 
-        scene_three_item_qt = root_item.child(2, 0)
-        log_input_expected_result("scene 3 exists", True, scene_three_item_qt is not None)
-        self.assertIsNotNone(scene_three_item_qt)
-        if scene_three_item_qt is None:
+        scene_three_item = self._get_scene_item(viewmodel, 3)
+        if scene_three_item is None:
             return
-
-        log_input_expected_result("scene 3 type", SceneItem, type(scene_three_item_qt))
-        self.assertEqual(type(scene_three_item_qt), SceneItem)
-        scene_three_item : SceneItem = cast(SceneItem, scene_three_item_qt)
 
         log_input_expected_result("scene 3 number", 3, scene_three_item.number)
         self.assertEqual(scene_three_item.number, 3)

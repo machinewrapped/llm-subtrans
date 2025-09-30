@@ -6,15 +6,15 @@ GUI framework is PySide6, be sure to use the correct syntax (e.g. scoped enum va
 
 Secrets are stored in a .env file - NEVER read the contents of the file.
 
-Run tests\unit_tests.py at the end of a task to validate the change, unless it purely touched UI code (the GUI is not covered by unit tests).
+Run tests\unit_tests.py at the end of a task to validate the change, unless it purely touched UI code (the GUI is not covered by unit tests). Activate the envsubtrans virtual environment first.
 
 ## Console Output
 Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Windows console errors
 
 ## Commands
-- Run all unit tests: `python tests/unit_tests.py` 
+- Run all unit tests: `python tests/unit_tests.py`
 - Run single test: `python -m unittest PySubtrans.UnitTests.test_MODULE` or `python -m unittest GuiSubtrans.UnitTests.test_MODULE`
-- Run full test suite: `python scripts/run_tests.py` 
+- Run full test suite: `python scripts/run_tests.py`
 - Build distribution: `./scripts/makedistro.sh` (Linux/Mac) or `scripts\makedistro.bat` (Windows)
 - Create virtual environment, install dependencies and configure project: `./install.sh` (Linux/Mac) or `install.bat` (Windows)
 

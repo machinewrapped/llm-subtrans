@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import cast
 
 from PySide6.QtCore import QCoreApplication
 
@@ -53,7 +54,7 @@ class ProjectViewModelTests(SubtitleTestCase):
             log_input_expected_result(f"scene {scene_index} type", SceneItem, type(scene_item_qt))
             self.assertEqual(type(scene_item_qt), SceneItem)
 
-            scene_item: SceneItem = scene_item_qt
+            scene_item: SceneItem = cast(SceneItem, scene_item_qt)
             expected_summary = f"Scene {scene_index}"
             log_input_expected_result(f"scene {scene_index} summary", expected_summary, scene_item.summary)
             self.assertEqual(scene_item.summary, expected_summary)
@@ -74,7 +75,7 @@ class ProjectViewModelTests(SubtitleTestCase):
                 )
                 self.assertEqual(type(batch_item_qt), BatchItem)
 
-                batch_item: BatchItem = batch_item_qt
+                batch_item: BatchItem = cast(BatchItem, batch_item_qt)
                 expected_batch_summary = f"Scene {scene_index} Batch {batch_index}"
                 log_input_expected_result(
                     f"batch ({scene_index},{batch_index}) summary",
@@ -103,7 +104,7 @@ class ProjectViewModelTests(SubtitleTestCase):
                     )
                     self.assertEqual(type(line_item_qt), LineItem)
 
-                    line_item: LineItem = line_item_qt
+                    line_item: LineItem = cast(LineItem, line_item_qt)
                     expected_text = f"Scene {scene_index} Batch {batch_index} Line {line_row + 1}"
                     log_input_expected_result(
                         f"line ({scene_index},{batch_index},{line_row + 1}) text",
@@ -129,7 +130,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("scene 1 type", SceneItem, type(scene_one_item_qt))
         self.assertEqual(type(scene_one_item_qt), SceneItem)
-        scene_one_item : SceneItem = scene_one_item_qt
+        scene_one_item : SceneItem = cast(SceneItem, scene_one_item_qt)
 
         log_input_expected_result("scene 1 summary", 'Scene 1 (edited)', scene_one_item.summary)
         self.assertEqual(scene_one_item.summary, 'Scene 1 (edited)')
@@ -149,7 +150,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         if scene_one_item_qt is None:
             return
 
-        scene_one_item : SceneItem = scene_one_item_qt
+        scene_one_item : SceneItem = cast(SceneItem, scene_one_item_qt)
         batch_one_item_qt = scene_one_item.child(0, 0)
         log_input_expected_result("batch (1,1) exists", True, batch_one_item_qt is not None)
         self.assertIsNotNone(batch_one_item_qt)
@@ -158,7 +159,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("batch (1,1) type", BatchItem, type(batch_one_item_qt))
         self.assertEqual(type(batch_one_item_qt), BatchItem)
-        batch_one_item : BatchItem = batch_one_item_qt
+        batch_one_item : BatchItem = cast(BatchItem, batch_one_item_qt)
 
         log_input_expected_result("batch (1,1) summary", 'Scene 1 Batch 1 (edited)', batch_one_item.summary)
         self.assertEqual(batch_one_item.summary, 'Scene 1 Batch 1 (edited)')
@@ -178,7 +179,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         if scene_one_item_qt is None:
             return
 
-        scene_one_item : SceneItem = scene_one_item_qt
+        scene_one_item : SceneItem = cast(SceneItem, scene_one_item_qt)
         batch_one_item_qt = scene_one_item.child(0, 0)
         log_input_expected_result("batch (1,1) exists", True, batch_one_item_qt is not None)
         self.assertIsNotNone(batch_one_item_qt)
@@ -187,7 +188,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("batch (1,1) type", BatchItem, type(batch_one_item_qt))
         self.assertEqual(type(batch_one_item_qt), BatchItem)
-        batch_one_item : BatchItem = batch_one_item_qt
+        batch_one_item : BatchItem = cast(BatchItem, batch_one_item_qt)
         updated_line_item_qt = batch_one_item.child(0, 0)
         log_input_expected_result("line (1,1,1) exists", True, updated_line_item_qt is not None)
         self.assertIsNotNone(updated_line_item_qt)
@@ -196,7 +197,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("line (1,1,1) type", LineItem, type(updated_line_item_qt))
         self.assertEqual(type(updated_line_item_qt), LineItem)
-        updated_line_item : LineItem = updated_line_item_qt
+        updated_line_item : LineItem = cast(LineItem, updated_line_item_qt)
 
         log_input_expected_result(
             "line (1,1,1) text",
@@ -229,7 +230,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         if scene_one_item_qt is None:
             return
 
-        scene_one_item : SceneItem = scene_one_item_qt
+        scene_one_item : SceneItem = cast(SceneItem, scene_one_item_qt)
         batch_one_item_qt = scene_one_item.child(0, 0)
         log_input_expected_result("batch (1,1) exists", True, batch_one_item_qt is not None)
         self.assertIsNotNone(batch_one_item_qt)
@@ -238,7 +239,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("batch (1,1) type", BatchItem, type(batch_one_item_qt))
         self.assertEqual(type(batch_one_item_qt), BatchItem)
-        batch_one_item : BatchItem = batch_one_item_qt
+        batch_one_item : BatchItem = cast(BatchItem, batch_one_item_qt)
 
         log_input_expected_result("batch (1,1) line count", 3, batch_one_item.line_count)
         self.assertEqual(batch_one_item.line_count, 3)
@@ -252,7 +253,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("new line type", LineItem, type(new_line_item_qt))
         self.assertEqual(type(new_line_item_qt), LineItem)
-        new_line_item : LineItem = new_line_item_qt
+        new_line_item : LineItem = cast(LineItem, new_line_item_qt)
 
         log_input_expected_result("new line text", 'Scene 1 Batch 1 Line New', new_line_item.line_text)
         self.assertEqual(new_line_item.line_text, 'Scene 1 Batch 1 Line New')
@@ -272,7 +273,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         if scene_one_item_qt is None:
             return
 
-        scene_one_item : SceneItem = scene_one_item_qt
+        scene_one_item : SceneItem = cast(SceneItem, scene_one_item_qt)
         batch_one_item_qt = scene_one_item.child(0, 0)
         log_input_expected_result("batch (1,1) exists", True, batch_one_item_qt is not None)
         self.assertIsNotNone(batch_one_item_qt)
@@ -281,7 +282,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("batch (1,1) type", BatchItem, type(batch_one_item_qt))
         self.assertEqual(type(batch_one_item_qt), BatchItem)
-        batch_one_item : BatchItem = batch_one_item_qt
+        batch_one_item : BatchItem = cast(BatchItem, batch_one_item_qt)
 
         log_input_expected_result("batch (1,1) line count", 1, batch_one_item.line_count)
         self.assertEqual(batch_one_item.line_count, 1)
@@ -293,6 +294,9 @@ class ProjectViewModelTests(SubtitleTestCase):
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_batch_scene = BuildSubtitlesFromLineCounts([[2]])
         new_batch = new_batch_scene.GetScene(1).GetBatch(1)
+        self.assertIsNotNone(new_batch)
+        assert new_batch is not None
+
         new_batch.scene = 1
         new_batch.number = len(subtitles.GetScene(1).batches) + 1
         new_batch.summary = f"Scene 1 Batch {new_batch.number}"
@@ -315,7 +319,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("scene 1 type", SceneItem, type(scene_one_item_qt))
         self.assertEqual(type(scene_one_item_qt), SceneItem)
-        scene_one_item : SceneItem = scene_one_item_qt
+        scene_one_item : SceneItem = cast(SceneItem, scene_one_item_qt)
 
         expected_batch_count = len(base_counts[0]) + 1
         log_input_expected_result("scene 1 batch count", expected_batch_count, scene_one_item.batch_count)
@@ -330,7 +334,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("new batch type", BatchItem, type(new_batch_item_qt))
         self.assertEqual(type(new_batch_item_qt), BatchItem)
-        new_batch_item : BatchItem = new_batch_item_qt
+        new_batch_item : BatchItem = cast(BatchItem, new_batch_item_qt)
 
         log_input_expected_result("new batch summary", new_batch.summary, new_batch_item.summary)
         self.assertEqual(new_batch_item.summary, new_batch.summary)
@@ -352,7 +356,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("scene 2 type", SceneItem, type(scene_two_item_qt))
         self.assertEqual(type(scene_two_item_qt), SceneItem)
-        scene_two_item : SceneItem = scene_two_item_qt
+        scene_two_item : SceneItem = cast(SceneItem, scene_two_item_qt)
 
         expected_batch_count = len(base_counts[1]) - 1
         log_input_expected_result("scene 2 batch count", expected_batch_count, scene_two_item.batch_count)
@@ -398,7 +402,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("scene 3 type", SceneItem, type(scene_three_item_qt))
         self.assertEqual(type(scene_three_item_qt), SceneItem)
-        scene_three_item : SceneItem = scene_three_item_qt
+        scene_three_item : SceneItem = cast(SceneItem, scene_three_item_qt)
 
         log_input_expected_result("scene 3 number", 3, scene_three_item.number)
         self.assertEqual(scene_three_item.number, 3)

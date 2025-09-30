@@ -122,7 +122,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.lines.update((1, 1, 1), {'text': 'Scene 1 Batch 1 Line 1 (edited)'})
         update.lines.remove((1, 1, 2))
 
-        next_line_number = max(line.number for line in subtitles.originals or []) + 1
+        next_line_number = max((line.number for line in subtitles.originals or []), default=0) + 1
 
         new_line = SubtitleLine.Construct(
             next_line_number,

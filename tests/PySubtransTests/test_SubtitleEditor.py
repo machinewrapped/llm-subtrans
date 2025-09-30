@@ -36,16 +36,7 @@ class SubtitleEditorTests(SubtitleTestCase):
         self.line_structure = [[4, 3], [3, 3], [4]]
         structured_subtitles = BuildSubtitlesFromLineCounts(self.line_structure)
 
-        self.test_lines = [
-            SubtitleLine.Construct(
-                line.number,
-                line.start,
-                line.end,
-                line.text or "",
-                dict(line.metadata)
-            )
-            for line in structured_subtitles.originals or []
-        ]
+        self.test_lines = structured_subtitles.originals.copy() if structured_subtitles.originals else []
 
         # Write test SRT content
         with open(self.test_srt_file, 'w', encoding='utf-8') as f:
@@ -470,16 +461,7 @@ class SubtitleEditorTests(SubtitleTestCase):
         """Test MergeScenes combines sequential scenes"""
 
         merge_structure = BuildSubtitlesFromLineCounts([[2], [2], [1]])
-        wide_gap_lines = [
-            SubtitleLine.Construct(
-                line.number,
-                line.start,
-                line.end,
-                line.text or "",
-                dict(line.metadata)
-            )
-            for line in merge_structure.originals or []
-        ]
+        wide_gap_lines = merge_structure.originals or []
 
         self.subtitles.originals = wide_gap_lines
         batcher = SubtitleBatcher(self.options)

@@ -186,7 +186,9 @@ def BuildSubtitlesFromLineCounts(line_counts : list[list[int]]) -> Subtitles:
                 )
 
                 line_number += 1
-                current_time = end_time + within_batch_gap
+                current_time = end_time
+                if line_offset < line_count:
+                    current_time += within_batch_gap
 
             batches.append(SubtitleBatch({
                 'scene': scene_index,

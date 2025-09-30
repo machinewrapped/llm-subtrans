@@ -34,9 +34,7 @@ class SubtitleEditorTests(SubtitleTestCase):
         self.test_srt_file = os.path.join(self.temp_dir, "test.srt")
 
         self.line_structure = [[4, 3], [3, 3], [4]]
-        structured_subtitles = BuildSubtitlesFromLineCounts(self.line_structure)
-
-        self.test_lines = structured_subtitles.originals.copy() if structured_subtitles.originals else []
+        self.test_lines = BuildSubtitlesFromLineCounts(self.line_structure).originals or []
 
         # Write test SRT content
         with open(self.test_srt_file, 'w', encoding='utf-8') as f:

@@ -35,7 +35,7 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         return viewmodel, subtitles
 
-    def _get_scene_item(self, viewmodel : ProjectViewModel, scene_number : int) -> SceneItem|None:
+    def _get_scene_item(self, viewmodel : ProjectViewModel, scene_number : int) -> SceneItem:
         """
         Helper to retrieve a scene item from the view model.
         Returns the SceneItem or None if not found or wrong type.
@@ -45,15 +45,13 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result(f"scene {scene_number} exists", True, scene_item_qt is not None)
         self.assertIsNotNone(scene_item_qt)
-        if scene_item_qt is None:
-            return None
 
         log_input_expected_result(f"scene {scene_number} type", SceneItem, type(scene_item_qt))
         self.assertEqual(type(scene_item_qt), SceneItem)
 
         return cast(SceneItem, scene_item_qt)
 
-    def _get_batch_item(self, scene_item : SceneItem, scene_number : int, batch_number : int) -> BatchItem|None:
+    def _get_batch_item(self, scene_item : SceneItem, scene_number : int, batch_number : int) -> BatchItem:
         """
         Helper to retrieve a batch item from a scene item.
         Returns the BatchItem or None if not found or wrong type.
@@ -62,15 +60,13 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result(f"batch ({scene_number},{batch_number}) exists", True, batch_item_qt is not None)
         self.assertIsNotNone(batch_item_qt)
-        if batch_item_qt is None:
-            return None
 
         log_input_expected_result(f"batch ({scene_number},{batch_number}) type", BatchItem, type(batch_item_qt))
         self.assertEqual(type(batch_item_qt), BatchItem)
 
         return cast(BatchItem, batch_item_qt)
 
-    def _get_line_item(self, batch_item : BatchItem, scene_number : int, batch_number : int, line_number : int) -> LineItem|None:
+    def _get_line_item(self, batch_item : BatchItem, scene_number : int, batch_number : int, line_number : int) -> LineItem:
         """
         Helper to retrieve a line item from a batch item.
         Returns the LineItem or None if not found or wrong type.
@@ -79,8 +75,6 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result(f"line ({scene_number},{batch_number},{line_number}) exists", True, line_item_qt is not None)
         self.assertIsNotNone(line_item_qt)
-        if line_item_qt is None:
-            return None
 
         log_input_expected_result(f"line ({scene_number},{batch_number},{line_number}) type", LineItem, type(line_item_qt))
         self.assertEqual(type(line_item_qt), LineItem)
@@ -218,8 +212,6 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         scene_one_item = self._get_scene_item(viewmodel, 1)
-        if scene_one_item is None:
-            return
 
         log_input_expected_result("scene 1 summary", 'Scene 1 (edited)', scene_one_item.summary)
         self.assertEqual(scene_one_item.summary, 'Scene 1 (edited)')
@@ -233,12 +225,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         scene_one_item = self._get_scene_item(viewmodel, 1)
-        if scene_one_item is None:
-            return
-
         batch_one_item = self._get_batch_item(scene_one_item, 1, 1)
-        if batch_one_item is None:
-            return
 
         log_input_expected_result("batch (1,1) summary", 'Scene 1 Batch 1 (edited)', batch_one_item.summary)
         self.assertEqual(batch_one_item.summary, 'Scene 1 Batch 1 (edited)')
@@ -252,16 +239,8 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         scene_one_item = self._get_scene_item(viewmodel, 1)
-        if scene_one_item is None:
-            return
-
         batch_one_item = self._get_batch_item(scene_one_item, 1, 1)
-        if batch_one_item is None:
-            return
-
         updated_line_item = self._get_line_item(batch_one_item, 1, 1, 1)
-        if updated_line_item is None:
-            return
 
         log_input_expected_result(
             "line (1,1,1) text",
@@ -288,12 +267,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         scene_one_item = self._get_scene_item(viewmodel, 1)
-        if scene_one_item is None:
-            return
-
         batch_one_item = self._get_batch_item(scene_one_item, 1, 1)
-        if batch_one_item is None:
-            return
 
         log_input_expected_result("batch (1,1) line count", 3, batch_one_item.line_count)
         self.assertEqual(batch_one_item.line_count, 3)
@@ -302,8 +276,6 @@ class ProjectViewModelTests(SubtitleTestCase):
         new_line_item_qt = batch_one_item.child(new_line_index, 0)
         log_input_expected_result("new line exists", True, new_line_item_qt is not None)
         self.assertIsNotNone(new_line_item_qt)
-        if new_line_item_qt is None:
-            return
 
         log_input_expected_result("new line type", LineItem, type(new_line_item_qt))
         self.assertEqual(type(new_line_item_qt), LineItem)
@@ -321,12 +293,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         scene_one_item = self._get_scene_item(viewmodel, 1)
-        if scene_one_item is None:
-            return
-
         batch_one_item = self._get_batch_item(scene_one_item, 1, 1)
-        if batch_one_item is None:
-            return
 
         log_input_expected_result("batch (1,1) line count", 1, batch_one_item.line_count)
         self.assertEqual(batch_one_item.line_count, 1)
@@ -345,8 +312,6 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         scene_one_item = self._get_scene_item(viewmodel, 1)
-        if scene_one_item is None:
-            return
 
         expected_batch_count = len(base_counts[0]) + 1
         log_input_expected_result("scene 1 batch count", expected_batch_count, scene_one_item.batch_count)
@@ -356,8 +321,6 @@ class ProjectViewModelTests(SubtitleTestCase):
         new_batch_item_qt = scene_one_item.child(new_batch_index, 0)
         log_input_expected_result("new batch exists", True, new_batch_item_qt is not None)
         self.assertIsNotNone(new_batch_item_qt)
-        if new_batch_item_qt is None:
-            return
 
         log_input_expected_result("new batch type", BatchItem, type(new_batch_item_qt))
         self.assertEqual(type(new_batch_item_qt), BatchItem)
@@ -375,8 +338,6 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         scene_two_item = self._get_scene_item(viewmodel, 2)
-        if scene_two_item is None:
-            return
 
         expected_batch_count = len(base_counts[1]) - 1
         log_input_expected_result("scene 2 batch count", expected_batch_count, scene_two_item.batch_count)
@@ -405,8 +366,6 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(final_scene_count, initial_scene_count + 1)
 
         scene_three_item = self._get_scene_item(viewmodel, 3)
-        if scene_three_item is None:
-            return
 
         log_input_expected_result("scene 3 number", 3, scene_three_item.number)
         self.assertEqual(scene_three_item.number, 3)

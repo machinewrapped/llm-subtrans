@@ -306,6 +306,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(batch_one_item.summary, 'Scene 1 Batch 1 (edited)')
 
         # Verify dataChanged was emitted (batch setData + scene.emitDataChanged + batch.emitDataChanged = 3)
+        # TODO: this count seems high, invesigate whether the explicit calls are needed
         viewmodel.assert_signal_emitted(self, 'dataChanged', expected_count=3)
 
     def test_update_line_text(self):
@@ -329,6 +330,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(updated_line_item.line_text, 'Scene 1 Batch 1 Line 1 (edited)')
 
         # Verify dataChanged was emitted (line item update + batch.emitDataChanged = 2)
+        # TODO: this count seems high, invesigate whether the explicit calls are needed
         viewmodel.assert_signal_emitted(self, 'dataChanged', expected_count=2)
 
     def test_add_new_line(self):

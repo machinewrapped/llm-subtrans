@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import cast
 
-from PySide6.QtCore import QCoreApplication
+from PySide6.QtCore import QCoreApplication, QModelIndex
 
 from GuiSubtrans.ViewModel.BatchItem import BatchItem
 from GuiSubtrans.ViewModel.LineItem import LineItem
@@ -16,6 +16,76 @@ from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.Subtitles import Subtitles
 
 
+class TestableProjectViewModel(ProjectViewModel):
+    """
+    Subclass of ProjectViewModel that tracks signals for testing.
+    """
+    def __init__(self):
+        super().__init__()
+        self.signal_history : list[dict] = []
+
+        # Connect to all relevant signals
+        self.dataChanged.connect(self._track_data_changed)
+        self.layoutChanged.connect(self._track_layout_changed)
+        self.modelReset.connect(self._track_model_reset)
+
+    def _track_data_changed(self, topLeft : QModelIndex, bottomRight : QModelIndex, roles : list[int]) -> None:
+        """Track dataChanged signals"""
+        self.signal_history.append({
+            'signal': 'dataChanged',
+            'topLeft': topLeft,
+            'bottomRight': bottomRight,
+            'roles': roles
+        })
+
+    def _track_layout_changed(self) -> None:
+        """Track layoutChanged signals"""
+        self.signal_history.append({'signal': 'layoutChanged'})
+
+    def _track_model_reset(self) -> None:
+        """Track modelReset signals"""
+        self.signal_history.append({'signal': 'modelReset'})
+
+    def clear_signal_history(self) -> None:
+        """Clear signal history between test operations"""
+        self.signal_history.clear()
+
+    def assert_signal_emitted(self, test_case : SubtitleTestCase, signal_name : str, expected_count : int|None = None) -> list[dict]:
+        """
+        Assert that a specific signal was emitted.
+        Returns the list of matching signals for further inspection.
+
+        Args:
+            test_case: The test case instance for assertions
+            signal_name: Name of the signal ('dataChanged', 'layoutChanged', 'modelReset')
+            expected_count: Expected number of times signal was emitted (None = at least once)
+        """
+        matching_signals = [s for s in self.signal_history if s['signal'] == signal_name]
+
+        if expected_count is None:
+            log_input_expected_result(f"{signal_name} emitted", True, len(matching_signals) > 0)
+            test_case.assertGreater(len(matching_signals), 0, f"Expected {signal_name} to be emitted")
+        else:
+            log_input_expected_result(f"{signal_name} count", expected_count, len(matching_signals))
+            test_case.assertEqual(len(matching_signals), expected_count,
+                                f"Expected {signal_name} to be emitted {expected_count} times, got {len(matching_signals)}")
+
+        return matching_signals
+
+    def assert_no_signal_emitted(self, test_case : SubtitleTestCase, signal_name : str) -> None:
+        """
+        Assert that a specific signal was NOT emitted.
+
+        Args:
+            test_case: The test case instance for assertions
+            signal_name: Name of the signal ('dataChanged', 'layoutChanged', 'modelReset')
+        """
+        matching_signals = [s for s in self.signal_history if s['signal'] == signal_name]
+        log_input_expected_result(f"{signal_name} not emitted", 0, len(matching_signals))
+        test_case.assertEqual(len(matching_signals), 0,
+                            f"Expected {signal_name} to NOT be emitted, but it was emitted {len(matching_signals)} times")
+
+
 class ProjectViewModelTests(SubtitleTestCase):
     _qt_app : QCoreApplication|None = None
 
@@ -27,10 +97,10 @@ class ProjectViewModelTests(SubtitleTestCase):
         else:
             cls._qt_app = QCoreApplication.instance()
 
-    def _create_viewmodel_with_counts(self, line_counts : list[list[int]]) -> tuple[ProjectViewModel, Subtitles]:
+    def _create_viewmodel_with_counts(self, line_counts : list[list[int]]) -> tuple[TestableProjectViewModel, Subtitles]:
         subtitles = BuildSubtitlesFromLineCounts(line_counts)
 
-        viewmodel = ProjectViewModel()
+        viewmodel = TestableProjectViewModel()
         viewmodel.CreateModel(subtitles)
 
         return viewmodel, subtitles
@@ -206,6 +276,7 @@ class ProjectViewModelTests(SubtitleTestCase):
     def test_update_scene_summary(self):
         base_counts = [[2, 2], [1, 1]]
         viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
+        viewmodel.clear_signal_history()
 
         update = ModelUpdate()
         update.scenes.update(1, {'summary': 'Scene 1 (edited)'})
@@ -216,9 +287,13 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("scene 1 summary", 'Scene 1 (edited)', scene_one_item.summary)
         self.assertEqual(scene_one_item.summary, 'Scene 1 (edited)')
 
+        # Verify dataChanged was emitted for in-place update
+        viewmodel.assert_signal_emitted(self, 'dataChanged', expected_count=1)
+
     def test_update_batch_summary(self):
         base_counts = [[2, 2], [1, 1]]
         viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
+        viewmodel.clear_signal_history()
 
         update = ModelUpdate()
         update.batches.update((1, 1), {'summary': 'Scene 1 Batch 1 (edited)'})
@@ -230,9 +305,13 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("batch (1,1) summary", 'Scene 1 Batch 1 (edited)', batch_one_item.summary)
         self.assertEqual(batch_one_item.summary, 'Scene 1 Batch 1 (edited)')
 
+        # Verify dataChanged was emitted (batch setData + scene.emitDataChanged + batch.emitDataChanged = 3)
+        viewmodel.assert_signal_emitted(self, 'dataChanged', expected_count=3)
+
     def test_update_line_text(self):
         base_counts = [[2, 2], [1, 1]]
         viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
+        viewmodel.clear_signal_history()
 
         update = ModelUpdate()
         update.lines.update((1, 1, 1), {'text': 'Scene 1 Batch 1 Line 1 (edited)'})
@@ -249,9 +328,13 @@ class ProjectViewModelTests(SubtitleTestCase):
         )
         self.assertEqual(updated_line_item.line_text, 'Scene 1 Batch 1 Line 1 (edited)')
 
+        # Verify dataChanged was emitted (line item update + batch.emitDataChanged = 2)
+        viewmodel.assert_signal_emitted(self, 'dataChanged', expected_count=2)
+
     def test_add_new_line(self):
         base_counts = [[2, 2], [1, 1]]
         viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
+        viewmodel.clear_signal_history()
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_line = SubtitleLine.Construct(
@@ -284,9 +367,13 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("new line text", 'Scene 1 Batch 1 Line New', new_line_item.line_text)
         self.assertEqual(new_line_item.line_text, 'Scene 1 Batch 1 Line New')
 
+        # Verify modelReset was emitted for structural change (adding a line)
+        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+
     def test_remove_line(self):
         base_counts = [[2, 2], [1, 1]]
         viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
+        viewmodel.clear_signal_history()
 
         update = ModelUpdate()
         update.lines.remove((1, 1, 2))
@@ -298,9 +385,13 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("batch (1,1) line count", 1, batch_one_item.line_count)
         self.assertEqual(batch_one_item.line_count, 1)
 
+        # Verify modelReset was emitted for structural change (removing a line)
+        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+
     def test_add_new_batch(self):
         base_counts = [[2, 2], [1, 1]]
         viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
+        viewmodel.clear_signal_history()
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_batch_number = len(subtitles.GetScene(1).batches) + 1
@@ -329,9 +420,13 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("new batch summary", new_batch.summary, new_batch_item.summary)
         self.assertEqual(new_batch_item.summary, new_batch.summary)
 
+        # Verify modelReset was emitted for structural change (adding a batch)
+        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+
     def test_remove_batch(self):
         base_counts = [[2, 2], [1, 1]]
         viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
+        viewmodel.clear_signal_history()
 
         update = ModelUpdate()
         update.batches.remove((2, 2))
@@ -343,6 +438,9 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("scene 2 batch count", expected_batch_count, scene_two_item.batch_count)
         self.assertEqual(scene_two_item.batch_count, expected_batch_count)
 
+        # Verify modelReset was emitted for structural change (removing a batch)
+        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+
     def test_add_new_scene(self):
         base_counts = [[2, 2], [1, 1]]
         viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
@@ -350,6 +448,8 @@ class ProjectViewModelTests(SubtitleTestCase):
         initial_scene_count = viewmodel.rowCount()
         log_input_expected_result("initial scene count", len(base_counts), initial_scene_count)
         self.assertEqual(initial_scene_count, len(base_counts))
+
+        viewmodel.clear_signal_history()
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_scene_number = initial_scene_count + 1
@@ -372,3 +472,6 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         log_input_expected_result("scene 3 batch count", 2, scene_three_item.batch_count)
         self.assertEqual(scene_three_item.batch_count, 2)
+
+        # Verify modelReset was emitted for structural change (adding a scene)
+        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)

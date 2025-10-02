@@ -4,7 +4,6 @@ import unittest
 from typing import Any
 
 import regex
-
 from PySubtrans.Helpers.Tests import log_test_name
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import SettingsType
@@ -12,14 +11,15 @@ from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import TranslationError
 from PySubtrans.SubtitleFileHandler import SubtitleFileHandler
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
-from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleLine import SubtitleLine
+from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleScene import SubtitleScene
+from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
-from PySubtrans.TranslationRequest import TranslationRequest
 from PySubtrans.TranslationProvider import TranslationProvider
+from PySubtrans.TranslationRequest import TranslationRequest
 
 class LoggedTestCase(unittest.TestCase):
     def setUp(self) -> None:
@@ -58,6 +58,14 @@ class SubtitleTestCase(LoggedTestCase):
 
     def setUp(self) -> None:
         super().setUp()
+
+    def create_subtitle_project(self, subtitles : Subtitles|None = None) -> SubtitleProject:
+        """Create a SubtitleProject populated with the provided subtitles."""
+        project = SubtitleProject(persistent=self.options.use_project_file)
+        project.write_translation = False
+        project.subtitles = subtitles or Subtitles()
+        project.UpdateProjectSettings(self.options)
+        return project
 
     def _assert_same_as_reference(self, subtitles : Subtitles, reference_subtitles: Subtitles):
         """

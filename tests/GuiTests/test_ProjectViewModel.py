@@ -2,28 +2,18 @@ import unittest
 from datetime import timedelta
 from typing import cast
 
-from PySide6.QtCore import QCoreApplication
-
+from GuiSubtrans.GuiSubtitleTestCase import GuiSubtitleTestCase
 from GuiSubtrans.ViewModel.BatchItem import BatchItem
 from GuiSubtrans.ViewModel.LineItem import LineItem
 from GuiSubtrans.ViewModel.SceneItem import SceneItem
 from GuiSubtrans.ViewModel.TestableViewModel import TestableViewModel
 from GuiSubtrans.ViewModel.ViewModel import ProjectViewModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
-from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, CreateDummyBatch, CreateDummyScene, SubtitleTestCase
+from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, CreateDummyBatch, CreateDummyScene
 from PySubtrans.Helpers.Tests import log_input_expected_result
 from PySubtrans.SubtitleLine import SubtitleLine
 
-class ProjectViewModelTests(SubtitleTestCase):
-    _qt_app : QCoreApplication|None = None
-
-    @classmethod
-    def setUpClass(cls) -> None:
-        super().setUpClass()
-        if QCoreApplication.instance() is None:
-            cls._qt_app = QCoreApplication([])
-        else:
-            cls._qt_app = QCoreApplication.instance()
+class ProjectViewModelTests(GuiSubtitleTestCase):
 
     def test_create_model_from_helper_subtitles(self):
         line_counts = [[3, 2], [1, 1, 2]]

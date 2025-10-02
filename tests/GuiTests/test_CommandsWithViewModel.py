@@ -1,5 +1,7 @@
 from collections.abc import Callable
 
+from PySide6.QtCore import QCoreApplication
+
 from GuiSubtrans.Commands.AutoSplitBatchCommand import AutoSplitBatchCommand
 from GuiSubtrans.Commands.DeleteLinesCommand import DeleteLinesCommand
 from GuiSubtrans.Commands.EditBatchCommand import EditBatchCommand
@@ -224,14 +226,18 @@ class CommandsWithViewModelTests(GuiSubtitleTestCase):
         for test_case in test_cases:
             with self.subTest(test_case['description']):
                 datamodel, viewmodel, subtitles = self._create_context(test_case['line_counts'])
-                command_factory: Callable = test_case['command']
-                command = command_factory(datamodel, subtitles)
+                try:
+                    command_factory: Callable = test_case['command']
+                    command = command_factory(datamodel, subtitles)
 
-                self._execute_and_update(command, datamodel, viewmodel)
+                    self._execute_and_update(command, datamodel, viewmodel)
 
-                project_subtitles = self._get_project_subtitles(datamodel)
-                self._assert_viewmodel_matches_subtitles(viewmodel, project_subtitles)
-                self._assert_expected_structure(viewmodel, test_case['expected'])
+                    project_subtitles = self._get_project_subtitles(datamodel)
+                    self._assert_viewmodel_matches_subtitles(viewmodel, project_subtitles)
+                    self._assert_expected_structure(viewmodel, test_case['expected'])
+                finally:
+                    viewmodel.deleteLater()
+                    QCoreApplication.processEvents()
 
     def _create_context(self, line_counts: list[list[int]]) -> tuple[ProjectDataModel, TestableViewModel, Subtitles]:
         viewmodel = TestableViewModel(self)

@@ -876,6 +876,9 @@ class ProjectViewModelTests(SubtitleTestCase):
             (1, 1, 0, global_line_1, 'Third update'),
         ])
 
+        # Verify signals: scene(1) + batch(3) + line(2) = 6
+        viewmodel.assert_signal_emitted('dataChanged', expected_count=6)
+
     def test_complex_multi_operation_update(self):
         """Test a complex update with multiple operations at once"""
         # Scene 1: [3, 3, 3] = lines 1-9

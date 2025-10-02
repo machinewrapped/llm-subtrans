@@ -321,10 +321,10 @@ class ProjectViewModel(QStandardItemModel):
             return
         scene_index = self.indexFromItem(scene_item)
 
-        self.beginRemoveRows(QModelIndex(), scene_index.row(), scene_index.row())
+        # Note: beginRemoveRows/endRemoveRows must NOT be used here because RemoveScene
+        # is only called from ViewModelUpdate, which wraps it in beginResetModel/endResetModel
         root_item.removeRow(scene_index.row())
         del self.model[scene_number]
-        self.endRemoveRows()
 
     #############################################################################
 
@@ -494,17 +494,9 @@ class ProjectViewModel(QStandardItemModel):
             raise ViewModelError(f"Batch {batch_number} not found in scene {scene_number}")
         for line_number, line_update in lines.items():
             line_item = batch_item.lines.get(line_number)
-            if line_item:
-                line_item.Update(line_update)
-            else:
-                line = SubtitleLine({
-                    'number' : line_number,
-                    'start' : line_update.get('start'),
-                    'end' : line_update.get('end'),
-                    'body' : line_update.get('text'),
-                })
-                line.translation = line_update.get('translation')
-                self.AddLine(scene_number, batch_number, line)
+            if not line_item:
+                raise ViewModelError(f"Line {line_number} not found in scene {scene_number} batch {batch_number}")
+            line_item.Update(line_update)
 
         # Emit signal so SubtitleView repaints the updated lines
         batch_item.emitDataChanged()

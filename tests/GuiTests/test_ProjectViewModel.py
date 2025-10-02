@@ -151,6 +151,18 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         return cast(LineItem, line_item_qt)
 
+    def _get_line_numbers_in_batch(self, batch_item : BatchItem) -> list[int]:
+        """
+        Helper to retrieve all global line numbers from a batch.
+        Returns a list of line numbers.
+        """
+        line_numbers = []
+        for i in range(batch_item.line_count):
+            line_item = batch_item.child(i, 0)
+            if isinstance(line_item, LineItem):
+                line_numbers.append(line_item.number)
+        return line_numbers
+
     def _create_batch(self, scene_number : int, batch_number : int, line_count : int, start_line_number : int, start_time : timedelta) -> SubtitleBatch:
         """
         Helper to create a SubtitleBatch with the specified number of lines.
@@ -722,20 +734,37 @@ class ProjectViewModelTests(SubtitleTestCase):
                     log_input_expected_result(f"batch ({scene_index},{batch_index}) last line", expected_last, last_line.line_text)
                     self.assertEqual(last_line.line_text, expected_last)
 
-    
-    @unittest.skip("TODO: Fix to use correct global line numbers")
     def test_realistic_update_on_large_model(self):
         """Test performing realistic updates on a larger model"""
         # Use a moderately large structure
         line_counts = [
-            [8, 10, 7],     # Scene 1: 25 lines
-            [12, 15],       # Scene 2: 27 lines
-            [9, 11, 8, 6],  # Scene 3: 34 lines
-            [14, 10],       # Scene 4: 24 lines
+            [8, 10, 7],     # Scene 1: lines 1-25
+            [12, 15],       # Scene 2: lines 26-52
+            [9, 11, 8, 6],  # Scene 3: lines 53-86
+            [14, 10],       # Scene 4: lines 87-110
         ]
 
         viewmodel, _ = self._create_viewmodel_with_counts(line_counts)
         viewmodel.clear_signal_history()
+
+        # Get actual global line numbers from the batches
+        scene_1 = self._get_scene_item(viewmodel, 1)
+        batch_1_1 = self._get_batch_item(scene_1, 1, 1)
+        line_1_1_1 = batch_1_1.child(0, 0)  # First line of scene 1 batch 1
+        self.assertIsInstance(line_1_1_1, LineItem)
+        global_line_1 = cast(LineItem, line_1_1_1).number
+
+        scene_3 = self._get_scene_item(viewmodel, 3)
+        batch_3_2 = self._get_batch_item(scene_3, 3, 2)
+        line_3_2_6 = batch_3_2.child(5, 0)  # 6th line of scene 3 batch 2 (middle-ish)
+        self.assertIsInstance(line_3_2_6, LineItem)
+        global_line_67 = cast(LineItem, line_3_2_6).number
+
+        scene_4 = self._get_scene_item(viewmodel, 4)
+        batch_4_2 = self._get_batch_item(scene_4, 4, 2)
+        line_4_2_10 = batch_4_2.child(9, 0)  # Last line of scene 4 batch 2
+        self.assertIsInstance(line_4_2_10, LineItem)
+        global_line_110 = cast(LineItem, line_4_2_10).number
 
         # Perform a complex update touching multiple scenes
         update = ModelUpdate()
@@ -743,12 +772,10 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.scenes.update(1, {'summary': 'Scene 1 - Updated'})
         # Update batch (2,1) summary
         update.batches.update((2, 1), {'summary': 'Scene 2 Batch 1 - Updated'})
-        # Update some line texts
-        # TODO: These line updates use incorrect line numbers (batch-local instead of global)
-        # Need to fix to use correct global line numbers from the subtitles
-        # update.lines.update((1, 1, 1), {'text': 'Updated first line'})
-        update.lines.update((3, 2, 11), {'text': 'Updated middle line'})
-        # update.lines.update((4, 2, 10), {'text': 'Updated last line'})
+        # Update some line texts using actual global line numbers
+        update.lines.update((1, 1, global_line_1), {'text': 'Updated first line'})
+        update.lines.update((3, 2, global_line_67), {'text': 'Updated middle line'})
+        update.lines.update((4, 2, global_line_110), {'text': 'Updated last line'})
 
         update.ApplyToViewModel(viewmodel)
 
@@ -763,8 +790,23 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("batch (2,1) summary", 'Scene 2 Batch 1 - Updated', batch_2_1.summary)
         self.assertEqual(batch_2_1.summary, 'Scene 2 Batch 1 - Updated')
 
+        # Verify line updates
+        batch_1_1 = self._get_batch_item(scene_1, 1, 1)
+        updated_line_1 = cast(LineItem, batch_1_1.child(0, 0))
+        log_input_expected_result(f"line ({global_line_1}) text", 'Updated first line', updated_line_1.line_text)
+        self.assertEqual(updated_line_1.line_text, 'Updated first line')
+
+        batch_3_2 = self._get_batch_item(scene_3, 3, 2)
+        updated_line_67 = cast(LineItem, batch_3_2.child(5, 0))
+        log_input_expected_result(f"line ({global_line_67}) text", 'Updated middle line', updated_line_67.line_text)
+        self.assertEqual(updated_line_67.line_text, 'Updated middle line')
+
+        batch_4_2 = self._get_batch_item(scene_4, 4, 2)
+        updated_line_110 = cast(LineItem, batch_4_2.child(9, 0))
+        log_input_expected_result(f"line ({global_line_110}) text", 'Updated last line', updated_line_110.line_text)
+        self.assertEqual(updated_line_110.line_text, 'Updated last line')
+
         # Verify unaffected scenes maintained their structure
-        scene_4 = self._get_scene_item(viewmodel, 4)
         log_input_expected_result("scene 4 batch count", 2, scene_4.batch_count)
         self.assertEqual(scene_4.batch_count, 2)
 
@@ -903,7 +945,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         """Test the update pattern used by SplitBatchCommand"""
         # Create a scene with a large batch to split
         base_counts = [[8, 6], [3]]
-        viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
+        viewmodel, _subtitles = self._create_viewmodel_with_counts(base_counts)
         viewmodel.clear_signal_history()
 
         # Simulate splitting batch (1,1) at line 4
@@ -962,7 +1004,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         """Test the update pattern used by SplitSceneCommand"""
         # Create scenes where we'll split scene 1
         base_counts = [[4, 5, 3], [2], [6]]
-        viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
+        viewmodel, _subtitles = self._create_viewmodel_with_counts(base_counts)
         viewmodel.clear_signal_history()
 
         # Simulate splitting scene 1 at batch 2
@@ -1026,7 +1068,7 @@ class ProjectViewModelTests(SubtitleTestCase):
     def test_multiple_updates_in_sequence(self):
         """Test applying multiple updates sequentially"""
         base_counts = [[3, 3], [2, 2]]
-        viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
+        viewmodel, _subtitles = self._create_viewmodel_with_counts(base_counts)
         viewmodel.clear_signal_history()
 
         # Update 1: Edit scene summary
@@ -1057,12 +1099,25 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("line (1,1,1) text", 'Third update', line_item.line_text)
         self.assertEqual(line_item.line_text, 'Third update')
 
-    @unittest.skip("TODO: Fix to use correct global line numbers")
     def test_complex_multi_operation_update(self):
         """Test a complex update with multiple operations at once"""
+        # Scene 1: [3, 3, 3] = lines 1-9
+        # Scene 2: [2, 2] = lines 10-13
+        # Scene 3: [4] = lines 14-17
         base_counts = [[3, 3, 3], [2, 2], [4]]
         viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
         viewmodel.clear_signal_history()
+
+        # Get actual global line numbers
+        scene_one_item = self._get_scene_item(viewmodel, 1)
+        batch_1_1 = self._get_batch_item(scene_one_item, 1, 1)
+        line_1_1_1 = cast(LineItem, batch_1_1.child(0, 0))
+        global_line_1 = line_1_1_1.number
+
+        scene_three_item = self._get_scene_item(viewmodel, 3)
+        batch_3_1 = self._get_batch_item(scene_three_item, 3, 1)
+        line_3_1_2 = cast(LineItem, batch_3_1.child(1, 0))  # Second line in scene 3 batch 1
+        global_line_15 = line_3_1_2.number
 
         # Perform multiple updates in one ModelUpdate (scene, batch, and line updates)
         update = ModelUpdate()
@@ -1070,10 +1125,10 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.scenes.update(1, {'summary': 'Updated scene 1'})
         # Edit batch (1,2) summary
         update.batches.update((1, 2), {'summary': 'Updated batch 1,2'})
-        # Edit line (1,1,1) text
-        update.lines.update((1, 1, 1), {'text': 'Updated line text'})
-        # Update line (3,1,2) text
-        update.lines.update((3, 1, 2), {'text': 'Another updated line'})
+        # Edit line using global line numbers
+        update.lines.update((1, 1, global_line_1), {'text': 'Updated line text'})
+        # Update line in scene 3
+        update.lines.update((3, 1, global_line_15), {'text': 'Another updated line'})
 
         update.ApplyToViewModel(viewmodel)
 
@@ -1093,16 +1148,8 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("line (1,1,1) text", 'Updated line text', line_one_item.line_text)
         self.assertEqual(line_one_item.line_text, 'Updated line text')
 
-        # Verify second line update in a different scene
-        # The update used actual line number from subtitles, need to use that to find it
-        scene_three_item = self._get_scene_item(viewmodel, 3)
+        # Verify second line update in scene 3
         batch_three_one_item = self._get_batch_item(scene_three_item, 3, 1)
-        # Check if any line in this batch has the updated text
-        found_updated_line = False
-        for i in range(batch_three_one_item.line_count):
-            line_item = batch_three_one_item.child(i, 0)
-            if isinstance(line_item, LineItem) and line_item.line_text == 'Another updated line':
-                found_updated_line = True
-                break
-        log_input_expected_result("found updated line in scene 3", True, found_updated_line)
-        self.assertTrue(found_updated_line, "Expected to find updated line text in scene 3 batch 1")
+        line_3_1_2_updated = cast(LineItem, batch_three_one_item.child(1, 0))
+        log_input_expected_result("line (3,1,2) text", 'Another updated line', line_3_1_2_updated.line_text)
+        self.assertEqual(line_3_1_2_updated.line_text, 'Another updated line')

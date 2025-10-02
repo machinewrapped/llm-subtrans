@@ -12,9 +12,10 @@ Run tests\unit_tests.py at the end of a task to validate the change, unless it p
 Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Windows console errors
 
 ## Commands
-- Run all unit tests: `python tests/unit_tests.py`
-- Run single test: `python -m unittest PySubtrans.UnitTests.test_MODULE` or `python -m unittest GuiSubtrans.UnitTests.test_MODULE`
-- Run full test suite: `python scripts/run_tests.py`
+- **IMPORTANT**: Always use the virtual environment Python: `./envsubtrans/Scripts/python.exe` (Windows) or `./envsubtrans/bin/python` (Linux/Mac)
+- Run all unit tests: `./envsubtrans/Scripts/python.exe tests/unit_tests.py`
+- Run single test: `./envsubtrans/Scripts/python.exe -m unittest PySubtrans.UnitTests.test_MODULE` or `./envsubtrans/Scripts/python.exe -m unittest GuiSubtrans.UnitTests.test_MODULE`
+- Run full test suite: `./envsubtrans/Scripts/python.exe scripts/run_tests.py`
 - Build distribution: `./scripts/makedistro.sh` (Linux/Mac) or `scripts\makedistro.bat` (Windows)
 - Create virtual environment, install dependencies and configure project: `./install.sh` (Linux/Mac) or `install.bat` (Windows)
 

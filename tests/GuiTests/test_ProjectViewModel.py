@@ -1,6 +1,6 @@
 import unittest
 from datetime import timedelta
-from typing import cast
+from typing import Any, cast
 
 from PySide6.QtCore import QCoreApplication, QModelIndex
 
@@ -162,6 +162,44 @@ class ProjectViewModelTests(SubtitleTestCase):
             if isinstance(line_item, LineItem):
                 line_numbers.append(line_item.number)
         return line_numbers
+
+    def _assert_scene_fields(self, viewmodel : ProjectViewModel, test_data : list[tuple[int, str, Any]]) -> None:
+        """
+        Helper to assert multiple scene fields at once.
+        test_data: list of (scene_num, field_name, expected_value)
+        """
+        for scene_num, field, expected in test_data:
+            scene = self._get_scene_item(viewmodel, scene_num)
+            actual = getattr(scene, field)
+            log_input_expected_result(f"scene {scene_num} {field}", expected, actual)
+            self.assertEqual(actual, expected)
+
+    def _assert_batch_fields(self, viewmodel : ProjectViewModel, test_data : list[tuple[int, int, str, Any]]) -> None:
+        """
+        Helper to assert multiple batch fields at once.
+        test_data: list of (scene_num, batch_num, field_name, expected_value)
+        """
+        for scene_num, batch_num, field, expected in test_data:
+            scene = self._get_scene_item(viewmodel, scene_num)
+            batch = self._get_batch_item(scene, scene_num, batch_num)
+            actual = getattr(batch, field)
+            log_input_expected_result(f"batch ({scene_num},{batch_num}) {field}", expected, actual)
+            self.assertEqual(actual, expected)
+
+    def _assert_line_texts(self, viewmodel : ProjectViewModel, test_data : list[tuple[int, int, int, int, str]]) -> None:
+        """
+        Helper to assert multiple line texts at once.
+        test_data: list of (scene_num, batch_num, line_idx, line_num, expected_text)
+        line_idx can be negative to index from the end
+        """
+        for scene_num, batch_num, line_idx, line_num, expected_text in test_data:
+            scene = self._get_scene_item(viewmodel, scene_num)
+            batch = self._get_batch_item(scene, scene_num, batch_num)
+            # Handle negative indices manually since Qt doesn't support them
+            actual_idx = line_idx if line_idx >= 0 else batch.line_count + line_idx
+            line = cast(LineItem, batch.child(actual_idx, 0))
+            log_input_expected_result(f"line ({line_num}) text", expected_text, line.line_text)
+            self.assertEqual(line.line_text, expected_text)
 
     def _create_batch(self, scene_number : int, batch_number : int, line_count : int, start_line_number : int, start_time : timedelta) -> SubtitleBatch:
         """
@@ -773,40 +811,29 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         update.ApplyToViewModel(viewmodel)
 
-        # Verify scene 1 update
-        scene_1 = self._get_scene_item(viewmodel, 1)
-        log_input_expected_result("scene 1 summary", 'Scene 1 - Updated', scene_1.summary)
-        self.assertEqual(scene_1.summary, 'Scene 1 - Updated')
+        # Verify updates
+        self._assert_scene_fields(viewmodel, [
+            (1, 'summary', 'Scene 1 - Updated'),
+        ])
 
-        # Verify batch (2,1) update
-        scene_2 = self._get_scene_item(viewmodel, 2)
-        batch_2_1 = self._get_batch_item(scene_2, 2, 1)
-        log_input_expected_result("batch (2,1) summary", 'Scene 2 Batch 1 - Updated', batch_2_1.summary)
-        self.assertEqual(batch_2_1.summary, 'Scene 2 Batch 1 - Updated')
+        self._assert_batch_fields(viewmodel, [
+            (2, 1, 'summary', 'Scene 2 Batch 1 - Updated'),
+        ])
 
-        # Verify line updates
-        batch_1_1 = self._get_batch_item(scene_1, 1, 1)
-        updated_line_1 = cast(LineItem, batch_1_1.child(0, 0))
-        log_input_expected_result(f"line ({global_line_1}) text", 'Updated first line', updated_line_1.line_text)
-        self.assertEqual(updated_line_1.line_text, 'Updated first line')
+        self._assert_line_texts(viewmodel, [
+            (1, 1, 0, global_line_1, 'Updated first line'),
+            (3, 2, 5, global_line_67, 'Updated middle line'),
+            (4, 2, -1, global_line_110, 'Updated last line'),
+        ])
 
-        batch_3_2 = self._get_batch_item(scene_3, 3, 2)
-        updated_line_67 = cast(LineItem, batch_3_2.child(5, 0))
-        log_input_expected_result(f"line ({global_line_67}) text", 'Updated middle line', updated_line_67.line_text)
-        self.assertEqual(updated_line_67.line_text, 'Updated middle line')
+        # Verify unaffected structure
+        self._assert_scene_fields(viewmodel, [
+            (4, 'batch_count', 2),
+        ])
 
-        batch_4_2 = self._get_batch_item(scene_4, 4, 2)
-        updated_line_110 = cast(LineItem, batch_4_2.child(9, 0))
-        log_input_expected_result(f"line ({global_line_110}) text", 'Updated last line', updated_line_110.line_text)
-        self.assertEqual(updated_line_110.line_text, 'Updated last line')
-
-        # Verify unaffected scenes maintained their structure
-        log_input_expected_result("scene 4 batch count", 2, scene_4.batch_count)
-        self.assertEqual(scene_4.batch_count, 2)
-
-        batch_4_1 = self._get_batch_item(scene_4, 4, 1)
-        log_input_expected_result("batch (4,1) line count", 14, batch_4_1.line_count)
-        self.assertEqual(batch_4_1.line_count, 14)
+        self._assert_batch_fields(viewmodel, [
+            (4, 1, 'line_count', 14),
+        ])
 
     @unittest.skip("Test needs to be rewritten to properly simulate MergeScenesCommand")
     def test_merge_scenes_pattern(self):
@@ -1124,24 +1151,16 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         update.ApplyToViewModel(viewmodel)
 
-        # Verify scene update
-        scene_one_item = self._get_scene_item(viewmodel, 1)
-        log_input_expected_result("scene 1 summary", 'Updated scene 1', scene_one_item.summary)
-        self.assertEqual(scene_one_item.summary, 'Updated scene 1')
+        # Verify updates
+        self._assert_scene_fields(viewmodel, [
+            (1, 'summary', 'Updated scene 1'),
+        ])
 
-        # Verify batch update
-        batch_item = self._get_batch_item(scene_one_item, 1, 2)
-        log_input_expected_result("batch (1,2) summary", 'Updated batch 1,2', batch_item.summary)
-        self.assertEqual(batch_item.summary, 'Updated batch 1,2')
+        self._assert_batch_fields(viewmodel, [
+            (1, 2, 'summary', 'Updated batch 1,2'),
+        ])
 
-        # Verify first line update
-        batch_one_item_scene1 = self._get_batch_item(scene_one_item, 1, 1)
-        line_one_item = self._get_line_item(batch_one_item_scene1, 1, 1, 1)
-        log_input_expected_result("line (1,1,1) text", 'Updated line text', line_one_item.line_text)
-        self.assertEqual(line_one_item.line_text, 'Updated line text')
-
-        # Verify second line update in scene 3
-        batch_three_one_item = self._get_batch_item(scene_three_item, 3, 1)
-        line_3_1_2_updated = cast(LineItem, batch_three_one_item.child(1, 0))
-        log_input_expected_result("line (3,1,2) text", 'Another updated line', line_3_1_2_updated.line_text)
-        self.assertEqual(line_3_1_2_updated.line_text, 'Another updated line')
+        self._assert_line_texts(viewmodel, [
+            (1, 1, 0, global_line_1, 'Updated line text'),
+            (3, 1, 1, global_line_15, 'Another updated line'),
+        ])

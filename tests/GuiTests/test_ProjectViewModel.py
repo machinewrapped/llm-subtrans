@@ -1,8 +1,8 @@
 import unittest
 from datetime import timedelta
-from typing import Any, cast
+from typing import cast
 
-from PySide6.QtCore import QCoreApplication, QModelIndex
+from PySide6.QtCore import QCoreApplication
 
 from GuiSubtrans.ViewModel.BatchItem import BatchItem
 from GuiSubtrans.ViewModel.LineItem import LineItem
@@ -12,11 +12,7 @@ from GuiSubtrans.ViewModel.ViewModel import ProjectViewModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, CreateDummyBatch, CreateDummyScene, SubtitleTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_result
-from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleLine import SubtitleLine
-from PySubtrans.SubtitleScene import SubtitleScene
-from PySubtrans.Subtitles import Subtitles
-
 
 class ProjectViewModelTests(SubtitleTestCase):
     _qt_app : QCoreApplication|None = None

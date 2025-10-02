@@ -21,14 +21,153 @@ class TestableProjectViewModel(ProjectViewModel):
     """
     Subclass of ProjectViewModel that tracks signals for testing.
     """
-    def __init__(self):
+    def __init__(self, test_case : SubtitleTestCase):
         super().__init__()
+        self.test = test_case
         self.signal_history : list[dict] = []
 
         # Connect to all relevant signals
         self.dataChanged.connect(self._track_data_changed)
         self.layoutChanged.connect(self._track_layout_changed)
         self.modelReset.connect(self._track_model_reset)
+
+    def CreateSubtitles(self, line_counts : list[list[int]]) -> Subtitles:
+        """Helper to create and set up subtitles from line counts"""
+        subtitles = BuildSubtitlesFromLineCounts(line_counts)
+        self.CreateModel(subtitles)
+        self.clear_signal_history()  # Clear any signals from initial setup
+        return subtitles
+
+    def test_get_scene_item(self, scene_number : int) -> SceneItem:
+        """
+        Helper to retrieve a scene item from the view model by scene number.
+        Scene numbers are stable identifiers, not row positions.
+        """
+        scene_item = self.model.get(scene_number)
+
+        log_input_expected_result(f"scene {scene_number} exists", True, scene_item is not None)
+        self.test.assertIsNotNone(scene_item)
+
+        log_input_expected_result(f"scene {scene_number} type", SceneItem, type(scene_item))
+        self.test.assertEqual(type(scene_item), SceneItem)
+
+        return cast(SceneItem, scene_item)
+
+    def test_get_batch_item(self, scene_number : int, batch_number : int) -> BatchItem:
+        """
+        Helper to retrieve a batch item by scene and batch numbers.
+        """
+        scene_item = self.test_get_scene_item(scene_number)
+        batch_item_qt = scene_item.child(batch_number - 1, 0)
+
+        log_input_expected_result(f"batch ({scene_number},{batch_number}) exists", True, batch_item_qt is not None)
+        self.test.assertIsNotNone(batch_item_qt)
+
+        log_input_expected_result(f"batch ({scene_number},{batch_number}) type", BatchItem, type(batch_item_qt))
+        self.test.assertEqual(type(batch_item_qt), BatchItem)
+
+        return cast(BatchItem, batch_item_qt)
+
+    def test_get_line_item(self, scene_number : int, batch_number : int, line_number : int) -> LineItem:
+        """
+        Helper to retrieve a line item by scene, batch, and line numbers.
+        """
+        batch_item = self.test_get_batch_item(scene_number, batch_number)
+        line_item_qt = batch_item.child(line_number - 1, 0)
+
+        log_input_expected_result(f"line ({scene_number},{batch_number},{line_number}) exists", True, line_item_qt is not None)
+        self.test.assertIsNotNone(line_item_qt)
+
+        log_input_expected_result(f"line ({scene_number},{batch_number},{line_number}) type", LineItem, type(line_item_qt))
+        self.test.assertEqual(type(line_item_qt), LineItem)
+
+        return cast(LineItem, line_item_qt)
+
+    def get_line_numbers_in_batch(self, scene_number : int, batch_number : int) -> list[int]:
+        """
+        Helper to retrieve all global line numbers from a batch.
+        Returns a list of line numbers.
+        """
+        batch_item = self.test_get_batch_item(scene_number, batch_number)
+        line_numbers = []
+        for i in range(batch_item.line_count):
+            line_item = batch_item.child(i, 0)
+            if isinstance(line_item, LineItem):
+                line_numbers.append(line_item.number)
+        return line_numbers
+
+    def clear_signal_history(self) -> None:
+        """Clear signal history between test operations"""
+        self.signal_history.clear()
+
+    def assert_signal_emitted(self, signal_name : str, expected_count : int|None = None) -> list[dict]:
+        """
+        Assert that a specific signal was emitted.
+        Returns the list of matching signals for further inspection.
+
+        Args:
+            signal_name: Name of the signal ('dataChanged', 'layoutChanged', 'modelReset')
+            expected_count: Expected number of times signal was emitted (None = at least once)
+        """
+        matching_signals = [s for s in self.signal_history if s['signal'] == signal_name]
+
+        if expected_count is None:
+            log_input_expected_result(f"{signal_name} emitted", True, len(matching_signals) > 0)
+            self.test.assertGreater(len(matching_signals), 0, f"Expected {signal_name} to be emitted")
+        else:
+            log_input_expected_result(f"{signal_name} count", expected_count, len(matching_signals))
+            self.test.assertEqual(len(matching_signals), expected_count,
+                                f"Expected {signal_name} to be emitted {expected_count} times, got {len(matching_signals)}")
+
+        return matching_signals
+
+    def assert_no_signal_emitted(self, signal_name : str) -> None:
+        """
+        Assert that a specific signal was NOT emitted.
+
+        Args:
+            signal_name: Name of the signal ('dataChanged', 'layoutChanged', 'modelReset')
+        """
+        matching_signals = [s for s in self.signal_history if s['signal'] == signal_name]
+        log_input_expected_result(f"{signal_name} not emitted", 0, len(matching_signals))
+        self.test.assertEqual(len(matching_signals), 0,
+                            f"Expected {signal_name} to NOT be emitted, but it was emitted {len(matching_signals)} times")
+
+    def assert_scene_fields(self, test_data : list[tuple[int, str, Any]]) -> None:
+        """
+        Helper to assert multiple scene fields at once.
+        test_data: list of (scene_num, field_name, expected_value)
+        """
+        for scene_num, field, expected in test_data:
+            scene = self.test_get_scene_item(scene_num)
+            actual = getattr(scene, field)
+            log_input_expected_result(f"scene {scene_num} {field}", expected, actual)
+            self.test.assertEqual(actual, expected)
+
+    def assert_batch_fields(self, test_data : list[tuple[int, int, str, Any]]) -> None:
+        """
+        Helper to assert multiple batch fields at once.
+        test_data: list of (scene_num, batch_num, field_name, expected_value)
+        """
+        for scene_num, batch_num, field, expected in test_data:
+            batch = self.test_get_batch_item(scene_num, batch_num)
+            actual = getattr(batch, field)
+            log_input_expected_result(f"batch ({scene_num},{batch_num}) {field}", expected, actual)
+            self.test.assertEqual(actual, expected)
+
+    def assert_line_texts(self, test_data : list[tuple[int, int, int, int, str]]) -> None:
+        """
+        Helper to assert multiple line texts at once.
+        test_data: list of (scene_num, batch_num, line_idx, line_num, expected_text)
+        line_idx can be negative to index from the end
+        """
+        for scene_num, batch_num, line_idx, line_num, expected_text in test_data:
+            batch = self.test_get_batch_item(scene_num, batch_num)
+            # Handle negative indices manually since Qt doesn't support them
+            actual_idx = line_idx if line_idx >= 0 else batch.line_count + line_idx
+            line = cast(LineItem, batch.child(actual_idx, 0))
+            log_input_expected_result(f"line ({line_num}) text", expected_text, line.line_text)
+            self.test.assertEqual(line.line_text, expected_text)
 
     def _track_data_changed(self, topLeft : QModelIndex, bottomRight : QModelIndex, roles : list[int]) -> None:
         """Track dataChanged signals"""
@@ -47,45 +186,6 @@ class TestableProjectViewModel(ProjectViewModel):
         """Track modelReset signals"""
         self.signal_history.append({'signal': 'modelReset'})
 
-    def clear_signal_history(self) -> None:
-        """Clear signal history between test operations"""
-        self.signal_history.clear()
-
-    def assert_signal_emitted(self, test_case : SubtitleTestCase, signal_name : str, expected_count : int|None = None) -> list[dict]:
-        """
-        Assert that a specific signal was emitted.
-        Returns the list of matching signals for further inspection.
-
-        Args:
-            test_case: The test case instance for assertions
-            signal_name: Name of the signal ('dataChanged', 'layoutChanged', 'modelReset')
-            expected_count: Expected number of times signal was emitted (None = at least once)
-        """
-        matching_signals = [s for s in self.signal_history if s['signal'] == signal_name]
-
-        if expected_count is None:
-            log_input_expected_result(f"{signal_name} emitted", True, len(matching_signals) > 0)
-            test_case.assertGreater(len(matching_signals), 0, f"Expected {signal_name} to be emitted")
-        else:
-            log_input_expected_result(f"{signal_name} count", expected_count, len(matching_signals))
-            test_case.assertEqual(len(matching_signals), expected_count,
-                                f"Expected {signal_name} to be emitted {expected_count} times, got {len(matching_signals)}")
-
-        return matching_signals
-
-    def assert_no_signal_emitted(self, test_case : SubtitleTestCase, signal_name : str) -> None:
-        """
-        Assert that a specific signal was NOT emitted.
-
-        Args:
-            test_case: The test case instance for assertions
-            signal_name: Name of the signal ('dataChanged', 'layoutChanged', 'modelReset')
-        """
-        matching_signals = [s for s in self.signal_history if s['signal'] == signal_name]
-        log_input_expected_result(f"{signal_name} not emitted", 0, len(matching_signals))
-        test_case.assertEqual(len(matching_signals), 0,
-                            f"Expected {signal_name} to NOT be emitted, but it was emitted {len(matching_signals)} times")
-
 
 class ProjectViewModelTests(SubtitleTestCase):
     _qt_app : QCoreApplication|None = None
@@ -97,109 +197,6 @@ class ProjectViewModelTests(SubtitleTestCase):
             cls._qt_app = QCoreApplication([])
         else:
             cls._qt_app = QCoreApplication.instance()
-
-    def _create_viewmodel_with_counts(self, line_counts : list[list[int]]) -> tuple[TestableProjectViewModel, Subtitles]:
-        subtitles = BuildSubtitlesFromLineCounts(line_counts)
-
-        viewmodel = TestableProjectViewModel()
-        viewmodel.CreateModel(subtitles)
-
-        return viewmodel, subtitles
-
-    def _get_scene_item(self, viewmodel : ProjectViewModel, scene_number : int) -> SceneItem:
-        """
-        Helper to retrieve a scene item from the view model by scene number.
-        Scene numbers are stable identifiers, not row positions.
-        """
-        scene_item = viewmodel.model.get(scene_number)
-
-        log_input_expected_result(f"scene {scene_number} exists", True, scene_item is not None)
-        self.assertIsNotNone(scene_item)
-
-        log_input_expected_result(f"scene {scene_number} type", SceneItem, type(scene_item))
-        self.assertEqual(type(scene_item), SceneItem)
-
-        return cast(SceneItem, scene_item)
-
-    def _get_batch_item(self, scene_item : SceneItem, scene_number : int, batch_number : int) -> BatchItem:
-        """
-        Helper to retrieve a batch item from a scene item.
-        Returns the BatchItem or None if not found or wrong type.
-        """
-        batch_item_qt = scene_item.child(batch_number - 1, 0)
-
-        log_input_expected_result(f"batch ({scene_number},{batch_number}) exists", True, batch_item_qt is not None)
-        self.assertIsNotNone(batch_item_qt)
-
-        log_input_expected_result(f"batch ({scene_number},{batch_number}) type", BatchItem, type(batch_item_qt))
-        self.assertEqual(type(batch_item_qt), BatchItem)
-
-        return cast(BatchItem, batch_item_qt)
-
-    def _get_line_item(self, batch_item : BatchItem, scene_number : int, batch_number : int, line_number : int) -> LineItem:
-        """
-        Helper to retrieve a line item from a batch item.
-        Returns the LineItem or None if not found or wrong type.
-        """
-        line_item_qt = batch_item.child(line_number - 1, 0)
-
-        log_input_expected_result(f"line ({scene_number},{batch_number},{line_number}) exists", True, line_item_qt is not None)
-        self.assertIsNotNone(line_item_qt)
-
-        log_input_expected_result(f"line ({scene_number},{batch_number},{line_number}) type", LineItem, type(line_item_qt))
-        self.assertEqual(type(line_item_qt), LineItem)
-
-        return cast(LineItem, line_item_qt)
-
-    def _get_line_numbers_in_batch(self, batch_item : BatchItem) -> list[int]:
-        """
-        Helper to retrieve all global line numbers from a batch.
-        Returns a list of line numbers.
-        """
-        line_numbers = []
-        for i in range(batch_item.line_count):
-            line_item = batch_item.child(i, 0)
-            if isinstance(line_item, LineItem):
-                line_numbers.append(line_item.number)
-        return line_numbers
-
-    def _assert_scene_fields(self, viewmodel : ProjectViewModel, test_data : list[tuple[int, str, Any]]) -> None:
-        """
-        Helper to assert multiple scene fields at once.
-        test_data: list of (scene_num, field_name, expected_value)
-        """
-        for scene_num, field, expected in test_data:
-            scene = self._get_scene_item(viewmodel, scene_num)
-            actual = getattr(scene, field)
-            log_input_expected_result(f"scene {scene_num} {field}", expected, actual)
-            self.assertEqual(actual, expected)
-
-    def _assert_batch_fields(self, viewmodel : ProjectViewModel, test_data : list[tuple[int, int, str, Any]]) -> None:
-        """
-        Helper to assert multiple batch fields at once.
-        test_data: list of (scene_num, batch_num, field_name, expected_value)
-        """
-        for scene_num, batch_num, field, expected in test_data:
-            scene = self._get_scene_item(viewmodel, scene_num)
-            batch = self._get_batch_item(scene, scene_num, batch_num)
-            actual = getattr(batch, field)
-            log_input_expected_result(f"batch ({scene_num},{batch_num}) {field}", expected, actual)
-            self.assertEqual(actual, expected)
-
-    def _assert_line_texts(self, viewmodel : ProjectViewModel, test_data : list[tuple[int, int, int, int, str]]) -> None:
-        """
-        Helper to assert multiple line texts at once.
-        test_data: list of (scene_num, batch_num, line_idx, line_num, expected_text)
-        line_idx can be negative to index from the end
-        """
-        for scene_num, batch_num, line_idx, line_num, expected_text in test_data:
-            scene = self._get_scene_item(viewmodel, scene_num)
-            batch = self._get_batch_item(scene, scene_num, batch_num)
-            # Handle negative indices manually since Qt doesn't support them
-            actual_idx = line_idx if line_idx >= 0 else batch.line_count + line_idx
-            line = cast(LineItem, batch.child(actual_idx, 0))
-            log_input_expected_result(f"line ({line_num}) text", expected_text, line.line_text)
-            self.assertEqual(line.line_text, expected_text)
 
     def _create_batch(self, scene_number : int, batch_number : int, line_count : int, start_line_number : int, start_time : timedelta) -> SubtitleBatch:
         """
@@ -325,63 +322,61 @@ class ProjectViewModelTests(SubtitleTestCase):
 
     def test_update_scene_summary(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         update = ModelUpdate()
         update.scenes.update(1, {'summary': 'Scene 1 (edited)'})
         update.ApplyToViewModel(viewmodel)
 
-        self._assert_scene_fields(viewmodel, [
+        viewmodel.assert_scene_fields([
             (1, 'summary', 'Scene 1 (edited)'),
         ])
 
         # Verify dataChanged was emitted for in-place update
-        viewmodel.assert_signal_emitted(self, 'dataChanged', expected_count=1)
+        viewmodel.assert_signal_emitted('dataChanged', expected_count=1)
 
     def test_update_batch_summary(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         update = ModelUpdate()
         update.batches.update((1, 1), {'summary': 'Scene 1 Batch 1 (edited)'})
         update.ApplyToViewModel(viewmodel)
 
-        self._assert_batch_fields(viewmodel, [
+        viewmodel.assert_batch_fields( [
             (1, 1, 'summary', 'Scene 1 Batch 1 (edited)'),
         ])
 
         # Verify dataChanged was emitted (batch setData + scene.emitDataChanged + batch.emitDataChanged = 3)
         # TODO: this count seems high, invesigate whether the explicit calls are needed
-        viewmodel.assert_signal_emitted(self, 'dataChanged', expected_count=3)
+        viewmodel.assert_signal_emitted('dataChanged', expected_count=3)
 
     def test_update_line_text(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Get actual global line number
-        scene_one_item = self._get_scene_item(viewmodel, 1)
-        batch_one_item = self._get_batch_item(scene_one_item, 1, 1)
-        global_line_1 = self._get_line_numbers_in_batch(batch_one_item)[0]
+        global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
 
         update = ModelUpdate()
         update.lines.update((1, 1, global_line_1), {'text': 'Scene 1 Batch 1 Line 1 (edited)'})
         update.ApplyToViewModel(viewmodel)
 
-        self._assert_line_texts(viewmodel, [
+        viewmodel.assert_line_texts( [
             (1, 1, 0, global_line_1, 'Scene 1 Batch 1 Line 1 (edited)'),
         ])
 
         # Verify dataChanged was emitted (line item update + batch.emitDataChanged = 2)
         # TODO: this count seems high, invesigate whether the explicit calls are needed
-        viewmodel.assert_signal_emitted(self, 'dataChanged', expected_count=2)
+        viewmodel.assert_signal_emitted('dataChanged', expected_count=2)
 
     def test_add_new_line(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        subtitles = viewmodel.CreateSubtitles(base_counts)
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_line = SubtitleLine.Construct(
@@ -396,8 +391,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.lines.add((1, 1, new_line.number), new_line)
         update.ApplyToViewModel(viewmodel)
 
-        scene_one_item = self._get_scene_item(viewmodel, 1)
-        batch_one_item = self._get_batch_item(scene_one_item, 1, 1)
+        batch_one_item = viewmodel.test_get_batch_item(1, 1)
 
         log_input_expected_result("batch (1,1) line count", 3, batch_one_item.line_count)
         self.assertEqual(batch_one_item.line_count, 3)
@@ -415,28 +409,28 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(new_line_item.line_text, 'Scene 1 Batch 1 Line New')
 
         # Verify modelReset was emitted for structural change (adding a line)
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     def test_remove_line(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         update = ModelUpdate()
         update.lines.remove((1, 1, 2))
         update.ApplyToViewModel(viewmodel)
 
-        self._assert_batch_fields(viewmodel, [
+        viewmodel.assert_batch_fields( [
             (1, 1, 'line_count', 1),
         ])
 
         # Verify modelReset was emitted for structural change (removing a line)
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     def test_add_new_batch(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        subtitles = viewmodel.CreateSubtitles(base_counts)
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_batch_number = len(subtitles.GetScene(1).batches) + 1
@@ -447,7 +441,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.batches.add((1, new_batch.number), new_batch)
         update.ApplyToViewModel(viewmodel)
 
-        scene_one_item = self._get_scene_item(viewmodel, 1)
+        scene_one_item = viewmodel.test_get_scene_item(1)
 
         expected_batch_count = len(base_counts[0]) + 1
         log_input_expected_result("scene 1 batch count", expected_batch_count, scene_one_item.batch_count)
@@ -466,34 +460,33 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(new_batch_item.summary, new_batch.summary)
 
         # Verify modelReset was emitted for structural change (adding a batch)
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     def test_remove_batch(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)        
 
         update = ModelUpdate()
         update.batches.remove((2, 2))
         update.ApplyToViewModel(viewmodel)
 
         expected_batch_count = len(base_counts[1]) - 1
-        self._assert_scene_fields(viewmodel, [
+        viewmodel.assert_scene_fields( [
             (2, 'batch_count', expected_batch_count),
         ])
 
         # Verify modelReset was emitted for structural change (removing a batch)
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     def test_add_new_scene(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
+        viewmodel = TestableProjectViewModel(self)
+        subtitles = viewmodel.CreateSubtitles(base_counts)
 
         initial_scene_count = viewmodel.rowCount()
         log_input_expected_result("initial scene count", len(base_counts), initial_scene_count)
         self.assertEqual(initial_scene_count, len(base_counts))
-
-        viewmodel.clear_signal_history()
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_scene_number = initial_scene_count + 1
@@ -509,7 +502,7 @@ class ProjectViewModelTests(SubtitleTestCase):
         log_input_expected_result("final scene count", initial_scene_count + 1, final_scene_count)
         self.assertEqual(final_scene_count, initial_scene_count + 1)
 
-        scene_three_item = self._get_scene_item(viewmodel, 3)
+        scene_three_item = viewmodel.test_get_scene_item(3)
 
         log_input_expected_result("scene 3 number", 3, scene_three_item.number)
         self.assertEqual(scene_three_item.number, 3)
@@ -518,14 +511,14 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(scene_three_item.batch_count, 2)
 
         # Verify modelReset was emitted for structural change (adding a scene)
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     
     def test_remove_scene(self):
         """Test removing a scene validates remaining scenes are correct"""
         base_counts = [[2, 2], [1, 1, 2], [3]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Remove scene 2 (which has 3 batches)
         update = ModelUpdate()
@@ -538,37 +531,37 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(final_scene_count, len(base_counts) - 1)
 
         # Verify scene 1 is still intact with correct structure
-        self._assert_scene_fields(viewmodel, [
+        viewmodel.assert_scene_fields( [
             (1, 'summary', 'Scene 1'),
             (1, 'batch_count', 2),
         ])
 
         # Check scene 1 batches have correct line counts
-        self._assert_batch_fields(viewmodel, [
+        viewmodel.assert_batch_fields( [
             (1, 1, 'line_count', 2),
             (1, 2, 'line_count', 2),
         ])
 
         # Verify scene 3 retains its original number (scene numbers are stable identifiers)
         # After removing scene 2, we should have 2 scenes total: scene 1 and scene 3
-        self._assert_scene_fields(viewmodel, [
+        viewmodel.assert_scene_fields( [
             (3, 'summary', 'Scene 3'),
             (3, 'batch_count', 1),
         ])
 
-        self._assert_batch_fields(viewmodel, [
+        viewmodel.assert_batch_fields( [
             (3, 1, 'line_count', 3),
         ])
 
         # Verify modelReset was emitted for structural change
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     
     def test_replace_scene(self):
         """Test replacing a scene validates new structure and unaffected scenes"""
         base_counts = [[2, 2], [1, 1]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Create a new scene with different structure - was [2,2], now [3,1]
         replacement_scene = self._create_scene(1, [3, 1], 1, timedelta(seconds=0))
@@ -583,30 +576,30 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(root_item.rowCount(), 2)
 
         # Verify replaced scene has new structure
-        scene_one_item = self._get_scene_item(viewmodel, 1)
+        scene_one_item = viewmodel.test_get_scene_item(1)
         log_input_expected_result("scene 1 batch count", 2, scene_one_item.batch_count)
         self.assertEqual(scene_one_item.batch_count, 2)
 
         # Check the first batch has 3 lines (changed from 2)
-        batch_one_item = self._get_batch_item(scene_one_item, 1, 1)
+        batch_one_item = viewmodel.test_get_batch_item(1, 1)
         log_input_expected_result("batch (1,1) line count", 3, batch_one_item.line_count)
         self.assertEqual(batch_one_item.line_count, 3)
 
         # Check the second batch has 1 line (changed from 2)
-        batch_two_item = self._get_batch_item(scene_one_item, 1, 2)
+        batch_two_item = viewmodel.test_get_batch_item(1, 2)
         log_input_expected_result("batch (1,2) line count", 1, batch_two_item.line_count)
         self.assertEqual(batch_two_item.line_count, 1)
 
         # Verify scene 2 is unaffected
-        scene_two_item = self._get_scene_item(viewmodel, 2)
+        scene_two_item = viewmodel.test_get_scene_item(2)
         log_input_expected_result("scene 2 batch count", 2, scene_two_item.batch_count)
         self.assertEqual(scene_two_item.batch_count, 2)
 
-        batch_2_1 = self._get_batch_item(scene_two_item, 2, 1)
+        batch_2_1 = viewmodel.test_get_batch_item(2, 1)
         log_input_expected_result("batch (2,1) line count", 1, batch_2_1.line_count)
         self.assertEqual(batch_2_1.line_count, 1)
 
-        batch_2_2 = self._get_batch_item(scene_two_item, 2, 2)
+        batch_2_2 = viewmodel.test_get_batch_item(2, 2)
         log_input_expected_result("batch (2,2) line count", 1, batch_2_2.line_count)
         self.assertEqual(batch_2_2.line_count, 1)
 
@@ -614,8 +607,8 @@ class ProjectViewModelTests(SubtitleTestCase):
     def test_replace_batch(self):
         """Test replacing a batch validates new lines and unaffected batches"""
         base_counts = [[2, 2, 3], [1, 1]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Replace batch (1,2) - was 2 lines, now 5 lines
         replacement_batch = self._create_batch(1, 2, 5, 3, timedelta(seconds=10))
@@ -624,29 +617,29 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.batches.replace((1, 2), replacement_batch)
         update.ApplyToViewModel(viewmodel)
 
-        scene_one_item = self._get_scene_item(viewmodel, 1)
+        scene_one_item = viewmodel.test_get_scene_item(1)
 
         # Verify scene still has same number of batches
         log_input_expected_result("scene 1 batch count", 3, scene_one_item.batch_count)
         self.assertEqual(scene_one_item.batch_count, 3)
 
         # Verify batch 1 is unaffected
-        batch_1_1 = self._get_batch_item(scene_one_item, 1, 1)
+        batch_1_1 = viewmodel.test_get_batch_item(1, 1)
         log_input_expected_result("batch (1,1) line count", 2, batch_1_1.line_count)
         self.assertEqual(batch_1_1.line_count, 2)
 
         # Verify replaced batch has new line count
-        batch_1_2 = self._get_batch_item(scene_one_item, 1, 2)
+        batch_1_2 = viewmodel.test_get_batch_item(1, 2)
         log_input_expected_result("batch (1,2) line count", 5, batch_1_2.line_count)
         self.assertEqual(batch_1_2.line_count, 5)
 
         # Verify batch 3 is unaffected
-        batch_1_3 = self._get_batch_item(scene_one_item, 1, 3)
+        batch_1_3 = viewmodel.test_get_batch_item(1, 3)
         log_input_expected_result("batch (1,3) line count", 3, batch_1_3.line_count)
         self.assertEqual(batch_1_3.line_count, 3)
 
         # Verify scene 2 is completely unaffected
-        scene_two_item = self._get_scene_item(viewmodel, 2)
+        scene_two_item = viewmodel.test_get_scene_item(2)
         log_input_expected_result("scene 2 batch count", 2, scene_two_item.batch_count)
         self.assertEqual(scene_two_item.batch_count, 2)
 
@@ -654,8 +647,8 @@ class ProjectViewModelTests(SubtitleTestCase):
     def test_delete_multiple_lines(self):
         """Test deleting multiple lines validates remaining lines and content"""
         base_counts = [[5, 4], [3, 2]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Delete lines 2 and 4 from batch (1,1), leaving lines 1, 3, 5
         update = ModelUpdate()
@@ -664,43 +657,41 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         update.ApplyToViewModel(viewmodel)
 
-        scene_one_item = self._get_scene_item(viewmodel, 1)
-
         # Verify affected batch has correct line count
-        batch_1_1 = self._get_batch_item(scene_one_item, 1, 1)
+        batch_1_1 = viewmodel.test_get_batch_item(1, 1)
         log_input_expected_result("batch (1,1) line count", 3, batch_1_1.line_count)
         self.assertEqual(batch_1_1.line_count, 3)
 
         # Verify remaining lines have correct text
         # After deleting lines 2 and 4, the remaining lines (originally 1, 3, 5)
         # are now at positions 1, 2, 3 but retain their original content
-        line_at_pos_1 = self._get_line_item(batch_1_1, 1, 1, 1)
+        line_at_pos_1 = viewmodel.test_get_line_item(1, 1, 1)
         log_input_expected_result("line at position 1 text", "Scene 1 Batch 1 Line 1", line_at_pos_1.line_text)
         self.assertEqual(line_at_pos_1.line_text, "Scene 1 Batch 1 Line 1")
 
-        line_at_pos_2 = self._get_line_item(batch_1_1, 1, 1, 2)
+        line_at_pos_2 = viewmodel.test_get_line_item(1, 1, 2)
         log_input_expected_result("line at position 2 text", "Scene 1 Batch 1 Line 3", line_at_pos_2.line_text)
         self.assertEqual(line_at_pos_2.line_text, "Scene 1 Batch 1 Line 3")
 
-        line_at_pos_3 = self._get_line_item(batch_1_1, 1, 1, 3)
+        line_at_pos_3 = viewmodel.test_get_line_item(1, 1, 3)
         log_input_expected_result("line at position 3 text", "Scene 1 Batch 1 Line 5", line_at_pos_3.line_text)
         self.assertEqual(line_at_pos_3.line_text, "Scene 1 Batch 1 Line 5")
 
         # Verify other batches are unaffected
-        batch_1_2 = self._get_batch_item(scene_one_item, 1, 2)
+        batch_1_2 = viewmodel.test_get_batch_item(1, 2)
         log_input_expected_result("batch (1,2) line count", 4, batch_1_2.line_count)
         self.assertEqual(batch_1_2.line_count, 4)
 
         # Verify scene 2 is completely unaffected
-        scene_two_item = self._get_scene_item(viewmodel, 2)
+        scene_two_item = viewmodel.test_get_scene_item(2)
         log_input_expected_result("scene 2 batch count", 2, scene_two_item.batch_count)
         self.assertEqual(scene_two_item.batch_count, 2)
 
-        batch_2_1 = self._get_batch_item(scene_two_item, 2, 1)
+        batch_2_1 = viewmodel.test_get_batch_item(2, 1)
         log_input_expected_result("batch (2,1) line count", 3, batch_2_1.line_count)
         self.assertEqual(batch_2_1.line_count, 3)
 
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     
     def test_large_realistic_model(self):
@@ -720,7 +711,8 @@ class ProjectViewModelTests(SubtitleTestCase):
             [4, 5, 3]       # Scene 10: 12 lines
         ]
 
-        viewmodel, subtitles = self._create_viewmodel_with_counts(line_counts)
+        viewmodel = TestableProjectViewModel(self)
+        subtitles=viewmodel.CreateSubtitles(line_counts)
 
         root_item = viewmodel.getRootItem()
         log_input_expected_result("scene count", len(line_counts), root_item.rowCount())
@@ -733,13 +725,13 @@ class ProjectViewModelTests(SubtitleTestCase):
 
         # Verify complete structure integrity for all scenes
         for scene_index, expected_batches in enumerate(line_counts, start=1):
-            scene_item = self._get_scene_item(viewmodel, scene_index)
+            scene_item = viewmodel.test_get_scene_item(scene_index)
             log_input_expected_result(f"scene {scene_index} batch count", len(expected_batches), scene_item.batch_count)
             self.assertEqual(scene_item.batch_count, len(expected_batches))
 
             # Verify each batch in detail
             for batch_index, expected_line_count in enumerate(expected_batches, start=1):
-                batch_item = self._get_batch_item(scene_item, scene_index, batch_index)
+                batch_item = viewmodel.test_get_batch_item(scene_index, batch_index)
                 log_input_expected_result(
                     f"batch ({scene_index},{batch_index}) line count",
                     expected_line_count,
@@ -748,13 +740,13 @@ class ProjectViewModelTests(SubtitleTestCase):
                 self.assertEqual(batch_item.line_count, expected_line_count)
 
                 # Spot check: verify first and last line in each batch have correct text
-                first_line = self._get_line_item(batch_item, scene_index, batch_index, 1)
+                first_line = viewmodel.test_get_line_item(scene_index, batch_index, 1)
                 expected_first = f"Scene {scene_index} Batch {batch_index} Line 1"
                 log_input_expected_result(f"batch ({scene_index},{batch_index}) first line", expected_first, first_line.line_text)
                 self.assertEqual(first_line.line_text, expected_first)
 
                 if expected_line_count > 1:
-                    last_line = self._get_line_item(batch_item, scene_index, batch_index, expected_line_count)
+                    last_line = viewmodel.test_get_line_item(scene_index, batch_index, expected_line_count)
                     expected_last = f"Scene {scene_index} Batch {batch_index} Line {expected_line_count}"
                     log_input_expected_result(f"batch ({scene_index},{batch_index}) last line", expected_last, last_line.line_text)
                     self.assertEqual(last_line.line_text, expected_last)
@@ -769,21 +761,13 @@ class ProjectViewModelTests(SubtitleTestCase):
             [14, 10],       # Scene 4: lines 87-110
         ]
 
-        viewmodel, _ = self._create_viewmodel_with_counts(line_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(line_counts)
 
         # Get actual global line numbers from the batches
-        scene_1 = self._get_scene_item(viewmodel, 1)
-        batch_1_1 = self._get_batch_item(scene_1, 1, 1)
-        global_line_1 = self._get_line_numbers_in_batch(batch_1_1)[0]
-
-        scene_3 = self._get_scene_item(viewmodel, 3)
-        batch_3_2 = self._get_batch_item(scene_3, 3, 2)
-        global_line_67 = self._get_line_numbers_in_batch(batch_3_2)[5]
-
-        scene_4 = self._get_scene_item(viewmodel, 4)
-        batch_4_2 = self._get_batch_item(scene_4, 4, 2)
-        global_line_110 = self._get_line_numbers_in_batch(batch_4_2)[-1]
+        global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
+        global_line_67 = viewmodel.get_line_numbers_in_batch(3, 2)[5]
+        global_line_110 = viewmodel.get_line_numbers_in_batch(4, 2)[-1]
 
         # Perform a complex update touching multiple scenes
         update = ModelUpdate()
@@ -799,17 +783,17 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         # Verify updates and unaffected structure
-        self._assert_scene_fields(viewmodel, [
+        viewmodel.assert_scene_fields( [
             (1, 'summary', 'Scene 1 - Updated'),
             (4, 'batch_count', 2),
         ])
 
-        self._assert_batch_fields(viewmodel, [
+        viewmodel.assert_batch_fields( [
             (2, 1, 'summary', 'Scene 2 Batch 1 - Updated'),
             (4, 1, 'line_count', 14),
         ])
 
-        self._assert_line_texts(viewmodel, [
+        viewmodel.assert_line_texts( [
             (1, 1, 0, global_line_1, 'Updated first line'),
             (3, 2, 5, global_line_67, 'Updated middle line'),
             (4, 2, -1, global_line_110, 'Updated last line'),
@@ -820,8 +804,8 @@ class ProjectViewModelTests(SubtitleTestCase):
         """Test the complex update pattern used by MergeScenesCommand"""
         # Create a structure with 5 scenes to make renumbering interesting
         base_counts = [[2, 2], [3], [1, 1], [2], [3, 1]]
-        viewmodel, subtitles = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Simulate merging scenes 2 and 3 into scene 2
         # This is what MergeScenesCommand does:
@@ -862,42 +846,42 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(root_item.rowCount(), 4)
 
         # Verify scene 1 is unchanged
-        scene_1 = self._get_scene_item(viewmodel, 1)
+        scene_1 = viewmodel.test_get_scene_item(1)
         log_input_expected_result("scene 1 batch count", 2, scene_1.batch_count)
         self.assertEqual(scene_1.batch_count, 2)
 
         # Verify scene 2 is the merged scene (now has 3 batches: 3+1+1 from original scenes 2+3)
-        scene_2 = self._get_scene_item(viewmodel, 2)
+        scene_2 = viewmodel.test_get_scene_item(2)
         log_input_expected_result("scene 2 batch count", 3, scene_2.batch_count)
         self.assertEqual(scene_2.batch_count, 3)
 
-        batch_2_1 = self._get_batch_item(scene_2, 2, 1)
+        batch_2_1 = viewmodel.test_get_batch_item(2, 1)
         log_input_expected_result("batch (2,1) line count", 3, batch_2_1.line_count)
         self.assertEqual(batch_2_1.line_count, 3)
 
         # Verify scene 3 no longer exists (was removed)
         # But scene 4 (originally scene 4) should now be scene 3
-        scene_3 = self._get_scene_item(viewmodel, 3)
+        scene_3 = viewmodel.test_get_scene_item(3)
         log_input_expected_result("scene 3 (was scene 4) batch count", 1, scene_3.batch_count)
         self.assertEqual(scene_3.batch_count, 1)
 
-        batch_3_1 = self._get_batch_item(scene_3, 3, 1)
+        batch_3_1 = viewmodel.test_get_batch_item(3, 1)
         log_input_expected_result("batch (3,1) line count", 2, batch_3_1.line_count)
         self.assertEqual(batch_3_1.line_count, 2)
 
         # Verify scene 4 (originally scene 5) structure
-        scene_4 = self._get_scene_item(viewmodel, 4)
+        scene_4 = viewmodel.test_get_scene_item(4)
         log_input_expected_result("scene 4 (was scene 5) batch count", 2, scene_4.batch_count)
         self.assertEqual(scene_4.batch_count, 2)
 
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     def test_merge_batches_pattern(self):
         """Test the update pattern used by MergeBatchesCommand"""
         # Create a scene with multiple batches to merge
         base_counts = [[3, 4, 2, 5], [2]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Simulate merging batches 2, 3, 4 in scene 1 into batch 2
         # MergeBatchesCommand does:
@@ -915,17 +899,17 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         # Verify final structure
-        scene_1 = self._get_scene_item(viewmodel, 1)
+        scene_1 = viewmodel.test_get_scene_item(1)
         log_input_expected_result("scene 1 batch count", 2, scene_1.batch_count)
         self.assertEqual(scene_1.batch_count, 2)
 
         # Verify batch 1 is unchanged
-        batch_1_1 = self._get_batch_item(scene_1, 1, 1)
+        batch_1_1 = viewmodel.test_get_batch_item(1, 1)
         log_input_expected_result("batch (1,1) line count", 3, batch_1_1.line_count)
         self.assertEqual(batch_1_1.line_count, 3)
 
         # Verify batch 2 is the merged batch
-        batch_1_2 = self._get_batch_item(scene_1, 1, 2)
+        batch_1_2 = viewmodel.test_get_batch_item(1, 2)
         log_input_expected_result("batch (1,2) line count", 11, batch_1_2.line_count)
         self.assertEqual(batch_1_2.line_count, 11)
 
@@ -935,19 +919,19 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(scene_1.rowCount(), 2)
 
         # Verify scene 2 is completely unaffected
-        scene_2 = self._get_scene_item(viewmodel, 2)
+        scene_2 = viewmodel.test_get_scene_item(2)
         log_input_expected_result("scene 2 batch count", 1, scene_2.batch_count)
         self.assertEqual(scene_2.batch_count, 1)
 
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     
     def test_split_batch_pattern(self):
         """Test the update pattern used by SplitBatchCommand"""
         # Create a scene with a large batch to split
         base_counts = [[8, 6], [3]]
-        viewmodel, _subtitles = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Simulate splitting batch (1,1) at line 4
         # Lines 1-3 stay in batch 1, lines 4-8 move to new batch 2
@@ -975,38 +959,38 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         # Verify final structure
-        scene_1 = self._get_scene_item(viewmodel, 1)
+        scene_1 = viewmodel.test_get_scene_item(1)
         log_input_expected_result("scene 1 batch count", 3, scene_1.batch_count)
         self.assertEqual(scene_1.batch_count, 3)
 
         # Verify batch 1 now has only 3 lines
-        batch_1_1 = self._get_batch_item(scene_1, 1, 1)
+        batch_1_1 = viewmodel.test_get_batch_item(1, 1)
         log_input_expected_result("batch (1,1) line count", 3, batch_1_1.line_count)
         self.assertEqual(batch_1_1.line_count, 3)
 
         # Verify new batch 2 has 5 lines
-        batch_1_2 = self._get_batch_item(scene_1, 1, 2)
+        batch_1_2 = viewmodel.test_get_batch_item(1, 2)
         log_input_expected_result("batch (1,2) line count", 5, batch_1_2.line_count)
         self.assertEqual(batch_1_2.line_count, 5)
 
         # Verify old batch 2 is now batch 3 with 6 lines
-        batch_1_3 = self._get_batch_item(scene_1, 1, 3)
+        batch_1_3 = viewmodel.test_get_batch_item(1, 3)
         log_input_expected_result("batch (1,3) line count", 6, batch_1_3.line_count)
         self.assertEqual(batch_1_3.line_count, 6)
 
         # Verify scene 2 unaffected
-        scene_2 = self._get_scene_item(viewmodel, 2)
+        scene_2 = viewmodel.test_get_scene_item(2)
         log_input_expected_result("scene 2 batch count", 1, scene_2.batch_count)
         self.assertEqual(scene_2.batch_count, 1)
 
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     def test_split_scene_pattern(self):
         """Test the update pattern used by SplitSceneCommand"""
         # Create scenes where we'll split scene 1
         base_counts = [[4, 5, 3], [2], [6]]
-        viewmodel, _subtitles = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Simulate splitting scene 1 at batch 2
         # Batches 1 stays in scene 1, batches 2-3 move to new scene 2
@@ -1037,45 +1021,43 @@ class ProjectViewModelTests(SubtitleTestCase):
         self.assertEqual(root_item.rowCount(), 4)
 
         # Verify scene 1 now has only 1 batch
-        scene_1 = self._get_scene_item(viewmodel, 1)
+        scene_1 = viewmodel.test_get_scene_item(1)
         log_input_expected_result("scene 1 batch count", 1, scene_1.batch_count)
         self.assertEqual(scene_1.batch_count, 1)
 
-        batch_1_1 = self._get_batch_item(scene_1, 1, 1)
+        batch_1_1 = viewmodel.test_get_batch_item(1, 1)
         log_input_expected_result("batch (1,1) line count", 4, batch_1_1.line_count)
         self.assertEqual(batch_1_1.line_count, 4)
 
         # Verify new scene 2 has 2 batches
-        scene_2 = self._get_scene_item(viewmodel, 2)
+        scene_2 = viewmodel.test_get_scene_item(2)
         log_input_expected_result("scene 2 batch count", 2, scene_2.batch_count)
         self.assertEqual(scene_2.batch_count, 2)
 
         # Verify old scene 2 is now scene 3
-        scene_3 = self._get_scene_item(viewmodel, 3)
+        scene_3 = viewmodel.test_get_scene_item(3)
         log_input_expected_result("scene 3 (was scene 2) batch count", 1, scene_3.batch_count)
         self.assertEqual(scene_3.batch_count, 1)
 
         # Verify old scene 3 is now scene 4
-        scene_4 = self._get_scene_item(viewmodel, 4)
+        scene_4 = viewmodel.test_get_scene_item(4)
         log_input_expected_result("scene 4 (was scene 3) batch count", 1, scene_4.batch_count)
         self.assertEqual(scene_4.batch_count, 1)
 
-        batch_4_1 = self._get_batch_item(scene_4, 4, 1)
+        batch_4_1 = viewmodel.test_get_batch_item(4, 1)
         log_input_expected_result("batch (4,1) line count", 6, batch_4_1.line_count)
         self.assertEqual(batch_4_1.line_count, 6)
 
-        viewmodel.assert_signal_emitted(self, 'modelReset', expected_count=1)
+        viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     def test_multiple_updates_in_sequence(self):
         """Test applying multiple updates sequentially"""
         base_counts = [[3, 3], [2, 2]]
-        viewmodel, _subtitles = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Get actual global line number
-        scene_one_item = self._get_scene_item(viewmodel, 1)
-        batch_one_item = self._get_batch_item(scene_one_item, 1, 1)
-        global_line_1 = self._get_line_numbers_in_batch(batch_one_item)[0]
+        global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
 
         # Update 1: Edit scene summary
         update1 = ModelUpdate()
@@ -1093,15 +1075,15 @@ class ProjectViewModelTests(SubtitleTestCase):
         update3.ApplyToViewModel(viewmodel)
 
         # Verify all updates were applied
-        self._assert_scene_fields(viewmodel, [
+        viewmodel.assert_scene_fields( [
             (1, 'summary', 'First update'),
         ])
 
-        self._assert_batch_fields(viewmodel, [
+        viewmodel.assert_batch_fields( [
             (1, 1, 'summary', 'Second update'),
         ])
 
-        self._assert_line_texts(viewmodel, [
+        viewmodel.assert_line_texts( [
             (1, 1, 0, global_line_1, 'Third update'),
         ])
 
@@ -1111,17 +1093,12 @@ class ProjectViewModelTests(SubtitleTestCase):
         # Scene 2: [2, 2] = lines 10-13
         # Scene 3: [4] = lines 14-17
         base_counts = [[3, 3, 3], [2, 2], [4]]
-        viewmodel, _ = self._create_viewmodel_with_counts(base_counts)
-        viewmodel.clear_signal_history()
+        viewmodel = TestableProjectViewModel(self)
+        _subtitles = viewmodel.CreateSubtitles(base_counts)
 
         # Get actual global line numbers
-        scene_one_item = self._get_scene_item(viewmodel, 1)
-        batch_1_1 = self._get_batch_item(scene_one_item, 1, 1)
-        global_line_1 = self._get_line_numbers_in_batch(batch_1_1)[0]
-
-        scene_three_item = self._get_scene_item(viewmodel, 3)
-        batch_3_1 = self._get_batch_item(scene_three_item, 3, 1)
-        global_line_15 = self._get_line_numbers_in_batch(batch_3_1)[1]
+        global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
+        global_line_15 = viewmodel.get_line_numbers_in_batch(3, 1)[1]
 
         # Perform multiple updates in one ModelUpdate (scene, batch, and line updates)
         update = ModelUpdate()
@@ -1137,15 +1114,15 @@ class ProjectViewModelTests(SubtitleTestCase):
         update.ApplyToViewModel(viewmodel)
 
         # Verify updates
-        self._assert_scene_fields(viewmodel, [
+        viewmodel.assert_scene_fields( [
             (1, 'summary', 'Updated scene 1'),
         ])
 
-        self._assert_batch_fields(viewmodel, [
+        viewmodel.assert_batch_fields( [
             (1, 2, 'summary', 'Updated batch 1,2'),
         ])
 
-        self._assert_line_texts(viewmodel, [
+        viewmodel.assert_line_texts( [
             (1, 1, 0, global_line_1, 'Updated line text'),
             (3, 1, 1, global_line_15, 'Another updated line'),
         ])

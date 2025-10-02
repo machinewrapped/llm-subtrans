@@ -1,10 +1,11 @@
 from copy import deepcopy
 from datetime import timedelta
 import unittest
-from typing import Any
+from typing import Any, TYPE_CHECKING
 
 import regex
 
+from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from PySubtrans.Helpers.Tests import log_test_name
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import SettingsType
@@ -20,6 +21,9 @@ from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 from PySubtrans.TranslationProvider import TranslationProvider
+
+if TYPE_CHECKING:
+    from PySubtrans.SubtitleProject import SubtitleProject
 
 class LoggedTestCase(unittest.TestCase):
     def setUp(self) -> None:
@@ -333,3 +337,8 @@ class DummyTranslationClient(TranslationClient):
             if user_prompt == request.prompt.user_prompt:
                 text = text.replace("\\n", "\n")
                 return Translation({'text': text})
+
+
+def create_project_datamodel(project : SubtitleProject|None = None, options : Options|SettingsType|None = None) -> ProjectDataModel:
+    """Create a ProjectDataModel for the given project and options."""
+    return ProjectDataModel(project, options)

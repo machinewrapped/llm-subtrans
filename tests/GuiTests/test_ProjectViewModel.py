@@ -750,21 +750,15 @@ class ProjectViewModelTests(SubtitleTestCase):
         # Get actual global line numbers from the batches
         scene_1 = self._get_scene_item(viewmodel, 1)
         batch_1_1 = self._get_batch_item(scene_1, 1, 1)
-        line_1_1_1 = batch_1_1.child(0, 0)  # First line of scene 1 batch 1
-        self.assertIsInstance(line_1_1_1, LineItem)
-        global_line_1 = cast(LineItem, line_1_1_1).number
+        global_line_1 = self._get_line_numbers_in_batch(batch_1_1)[0]
 
         scene_3 = self._get_scene_item(viewmodel, 3)
         batch_3_2 = self._get_batch_item(scene_3, 3, 2)
-        line_3_2_6 = batch_3_2.child(5, 0)  # 6th line of scene 3 batch 2 (middle-ish)
-        self.assertIsInstance(line_3_2_6, LineItem)
-        global_line_67 = cast(LineItem, line_3_2_6).number
+        global_line_67 = self._get_line_numbers_in_batch(batch_3_2)[5]
 
         scene_4 = self._get_scene_item(viewmodel, 4)
         batch_4_2 = self._get_batch_item(scene_4, 4, 2)
-        line_4_2_10 = batch_4_2.child(9, 0)  # Last line of scene 4 batch 2
-        self.assertIsInstance(line_4_2_10, LineItem)
-        global_line_110 = cast(LineItem, line_4_2_10).number
+        global_line_110 = self._get_line_numbers_in_batch(batch_4_2)[-1]
 
         # Perform a complex update touching multiple scenes
         update = ModelUpdate()
@@ -1111,13 +1105,11 @@ class ProjectViewModelTests(SubtitleTestCase):
         # Get actual global line numbers
         scene_one_item = self._get_scene_item(viewmodel, 1)
         batch_1_1 = self._get_batch_item(scene_one_item, 1, 1)
-        line_1_1_1 = cast(LineItem, batch_1_1.child(0, 0))
-        global_line_1 = line_1_1_1.number
+        global_line_1 = self._get_line_numbers_in_batch(batch_1_1)[0]
 
         scene_three_item = self._get_scene_item(viewmodel, 3)
         batch_3_1 = self._get_batch_item(scene_three_item, 3, 1)
-        line_3_1_2 = cast(LineItem, batch_3_1.child(1, 0))  # Second line in scene 3 batch 1
-        global_line_15 = line_3_1_2.number
+        global_line_15 = self._get_line_numbers_in_batch(batch_3_1)[1]
 
         # Perform multiple updates in one ModelUpdate (scene, batch, and line updates)
         update = ModelUpdate()

@@ -6,7 +6,7 @@ from GuiSubtrans.ViewModel.BatchItem import BatchItem
 from GuiSubtrans.ViewModel.LineItem import LineItem
 from GuiSubtrans.ViewModel.SceneItem import SceneItem
 from GuiSubtrans.ViewModel.ViewModel import ProjectViewModel
-from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, SubtitleTestCase
+from PySubtrans.Helpers.TestCases import SubtitleTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_result
 from PySubtrans.Subtitles import Subtitles
 
@@ -24,13 +24,6 @@ class TestableViewModel(ProjectViewModel):
         self.dataChanged.connect(self._track_data_changed)
         self.layoutChanged.connect(self._track_layout_changed)
         self.modelReset.connect(self._track_model_reset)
-
-    def CreateSubtitles(self, line_counts : list[list[int]]) -> Subtitles:
-        """Helper to create and set up subtitles from line counts"""
-        subtitles = BuildSubtitlesFromLineCounts(line_counts)
-        self.CreateModel(subtitles)
-        self.clear_signal_history()  # Clear any signals from initial setup
-        return subtitles
 
     def test_get_scene_item(self, scene_number : int) -> SceneItem:
         """
@@ -162,6 +155,114 @@ class TestableViewModel(ProjectViewModel):
             line = cast(LineItem, batch.child(actual_idx, 0))
             log_input_expected_result(f"line ({line_num}) text", expected_text, line.line_text)
             self.test.assertEqual(line.line_text, expected_text)
+
+    def assert_viewmodel_matches_subtitles(self, subtitles: Subtitles) -> None:
+        """ 
+        Assert that the viewmodel structure matches the subtitles structure
+
+        This does a full comparison of scenes, batches, and lines between the viewmodel and subtitles.        
+        """
+        expected_scene_numbers = [scene.number for scene in subtitles.scenes]
+        actual_scene_numbers = sorted(self.model.keys())
+        log_input_expected_result('scene numbers match project', expected_scene_numbers, actual_scene_numbers)
+        self.test.assertSequenceEqual(actual_scene_numbers, expected_scene_numbers)
+
+        for scene in subtitles.scenes:
+            scene_item = self.test_get_scene_item(scene.number)
+            log_input_expected_result(f'scene {scene.number} summary', scene.summary, scene_item.summary)
+            self.test.assertEqual(scene_item.summary, scene.summary)
+
+            expected_batch_numbers = [batch.number for batch in scene.batches]
+            actual_batch_numbers = sorted(scene_item.batches.keys())
+            log_input_expected_result(f'scene {scene.number} batch numbers', expected_batch_numbers, actual_batch_numbers)
+            self.test.assertSequenceEqual(actual_batch_numbers, expected_batch_numbers)
+
+            for batch in scene.batches:
+                batch_item = self.test_get_batch_item(scene.number, batch.number)
+                log_input_expected_result(f'batch ({scene.number},{batch.number}) summary', batch.summary, batch_item.summary)
+                self.test.assertEqual(batch_item.summary, batch.summary)
+
+                expected_line_numbers = [line.number for line in batch.originals]
+                actual_line_numbers = self.get_line_numbers_in_batch(scene.number, batch.number)
+                log_input_expected_result(f'batch ({scene.number},{batch.number}) line numbers', expected_line_numbers, actual_line_numbers)
+                self.test.assertSequenceEqual(actual_line_numbers, expected_line_numbers)
+
+                for line in batch.originals:
+                    line_item = batch_item.lines.get(line.number)
+                    log_input_expected_result(f'line ({scene.number},{batch.number},{line.number}) exists', True, line_item is not None)
+                    self.test.assertIsNotNone(line_item)
+                    if line_item:
+                        log_input_expected_result(f'line ({scene.number},{batch.number},{line.number}) text', line.text, line_item.line_text)
+                        self.test.assertEqual(line_item.line_text, line.text)
+
+    def assert_expected_structure(self, expected: dict) -> None:
+        """ 
+        Assert that the viewmodel structure matches the expected structure 
+
+        The expected structure is encoded as a dict:
+        {
+            'scenes': [
+                {
+                    'number': int,
+                    'summary': str (optional),
+                    'batches': [
+                        {
+                            'number': int,
+                            'summary': str (optional),
+                            'line_numbers': [int, ...] (optional),
+                            'line_texts': {line_number: text, ...} (optional)
+                        },
+                        ...
+                    ]
+                },
+                ...
+            ]
+        }
+        """
+        expected_scenes = expected.get('scenes', [])
+        expected_scene_numbers = [scene_data['number'] for scene_data in expected_scenes]
+        actual_scene_numbers = sorted(self.model.keys())
+        log_input_expected_result('expected scene numbers', expected_scene_numbers, actual_scene_numbers)
+        self.test.assertSequenceEqual(actual_scene_numbers, expected_scene_numbers)
+
+        for scene_data in expected_scenes:
+            scene_number = scene_data['number']
+            scene_item = self.test_get_scene_item(scene_number)
+
+            if 'summary' in scene_data:
+                expected_summary = scene_data['summary']
+                log_input_expected_result(f'scene {scene_number} expected summary', expected_summary, scene_item.summary)
+                self.test.assertEqual(scene_item.summary, expected_summary)
+
+            expected_batches = scene_data.get('batches', [])
+            expected_batch_numbers = [batch_data['number'] for batch_data in expected_batches]
+            actual_batch_numbers = sorted(scene_item.batches.keys())
+            log_input_expected_result(f'scene {scene_number} expected batches', expected_batch_numbers, actual_batch_numbers)
+            self.test.assertSequenceEqual(actual_batch_numbers, expected_batch_numbers)
+
+            for batch_data in expected_batches:
+                batch_number = batch_data['number']
+                batch_item = self.test_get_batch_item(scene_number, batch_number)
+
+                if 'summary' in batch_data:
+                    expected_batch_summary = batch_data['summary']
+                    log_input_expected_result(f'batch ({scene_number},{batch_number}) expected summary', expected_batch_summary, batch_item.summary)
+                    self.test.assertEqual(batch_item.summary, expected_batch_summary)
+
+                expected_line_numbers = batch_data.get('line_numbers')
+                if expected_line_numbers is not None:
+                    actual_line_numbers = self.get_line_numbers_in_batch(scene_number, batch_number)
+                    log_input_expected_result(f'batch ({scene_number},{batch_number}) expected line numbers', expected_line_numbers, actual_line_numbers)
+                    self.test.assertSequenceEqual(actual_line_numbers, expected_line_numbers)
+
+                expected_line_texts = batch_data.get('line_texts', {})
+                for line_number, expected_text in expected_line_texts.items():
+                    line_item = batch_item.lines.get(line_number)
+                    log_input_expected_result(f'line ({scene_number},{batch_number},{line_number}) expected text', expected_text, line_item.line_text if line_item else None)
+                    self.test.assertIsNotNone(line_item)
+                    if line_item:
+                        self.test.assertEqual(line_item.line_text, expected_text)
+
 
     def _track_data_changed(self, topLeft : QModelIndex, bottomRight : QModelIndex, roles : list[int]) -> None:
         """Track dataChanged signals"""

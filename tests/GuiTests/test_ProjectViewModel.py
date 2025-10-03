@@ -14,6 +14,11 @@ from PySubtrans.Helpers.Tests import log_input_expected_result
 from PySubtrans.SubtitleLine import SubtitleLine
 
 class ProjectViewModelTests(GuiSubtitleTestCase):
+    """
+    Tests for ProjectViewModel using ModelUpdate to apply changes.
+
+    These tests focus on verifying that the ViewModel structure and data remain consistent after updates.
+    """
 
     def test_create_model_from_helper_subtitles(self):
         line_counts = [[3, 2], [1, 1, 2]]
@@ -96,9 +101,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
                     self.assertEqual(line_item.line_text, expected_text)
 
     def test_update_scene_summary(self):
-        base_counts = [[2, 2], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts([[2, 2], [1, 1]])
 
         update = ModelUpdate()
         update.scenes.update(1, {'summary': 'Scene 1 (edited)'})
@@ -112,9 +115,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         viewmodel.assert_signal_emitted('dataChanged', expected_count=1)
 
     def test_update_batch_summary(self):
-        base_counts = [[2, 2], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts([[2, 2], [1, 1]])
 
         update = ModelUpdate()
         update.batches.update((1, 1), {'summary': 'Scene 1 Batch 1 (edited)'})
@@ -129,9 +130,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         viewmodel.assert_signal_emitted('dataChanged', expected_count=3)
 
     def test_update_line_text(self):
-        base_counts = [[2, 2], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts([[2, 2], [1, 1]])
 
         # Get actual global line number
         global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
@@ -150,8 +149,8 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
     def test_add_new_line(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        subtitles = viewmodel.CreateSubtitles(base_counts)
+        subtitles = self.create_test_subtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel(subtitles)
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_line = SubtitleLine.Construct(
@@ -187,9 +186,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
     def test_remove_line(self):
-        base_counts = [[2, 2], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts([[2, 2], [1, 1]])
 
         update = ModelUpdate()
         update.lines.remove((1, 1, 2))
@@ -204,8 +201,8 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
     def test_add_new_batch(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        subtitles = viewmodel.CreateSubtitles(base_counts)
+        subtitles = self.create_test_subtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel(subtitles)
 
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
         new_batch_number = len(subtitles.GetScene(1).batches) + 1
@@ -239,8 +236,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
     def test_remove_batch(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)        
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         update = ModelUpdate()
         update.batches.remove((2, 2))
@@ -256,8 +252,8 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
     def test_add_new_scene(self):
         base_counts = [[2, 2], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        subtitles = viewmodel.CreateSubtitles(base_counts)
+        subtitles = self.create_test_subtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel(subtitles)
 
         initial_scene_count = viewmodel.rowCount()
         log_input_expected_result("initial scene count", len(base_counts), initial_scene_count)
@@ -292,8 +288,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
     def test_remove_scene(self):
         """Test removing a scene validates remaining scenes are correct"""
         base_counts = [[2, 2], [1, 1, 2], [3]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         # Remove scene 2 (which has 3 batches)
         update = ModelUpdate()
@@ -335,8 +330,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
     def test_replace_scene(self):
         """Test replacing a scene validates new structure and unaffected scenes"""
         base_counts = [[2, 2], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         # Create a new scene with different structure - was [2,2], now [3,1]
         replacement_scene = CreateDummyScene(1, [3, 1], 1, timedelta(seconds=0))
@@ -382,8 +376,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
     def test_replace_batch(self):
         """Test replacing a batch validates new lines and unaffected batches"""
         base_counts = [[2, 2, 3], [1, 1]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         # Replace batch (1,2) - was 2 lines, now 5 lines
         replacement_batch = CreateDummyBatch(1, 2, 5, 3, timedelta(seconds=10))
@@ -422,8 +415,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
     def test_delete_multiple_lines(self):
         """Test deleting multiple lines validates remaining lines and content"""
         base_counts = [[5, 4], [3, 2]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         # Delete lines 2 and 4 from batch (1,1), leaving lines 1, 3, 5
         update = ModelUpdate()
@@ -486,8 +478,8 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
             [4, 5, 3]       # Scene 10: 12 lines
         ]
 
-        viewmodel = TestableViewModel(self)
-        subtitles=viewmodel.CreateSubtitles(line_counts)
+        subtitles = BuildSubtitlesFromLineCounts(line_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel(subtitles)
 
         root_item = viewmodel.getRootItem()
         log_input_expected_result("scene count", len(line_counts), root_item.rowCount())
@@ -536,8 +528,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
             [14, 10],       # Scene 4: lines 87-110
         ]
 
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(line_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(line_counts)
 
         # Get actual global line numbers from the batches
         global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
@@ -579,8 +570,8 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         """Test the complex update pattern used by MergeScenesCommand"""
         # Create a structure with 5 scenes to make renumbering interesting
         base_counts = [[2, 2], [3], [1, 1], [2], [3, 1]]
-        viewmodel = TestableViewModel(self)
-        subtitles = viewmodel.CreateSubtitles(base_counts)
+        subtitles = self.create_test_subtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel(subtitles)
 
         # Simulate merging scenes 2 and 3 into scene 2
         # This is what MergeScenesCommand does:
@@ -655,8 +646,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         """Test the update pattern used by MergeBatchesCommand"""
         # Create a scene with multiple batches to merge
         base_counts = [[3, 4, 2, 5], [2]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         # Simulate merging batches 2, 3, 4 in scene 1 into batch 2
         # MergeBatchesCommand does:
@@ -705,8 +695,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         """Test the update pattern used by SplitBatchCommand"""
         # Create a scene with a large batch to split
         base_counts = [[8, 6], [3]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         # Simulate splitting batch (1,1) at line 4
         # Lines 1-3 stay in batch 1, lines 4-8 move to new batch 2
@@ -764,8 +753,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         """Test the update pattern used by SplitSceneCommand"""
         # Create scenes where we'll split scene 1
         base_counts = [[4, 5, 3], [2], [6]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         # Simulate splitting scene 1 at batch 2
         # Batches 1 stays in scene 1, batches 2-3 move to new scene 2
@@ -828,8 +816,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
     def test_multiple_updates_in_sequence(self):
         """Test applying multiple updates sequentially"""
         base_counts = [[3, 3], [2, 2]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         # Get actual global line number
         global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
@@ -871,8 +858,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         # Scene 2: [2, 2] = lines 10-13
         # Scene 3: [4] = lines 14-17
         base_counts = [[3, 3, 3], [2, 2], [4]]
-        viewmodel = TestableViewModel(self)
-        _subtitles = viewmodel.CreateSubtitles(base_counts)
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
         # Get actual global line numbers
         global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]

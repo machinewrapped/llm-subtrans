@@ -192,12 +192,14 @@ class TestableViewModel(ProjectViewModel):
                     log_input_expected_result(f'line ({scene.number},{batch.number},{line.number}) exists', True, line_item is not None)
                     self.test.assertIsNotNone(line_item)
                     if line_item:
+                        log_input_expected_result(f'line ({scene.number},{batch.number},{line.number}) type', LineItem, type(line_item))
+                        self.test.assertEqual(type(line_item), LineItem)
                         log_input_expected_result(f'line ({scene.number},{batch.number},{line.number}) text', line.text, line_item.line_text)
                         self.test.assertEqual(line_item.line_text, line.text)
 
     def assert_expected_structure(self, expected: dict) -> None:
-        """ 
-        Assert that the viewmodel structure matches the expected structure 
+        """
+        Assert that the viewmodel structure matches the expected structure
 
         The expected structure is encoded as a dict:
         {
@@ -209,6 +211,7 @@ class TestableViewModel(ProjectViewModel):
                         {
                             'number': int,
                             'summary': str (optional),
+                            'line_count': int (optional),
                             'line_numbers': [int, ...] (optional),
                             'line_texts': {line_number: text, ...} (optional)
                         },
@@ -248,6 +251,11 @@ class TestableViewModel(ProjectViewModel):
                     expected_batch_summary = batch_data['summary']
                     log_input_expected_result(f'batch ({scene_number},{batch_number}) expected summary', expected_batch_summary, batch_item.summary)
                     self.test.assertEqual(batch_item.summary, expected_batch_summary)
+
+                expected_line_count = batch_data.get('line_count')
+                if expected_line_count is not None:
+                    log_input_expected_result(f'batch ({scene_number},{batch_number}) expected line count', expected_line_count, batch_item.line_count)
+                    self.test.assertEqual(batch_item.line_count, expected_line_count)
 
                 expected_line_numbers = batch_data.get('line_numbers')
                 if expected_line_numbers is not None:

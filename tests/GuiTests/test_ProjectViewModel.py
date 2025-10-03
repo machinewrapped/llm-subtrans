@@ -698,11 +698,9 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
     def test_multiple_updates_in_sequence(self):
         """Test applying multiple updates sequentially"""
+        # Structure: [[3, 3], [2, 2]] = lines 1-3, 4-6, 7-8, 9-10
         base_counts = [[3, 3], [2, 2]]
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
-
-        # Get actual global line number
-        global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
 
         # Update 1: Edit scene summary
         update1 = ModelUpdate()
@@ -716,54 +714,112 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
         # Update 3: Edit line text
         update3 = ModelUpdate()
-        update3.lines.update((1, 1, global_line_1), {'text': 'Third update'})
+        update3.lines.update((1, 1, 1), {'text': 'Third update'})
         update3.ApplyToViewModel(viewmodel)
 
-        viewmodel.assert_scene_fields( [
-            (1, 'summary', 'First update'),
-        ])
-
-        viewmodel.assert_batch_fields( [
-            (1, 1, 'summary', 'Second update'),
-        ])
-
-        viewmodel.assert_line_texts( [
-            (1, 1, 0, global_line_1, 'Third update'),
-        ])
+        # Verify structure unchanged [[3, 3], [2, 2]] and all updates applied correctly
+        # Validate all line texts to ensure no unintended changes
+        viewmodel.assert_expected_structure({
+            'scenes': [
+                {
+                    'number': 1,
+                    'summary': 'First update',
+                    'batches': [
+                        {
+                            'number': 1,
+                            'line_count': 3,
+                            'summary': 'Second update',
+                            'line_texts': {
+                                1: 'Third update',  # Updated
+                                2: 'Scene 1 Batch 1 Line 2',  # Unchanged
+                                3: 'Scene 1 Batch 1 Line 3',  # Unchanged
+                            }
+                        },
+                        {'number': 2, 'line_count': 3},
+                    ]
+                },
+                {
+                    'number': 2,
+                    'batches': [
+                        {
+                            'number': 1,
+                            'line_count': 2,
+                            'line_texts': {7: 'Scene 2 Batch 1 Line 1'}  # Spot-check
+                        },
+                        {'number': 2, 'line_count': 2},
+                    ]
+                },
+            ]
+        })
 
         # Verify signals: scene(1) + batch(3) + line(2) = 6
         viewmodel.assert_signal_emitted('dataChanged', expected_count=6)
 
     def test_complex_multi_operation_update(self):
         """Test a complex update with multiple operations at once"""
-        # Scene 1: [3, 3, 3] = lines 1-9
-        # Scene 2: [2, 2] = lines 10-13
+        # Scene 1: [3, 3, 3] = lines 1-3, 4-6, 7-9
+        # Scene 2: [2, 2] = lines 10-11, 12-13
         # Scene 3: [4] = lines 14-17
         base_counts = [[3, 3, 3], [2, 2], [4]]
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
-
-        # Get actual global line numbers
-        global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
-        global_line_15 = viewmodel.get_line_numbers_in_batch(3, 1)[1]
 
         # Perform multiple updates in one ModelUpdate (scene, batch, and line updates)
         update = ModelUpdate()
         update.scenes.update(1, {'summary': 'Updated scene 1'})
         update.batches.update((1, 2), {'summary': 'Updated batch 1,2'})
-        update.lines.update((1, 1, global_line_1), {'text': 'Updated line text'})
-        update.lines.update((3, 1, global_line_15), {'text': 'Another updated line'})
+        update.lines.update((1, 1, 1), {'text': 'Updated line text'})
+        update.lines.update((3, 1, 15), {'text': 'Another updated line'})
 
         update.ApplyToViewModel(viewmodel)
 
-        viewmodel.assert_scene_fields( [
-            (1, 'summary', 'Updated scene 1'),
-        ])
-
-        viewmodel.assert_batch_fields( [
-            (1, 2, 'summary', 'Updated batch 1,2'),
-        ])
-
-        viewmodel.assert_line_texts( [
-            (1, 1, 0, global_line_1, 'Updated line text'),
-            (3, 1, 1, global_line_15, 'Another updated line'),
-        ])
+        # Verify structure unchanged [[3, 3, 3], [2, 2], [4]] and all updates applied correctly
+        # Validate line texts to ensure no unintended changes
+        viewmodel.assert_expected_structure({
+            'scenes': [
+                {
+                    'number': 1,
+                    'summary': 'Updated scene 1',
+                    'batches': [
+                        {
+                            'number': 1,
+                            'line_count': 3,
+                            'line_texts': {
+                                1: 'Updated line text',  # Updated
+                                2: 'Scene 1 Batch 1 Line 2',  # Unchanged
+                            }
+                        },
+                        {
+                            'number': 2,
+                            'line_count': 3,
+                            'summary': 'Updated batch 1,2'
+                        },
+                        {'number': 3, 'line_count': 3},
+                    ]
+                },
+                {
+                    'number': 2,
+                    'batches': [
+                        {
+                            'number': 1,
+                            'line_count': 2,
+                            'line_texts': {10: 'Scene 2 Batch 1 Line 1'}  # Spot-check
+                        },
+                        {'number': 2, 'line_count': 2},
+                    ]
+                },
+                {
+                    'number': 3,
+                    'batches': [
+                        {
+                            'number': 1,
+                            'line_count': 4,
+                            'line_texts': {
+                                14: 'Scene 3 Batch 1 Line 1',  # Unchanged
+                                15: 'Another updated line',  # Updated
+                                16: 'Scene 3 Batch 1 Line 3',  # Unchanged
+                            }
+                        },
+                    ]
+                },
+            ]
+        })

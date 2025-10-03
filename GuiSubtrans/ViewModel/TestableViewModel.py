@@ -55,21 +55,6 @@ class TestableViewModel(ProjectViewModel):
 
         return cast(BatchItem, batch_item_qt)
 
-    def test_get_line_item(self, scene_number : int, batch_number : int, line_number : int) -> LineItem:
-        """
-        Helper to retrieve a line item by scene, batch, and line numbers.
-        """
-        batch_item = self.test_get_batch_item(scene_number, batch_number)
-        line_item_qt = batch_item.child(line_number - 1, 0)
-
-        log_input_expected_result(f"line ({scene_number},{batch_number},{line_number}) exists", True, line_item_qt is not None)
-        self.test.assertIsNotNone(line_item_qt)
-
-        log_input_expected_result(f"line ({scene_number},{batch_number},{line_number}) type", LineItem, type(line_item_qt))
-        self.test.assertEqual(type(line_item_qt), LineItem)
-
-        return cast(LineItem, line_item_qt)
-
     def get_line_numbers_in_batch(self, scene_number : int, batch_number : int) -> list[int]:
         """
         Helper to retrieve all global line numbers from a batch.

@@ -263,7 +263,6 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         base_counts = [[2, 2], [1, 1, 2], [3]]
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
-        # Remove scene 2 (which has 3 batches)
         update = ModelUpdate()
         update.scenes.remove(2)
         update.ApplyToViewModel(viewmodel)
@@ -298,7 +297,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         base_counts = [[2, 2], [1, 1]]
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
-        # Create a new scene with different structure - was [2,2], now [3,1]
+        # Create a new scene with different structure
         replacement_scene = CreateDummyScene(1, [3, 1], 1, timedelta(seconds=0))
 
         update = ModelUpdate()
@@ -365,7 +364,6 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         base_counts = [[5, 4], [3, 2]]
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
-        # Delete lines 2 and 4 from batch (1,1), leaving lines 1, 3, 5
         update = ModelUpdate()
         update.lines.remove((1, 1, 2))
         update.lines.remove((1, 1, 4))
@@ -380,7 +378,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
                     'batches': [
                         {
                             'number': 1,
-                            'line_count': 3,  # Changed from 5 (deleted lines 2 and 4)
+                            'line_count': 3,
                             'line_texts': {  # Remaining lines 1, 3, 5 retain their original text
                                 1: "Scene 1 Batch 1 Line 1",
                                 3: "Scene 1 Batch 1 Line 3",
@@ -434,7 +432,6 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
     def test_realistic_update_on_large_model(self):
         """Test performing realistic updates on a larger model"""
-        # Use a moderately large structure
         line_counts = [
             [8, 10, 7],     # Scene 1: lines 1-25
             [12, 15],       # Scene 2: lines 26-52
@@ -451,18 +448,14 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
         # Perform a complex update touching multiple scenes
         update = ModelUpdate()
-        # Update scene 1 summary
         update.scenes.update(1, {'summary': 'Scene 1 - Updated'})
-        # Update batch (2,1) summary
         update.batches.update((2, 1), {'summary': 'Scene 2 Batch 1 - Updated'})
-        # Update some line texts using actual global line numbers
         update.lines.update((1, 1, global_line_1), {'text': 'Updated first line'})
         update.lines.update((3, 2, global_line_67), {'text': 'Updated middle line'})
         update.lines.update((4, 2, global_line_110), {'text': 'Updated last line'})
 
         update.ApplyToViewModel(viewmodel)
 
-        # Verify updates and unaffected structure
         viewmodel.assert_scene_fields( [
             (1, 'summary', 'Scene 1 - Updated'),
             (4, 'batch_count', 2),
@@ -482,7 +475,6 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
     def test_merge_scenes_pattern(self):
         """Test the complex update pattern used by MergeScenesCommand"""
         # Create a structure with 5 scenes
-        # Scene 1: [2,2], Scene 2: [3], Scene 3: [1,1], Scene 4: [2], Scene 5: [3,1]
         base_counts = [[2, 2], [3], [1, 1], [2], [3, 1]]
         subtitles = self.create_test_subtitles(base_counts)
         viewmodel : TestableViewModel = self.create_testable_viewmodel(subtitles)
@@ -549,7 +541,6 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
     def test_merge_batches_pattern(self):
         """Test the update pattern used by MergeBatchesCommand"""
-        # Create a scene with multiple batches to merge
         base_counts = [[3, 4, 2, 5], [2]]
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
@@ -558,7 +549,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         # 1. Replace batch 2 with merged batch (containing all lines from batches 2,3,4)
         # 2. Remove batches 3 and 4
 
-        # Create merged batch with combined line count (4+2+5=11 lines)
+        # Create merged batch with combined line count
         merged_batch = CreateDummyBatch(1, 2, 11, 4, timedelta(seconds=10))
 
         update = ModelUpdate()
@@ -592,7 +583,6 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
     
     def test_split_batch_pattern(self):
         """Test the update pattern used by SplitBatchCommand"""
-        # Create a scene with a large batch to split
         base_counts = [[8, 6], [3]]
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
@@ -646,7 +636,6 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
     def test_split_scene_pattern(self):
         """Test the update pattern used by SplitSceneCommand"""
-        # Create scenes where we'll split scene 1
         base_counts = [[4, 5, 3], [2], [6]]
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(base_counts)
 
@@ -730,7 +719,6 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         update3.lines.update((1, 1, global_line_1), {'text': 'Third update'})
         update3.ApplyToViewModel(viewmodel)
 
-        # Verify all updates were applied
         viewmodel.assert_scene_fields( [
             (1, 'summary', 'First update'),
         ])
@@ -760,18 +748,13 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
         # Perform multiple updates in one ModelUpdate (scene, batch, and line updates)
         update = ModelUpdate()
-        # Edit scene 1 summary
         update.scenes.update(1, {'summary': 'Updated scene 1'})
-        # Edit batch (1,2) summary
         update.batches.update((1, 2), {'summary': 'Updated batch 1,2'})
-        # Edit line using global line numbers
         update.lines.update((1, 1, global_line_1), {'text': 'Updated line text'})
-        # Update line in scene 3
         update.lines.update((3, 1, global_line_15), {'text': 'Another updated line'})
 
         update.ApplyToViewModel(viewmodel)
 
-        # Verify updates
         viewmodel.assert_scene_fields( [
             (1, 'summary', 'Updated scene 1'),
         ])

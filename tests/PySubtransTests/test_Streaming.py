@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import timedelta
 
 from PySubtrans.Helpers.TestCases import SubtitleTestCase, DummyTranslationClient
-from PySubtrans.Helpers.Tests import log_test_name, log_input_expected_result, log_info, skip_if_debugger_attached_decorator
+from PySubtrans.Helpers.Tests import log_test_name, log_input_expected_result, log_info, skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType, SettingType
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
@@ -225,7 +225,7 @@ class StreamingTests(SubtitleTestCase):
 
 
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_network_interruption_handling(self):
         """Test handling of network interruptions during streaming"""
 
@@ -282,7 +282,7 @@ class StreamingTests(SubtitleTestCase):
         log_input_expected_result("Network error message contains 'network interruption'", True, contains_interruption)
         self.assertIn("network interruption", error_message)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_api_error_handling(self):
         """Test handling of API errors during streaming"""
 

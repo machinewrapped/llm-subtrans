@@ -18,7 +18,7 @@ from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.Helpers.Tests import (
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached_decorator,
+    skip_if_debugger_attached,
 )
 
 
@@ -355,7 +355,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Test serialization
         else:
             self.skipTest("Colors not found in metadata, cannot test serialization")
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_AssLineBreaksHandling(self):
         
         ass_content = """[Script Info]

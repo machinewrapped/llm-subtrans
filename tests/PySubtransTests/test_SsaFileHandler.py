@@ -11,7 +11,7 @@ from PySubtrans.Helpers.Tests import (
     log_info,
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached_decorator,
+    skip_if_debugger_attached,
 )
 
 class TestSSAFileHandler(unittest.TestCase):
@@ -205,7 +205,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         log_input_expected_result("SSA with no dialogue lines", 0, len(lines))
         self.assertEqual(len(lines), 0)
     
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_parse_invalid_ssa_content(self):
         """Test error handling for invalid SSA content."""
         

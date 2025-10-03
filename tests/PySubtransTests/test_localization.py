@@ -4,7 +4,7 @@ import unittest
 from PySubtrans.Helpers.Tests import (
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached_decorator,
+    skip_if_debugger_attached,
 )
 from PySubtrans.Helpers.Localization import (
     initialize_localization,
@@ -50,7 +50,7 @@ class TestLocalization(unittest.TestCase):
         log_input_expected_result("Cancel", "Cancel", en_result)
         self.assertEqual(en_result, "Cancel")
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_missing_language_fallback(self):
         initialize_localization("zz")  # non-existent locale
         # Should gracefully fall back to identity translation

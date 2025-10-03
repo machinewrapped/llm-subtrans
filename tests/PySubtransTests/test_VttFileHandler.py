@@ -10,7 +10,7 @@ from PySubtrans.SubtitleError import SubtitleParseError
 from PySubtrans.Helpers.Tests import (
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached_decorator,
+    skip_if_debugger_attached,
 )
 
 class TestVttFileHandler(unittest.TestCase):
@@ -199,7 +199,7 @@ Third subtitle line with <i>formatting</i>
                     log_input_expected_result(expected_content, True, contains_content)
                     self.assertIn(expected_content, result)
     
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_parse_invalid_vtt_content(self):
         """Test error handling for invalid WebVTT content."""
         

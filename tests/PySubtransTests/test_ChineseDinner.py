@@ -8,7 +8,7 @@ from PySubtrans.Helpers.Tests import (
     log_info,
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached_decorator,
+    skip_if_debugger_attached,
 )
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
@@ -554,7 +554,7 @@ class ChineseDinnerTests(SubtitleTestCase):
                 log_input_expected_result("No-change update returned False", False, result)
                 self.assertFalse(result)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_SubtitleEditor_UpdateLine_error_handling(self):
         """Tests error handling paths for SubtitleEditor.UpdateLine"""
         subtitles = PrepareSubtitles(chinese_dinner_data)

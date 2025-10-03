@@ -13,7 +13,7 @@ from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached_decorator,
+    skip_if_debugger_attached,
 )
 
 
@@ -44,7 +44,7 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         log_input_expected_result('.srt', SrtFileHandler, handler)
         self.assertIs(handler, SrtFileHandler)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_UnknownExtension(self):
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.get_handler_by_extension('.unknown')
@@ -81,19 +81,19 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         log_input_expected_result("test.srt", SrtFileHandler, type(handler))
         self.assertIsInstance(handler, SrtFileHandler)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_CreateHandlerWithNoExtensionOrFilename(self):
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.create_handler()
         log_input_expected_error("None", ValueError, e.exception)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_CreateHandlerWithEmptyExtension(self):
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.create_handler(extension="")
         log_input_expected_error('""', ValueError, e.exception)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_CreateHandlerWithInvalidFilename(self):
         with self.assertRaises(ValueError) as e:
             SubtitleFormatRegistry.create_handler(filename="test")
@@ -145,7 +145,7 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
             os.unlink(temp_path)
 
     @patch('pysubs2.load')
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_DetectFormatAndLoadFileError(self, mock_load):
         mock_load.side_effect = Exception("Parse error")
 
@@ -154,7 +154,7 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         log_input_expected_error("nonexistent.srt", SubtitleParseError, e.exception)
 
     @patch('pysubs2.load')
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_DetectFormatAndLoadFileUnicodeError(self, mock_load):
         
         mock_subs = MagicMock()
@@ -389,7 +389,7 @@ Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
         finally:
             os.unlink(temp_path)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_FormatDetectionWithMalformedFile(self):
         
         malformed_content = "This is not a valid subtitle file\nJust random text\nWith no format\n"
@@ -409,7 +409,7 @@ Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
         finally:
             os.unlink(temp_path)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_FormatDetectionWithEmptyFile(self):
         
         with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False, encoding='utf-8') as f:
@@ -423,7 +423,7 @@ Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
         finally:
             os.unlink(temp_path)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_FormatDetectionWithBinaryFile(self):
         
         # Create a binary file that's definitely not a subtitle
@@ -477,7 +477,7 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
         finally:
             os.unlink(temp_path)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_FormatDetectionNonexistentFile(self):
         
         filename = "nonexistent_file.txt"
@@ -485,7 +485,7 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
             SubtitleFormatRegistry.detect_format_and_load_file(filename)
         log_input_expected_error(f"filename={filename}", SubtitleParseError, e.exception)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_FormatDetectionWithNonUtf8SrtFile(self):
         
         # SRT content with non-ASCII characters (French accents)
@@ -510,7 +510,7 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
         finally:
             os.unlink(temp_path)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_FormatDetectionWithNonUtf8AssFile(self):
         
         # ASS content with non-ASCII characters

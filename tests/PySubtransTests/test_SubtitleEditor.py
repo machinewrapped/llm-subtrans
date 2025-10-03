@@ -7,7 +7,7 @@ from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, SubtitleT
 from PySubtrans.Helpers.Tests import (
     log_input_expected_result,
     log_test_name,
-    skip_if_debugger_attached_decorator,
+    skip_if_debugger_attached,
 )
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
@@ -90,7 +90,7 @@ class SubtitleEditorTests(SubtitleTestCase):
         log_input_expected_result("callback success flag", True, callback_results[0])
         self.assertTrue(callback_results[0])
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_exit_callback_invoked_on_failure(self):
         """Test that exit callback receives failure flag when an exception occurs"""
         callback_results: list[bool] = []
@@ -105,7 +105,7 @@ class SubtitleEditorTests(SubtitleTestCase):
         log_input_expected_result("callback failure flag", False, callback_results[0])
         self.assertFalse(callback_results[0])
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_exit_callback_exception_propagates(self):
         """Exit callback exceptions should propagate out of the context manager"""
         def failing_callback(_: bool) -> None:
@@ -324,7 +324,7 @@ class SubtitleEditorTests(SubtitleTestCase):
                             self.assertEqual(trans.number, orig.number)
                             self.assertEqual(trans.text, orig.text)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_duplicate_originals_fails_with_existing_translations(self):
         """Test DuplicateOriginalsAsTranslations raises error if translations exist"""
         # Create scenes with batching and add a translation
@@ -439,7 +439,7 @@ class SubtitleEditorTests(SubtitleTestCase):
                 log_input_expected_result(f"deleted originals from batch ({scene_num},{batch_num})", True, len(deleted_originals) > 0)
                 self.assertGreater(len(deleted_originals), 0)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_delete_lines_nonexistent(self):
         """Test DeleteLines raises error when no lines are deleted"""
         batcher = SubtitleBatcher(self.options)
@@ -488,7 +488,7 @@ class SubtitleEditorTests(SubtitleTestCase):
                 log_input_expected_result(f"scene {i} has correct number", i, scene.number)
                 self.assertEqual(scene.number, i)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_merge_scenes_invalid_input(self):
         """Test MergeScenes raises errors for invalid input"""
         batcher = SubtitleBatcher(self.options)
@@ -928,7 +928,7 @@ class SubtitleEditorTests(SubtitleTestCase):
             log_input_expected_result("no change update returned False", False, result)
             self.assertFalse(result)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_update_line_invalid_line(self):
         """Test UpdateLine raises error for non-existent line"""
         batcher = SubtitleBatcher(self.options)
@@ -944,7 +944,7 @@ class SubtitleEditorTests(SubtitleTestCase):
             log_input_expected_result("error mentions line not found", True, "not found" in error_message.lower())
             self.assertIn("not found", error_message.lower())
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_update_line_invalid_timing(self):
         """Test UpdateLine raises error for invalid timing"""
         batcher = SubtitleBatcher(self.options)

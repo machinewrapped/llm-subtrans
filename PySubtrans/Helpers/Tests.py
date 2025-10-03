@@ -58,24 +58,15 @@ def log_input_expected_error(input : Any, expected_error : type[Exception], resu
     log_info(str(result), prefix="-->".ljust(10))
     logging.info(separator)
 
-def skip_if_debugger_attached(test_name : str) -> bool:
-    """
-    Returns True if running under a debugger and logs that the test is being skipped.
-    Use this to skip tests that raise expected exceptions when debugging.
-    """
-    if sys.gettrace() is not None:
-        print(f"\nSkipping {test_name} when debugger is attached")
-        return True
-    return False
 
-
-def skip_if_debugger_attached_decorator(test_method):
+def skip_if_debugger_attached(test_method):
     """
-    Decorator version of skip_if_debugger_attached that skips the test method when debugger is attached.
-    Use this to skip tests that raise expected exceptions when debugging.
+    Decorator to skips a test method when debugger is attached.
+    Use this to skip tests that raise expected exceptions when debugging,
+    to facilitate debugging tests that are UNEXPECTEDLY raising exceptions.
 
     Usage:
-        @skip_if_debugger_attached_decorator
+        @skip_if_debugger_attached
         def test_some_exception_handling(self):
             # Test that raises exceptions
             pass

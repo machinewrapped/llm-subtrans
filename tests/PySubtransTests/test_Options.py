@@ -11,7 +11,7 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
     log_input_expected_result,
-    skip_if_debugger_attached_decorator,
+    skip_if_debugger_attached,
 )
 from PySubtrans.SettingsType import SettingsType, SettingType, SettingsError
 
@@ -896,7 +896,7 @@ class TestSettingsHelpers(LoggedTestCase):
         log_input_expected_result("None value", False, result)
         self.assertFalse(result)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_get_bool_setting_errors(self):
         """Test GetBoolSetting error cases"""
         
@@ -929,7 +929,7 @@ class TestSettingsHelpers(LoggedTestCase):
         log_input_expected_result("None value", None, result)
         self.assertIsNone(result)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_get_int_setting_errors(self):
         """Test GetIntSetting error cases"""
         
@@ -957,7 +957,7 @@ class TestSettingsHelpers(LoggedTestCase):
         log_input_expected_result("missing key", None, result)
         self.assertIsNone(result)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_get_float_setting_errors(self):
         """Test GetFloatSetting error cases"""
         
@@ -1006,7 +1006,7 @@ class TestSettingsHelpers(LoggedTestCase):
         log_input_expected_result("missing key", [], result)
         self.assertEqual(result, [])
         
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_get_list_setting_errors(self):
         """Test GetListSetting error cases"""
         
@@ -1053,7 +1053,7 @@ class TestSettingsHelpers(LoggedTestCase):
         log_input_expected_result("missing key with default", default, result)
         self.assertEqual(result, default)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_get_timedelta_setting_errors(self):
         """Test GetTimeDeltaSetting error cases"""
         
@@ -1088,7 +1088,7 @@ class TestSettingsHelpers(LoggedTestCase):
         log_input_expected_result("Options object", True, result)
         self.assertTrue(result)
 
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_get_optional_setting_errors(self):
         """Test get_optional_setting error cases"""
         
@@ -1111,7 +1111,7 @@ class TestSettingsHelpers(LoggedTestCase):
                 log_input_expected_result(f"'{key}' as {setting_type.__name__}", expected, result)
                 self.assertEqual(result, expected)
         
-    @skip_if_debugger_attached_decorator
+    @skip_if_debugger_attached
     def test_validate_setting_type_errors(self):
         """Test validate_setting_type error cases"""
         

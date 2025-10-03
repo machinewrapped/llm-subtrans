@@ -1,13 +1,8 @@
 import unittest
 from datetime import timedelta
-from typing import cast
 
 from GuiSubtrans.GuiSubtitleTestCase import GuiSubtitleTestCase
-from GuiSubtrans.ViewModel.BatchItem import BatchItem
-from GuiSubtrans.ViewModel.LineItem import LineItem
-from GuiSubtrans.ViewModel.SceneItem import SceneItem
 from GuiSubtrans.ViewModel.TestableViewModel import TestableViewModel
-from GuiSubtrans.ViewModel.ViewModel import ProjectViewModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, CreateDummyBatch, CreateDummyScene
 from PySubtrans.Helpers.Tests import log_input_expected_result
@@ -94,24 +89,29 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         update.lines.add((1, 1, new_line.number), new_line)
         update.ApplyToViewModel(viewmodel)
 
-        # Verify batch line count increased
-        viewmodel.assert_batch_fields([
-            (1, 1, 'line_count', 3),
-        ])
-
-        # Verify new line was added with correct text
-        batch_one_item = viewmodel.test_get_batch_item(1, 1)
-        new_line_index = batch_one_item.line_count - 1
-        new_line_item_qt = batch_one_item.child(new_line_index, 0)
-        log_input_expected_result("new line exists", True, new_line_item_qt is not None)
-        self.assertIsNotNone(new_line_item_qt)
-
-        log_input_expected_result("new line type", LineItem, type(new_line_item_qt))
-        self.assertEqual(type(new_line_item_qt), LineItem)
-        new_line_item : LineItem = cast(LineItem, new_line_item_qt)
-
-        log_input_expected_result("new line text", 'Scene 1 Batch 1 Line New', new_line_item.line_text)
-        self.assertEqual(new_line_item.line_text, 'Scene 1 Batch 1 Line New')
+        # Verify structure: batch (1,1) changed from 2 to 3 lines, everything else unaffected
+        viewmodel.assert_expected_structure({
+            'scenes': [
+                {
+                    'number': 1,
+                    'batches': [
+                        {
+                            'number': 1,
+                            'line_count': 3,  # Changed from 2
+                            'line_texts': {next_line_number: 'Scene 1 Batch 1 Line New'}
+                        },
+                        {'number': 2, 'line_count': 2},
+                    ]
+                },
+                {
+                    'number': 2,
+                    'batches': [
+                        {'number': 1, 'line_count': 1},
+                        {'number': 2, 'line_count': 1},
+                    ]
+                },
+            ]
+        })
 
         # Verify modelReset was emitted for structural change (adding a line)
         viewmodel.assert_signal_emitted('modelReset', expected_count=1)
@@ -123,9 +123,25 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         update.lines.remove((1, 1, 2))
         update.ApplyToViewModel(viewmodel)
 
-        viewmodel.assert_batch_fields( [
-            (1, 1, 'line_count', 1),
-        ])
+        # Verify structure: batch (1,1) changed from 2 to 1 line, everything else unaffected
+        viewmodel.assert_expected_structure({
+            'scenes': [
+                {
+                    'number': 1,
+                    'batches': [
+                        {'number': 1, 'line_count': 1},  # Changed from 2
+                        {'number': 2, 'line_count': 2},
+                    ]
+                },
+                {
+                    'number': 2,
+                    'batches': [
+                        {'number': 1, 'line_count': 1},
+                        {'number': 2, 'line_count': 1},
+                    ]
+                },
+            ]
+        })
 
         # Verify modelReset was emitted for structural change (removing a line)
         viewmodel.assert_signal_emitted('modelReset', expected_count=1)
@@ -144,16 +160,26 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         update.batches.add((1, new_batch.number), new_batch)
         update.ApplyToViewModel(viewmodel)
 
-        # Verify scene batch count increased
-        expected_batch_count = len(base_counts[0]) + 1
-        viewmodel.assert_scene_fields([
-            (1, 'batch_count', expected_batch_count),
-        ])
-
-        # Verify new batch was added with correct summary
-        viewmodel.assert_batch_fields([
-            (1, new_batch_number, 'summary', new_batch.summary),
-        ])
+        # Verify structure: scene 1 changed from [2,2] to [2,2,2], scene 2 unaffected
+        viewmodel.assert_expected_structure({
+            'scenes': [
+                {
+                    'number': 1,
+                    'batches': [
+                        {'number': 1, 'line_count': 2},
+                        {'number': 2, 'line_count': 2},
+                        {'number': 3, 'line_count': 2, 'summary': new_batch.summary},  # New batch
+                    ]
+                },
+                {
+                    'number': 2,
+                    'batches': [
+                        {'number': 1, 'line_count': 1},
+                        {'number': 2, 'line_count': 1},
+                    ]
+                },
+            ]
+        })
 
         # Verify modelReset was emitted for structural change (adding a batch)
         viewmodel.assert_signal_emitted('modelReset', expected_count=1)
@@ -166,10 +192,24 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         update.batches.remove((2, 2))
         update.ApplyToViewModel(viewmodel)
 
-        expected_batch_count = len(base_counts[1]) - 1
-        viewmodel.assert_scene_fields( [
-            (2, 'batch_count', expected_batch_count),
-        ])
+        # Verify structure: scene 1 unaffected, scene 2 changed from [1,1] to [1]
+        viewmodel.assert_expected_structure({
+            'scenes': [
+                {
+                    'number': 1,
+                    'batches': [
+                        {'number': 1, 'line_count': 2},
+                        {'number': 2, 'line_count': 2},
+                    ]
+                },
+                {
+                    'number': 2,
+                    'batches': [
+                        {'number': 1, 'line_count': 1},  # Batch 2 removed
+                    ]
+                },
+            ]
+        })
 
         # Verify modelReset was emitted for structural change (removing a batch)
         viewmodel.assert_signal_emitted('modelReset', expected_count=1)
@@ -179,12 +219,8 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         subtitles = self.create_test_subtitles(base_counts)
         viewmodel : TestableViewModel = self.create_testable_viewmodel(subtitles)
 
-        initial_scene_count = viewmodel.rowCount()
-        log_input_expected_result("initial scene count", len(base_counts), initial_scene_count)
-        self.assertEqual(initial_scene_count, len(base_counts))
-
         next_line_number = max(line.number for line in subtitles.originals or []) + 1
-        new_scene_number = initial_scene_count + 1
+        new_scene_number = len(base_counts) + 1
 
         new_scene = CreateDummyScene(new_scene_number, [1, 1], next_line_number, timedelta(seconds=180))
 
@@ -192,17 +228,32 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         update.scenes.add(new_scene.number, new_scene)
         update.ApplyToViewModel(viewmodel)
 
-        # Verify scene count increased
-        root_item = viewmodel.getRootItem()
-        final_scene_count = root_item.rowCount()
-        log_input_expected_result("final scene count", initial_scene_count + 1, final_scene_count)
-        self.assertEqual(final_scene_count, initial_scene_count + 1)
-
-        # Verify new scene was added with correct structure
-        viewmodel.assert_scene_fields([
-            (3, 'number', 3),
-            (3, 'batch_count', 2),
-        ])
+        # Verify structure: scenes 1 and 2 unaffected, new scene 3 added with [1,1] batches
+        viewmodel.assert_expected_structure({
+            'scenes': [
+                {
+                    'number': 1,
+                    'batches': [
+                        {'number': 1, 'line_count': 2},
+                        {'number': 2, 'line_count': 2},
+                    ]
+                },
+                {
+                    'number': 2,
+                    'batches': [
+                        {'number': 1, 'line_count': 1},
+                        {'number': 2, 'line_count': 1},
+                    ]
+                },
+                {
+                    'number': 3,  # New scene
+                    'batches': [
+                        {'number': 1, 'line_count': 1},
+                        {'number': 2, 'line_count': 1},
+                    ]
+                },
+            ]
+        })
 
         # Verify modelReset was emitted for structural change (adding a scene)
         viewmodel.assert_signal_emitted('modelReset', expected_count=1)
@@ -218,33 +269,26 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         update.scenes.remove(2)
         update.ApplyToViewModel(viewmodel)
 
-        root_item = viewmodel.getRootItem()
-        final_scene_count = root_item.rowCount()
-        log_input_expected_result("final scene count", len(base_counts) - 1, final_scene_count)
-        self.assertEqual(final_scene_count, len(base_counts) - 1)
-
-        # Verify scene 1 is still intact with correct structure
-        viewmodel.assert_scene_fields( [
-            (1, 'summary', 'Scene 1'),
-            (1, 'batch_count', 2),
-        ])
-
-        # Check scene 1 batches have correct line counts
-        viewmodel.assert_batch_fields( [
-            (1, 1, 'line_count', 2),
-            (1, 2, 'line_count', 2),
-        ])
-
-        # Verify scene 3 retains its original number (scene numbers are stable identifiers)
-        # After removing scene 2, we should have 2 scenes total: scene 1 and scene 3
-        viewmodel.assert_scene_fields( [
-            (3, 'summary', 'Scene 3'),
-            (3, 'batch_count', 1),
-        ])
-
-        viewmodel.assert_batch_fields( [
-            (3, 1, 'line_count', 3),
-        ])
+        # Verify structure: scene 1 and 3 remain (scene numbers are stable, so 1 and 3, not 1 and 2)
+        viewmodel.assert_expected_structure({
+            'scenes': [
+                {
+                    'number': 1,
+                    'summary': 'Scene 1',
+                    'batches': [
+                        {'number': 1, 'line_count': 2},
+                        {'number': 2, 'line_count': 2},
+                    ]
+                },
+                {
+                    'number': 3,  # Original scene 3 retains its number
+                    'summary': 'Scene 3',
+                    'batches': [
+                        {'number': 1, 'line_count': 3},
+                    ]
+                },
+            ]
+        })
 
         # Verify modelReset was emitted for structural change
         viewmodel.assert_signal_emitted('modelReset', expected_count=1)
@@ -329,13 +373,21 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
 
         update.ApplyToViewModel(viewmodel)
 
-        # Verify overall structure: batch (1,1) reduced from 5 to 3 lines, others unaffected
+        # Verify structure: batch (1,1) reduced from 5 to 3 lines, with correct remaining line texts
         viewmodel.assert_expected_structure({
             'scenes': [
                 {
                     'number': 1,
                     'batches': [
-                        {'number': 1, 'line_count': 3},  # Changed from 5
+                        {
+                            'number': 1,
+                            'line_count': 3,  # Changed from 5 (deleted lines 2 and 4)
+                            'line_texts': {  # Remaining lines 1, 3, 5 retain their original text
+                                1: "Scene 1 Batch 1 Line 1",
+                                3: "Scene 1 Batch 1 Line 3",
+                                5: "Scene 1 Batch 1 Line 5"
+                            }
+                        },
                         {'number': 2, 'line_count': 4},
                     ]
                 },
@@ -348,19 +400,6 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
                 },
             ]
         })
-
-        # Verify remaining lines have correct text (originally lines 1, 3, 5, now at positions 1, 2, 3)
-        line_at_pos_1 = viewmodel.test_get_line_item(1, 1, 1)
-        log_input_expected_result("line at position 1 text", "Scene 1 Batch 1 Line 1", line_at_pos_1.line_text)
-        self.assertEqual(line_at_pos_1.line_text, "Scene 1 Batch 1 Line 1")
-
-        line_at_pos_2 = viewmodel.test_get_line_item(1, 1, 2)
-        log_input_expected_result("line at position 2 text", "Scene 1 Batch 1 Line 3", line_at_pos_2.line_text)
-        self.assertEqual(line_at_pos_2.line_text, "Scene 1 Batch 1 Line 3")
-
-        line_at_pos_3 = viewmodel.test_get_line_item(1, 1, 3)
-        log_input_expected_result("line at position 3 text", "Scene 1 Batch 1 Line 5", line_at_pos_3.line_text)
-        self.assertEqual(line_at_pos_3.line_text, "Scene 1 Batch 1 Line 5")
 
         viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 

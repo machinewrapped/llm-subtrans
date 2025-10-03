@@ -55,15 +55,12 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
     def test_update_line_text(self):
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts([[2, 2], [1, 1]])
 
-        # Get actual global line number
-        global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
-
         update = ModelUpdate()
-        update.lines.update((1, 1, global_line_1), {'text': 'Scene 1 Batch 1 Line 1 (edited)'})
+        update.lines.update((1, 1, 1), {'text': 'Scene 1 Batch 1 Line 1 (edited)'})
         update.ApplyToViewModel(viewmodel)
 
-        viewmodel.assert_line_texts( [
-            (1, 1, 0, global_line_1, 'Scene 1 Batch 1 Line 1 (edited)'),
+        viewmodel.assert_line_contents( [
+            (1, 1, 0, 1, 'Scene 1 Batch 1 Line 1 (edited)'),
         ])
 
         # Verify dataChanged was emitted (line item update + batch.emitDataChanged = 2)
@@ -442,17 +439,17 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts(line_counts)
 
         # Get actual global line numbers from the batches
-        global_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
-        global_line_67 = viewmodel.get_line_numbers_in_batch(3, 2)[5]
-        global_line_110 = viewmodel.get_line_numbers_in_batch(4, 2)[-1]
+        update_line_1 = viewmodel.get_line_numbers_in_batch(1, 1)[0]
+        update_line_2 = viewmodel.get_line_numbers_in_batch(3, 2)[5]
+        update_line_3 = viewmodel.get_line_numbers_in_batch(4, 2)[-1]
 
         # Perform a complex update touching multiple scenes
         update = ModelUpdate()
         update.scenes.update(1, {'summary': 'Scene 1 - Updated'})
         update.batches.update((2, 1), {'summary': 'Scene 2 Batch 1 - Updated'})
-        update.lines.update((1, 1, global_line_1), {'text': 'Updated first line'})
-        update.lines.update((3, 2, global_line_67), {'text': 'Updated middle line'})
-        update.lines.update((4, 2, global_line_110), {'text': 'Updated last line'})
+        update.lines.update((1, 1, update_line_1), {'text': 'Updated first line'})
+        update.lines.update((3, 2, update_line_2), {'text': 'Updated middle line'})
+        update.lines.update((4, 2, update_line_3), {'text': 'Updated last line'})
 
         update.ApplyToViewModel(viewmodel)
 
@@ -466,10 +463,10 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
             (4, 1, 'line_count', 14),
         ])
 
-        viewmodel.assert_line_texts( [
-            (1, 1, 0, global_line_1, 'Updated first line'),
-            (3, 2, 5, global_line_67, 'Updated middle line'),
-            (4, 2, -1, global_line_110, 'Updated last line'),
+        viewmodel.assert_line_contents( [
+            (1, 1, 0, update_line_1, 'Updated first line'),
+            (3, 2, 5, update_line_2, 'Updated middle line'),
+            (4, 2, -1, update_line_3, 'Updated last line'),
         ])
 
     def test_merge_scenes_pattern(self):

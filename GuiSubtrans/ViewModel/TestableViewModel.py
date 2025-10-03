@@ -142,18 +142,18 @@ class TestableViewModel(ProjectViewModel):
             log_input_expected_result(f"batch ({scene_num},{batch_num}) {field}", expected, actual)
             self.test.assertEqual(actual, expected)
 
-    def assert_line_texts(self, test_data : list[tuple[int, int, int, int, str]]) -> None:
+    def assert_line_contents(self, test_data : list[tuple[int, int, int, int, str]]) -> None:
         """
         Helper to assert multiple line texts at once.
         test_data: list of (scene_num, batch_num, line_idx, line_num, expected_text)
         line_idx can be negative to index from the end
         """
-        for scene_num, batch_num, line_idx, line_num, expected_text in test_data:
+        for scene_num, batch_num, line_idx, absolute_line_num, expected_text in test_data:
             batch = self.test_get_batch_item(scene_num, batch_num)
             # Handle negative indices manually since Qt doesn't support them
             actual_idx = line_idx if line_idx >= 0 else batch.line_count + line_idx
             line = cast(LineItem, batch.child(actual_idx, 0))
-            log_input_expected_result(f"line ({line_num}) text", expected_text, line.line_text)
+            log_input_expected_result(f"line ({absolute_line_num}) text", expected_text, line.line_text)
             self.test.assertEqual(line.line_text, expected_text)
 
     def assert_viewmodel_matches_subtitles(self, subtitles: Subtitles) -> None:

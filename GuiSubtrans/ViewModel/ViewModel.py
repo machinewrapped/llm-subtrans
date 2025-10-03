@@ -321,8 +321,6 @@ class ProjectViewModel(QStandardItemModel):
             return
         scene_index = self.indexFromItem(scene_item)
 
-        # Note: beginRemoveRows/endRemoveRows must NOT be used here because RemoveScene
-        # is only called from ViewModelUpdate, which wraps it in beginResetModel/endResetModel
         root_item.removeRow(scene_index.row())
         del self.model[scene_number]
 

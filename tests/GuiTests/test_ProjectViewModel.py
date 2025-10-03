@@ -1,4 +1,3 @@
-import unittest
 from datetime import timedelta
 
 from GuiSubtrans.GuiSubtitleTestCase import GuiSubtitleTestCase
@@ -480,80 +479,71 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
             (4, 2, -1, global_line_110, 'Updated last line'),
         ])
 
-    @unittest.skip("Test needs to be rewritten to properly simulate MergeScenesCommand")
     def test_merge_scenes_pattern(self):
         """Test the complex update pattern used by MergeScenesCommand"""
-        # Create a structure with 5 scenes to make renumbering interesting
+        # Create a structure with 5 scenes
+        # Scene 1: [2,2], Scene 2: [3], Scene 3: [1,1], Scene 4: [2], Scene 5: [3,1]
         base_counts = [[2, 2], [3], [1, 1], [2], [3, 1]]
         subtitles = self.create_test_subtitles(base_counts)
         viewmodel : TestableViewModel = self.create_testable_viewmodel(subtitles)
 
         # Simulate merging scenes 2 and 3 into scene 2
-        # This is what MergeScenesCommand does:
-        # 1. Merge the actual scene data in the subtitles model using the editor
-        # 2. Update the viewmodel to reflect the changes
+        # MergeScenesCommand pattern (see MergeScenesCommand.execute):
+        # 1. Renumber later scenes (4→3, 5→4) to keep numbering consecutive
+        # 2. Replace scene 2 with merged version (containing batches from scenes 2 and 3)
+        # 3. Remove scene 3
+        # Note: Scene numbers are renumbered to stay consecutive: 1,2,3,4
 
-        # First, merge the scenes in the underlying data model (what the editor does)
-        scene_2 = subtitles.GetScene(2)
-        scene_3 = subtitles.GetScene(3)
-        # Move scene 3's batches to scene 2
-        for batch in scene_3.batches:
-            scene_2.batches.append(batch)
-            batch.scene = 2
-        # Remove scene 3 from subtitles
-        subtitles.scenes = [s for s in subtitles.scenes if s.number != 3]
-        # Renumber later scenes in the data model
-        for scene in subtitles.scenes:
-            if scene.number == 4:
-                scene.number = 3
-            elif scene.number == 5:
-                scene.number = 4
+        # Create merged scene 2 with batches from both scenes 2 and 3: [3] + [1,1] = [3,1,1]
+        merged_scene_2 = CreateDummyScene(2, [3, 1, 1], 4, timedelta(seconds=10))
 
-        # Now create the viewmodel update to reflect these data changes
         update = ModelUpdate()
-        # Renumber later scenes in viewmodel (4→3, 5→4)
+        # Renumber later scenes to keep numbering consecutive (as MergeScenesCommand does)
         update.scenes.update(4, {'number': 3})
         update.scenes.update(5, {'number': 4})
-        # Replace scene 2 with updated scene
-        update.scenes.replace(2, scene_2)
-        # Remove scene 3 from viewmodel (already removed from data)
-        update.scenes.removals = [3]
+        # Replace scene 2 with merged version
+        update.scenes.replace(2, merged_scene_2)
+        # Remove scene 3
+        update.scenes.remove(3)
 
         update.ApplyToViewModel(viewmodel)
+        viewmodel.Remap()  # Required to rebuild model dictionary after scene number changes
 
-        # Verify final structure
-        root_item = viewmodel.getRootItem()
-        log_input_expected_result("final scene count", 4, root_item.rowCount())
-        self.assertEqual(root_item.rowCount(), 4)
-
-        # Verify scene 1 is unchanged
-        scene_1 = viewmodel.test_get_scene_item(1)
-        log_input_expected_result("scene 1 batch count", 2, scene_1.batch_count)
-        self.assertEqual(scene_1.batch_count, 2)
-
-        # Verify scene 2 is the merged scene (now has 3 batches: 3+1+1 from original scenes 2+3)
-        scene_2 = viewmodel.test_get_scene_item(2)
-        log_input_expected_result("scene 2 batch count", 3, scene_2.batch_count)
-        self.assertEqual(scene_2.batch_count, 3)
-
-        batch_2_1 = viewmodel.test_get_batch_item(2, 1)
-        log_input_expected_result("batch (2,1) line count", 3, batch_2_1.line_count)
-        self.assertEqual(batch_2_1.line_count, 3)
-
-        # Verify scene 3 no longer exists (was removed)
-        # But scene 4 (originally scene 4) should now be scene 3
-        scene_3 = viewmodel.test_get_scene_item(3)
-        log_input_expected_result("scene 3 (was scene 4) batch count", 1, scene_3.batch_count)
-        self.assertEqual(scene_3.batch_count, 1)
-
-        batch_3_1 = viewmodel.test_get_batch_item(3, 1)
-        log_input_expected_result("batch (3,1) line count", 2, batch_3_1.line_count)
-        self.assertEqual(batch_3_1.line_count, 2)
-
-        # Verify scene 4 (originally scene 5) structure
-        scene_4 = viewmodel.test_get_scene_item(4)
-        log_input_expected_result("scene 4 (was scene 5) batch count", 2, scene_4.batch_count)
-        self.assertEqual(scene_4.batch_count, 2)
+        # Verify structure: scenes 2 and 3 merged, later scenes renumbered
+        # Original: 1:[2,2], 2:[3], 3:[1,1], 4:[2], 5:[3,1]
+        # Result:   1:[2,2], 2:[3,1,1], 3:[2], 4:[3,1]  (consecutive numbering)
+        viewmodel.assert_expected_structure({
+            'scenes': [
+                {
+                    'number': 1,
+                    'batches': [
+                        {'number': 1, 'line_count': 2},
+                        {'number': 2, 'line_count': 2},
+                    ]
+                },
+                {
+                    'number': 2,  # Merged scene 2+3
+                    'batches': [
+                        {'number': 1, 'line_count': 3},  # From original scene 2
+                        {'number': 2, 'line_count': 1},  # From original scene 3
+                        {'number': 3, 'line_count': 1},  # From original scene 3
+                    ]
+                },
+                {
+                    'number': 3,  # Was scene 4, renumbered to keep consecutive
+                    'batches': [
+                        {'number': 1, 'line_count': 2},
+                    ]
+                },
+                {
+                    'number': 4,  # Was scene 5, renumbered to keep consecutive
+                    'batches': [
+                        {'number': 1, 'line_count': 3},
+                        {'number': 2, 'line_count': 1},
+                    ]
+                },
+            ]
+        })
 
         viewmodel.assert_signal_emitted('modelReset', expected_count=1)
 
@@ -630,6 +620,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         update.batches.add((1, 2), new_batch_2)
 
         update.ApplyToViewModel(viewmodel)
+        viewmodel.Remap()  # Required to rebuild model dictionary after batch number changes
 
         # Verify structure: scene 1 changed from [8,6] to [3,5,6], scene 2 unaffected
         viewmodel.assert_expected_structure({
@@ -681,6 +672,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         update.scenes.add(2, new_scene_2)
 
         update.ApplyToViewModel(viewmodel)
+        viewmodel.Remap()  # Required to rebuild model dictionary after scene number changes
 
         # Verify structure: [4,5,3], [2], [6] → [4], [5,3], [2], [6]
         viewmodel.assert_expected_structure({

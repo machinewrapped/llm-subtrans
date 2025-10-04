@@ -1,7 +1,6 @@
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from .DataModelHelpers import CreateTestDataModel
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
@@ -45,15 +44,11 @@ class DataModelTests(SubtitleTestCase):
         datamodel = ProjectDataModel(project, global_options)
         
         # Verify initial state - project options should override global options for project-specific settings
-        log_input_expected_result("Initial provider", 'Dummy Claude', datamodel.project_options.provider)
-        log_input_expected_result("Initial target_language", 'French', datamodel.project_options.target_language)
+        self.assertLoggedEqual("Initial provider", 'Dummy Claude', datamodel.project_options.provider)
+        self.assertLoggedEqual("Initial target_language", 'French', datamodel.project_options.target_language)
         movie_name = datamodel.project_options.get_str('movie_name')
-        log_input_expected_result("Initial movie_name", 'Chinese Dinner', movie_name)
-        
-        self.assertEqual(datamodel.project_options.provider, 'Dummy Claude')
-        self.assertEqual(datamodel.project_options.target_language, 'French')
+        self.assertLoggedEqual("Initial movie_name", 'Chinese Dinner', movie_name)
         self.assertIsNotNone(movie_name)
-        self.assertEqual(movie_name, 'Chinese Dinner')
         
         # Update global options - should affect non-project-specific settings
         new_global_settings = SettingsType({
@@ -72,23 +67,17 @@ class DataModelTests(SubtitleTestCase):
         max_threads = datamodel.project_options.get_int('max_threads')
         retry_on_error = datamodel.project_options.get_bool('retry_on_error')
         
-        log_input_expected_result("Provider after global update", 'Dummy Claude', datamodel.project_options.provider)
-        log_input_expected_result("Target language after global update", 'French', datamodel.project_options.target_language)
-        log_input_expected_result("Movie name after global update", 'Chinese Dinner', movie_name_after)
-        
-        self.assertEqual(datamodel.project_options.provider, 'Dummy Claude')
-        self.assertEqual(datamodel.project_options.target_language, 'French')
+        self.assertLoggedEqual("Provider after global update", 'Dummy Claude', datamodel.project_options.provider)
+        self.assertLoggedEqual("Target language after global update", 'French', datamodel.project_options.target_language)
+        self.assertLoggedEqual("Movie name after global update", 'Chinese Dinner', movie_name_after)
         self.assertIsNotNone(movie_name_after)
-        self.assertEqual(movie_name_after, 'Chinese Dinner')
         
         # Non-project-specific settings should be updated
-        log_input_expected_result("Max threads after global update", 8, max_threads)
-        log_input_expected_result("Retry on error after global update", False, retry_on_error)
+        self.assertLoggedEqual("Max threads after global update", 8, max_threads)
+        self.assertLoggedEqual("Retry on error after global update", False, retry_on_error)
         
         self.assertIsNotNone(max_threads)
-        self.assertEqual(max_threads, 8)
         self.assertIsNotNone(retry_on_error)
-        self.assertEqual(retry_on_error, False)
         
     def test_UpdateProjectSettings(self):
         """Test that updating project settings works correctly"""
@@ -113,19 +102,14 @@ class DataModelTests(SubtitleTestCase):
         updated_movie_name = datamodel.project_options.get_str('movie_name')
         updated_description = datamodel.project_options.get_str('description')
         
-        log_input_expected_result("Updated target language", 'Japanese', datamodel.project_options.target_language)
-        log_input_expected_result("Updated movie name", 'Updated Movie Name', updated_movie_name)
-        log_input_expected_result("Updated description", 'Updated description', updated_description)
-        
-        self.assertEqual(datamodel.project_options.target_language, 'Japanese')
+        self.assertLoggedEqual("Updated target language", 'Japanese', datamodel.project_options.target_language)
+        self.assertLoggedEqual("Updated movie name", 'Updated Movie Name', updated_movie_name)
+        self.assertLoggedEqual("Updated description", 'Updated description', updated_description)
         self.assertIsNotNone(updated_movie_name)
-        self.assertEqual(updated_movie_name, 'Updated Movie Name')
         self.assertIsNotNone(updated_description)
-        self.assertEqual(updated_description, 'Updated description')
         
         # Verify provider wasn't changed (should remain from original options)
-        log_input_expected_result("Provider unchanged", original_provider, datamodel.project_options.provider)
-        self.assertEqual(datamodel.project_options.provider, original_provider)
+        self.assertLoggedEqual("Provider unchanged", original_provider, datamodel.project_options.provider)
         
     def test_ProjectOptionsIsolation(self):
         """Test that multiple projects maintain separate option states"""
@@ -171,17 +155,12 @@ class DataModelTests(SubtitleTestCase):
         project1_movie_name = datamodel1.project_options.get_str('movie_name')
         project2_movie_name = datamodel2.project_options.get_str('movie_name')
         
-        log_input_expected_result("Project 1 target language", 'Spanish', datamodel1.project_options.target_language)
-        log_input_expected_result("Project 2 target language", 'French', datamodel2.project_options.target_language)
-        log_input_expected_result("Project 1 movie name", 'Project 1', project1_movie_name)
-        log_input_expected_result("Project 2 movie name", 'Project 2', project2_movie_name)
-        
-        self.assertEqual(datamodel1.project_options.target_language, 'Spanish')
-        self.assertEqual(datamodel2.project_options.target_language, 'French')
+        self.assertLoggedEqual("Project 1 target language", 'Spanish', datamodel1.project_options.target_language)
+        self.assertLoggedEqual("Project 2 target language", 'French', datamodel2.project_options.target_language)
+        self.assertLoggedEqual("Project 1 movie name", 'Project 1', project1_movie_name)
+        self.assertLoggedEqual("Project 2 movie name", 'Project 2', project2_movie_name)
         self.assertIsNotNone(project1_movie_name)
-        self.assertEqual(project1_movie_name, 'Project 1')
         self.assertIsNotNone(project2_movie_name)
-        self.assertEqual(project2_movie_name, 'Project 2')
         
         # Update global settings on project 1
         datamodel1.UpdateSettings(SettingsType({
@@ -195,27 +174,20 @@ class DataModelTests(SubtitleTestCase):
         project2_movie_name_after = datamodel2.project_options.get_str('movie_name')
         project2_max_threads = datamodel2.project_options.get_int('max_threads')
         
-        log_input_expected_result("Project 1 max threads after update", 4, project1_max_threads)
-        log_input_expected_result("Project 1 target language after update", 'Spanish', datamodel1.project_options.target_language)
-        log_input_expected_result("Project 1 movie name after update", 'Project 1', project1_movie_name_after)
+        self.assertLoggedEqual("Project 1 max threads after update", 4, project1_max_threads)
+        self.assertLoggedEqual("Project 1 target language after update", 'Spanish', datamodel1.project_options.target_language)
+        self.assertLoggedEqual("Project 1 movie name after update", 'Project 1', project1_movie_name_after)
         
         self.assertIsNotNone(project1_max_threads)
-        self.assertEqual(project1_max_threads, 4)
-        self.assertEqual(datamodel1.project_options.target_language, 'Spanish')
         self.assertIsNotNone(project1_movie_name_after)
-        self.assertEqual(project1_movie_name_after, 'Project 1')
         
         # Project 2 should preserve project-specific settings but get global updates
-        log_input_expected_result("Project 2 target language after project 1 update", 'French', datamodel2.project_options.target_language)
-        log_input_expected_result("Project 2 movie name after project 1 update", 'Project 2', project2_movie_name_after)
-        log_input_expected_result("Project 2 max threads after project 1 update", 4, project2_max_threads)
-        
-        self.assertEqual(datamodel2.project_options.target_language, 'French')
+        self.assertLoggedEqual("Project 2 target language after project 1 update", 'French', datamodel2.project_options.target_language)
+        self.assertLoggedEqual("Project 2 movie name after project 1 update", 'Project 2', project2_movie_name_after)
+        self.assertLoggedEqual("Project 2 max threads after project 1 update", 4, project2_max_threads)
         self.assertIsNotNone(project2_movie_name_after)
-        self.assertEqual(project2_movie_name_after, 'Project 2')
         # Global settings like max_threads should propagate to all projects sharing global options
         self.assertIsNotNone(project2_max_threads)
-        self.assertEqual(project2_max_threads, 4)
         
     def test_ProviderSettingsIsolation(self):
         """Test that provider settings remain isolated between project and global options"""
@@ -253,16 +225,14 @@ class DataModelTests(SubtitleTestCase):
         # Check that project provider settings were updated
         current_settings = datamodel.provider_settings
         current_model = current_settings.get_str('model')
-        log_input_expected_result("Provider model after update", 'gpt-4-turbo', current_model)
+        self.assertLoggedEqual("Provider model after update", 'gpt-4-turbo', current_model)
         self.assertIsNotNone(current_model)
-        self.assertEqual(current_model, 'gpt-4-turbo')
         
         # Verify global options weren't affected
         global_provider_settings = global_options.provider_settings.get('Dummy GPT', SettingsType())
         global_model = global_provider_settings.get_str('model')
-        log_input_expected_result("Global provider model unchanged", 'gpt-3.5-turbo', global_model)
+        self.assertLoggedEqual("Global provider model unchanged", 'gpt-3.5-turbo', global_model)
         self.assertIsNotNone(global_model)
-        self.assertEqual(global_model, 'gpt-3.5-turbo')
         
     def test_UpdateSettingsWithNoneProject(self):
         """Test UpdateSettings behavior when no project is loaded"""
@@ -287,12 +257,8 @@ class DataModelTests(SubtitleTestCase):
         # All settings should be updated since there's no project to restore from (this is a bit of a nonsense test)
         max_threads_no_project = datamodel.project_options.get_int('max_threads')
         
-        log_input_expected_result("Provider with no project", 'Dummy Claude', datamodel.project_options.provider)
-        log_input_expected_result("Target language with no project", 'Spanish', datamodel.project_options.target_language)
-        log_input_expected_result("Max threads with no project", 6, max_threads_no_project)
-        
-        self.assertEqual(datamodel.project_options.provider, 'Dummy Claude')
-        self.assertEqual(datamodel.project_options.target_language, 'Spanish')
+        self.assertLoggedEqual("Provider with no project", 'Dummy Claude', datamodel.project_options.provider)
+        self.assertLoggedEqual("Target language with no project", 'Spanish', datamodel.project_options.target_language)
+        self.assertLoggedEqual("Max threads with no project", 6, max_threads_no_project)
         self.assertIsNotNone(max_threads_no_project)
-        self.assertEqual(max_threads_no_project, 6)
 

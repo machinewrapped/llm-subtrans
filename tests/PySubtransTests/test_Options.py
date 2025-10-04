@@ -1021,7 +1021,7 @@ class TestSettingsHelpers(LoggedTestCase):
         
         # Test with Options object
         result = get_optional_setting(self.test_options_obj, 'bool_true', bool)
-        self.assertLoggedTrue("Options object", result)
+        self.assertLoggedTrue("Options object", result or False)
 
     @skip_if_debugger_attached
     def test_get_optional_setting_errors(self):

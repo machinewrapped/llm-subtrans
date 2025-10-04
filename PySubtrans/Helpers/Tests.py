@@ -36,6 +36,16 @@ def log_test_name(test_name: str):
     log_info(test_name.center(len(separator)))
     logging.info(separator)
 
+def log_expected_result(expected : Any, result : Any):
+    """
+    Logs the input value, the expected result and the actual result.
+    """
+    log_info(str(expected), prefix="===".ljust(10))
+    log_info(str(result), prefix="-->".ljust(10))
+    if expected != result:
+        log_error("*** UNEXPECTED RESULT! ***", prefix="!!!".ljust(10))
+    logging.info(separator)
+
 def log_input_expected_result(input : Any, expected : Any, result : Any):
     """
     Logs the input value, the expected result and the actual result.

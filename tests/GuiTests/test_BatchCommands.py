@@ -49,7 +49,7 @@ class BatchCommandTests(SubtitleTestCase):
         self.assertTrue(len(file.scenes) > 0)
 
         log_input_expected_result("Scene count", expected_scene_count, len(file.scenes))
-        self.assertEqual(len(file.scenes), 4)
+        self.assertEqual(len(file.scenes), expected_scene_count)
 
         scene_sizes = [scene.size for scene in file.scenes]
         scene_linecounts = [scene.linecount for scene in file.scenes]

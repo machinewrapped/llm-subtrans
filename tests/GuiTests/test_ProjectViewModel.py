@@ -421,8 +421,7 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         # Verify total line count
         total_lines = sum(sum(scene) for scene in line_counts)
         actual_lines = len(subtitles.originals or [])
-        log_input_expected_result("total lines", total_lines, actual_lines)
-        self.assertEqual(actual_lines, total_lines)
+        self.assertLoggedEqual("total lines", total_lines, actual_lines)
 
         # Verify complete viewmodel structure matches subtitles
         viewmodel.assert_viewmodel_matches_subtitles(subtitles)

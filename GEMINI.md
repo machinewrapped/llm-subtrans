@@ -33,20 +33,23 @@ Always run the unit_tests at the end of a task to validate any changes to the co
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()
 - **Threading safety**: Use locks (RLock/QRecursiveMutex) for thread-safe operations
-- **Unit Tests**: Follow project test structure and use proper logging for debugging.
+  **Regular Expressions**: The project uses the `regex` module for regular expression handling, rather than the standard `re`.
+- **Unit Tests**: Extend `LoggedTestCase` from `PySubtrans.Helpers.TestCases` and use `assertLogged*` methods for automatic logging and assertions.
   - **Key Principles**:
-    - Use semantic assertions (`assertIsNotNone`, `assertIn`, `assertEqual`) over generic `assertTrue` 
-    - Call `log_input_expected_result(input, expected, actual)` BEFORE the assertion to log useful diagnostic data
-    - Log informative input values (actual input value for the test case, field names being compared)
+    - Prefer `assertLogged*` helper methods over manual logging + standard assertions
+    - Use semantic assertions over generic `assertTrue` - the helpers provide `assertLoggedEqual`, `assertLoggedIsNotNone`, `assertLoggedIn`, etc.
+    - Include descriptive text as the first parameter to explain what is being tested
+    - Optionally provide `input_value` parameter for additional context
   - **Common Patterns**:
-    - **Equality**: `log_input_expected_result("field_name", expected, obj.field); self.assertEqual(obj.field, expected)`
-    - **Type checks**: `log_input_expected_result(obj, ExpectedClass, type(obj)); self.assertEqual(type(obj), ExpectedClass)`
-    - **None checks**: `log_input_expected_result(obj, True, obj is not None); self.assertIsNotNone(obj)`
-    - **Membership**: `log_input_expected_result("key_name", True, "key" in data); self.assertIn("key", data)`
-  - **Exception Tests**: Guard with `skip_if_debugger_attached decorator for debugging compatibility
+    - **Equality**: `self.assertLoggedEqual("field_name", expected, obj.field)`
+    - **Type checks**: `self.assertLoggedIsInstance("object type", obj, ExpectedClass)`
+    - **None checks**: `self.assertLoggedIsNotNone("result", obj)`
+    - **Membership**: `self.assertLoggedIn("key existence", "key", data)`
+    - **Comparisons**: `self.assertLoggedGreater("count", actual_count, 0)`
+    - **Custom logging**: `self.log_expected_result(expected, actual, description="custom check", input_value=input_data)`
+  - **Exception Tests**: Guard with `skip_if_debugger_attached` decorator for debugging compatibility
     - Use `log_input_expected_error(input, ExpectedException, actual_exception)` for exception logging
   - **None Safety**: Use `.get(key, default)` with appropriate default values to avoid Pylance warnings, or assert then test for None values.
-  - **Regular Expressions**: The project uses the `regex` module for regular expression handling, rather than the standard `re`.
 
 ## Information
 Consult `docs/architecture.md` for detailed information on the project architecture and components.

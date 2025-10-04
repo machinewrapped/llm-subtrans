@@ -6,7 +6,6 @@ from PySubtrans.Helpers.TestCases import PrepareSubtitles, SubtitleTestCase
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.Tests import (
     log_info,
-    log_input_expected_result,
     log_test_name,
     skip_if_debugger_attached,
 )
@@ -113,16 +112,14 @@ class ChineseDinnerTests(SubtitleTestCase):
             self.assertIsNotNone(scene)
             assert scene is not None
 
-            log_input_expected_result(f"Scene {scene.number} lines", scene_lengths[i], scene.linecount)
-            self.assertEqual(scene_lengths[i], scene.linecount)
+            self.assertLoggedEqual(f"Scene {scene.number} lines", scene_lengths[i], scene.linecount)
 
             if not scene.originals or len(scene.originals) == 0:
                 self.fail(f"Scene {scene_number} has no batches")
                 continue
 
             first_line = scene.originals[0]
-            log_input_expected_result(f"First line", first_lines[i], first_line.text)
-            self.assertEqual(first_lines[i], first_line.text)
+            self.assertLoggedEqual("First line", first_lines[i], first_line.text)
 
         for line_number, scene_number, batch_number in batch_containing_line:
             batch = subtitles.GetBatchContainingLine(line_number)
@@ -133,9 +130,7 @@ class ChineseDinnerTests(SubtitleTestCase):
                 continue
             assert batch is not None
 
-            log_input_expected_result(line_number, (scene_number, batch_number), (batch.scene, batch.number))
-            self.assertEqual(scene_number, batch.scene)
-            self.assertEqual(batch_number, batch.number)
+            self.assertLoggedEqual(f"Line {line_number} batch location", (scene_number, batch_number), (batch.scene, batch.number))
 
             with self.subTest("Test batch context"):
                 log_test_name("Test batch context")
@@ -174,31 +169,22 @@ class ChineseDinnerTests(SubtitleTestCase):
             with SubtitleEditor(subtitles) as editor:
                 editor.MergeScenes([3,4])
 
-            log_input_expected_result(f"Merge [3,4] -> scenecount", 3, subtitles.scenecount)
-            self.assertEqual(subtitles.scenecount, 3)
+            self.assertLoggedEqual(f"Merge [3,4] -> scenecount", 3, subtitles.scenecount)
 
             merged_scene : SubtitleScene = subtitles.GetScene(3)
             self.assertIsNotNone(merged_scene)
             assert merged_scene is not None
-            log_input_expected_result("Batch count", 2, merged_scene.size)
-            self.assertEqual(merged_scene.size, 2)
-            log_input_expected_result("Line count", 9, merged_scene.linecount)
-            self.assertEqual(merged_scene.linecount, 9)
-            log_input_expected_result("First line number", 56, merged_scene.first_line_number)
-            self.assertEqual(merged_scene.first_line_number, 56)
-            log_input_expected_result("Last line number", 64, merged_scene.last_line_number)
-            self.assertEqual(merged_scene.last_line_number, 64)
+            self.assertLoggedEqual("Batch count", 2, merged_scene.size)
+            self.assertLoggedEqual("Line count", 9, merged_scene.linecount)
+            self.assertLoggedEqual("First line number", 56, merged_scene.first_line_number)
+            self.assertLoggedEqual("Last line number", 64, merged_scene.last_line_number)
 
             first_batch : SubtitleBatch|None = merged_scene.GetBatch(1)
             self.assertIsNotNone(first_batch, "First batch should exist after merge")
             assert first_batch is not None  # Type narrowing for PyLance
-            log_input_expected_result("Batch 1", (3, 1), (first_batch.scene, first_batch.number))
-            self.assertEqual(first_batch.scene, 3)
-            self.assertEqual(first_batch.number, 1)
-            log_input_expected_result("First line number", 56, first_batch.first_line_number)
-            self.assertEqual(first_batch.first_line_number, 56)
-            log_input_expected_result("Last line number", 61, first_batch.last_line_number)
-            self.assertEqual(first_batch.last_line_number, 61)
+            self.assertLoggedEqual("Batch 1", (3, 1), (first_batch.scene, first_batch.number))
+            self.assertLoggedEqual("First line number", 56, first_batch.first_line_number)
+            self.assertLoggedEqual("Last line number", 61, first_batch.last_line_number)
 
             first_batch_context = GetBatchContext(subtitles, 3, 1, 10)
             self.assertIsNotNone(first_batch_context)
@@ -227,13 +213,9 @@ class ChineseDinnerTests(SubtitleTestCase):
             second_batch : SubtitleBatch|None = subtitles.GetBatchContainingLine(62)
             self.assertIsNotNone(second_batch, "Second batch should exist")
             assert second_batch is not None  # Type narrowing for PyLance
-            log_input_expected_result("Line 61 in batch", (3, 2), (second_batch.scene, second_batch.number))
-            self.assertEqual(second_batch.scene, 3)
-            self.assertEqual(second_batch.number, 2)
-            log_input_expected_result("First line number", 62, second_batch.first_line_number)
-            self.assertEqual(second_batch.first_line_number, 62)
-            log_input_expected_result("Last line number", 64, second_batch.last_line_number)
-            self.assertEqual(second_batch.last_line_number, 64)
+            self.assertLoggedEqual("Line 61 in batch", (3, 2), (second_batch.scene, second_batch.number))
+            self.assertLoggedEqual("First line number", 62, second_batch.first_line_number)
+            self.assertLoggedEqual("Last line number", 64, second_batch.last_line_number)
 
             second_batch_context = GetBatchContext(subtitles, 3, 2, 10)
             self.assertIsNotNone(second_batch_context)
@@ -265,21 +247,17 @@ class ChineseDinnerTests(SubtitleTestCase):
             with SubtitleEditor(subtitles) as editor:
                 editor.MergeBatches(3, [1,2])
 
-            log_input_expected_result("Scene count", 3, subtitles.scenecount)
-            self.assertEqual(subtitles.scenecount, 3)
+            self.assertLoggedEqual("Scene count", 3, subtitles.scenecount)
 
-            log_input_expected_result("Batch count", 1, merged_scene.size)
-            self.assertEqual(merged_scene.size, 1)
+            self.assertLoggedEqual("Batch count", 1, merged_scene.size)
 
-            log_input_expected_result("Scene line count", 9, merged_scene.linecount)
-            self.assertEqual(merged_scene.linecount, 9)
+            self.assertLoggedEqual("Scene line count", 9, merged_scene.linecount)
 
             merged_batch : SubtitleBatch|None = merged_scene.GetBatch(1)
             self.assertIsNotNone(merged_batch, "Merged batch should exist")
             assert merged_batch is not None  # Type narrowing for PyLance
 
-            log_input_expected_result("Batch line count", 9, merged_batch.size)
-            self.assertEqual(merged_batch.size, 9)
+            self.assertLoggedEqual("Batch line count", 9, merged_batch.size)
 
             self.assertEqual(merged_batch.first_line_number, 56)
             self.assertEqual(merged_batch.last_line_number, 64)
@@ -316,11 +294,9 @@ class ChineseDinnerTests(SubtitleTestCase):
             min_batch_size = 5
             scene_1.AutoSplitBatch(1, min_batch_size)
 
-            log_input_expected_result("Scene count", 3, subtitles.scenecount)
-            self.assertEqual(subtitles.scenecount, 3)
+            self.assertLoggedEqual("Scene count", 3, subtitles.scenecount)
 
-            log_input_expected_result("Scene 1 batches", 2, scene_1.size)
-            self.assertEqual(scene_1.size, 2)
+            self.assertLoggedEqual("Scene 1 batches", 2, scene_1.size)
 
             expected_batch_sizes = [14, 16]
             expected_first_lines = [
@@ -333,12 +309,9 @@ class ChineseDinnerTests(SubtitleTestCase):
                 self.assertIsNotNone(batch, f"Batch {i+1} should exist after auto-split")
                 assert batch is not None  # Type narrowing for PyLance
 
-                log_input_expected_result(f"Batch {batch.number} size", expected_batch_sizes[i], batch.size)
-                self.assertEqual(expected_batch_sizes[i], batch.size)
+                self.assertLoggedEqual(f"Batch {batch.number} size", expected_batch_sizes[i], batch.size)
 
-                log_input_expected_result(f"First line ", expected_first_lines[i], (batch.first_line_number, batch.originals[0].text))
-                self.assertEqual(expected_first_lines[i][0], batch.first_line_number)
-                self.assertEqual(expected_first_lines[i][1], batch.originals[0].text)
+                self.assertLoggedEqual(f"Batch {batch.number} first line", expected_first_lines[i], (batch.first_line_number, batch.originals[0].text))
 
         with self.subTest("Split scene 1"):
             log_test_name("Split scene 1")
@@ -346,24 +319,19 @@ class ChineseDinnerTests(SubtitleTestCase):
             with SubtitleEditor(subtitles) as editor:
                 editor.SplitScene(1, 2)
 
-            log_input_expected_result("Scene count", 4, subtitles.scenecount)
-            self.assertEqual(subtitles.scenecount, 4)
+            self.assertLoggedEqual("Scene count", 4, subtitles.scenecount)
 
             scene_1 = subtitles.GetScene(1)
             self.assertIsNotNone(scene_1)
 
-            log_input_expected_result("Scene 1 batches", (1, 14), (scene_1.size, scene_1.linecount))
-            self.assertEqual(scene_1.size, 1)
-            self.assertEqual(scene_1.linecount, 14)
+            self.assertLoggedEqual("Scene 1 batch summary", (1, 14), (scene_1.size, scene_1.linecount))
             self.assertEqual(scene_1.first_line_number, 1)
             self.assertEqual(scene_1.last_line_number, 14)
 
             scene_2 = subtitles.GetScene(2)
             self.assertIsNotNone(scene_2)
 
-            log_input_expected_result("Scene 2 batches", (1, 16), (scene_2.size, scene_2.linecount))
-            self.assertEqual(scene_2.size, 1)
-            self.assertEqual(scene_2.linecount, 16)
+            self.assertLoggedEqual("Scene 2 batch summary", (1, 16), (scene_2.size, scene_2.linecount))
             self.assertEqual(scene_2.first_line_number, 15)
             self.assertEqual(scene_2.last_line_number, 30)
 
@@ -388,11 +356,8 @@ class ChineseDinnerTests(SubtitleTestCase):
         line.text = "どうして俺を殺すのか."
         line.translation = "Why are you going to kill me?"
 
-        log_input_expected_result("After update", "どうして俺を殺すのか.", line.text)
-        log_input_expected_result("Translated", "Why are you going to kill me?", line.translation)
-
-        self.assertEqual(line.text, "どうして俺を殺すのか.")
-        self.assertEqual(line.translation, "Why are you going to kill me?")
+        self.assertLoggedEqual("After update", "どうして俺を殺すのか.", line.text)
+        self.assertLoggedEqual("Translated", "Why are you going to kill me?", line.translation)
 
     def test_SubtitleEditor_UpdateLine(self):
         """
@@ -429,41 +394,31 @@ class ChineseDinnerTests(SubtitleTestCase):
                     'metadata': new_metadata
                 })
 
-                log_input_expected_result("UpdateLine returned True", True, result)
-                self.assertTrue(result)
+                self.assertLoggedTrue("UpdateLine returned True", result)
 
             # Verify changes were applied
             updated_line = subtitles.GetOriginalLine(test_line_number)
             self.assertIsNotNone(updated_line)
             assert updated_line is not None
 
-            log_input_expected_result("Line text updated", new_text, updated_line.text)
-            log_input_expected_result("Line translation updated", new_translation, updated_line.translation)
-            log_input_expected_result("Line metadata updated", new_metadata, updated_line.metadata)
-
-            self.assertEqual(updated_line.text, new_text)
-            self.assertEqual(updated_line.translation, new_translation)
-            self.assertEqual(updated_line.metadata, new_metadata)
+            self.assertLoggedEqual("Line text updated", new_text, updated_line.text)
+            self.assertLoggedEqual("Line translation updated", new_translation, updated_line.translation)
+            self.assertLoggedEqual("Line metadata updated", new_metadata, updated_line.metadata)
 
             # Verify timing was preserved
-            log_input_expected_result("Start time preserved", original_start, updated_line.start)
-            log_input_expected_result("End time preserved", original_end, updated_line.end)
-            self.assertEqual(updated_line.start, original_start)
-            self.assertEqual(updated_line.end, original_end)
+            self.assertLoggedEqual("Start time preserved", original_start, updated_line.start)
+            self.assertLoggedEqual("End time preserved", original_end, updated_line.end)
 
             # Verify translated line was created in batch
             batch = subtitles.GetBatchContainingLine(test_line_number)
             self.assertIsNotNone(batch)
             assert batch is not None
             translated_line = batch.GetTranslatedLine(test_line_number)
-            log_input_expected_result("Translated line created", True, translated_line is not None)
-            self.assertIsNotNone(translated_line)
+            self.assertLoggedIsNotNone("Translated line created", translated_line)
 
             if translated_line:
-                log_input_expected_result("Translated line text", new_translation, translated_line.text)
-                log_input_expected_result("Translated line original reference", new_text, translated_line.original)
-                self.assertEqual(translated_line.text, new_translation)
-                self.assertEqual(translated_line.original, new_text)
+                self.assertLoggedEqual("Translated line text", new_translation, translated_line.text)
+                self.assertLoggedEqual("Translated line original reference", new_text, translated_line.original)
 
         with self.subTest("Update line timing"):
             log_test_name("Update line timing")
@@ -486,16 +441,13 @@ class ChineseDinnerTests(SubtitleTestCase):
                     'end': new_end
                 })
 
-                log_input_expected_result("Timing update returned True", True, result)
-                self.assertTrue(result)
+                self.assertLoggedTrue("Timing update returned True", result)
 
             # Verify timing was updated
             updated_line = batch.GetOriginalLine(test_line_number)
             assert updated_line is not None
-            log_input_expected_result("Start time updated", new_start, updated_line.start)
-            log_input_expected_result("End time updated", new_end, updated_line.end)
-            self.assertEqual(updated_line.start, new_start)
-            self.assertEqual(updated_line.end, new_end)
+            self.assertLoggedEqual("Start time updated", new_start, updated_line.start)
+            self.assertLoggedEqual("End time updated", new_end, updated_line.end)
 
         with self.subTest("Update existing translation"):
             log_test_name("Update existing translation")
@@ -516,20 +468,17 @@ class ChineseDinnerTests(SubtitleTestCase):
                     'translation': updated_translation
                 })
 
-                log_input_expected_result("Translation update returned True", True, result)
-                self.assertTrue(result)
+                self.assertLoggedTrue("Translation update returned True", result)
 
             # Verify translation was updated
             updated_translated_line = batch.GetTranslatedLine(test_line_number)
             assert updated_translated_line is not None
-            log_input_expected_result("Translation text updated", updated_translation, updated_translated_line.text)
-            self.assertEqual(updated_translated_line.text, updated_translation)
+            self.assertLoggedEqual("Translation text updated", updated_translation, updated_translated_line.text)
 
             # Verify original line also reflects change
             original_line = batch.GetOriginalLine(test_line_number)
             assert original_line is not None
-            log_input_expected_result("Original line translation property", updated_translation, original_line.translation)
-            self.assertEqual(original_line.translation, updated_translation)
+            self.assertLoggedEqual("Original line translation property", updated_translation, original_line.translation)
 
         with self.subTest("No-change update"):
             log_test_name("No-change update")
@@ -551,8 +500,7 @@ class ChineseDinnerTests(SubtitleTestCase):
                     'end': original_line.end
                 })
 
-                log_input_expected_result("No-change update returned False", False, result)
-                self.assertFalse(result)
+                self.assertLoggedFalse("No-change update returned False", result)
 
     @skip_if_debugger_attached
     def test_SubtitleEditor_UpdateLine_error_handling(self):
@@ -571,8 +519,7 @@ class ChineseDinnerTests(SubtitleTestCase):
                     editor.UpdateLine(999, {'text': 'Should fail'})
 
             error_message = str(context.exception)
-            log_input_expected_result("Error mentions line not found", True, "not found" in error_message.lower())
-            self.assertIn("not found", error_message.lower())
+            self.assertLoggedIn("Error mentions line not found", "not found", error_message.lower())
 
         with self.subTest("Invalid timing"):
             log_test_name("UpdateLine error: invalid timing")
@@ -582,6 +529,5 @@ class ChineseDinnerTests(SubtitleTestCase):
                     editor.UpdateLine(1, {'start': 'invalid time format'})
 
             error_message = str(context.exception)
-            log_input_expected_result("Error mentions invalid time", True, "invalid" in error_message.lower())
-            self.assertIn("invalid", error_message.lower())
+            self.assertLoggedIn("Error mentions invalid time", "invalid", error_message.lower())
 

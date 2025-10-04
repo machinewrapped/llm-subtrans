@@ -1,4 +1,5 @@
 from copy import deepcopy
+import logging
 
 from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans.Helpers.TestCases import DummyProvider, PrepareSubtitles, SubtitleTestCase
@@ -9,6 +10,7 @@ from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.TranslationEvents import TranslationEvents
 
 from ..TestData.chinese_dinner import chinese_dinner_data
 
@@ -135,5 +137,49 @@ class SubtitleTranslatorTests(SubtitleTestCase):
             self.assertLoggedEqual("Differences", expected_differences, differences)
 
             self.assertLoggedEqual("Unchanged", expected_unchanged, unchanged)
+
+
+class TranslationEventsTests(SubtitleTestCase):
+    def test_default_loggers_connection(self):
+        """Test that default loggers can be connected and disconnected without errors"""
+        events = TranslationEvents()
+
+        # Verify connect/disconnect doesn't raise exceptions
+        try:
+            events.connect_default_loggers()
+            events.disconnect_default_loggers()
+        except Exception as e:
+            self.fail(f"Default logger connection raised an exception: {e}")
+
+    def test_custom_logger_connection(self):
+        """Test that custom logger receives signals with keyword arguments"""
+        events = TranslationEvents()
+
+        # Track messages received by custom logger
+        received_messages = []
+
+        class TestLogger:
+            def error(self, msg : str, *args, **kwargs):
+                received_messages.append(('ERROR', msg))
+
+            def warning(self, msg : str, *args, **kwargs):
+                received_messages.append(('WARNING', msg))
+
+            def info(self, msg : str, *args, **kwargs):
+                received_messages.append(('INFO', msg))
+
+        logger = TestLogger()
+
+        # Connect and emit signals
+        events.connect_logger(logger) #type: ignore
+        events.error.send(self, message="Test error")
+        events.warning.send(self, message="Test warning")
+        events.info.send(self, message="Test info")
+
+        # Verify signals were received correctly
+        self.assertLoggedEqual("Messages received", 3, len(received_messages))
+        self.assertLoggedEqual("Error message", "Test error", received_messages[0][1])
+        self.assertLoggedEqual("Warning message", "Test warning", received_messages[1][1])
+        self.assertLoggedEqual("Info message", "Test info", received_messages[2][1])
 
 

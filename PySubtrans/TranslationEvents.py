@@ -1,5 +1,13 @@
 import logging
 from blinker import Signal
+from typing import Protocol
+
+
+class LoggerProtocol(Protocol):
+    """Protocol for objects that can be used as loggers"""
+    def error(self, msg : object, *args, **kwargs) -> None: ...
+    def warning(self, msg : object, *args, **kwargs) -> None: ...
+    def info(self, msg : object, *args, **kwargs) -> None: ...
 
 
 class TranslationEvents:
@@ -50,28 +58,38 @@ class TranslationEvents:
         self.warning = Signal("translation-warning")
         self.info = Signal("translation-info")
 
+        # Wrapper functions to adapt signal kwargs to logger positional args
+        self._default_error_wrapper = lambda sender, message: logging.error(message)
+        self._default_warning_wrapper = lambda sender, message: logging.warning(message)
+        self._default_info_wrapper = lambda sender, message: logging.info(message)
+
+        # Wrappers for custom logger (if connected)
+        self._custom_error_wrapper = None
+        self._custom_warning_wrapper = None
+        self._custom_info_wrapper = None
+
     def connect_default_loggers(self):
         """
         Connect default logging handlers to logging signals.
         """
-        self.error.connect(logging.error)
-        self.warning.connect(logging.warning)
-        self.info.connect(logging.info)
+        self.error.connect(self._default_error_wrapper, weak=False)
+        self.warning.connect(self._default_warning_wrapper, weak=False)
+        self.info.connect(self._default_info_wrapper, weak=False)
 
     def disconnect_default_loggers(self):
         """
         Disconnect default logging handlers from the signals.
         """
-        self.error.disconnect(logging.error)
-        self.warning.disconnect(logging.warning)
-        self.info.disconnect(logging.info)
+        self.error.disconnect(self._default_error_wrapper)
+        self.warning.disconnect(self._default_warning_wrapper)
+        self.info.disconnect(self._default_info_wrapper)
 
-    def connect_logger(self, logger : logging.Logger):
+    def connect_logger(self, logger : LoggerProtocol):
         """
         Connect a custom logger to the logging signals.
 
         Args:
-            logger: The logger instance to connect to error, warning, and info signals
+            logger: A logger-like object with error, warning, and info methods
         """
         # Create wrapper functions to adapt signal kwargs to logger positional args
         def error_wrapper(sender, message):
@@ -83,6 +101,7 @@ class TranslationEvents:
         def info_wrapper(sender, message):
             logger.info(message)
 
-        self.error.connect(error_wrapper)
-        self.warning.connect(warning_wrapper)
-        self.info.connect(info_wrapper)
+        # Use weak=False to prevent garbage collection of closures
+        self.error.connect(error_wrapper, weak=False)
+        self.warning.connect(warning_wrapper, weak=False)
+        self.info.connect(info_wrapper, weak=False)

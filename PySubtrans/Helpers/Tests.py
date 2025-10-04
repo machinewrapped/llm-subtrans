@@ -38,7 +38,7 @@ def log_test_name(test_name: str):
 
 def log_expected_result(expected : Any, result : Any):
     """
-    Logs the input value, the expected result and the actual result.
+    Logs the expected result and the actual result.
     """
     log_info(str(expected), prefix="===".ljust(10))
     log_info(str(result), prefix="-->".ljust(10))

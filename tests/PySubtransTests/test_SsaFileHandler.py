@@ -175,7 +175,6 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         
         # pysubs2 converts newlines back to \\N in SSA format output
         expected_text = "First line\\NSecond line"
-        contains_expected = expected_text in result
         self.assertLoggedIn("Contains SSA line break", expected_text, result)
     
     def test_parse_empty_events_section(self):

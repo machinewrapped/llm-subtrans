@@ -4,7 +4,6 @@ import unittest
 
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
 from PySubtrans.Helpers.Tests import (
-    log_input_expected_result,
     log_test_name,
     skip_if_debugger_attached,
 )
@@ -54,11 +53,8 @@ class SubtitleProjectTests(SubtitleTestCase):
         project = SubtitleProject()
 
         # Test basic initialization
-        log_input_expected_result("project.subtitles exists", True, project.subtitles is not None)
-        self.assertIsNotNone(project.subtitles)
-
-        log_input_expected_result("project.subtitles type", Subtitles, type(project.subtitles))
-        self.assertIsInstance(project.subtitles, Subtitles)
+        self.assertLoggedIsNotNone("project.subtitles exists", project.subtitles)
+        self.assertLoggedIsInstance("project.subtitles type", project.subtitles, Subtitles)
 
         # Test that default project settings are applied
         default_settings = SubtitleProject.DEFAULT_PROJECT_SETTINGS
@@ -67,29 +63,20 @@ class SubtitleProjectTests(SubtitleTestCase):
                 continue
             actual_value = project.subtitles.settings.get(key)
             expected_value = default_settings[key]
-            log_input_expected_result(f"default setting '{key}'", expected_value, actual_value)
-            self.assertEqual(actual_value, expected_value)
+            self.assertLoggedEqual(f"default setting '{key}'", expected_value, actual_value)
 
         # Test project-specific properties
-        log_input_expected_result("project.projectfile", None, project.projectfile)
-        self.assertIsNone(project.projectfile)
-
-        log_input_expected_result("project.existing_project", False, project.existing_project)
-        self.assertFalse(project.existing_project)
-
-        log_input_expected_result("project.needs_writing", False, project.needs_writing)
-        self.assertFalse(project.needs_writing)
-
-        log_input_expected_result("project.use_project_file", False, project.use_project_file)
-        self.assertFalse(project.use_project_file)
+        self.assertLoggedIsNone("project.projectfile", project.projectfile)
+        self.assertLoggedFalse("project.existing_project", project.existing_project)
+        self.assertLoggedFalse("project.needs_writing", project.needs_writing)
+        self.assertLoggedFalse("project.use_project_file", project.use_project_file)
 
     def test_persistent_initialization(self):
         """Test SubtitleProject initialization with persistent=True"""
 
         project = SubtitleProject(persistent=True)
 
-        log_input_expected_result("persistent project.use_project_file", True, project.use_project_file)
-        self.assertTrue(project.use_project_file)
+        self.assertLoggedTrue("persistent project.use_project_file", project.use_project_file)
 
     def test_update_project_settings_normal(self):
         """Test UpdateProjectSettings with normal settings"""
@@ -119,23 +106,32 @@ class SubtitleProjectTests(SubtitleTestCase):
 
         for key, expected in test_cases:
             actual = project.subtitles.settings.get(key)
-            log_input_expected_result(f"valid setting '{key}'", expected, actual)
-            self.assertEqual(actual, expected, f"Valid project setting '{key}' should be stored")
+            self.assertLoggedEqual(
+                f"valid setting '{key}'",
+                expected,
+                actual,
+                f"Valid project setting '{key}' should be stored",
+            )
 
         # Test names were parsed correctly
         names = project.subtitles.settings.get_str_list('names')
         expected_names = ['Character1', 'Character2']
-        log_input_expected_result(names, expected_names, names)
-        self.assertEqual(names, expected_names)
+        self.assertLoggedSequenceEqual("parsed names", expected_names, names)
 
         # CRITICAL: Test that invalid settings were filtered out
         invalid_setting = project.subtitles.settings.get('invalid_setting')
-        log_input_expected_result(invalid_setting, None, invalid_setting)
-        self.assertIsNone(invalid_setting, "Invalid settings should be filtered out by UpdateProjectSettings")
+        self.assertLoggedIsNone(
+            "invalid_setting filtered",
+            invalid_setting,
+            "Invalid settings should be filtered out by UpdateProjectSettings",
+        )
 
         scene_threshold = project.subtitles.settings.get('scene_threshold')
-        log_input_expected_result("scene_threshold filtered", None, scene_threshold)
-        self.assertIsNone(scene_threshold, "Non-project settings should be filtered out by UpdateProjectSettings")
+        self.assertLoggedIsNone(
+            "scene_threshold filtered",
+            scene_threshold,
+            "Non-project settings should be filtered out by UpdateProjectSettings",
+        )
 
     def test_update_project_settings_legacy(self):
         """Test UpdateProjectSettings with legacy settings compatibility"""
@@ -157,34 +153,54 @@ class SubtitleProjectTests(SubtitleTestCase):
         # Test that legacy conversions worked
         # synopsis -> description
         description = project.subtitles.settings.get('description')
-        log_input_expected_result(description, 'Legacy description', description)
-        self.assertEqual(description, 'Legacy description')
+        self.assertLoggedEqual(
+            "synopsis converted to description",
+            'Legacy description',
+            description,
+        )
 
         # gpt_prompt -> prompt
         prompt = project.subtitles.settings.get('prompt')
-        log_input_expected_result(prompt, 'Legacy prompt', prompt)
-        self.assertEqual(prompt, 'Legacy prompt')
+        self.assertLoggedEqual(
+            "gpt_prompt converted to prompt",
+            'Legacy prompt',
+            prompt,
+        )
 
         # gpt_model -> model
         model = project.subtitles.settings.get('model')
-        log_input_expected_result(model, 'legacy-model', model)
-        self.assertEqual(model, 'legacy-model')
+        self.assertLoggedEqual(
+            "gpt_model converted to model",
+            'legacy-model',
+            model,
+        )
 
         # characters merged with names
         names = project.subtitles.settings.get_str_list('names')
-        log_input_expected_result(names, ['New Character', 'Old Character'], names)
-        self.assertIn('New Character', names)
-        self.assertIn('Old Character', names)
+        self.assertLoggedIn(
+            "names include 'New Character'",
+            'New Character',
+            names,
+            input_value=names,
+        )
+        self.assertLoggedIn(
+            "names include 'Old Character'",
+            'Old Character',
+            names,
+            input_value=names,
+        )
 
         # match_partial_words -> substitution_mode
         substitution_mode = project.subtitles.settings.get('substitution_mode')
-        log_input_expected_result(substitution_mode, 'Partial Words', substitution_mode)
-        self.assertEqual(substitution_mode, 'Partial Words')
+        self.assertLoggedEqual(
+            "match_partial_words converted to substitution_mode",
+            'Partial Words',
+            substitution_mode,
+        )
 
         # Verify original legacy keys were removed
         characters = project.subtitles.settings.get('characters')
-        log_input_expected_result(characters, None, characters)
-        self.assertIsNone(characters)
+        self.assertLoggedIsNone("legacy characters removed", characters)
 
     def test_update_output_path(self):
         """Test UpdateOutputPath functionality thoroughly"""
@@ -197,17 +213,23 @@ class SubtitleProjectTests(SubtitleTestCase):
         project.UpdateOutputPath()
 
         output_path = project.subtitles.outputpath
-        log_input_expected_result("output path generated", True, output_path is not None)
-        self.assertIsNotNone(output_path)
+        self.assertLoggedIsNotNone("output path generated", output_path)
 
         # Should contain target language in filename (case insensitive)
         if output_path:
-            log_input_expected_result(output_path, True, 'spanish' in output_path.lower())
-            self.assertIn('spanish', output_path.lower())
+            self.assertLoggedIn(
+                "output path includes target language",
+                'spanish',
+                output_path.lower(),
+                input_value=output_path,
+            )
 
             # Should have .srt extension by default
-            log_input_expected_result(output_path, True, output_path.endswith('.srt'))
-            self.assertTrue(output_path.endswith('.srt'))
+            self.assertLoggedTrue(
+                "default output extension",
+                output_path.endswith('.srt'),
+                input_value=output_path,
+            )
 
         # Test with custom path - UpdateOutputPath processes through GetOutputPath
         custom_path = os.path.join(self.temp_dir, "custom_output.vtt")
@@ -217,21 +239,26 @@ class SubtitleProjectTests(SubtitleTestCase):
         new_output_path = project.subtitles.outputpath
         # GetOutputPath will add language suffix, so expect that behavior
         expected_custom_path = os.path.join(self.temp_dir, "custom_output.spanish.vtt")
-        log_input_expected_result("custom output path with language", expected_custom_path, new_output_path)
-        self.assertEqual(new_output_path, expected_custom_path)
+        self.assertLoggedEqual(
+            "custom output path with language",
+            expected_custom_path,
+            new_output_path,
+        )
 
         # Should update file format
         file_format = project.subtitles.file_format
-        log_input_expected_result("file format updated", '.vtt', file_format)
-        self.assertEqual(file_format, '.vtt')
+        self.assertLoggedEqual("file format updated", '.vtt', file_format)
 
         # Test with custom extension
         project.UpdateOutputPath(extension='.ass')
 
         ass_output_path = project.subtitles.outputpath
         if ass_output_path:
-            log_input_expected_result(ass_output_path, True, ass_output_path.endswith('.ass'))
-            self.assertTrue(ass_output_path.endswith('.ass'))
+            self.assertLoggedTrue(
+                "custom extension applied",
+                ass_output_path.endswith('.ass'),
+                input_value=ass_output_path,
+            )
 
     def test_initialise_project_with_explicit_output_path(self):
         """Test InitialiseProject respects explicit output path (CLI scenario)"""
@@ -244,13 +271,21 @@ class SubtitleProjectTests(SubtitleTestCase):
 
         # Verify the explicit output path was set
         actual_output = project.subtitles.outputpath
-        log_input_expected_result("explicit output path respected", explicit_output, actual_output)
-        self.assertEqual(actual_output, explicit_output, "InitialiseProject should respect explicit outputpath")
+        self.assertLoggedEqual(
+            "explicit output path respected",
+            explicit_output,
+            actual_output,
+            "InitialiseProject should respect explicit outputpath",
+        )
 
         # Verify file format was updated
         file_format = project.subtitles.file_format
-        log_input_expected_result("file format from explicit path", '.vtt', file_format)
-        self.assertEqual(file_format, '.vtt', "File format should be derived from explicit output path")
+        self.assertLoggedEqual(
+            "file format from explicit path",
+            '.vtt',
+            file_format,
+            "File format should be derived from explicit output path",
+        )
 
     def test_initialise_project_new_srt(self):
         """Test InitialiseProject with a new SRT file"""
@@ -261,32 +296,26 @@ class SubtitleProjectTests(SubtitleTestCase):
         project.InitialiseProject(self.test_srt_file)
 
         # Verify project was initialized correctly
-        log_input_expected_result("subtitles loaded", True, project.subtitles is not None)
-        self.assertIsNotNone(project.subtitles)
+        self.assertLoggedIsNotNone("subtitles loaded", project.subtitles)
 
-        log_input_expected_result("has subtitles", True, project.subtitles.has_subtitles)
-        self.assertTrue(project.subtitles.has_subtitles)
+        self.assertLoggedTrue("has subtitles", project.subtitles.has_subtitles)
 
         line_count = project.subtitles.linecount
         expected_line_count = 64  # From chinese_dinner_data
-        log_input_expected_result("line count", expected_line_count, line_count)
-        self.assertEqual(line_count, expected_line_count)
+        self.assertLoggedEqual("line count", expected_line_count, line_count)
 
         # Verify source path is set
         source_path = project.subtitles.sourcepath
-        log_input_expected_result("source path", self.test_srt_file, source_path)
-        self.assertEqual(source_path, self.test_srt_file)
+        self.assertLoggedEqual("source path", self.test_srt_file, source_path)
 
         # Verify output path is generated
         output_path = project.subtitles.outputpath
-        log_input_expected_result("output path generated", True, output_path is not None)
-        self.assertIsNotNone(output_path)
+        self.assertLoggedIsNotNone("output path generated", output_path)
 
         # Verify project file path is set
         expected_project_file = self.test_srt_file.replace('.srt', '.subtrans')
         actual_project_file = project.projectfile
-        log_input_expected_result("project file path", expected_project_file, actual_project_file)
-        self.assertEqual(actual_project_file, expected_project_file)
+        self.assertLoggedEqual("project file path", expected_project_file, actual_project_file)
 
     def test_save_and_reload_project_preserves_settings(self):
         """Test saving and reloading project preserves custom settings"""
@@ -328,25 +357,21 @@ class SubtitleProjectTests(SubtitleTestCase):
 
         for key, expected in test_cases:
             actual = new_project.subtitles.settings.get(key)
-            log_input_expected_result(f"preserved setting '{key}'", expected, actual)
-            self.assertEqual(actual, expected)
+            self.assertLoggedEqual(f"preserved setting '{key}'", expected, actual)
 
         # Verify names were preserved
         names = new_project.subtitles.settings.get_str_list('names')
         expected_names = ['Custom Character 1', 'Custom Character 2']
-        log_input_expected_result(names, expected_names, names)
-        self.assertEqual(names, expected_names)
+        self.assertLoggedSequenceEqual("preserved names", expected_names, names)
 
         # Verify subtitles data was preserved
         original_line_count = project.subtitles.linecount
         new_line_count = new_project.subtitles.linecount
-        log_input_expected_result("preserved line count", original_line_count, new_line_count)
-        self.assertEqual(new_line_count, original_line_count)
+        self.assertLoggedEqual("preserved line count", original_line_count, new_line_count)
 
         original_scene_count = project.subtitles.scenecount
         new_scene_count = new_project.subtitles.scenecount
-        log_input_expected_result("preserved scene count", original_scene_count, new_scene_count)
-        self.assertEqual(new_scene_count, original_scene_count)
+        self.assertLoggedEqual("preserved scene count", original_scene_count, new_scene_count)
 
 
     def test_initialise_project_existing_subtrans(self):
@@ -374,24 +399,19 @@ class SubtitleProjectTests(SubtitleTestCase):
         new_project.InitialiseProject(self.test_project_file)
 
         # Should load existing project
-        log_input_expected_result("existing_project flag", True, new_project.existing_project)
-        self.assertTrue(new_project.existing_project)
+        self.assertLoggedTrue("existing_project flag", new_project.existing_project)
 
-        log_input_expected_result("use_project_file flag", True, new_project.use_project_file)
-        self.assertTrue(new_project.use_project_file)
+        self.assertLoggedTrue("use_project_file flag", new_project.use_project_file)
 
         # Should preserve settings
         target_language = new_project.subtitles.settings.get('target_language')
         movie_name = new_project.subtitles.settings.get('movie_name')
-        log_input_expected_result("preserved target_language", 'German', target_language)
-        log_input_expected_result("preserved movie_name", 'Existing Project Movie', movie_name)
-        self.assertEqual(target_language, 'German')
-        self.assertEqual(movie_name, 'Existing Project Movie')
+        self.assertLoggedEqual("preserved target_language", 'German', target_language)
+        self.assertLoggedEqual("preserved movie_name", 'Existing Project Movie', movie_name)
 
         # Should have scenes from batching
         scene_count = new_project.subtitles.scenecount
-        log_input_expected_result("scene count > 0", True, scene_count > 0)
-        self.assertGreater(scene_count, 0)
+        self.assertLoggedGreater("scene count > 0", scene_count, 0)
 
     def test_initialise_project_existing_subtrans_reload(self):
         """Test InitialiseProject with existing subtrans file and reload_subtitles=True"""
@@ -431,22 +451,18 @@ Modified subtitle line 2
         # Should preserve project settings
         target_language = new_project.subtitles.settings.get('target_language')
         movie_name = new_project.subtitles.settings.get('movie_name')
-        log_input_expected_result("preserved target_language", 'Portuguese', target_language)
-        log_input_expected_result("preserved movie_name", 'Reload Test Movie', movie_name)
-        self.assertEqual(target_language, 'Portuguese')
-        self.assertEqual(movie_name, 'Reload Test Movie')
+        self.assertLoggedEqual("preserved target_language", 'Portuguese', target_language)
+        self.assertLoggedEqual("preserved movie_name", 'Reload Test Movie', movie_name)
 
         # Should have reloaded subtitle content
         line_count = new_project.subtitles.linecount
         expected_line_count = 2  # Modified content has 2 lines
-        log_input_expected_result("reloaded line count", expected_line_count, line_count)
-        self.assertEqual(line_count, expected_line_count)
+        self.assertLoggedEqual("reloaded line count", expected_line_count, line_count)
 
         # Should have subtitle text from reloaded file
         if new_project.subtitles.originals:
             first_line_text = new_project.subtitles.originals[0].text
-            log_input_expected_result("reloaded first line", "Modified subtitle line 1", first_line_text)
-            self.assertEqual(first_line_text, "Modified subtitle line 1")
+            self.assertLoggedEqual("reloaded first line", "Modified subtitle line 1", first_line_text)
 
     def test_get_project_settings(self):
         """Test GetProjectSettings method returns expected settings"""
@@ -480,20 +496,31 @@ Modified subtitle line 2
 
         for key, expected_value in expected_included:
             actual_value = project_settings.get(key)
-            log_input_expected_result(f"includes '{key}'", expected_value, actual_value)
-            self.assertEqual(actual_value, expected_value, f"GetProjectSettings should include valid non-empty setting '{key}'")
+            self.assertLoggedEqual(
+                f"includes '{key}'",
+                expected_value,
+                actual_value,
+                f"GetProjectSettings should include valid non-empty setting '{key}'",
+            )
 
         # Test what SHOULD be excluded (None and empty strings)
         excluded_none_empty = ['substitutions', 'prompt']
         for key in excluded_none_empty:
-            log_input_expected_result(f"excludes '{key}' (None/empty)", False, key in project_settings)
-            self.assertNotIn(key, project_settings, f"GetProjectSettings should exclude None/empty setting '{key}'")
+            self.assertLoggedNotIn(
+                f"excludes '{key}' (None/empty)",
+                key,
+                project_settings,
+                f"GetProjectSettings should exclude None/empty setting '{key}'",
+            )
 
         # CRITICAL: Test that invalid settings were filtered out by UpdateProjectSettings
         # GetProjectSettings should only see valid project settings that passed through UpdateProjectSettings
         invalid_in_result = project_settings.get('invalid_setting')
-        log_input_expected_result(invalid_in_result, None, invalid_in_result)
-        self.assertIsNone(invalid_in_result, "Invalid settings should have been filtered out by UpdateProjectSettings")
+        self.assertLoggedIsNone(
+            "invalid_setting excluded",
+            invalid_in_result,
+            "Invalid settings should have been filtered out by UpdateProjectSettings",
+        )
 
     def test_get_project_filepath(self):
         """Test GetProjectFilepath method"""
@@ -505,24 +532,21 @@ Modified subtitle line 2
         project_path = project.GetProjectFilepath(srt_path)
         expected_path = os.path.normpath("/path/to/movie.subtrans")
         actual_path = os.path.normpath(project_path)
-        log_input_expected_result("SRT to subtrans", expected_path, actual_path)
-        self.assertEqual(actual_path, expected_path)
+        self.assertLoggedEqual("SRT to subtrans", expected_path, actual_path)
 
         # Test with already subtrans file
         subtrans_path = "/path/to/movie.subtrans"
         project_path = project.GetProjectFilepath(subtrans_path)
         expected_path = os.path.normpath(subtrans_path)
         actual_path = os.path.normpath(project_path)
-        log_input_expected_result("subtrans unchanged", expected_path, actual_path)
-        self.assertEqual(actual_path, expected_path)
+        self.assertLoggedEqual("subtrans unchanged", expected_path, actual_path)
 
         # Test with no extension
         no_ext_path = "/path/to/movie"
         project_path = project.GetProjectFilepath(no_ext_path)
         expected_path = os.path.normpath("/path/to/movie.subtrans")
         actual_path = os.path.normpath(project_path)
-        log_input_expected_result("no extension to subtrans", expected_path, actual_path)
-        self.assertEqual(actual_path, expected_path)
+        self.assertLoggedEqual("no extension to subtrans", expected_path, actual_path)
 
     def test_get_backup_filepath(self):
         """Test GetBackupFilepath method"""
@@ -533,8 +557,7 @@ Modified subtitle line 2
         backup_path = project.GetBackupFilepath(filepath)
         expected_backup = os.path.normpath("/path/to/movie.subtrans-backup")
         actual_backup = os.path.normpath(backup_path)
-        log_input_expected_result("backup filepath", expected_backup, actual_backup)
-        self.assertEqual(actual_backup, expected_backup)
+        self.assertLoggedEqual("backup filepath", expected_backup, actual_backup)
 
     def test_properties(self):
         """Test project properties"""
@@ -542,17 +565,11 @@ Modified subtitle line 2
         project = SubtitleProject()
 
         # Test initial property values
-        log_input_expected_result("initial target_language", None, project.target_language)
-        log_input_expected_result("initial task_type", None, project.task_type)
-        log_input_expected_result("initial movie_name", None, project.movie_name)
-        log_input_expected_result("initial any_translated", False, project.any_translated)
-        log_input_expected_result("initial all_translated", False, project.all_translated)
-
-        self.assertIsNone(project.target_language)
-        self.assertIsNone(project.task_type)
-        self.assertIsNone(project.movie_name)
-        self.assertFalse(project.any_translated)
-        self.assertFalse(project.all_translated)
+        self.assertLoggedIsNone("initial target_language", project.target_language)
+        self.assertLoggedIsNone("initial task_type", project.task_type)
+        self.assertLoggedIsNone("initial movie_name", project.movie_name)
+        self.assertLoggedFalse("initial any_translated", project.any_translated)
+        self.assertLoggedFalse("initial all_translated", project.all_translated)
 
         # Update settings and test properties reflect changes
         settings = SettingsType({
@@ -562,28 +579,22 @@ Modified subtitle line 2
         })
         project.UpdateProjectSettings(settings)
 
-        log_input_expected_result("updated target_language", 'Russian', project.target_language)
-        log_input_expected_result("updated task_type", 'translation', project.task_type)
-        log_input_expected_result("updated movie_name", 'Property Test Movie', project.movie_name)
-
-        self.assertEqual(project.target_language, 'Russian')
-        self.assertEqual(project.task_type, 'translation')
-        self.assertEqual(project.movie_name, 'Property Test Movie')
+        self.assertLoggedEqual("updated target_language", 'Russian', project.target_language)
+        self.assertLoggedEqual("updated task_type", 'translation', project.task_type)
+        self.assertLoggedEqual("updated movie_name", 'Property Test Movie', project.movie_name)
 
     def test_get_editor_marks_project_dirty(self):
         """GetEditor should mark the project as needing to be written after edits"""
 
         project = SubtitleProject(persistent=True)
 
-        log_input_expected_result("initial needs_writing", False, project.needs_writing)
-        self.assertFalse(project.needs_writing)
+        self.assertLoggedFalse("initial needs_writing", project.needs_writing)
 
         with project.GetEditor() as editor:
             new_scene = SubtitleScene({'number': 1})
             editor.AddScene(new_scene)
 
-        log_input_expected_result("needs_writing after edit", True, project.needs_writing)
-        self.assertTrue(project.needs_writing)
+        self.assertLoggedTrue("needs_writing after edit", project.needs_writing)
 
     @skip_if_debugger_attached
     def test_get_editor_exception_does_not_mark_project_dirty(self):
@@ -594,8 +605,7 @@ Modified subtitle line 2
             with project.GetEditor():
                 raise ValueError("Test edit failure")
 
-        log_input_expected_result("needs_writing after failed edit", False, project.needs_writing)
-        self.assertFalse(project.needs_writing)
+        self.assertLoggedFalse("needs_writing after failed edit", project.needs_writing)
 
 
 if __name__ == '__main__':

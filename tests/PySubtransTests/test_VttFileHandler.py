@@ -192,7 +192,6 @@ Third subtitle line with <i>formatting</i>
                 result = self.handler.compose(data)
                 
                 for expected_content in case["should_contain"]:
-                    contains_content = expected_content in result
                     self.assertLoggedIn(expected_content, expected_content, result)
     
     @skip_if_debugger_attached

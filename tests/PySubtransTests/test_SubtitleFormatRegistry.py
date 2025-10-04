@@ -2,17 +2,16 @@ import os
 import tempfile
 import unittest
 from typing import TextIO
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from PySubtrans.SubtitleFileHandler import SubtitleFileHandler
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.SubtitleData import SubtitleData
 from PySubtrans.SubtitleError import SubtitleParseError
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
-    log_input_expected_result,
-    log_test_name,
     skip_if_debugger_attached,
 )
 
@@ -33,16 +32,15 @@ class DummySrtHandler(SubtitleFileHandler):
         return self.parse_string("")
 
 
-class TestSubtitleFormatRegistry(unittest.TestCase):
+class TestSubtitleFormatRegistry(LoggedTestCase):
     def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+        super().setUp()
         SubtitleFormatRegistry.clear()
         SubtitleFormatRegistry.discover()
 
     def test_AutoDiscovery(self):
         handler = SubtitleFormatRegistry.get_handler_by_extension('.srt')
-        log_input_expected_result('.srt', SrtFileHandler, handler)
-        self.assertIs(handler, SrtFileHandler)
+        self.assertLoggedIs(".srt handler", SrtFileHandler, handler)
 
     @skip_if_debugger_attached
     def test_UnknownExtension(self):
@@ -52,13 +50,11 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
 
     def test_EnumerateFormats(self):
         formats = SubtitleFormatRegistry.enumerate_formats()
-        log_input_expected_result('contains .srt', True, '.srt' in formats)
-        self.assertIn('.srt', formats)
+        self.assertLoggedIn('contains .srt', '.srt', formats)
 
     def test_CreateHandler(self):
         handler = SubtitleFormatRegistry.create_handler('.srt')
-        log_input_expected_result('.srt', SrtFileHandler, type(handler))
-        self.assertIsInstance(handler, SrtFileHandler)
+        self.assertLoggedIsInstance('.srt handler instance', handler, SrtFileHandler)
 
     def test_DuplicateRegistrationPriority(self):
 
@@ -66,20 +62,17 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
 
         SubtitleFormatRegistry.register_handler(DummySrtHandler)
         handler = SubtitleFormatRegistry.get_handler_by_extension('.srt')
-        log_input_expected_result('priority', DummySrtHandler, handler)
-        self.assertIs(handler, DummySrtHandler)
+        self.assertLoggedIs('priority', DummySrtHandler, handler)
 
         SubtitleFormatRegistry.register_handler(SrtFileHandler)
         handler_after = SubtitleFormatRegistry.get_handler_by_extension('.srt')
-        log_input_expected_result('priority', SrtFileHandler, handler_after)
-        self.assertIs(handler_after, SrtFileHandler)
+        self.assertLoggedIs('priority restored', SrtFileHandler, handler_after)
 
         SubtitleFormatRegistry.clear()
 
     def test_CreateHandlerWithFilename(self):
         handler = SubtitleFormatRegistry.create_handler(filename="test.srt")
-        log_input_expected_result("test.srt", SrtFileHandler, type(handler))
-        self.assertIsInstance(handler, SrtFileHandler)
+        self.assertLoggedIsInstance('test.srt handler instance', handler, SrtFileHandler)
 
     @skip_if_debugger_attached
     def test_CreateHandlerWithNoExtensionOrFilename(self):
@@ -101,34 +94,28 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
 
     def test_ListAvailableFormats(self):
         formats = SubtitleFormatRegistry.list_available_formats()
-        log_input_expected_result("contains .srt", True, ".srt" in formats)
-        self.assertIn(".srt", formats)
+        self.assertLoggedIn('contains .srt', '.srt', formats)
         self.assertIsInstance(formats, str)
 
     def test_ListAvailableFormatsEmpty(self):
         SubtitleFormatRegistry.disable_autodiscovery()
         formats = SubtitleFormatRegistry.list_available_formats()
-        log_input_expected_result("empty registry", "None", formats)
-        self.assertEqual("None", formats)
+        self.assertLoggedEqual('empty registry', 'None', formats)
         SubtitleFormatRegistry.discover()
 
     def test_GetFormatFromFilename(self):
         
         extension = SubtitleFormatRegistry.get_format_from_filename("test.srt")
-        log_input_expected_result("test.srt", ".srt", extension)
-        self.assertEqual(".srt", extension)
-        
+        self.assertLoggedEqual('test.srt extension', '.srt', extension)
+
         extension = SubtitleFormatRegistry.get_format_from_filename("test.SRT")
-        log_input_expected_result("test.SRT", ".srt", extension)
-        self.assertEqual(".srt", extension)
-        
+        self.assertLoggedEqual('test.SRT extension', '.srt', extension)
+
         extension = SubtitleFormatRegistry.get_format_from_filename("test")
-        log_input_expected_result("test", None, extension)
-        self.assertIsNone(extension)
+        self.assertLoggedIsNone('test extension', extension)
         
         extension = SubtitleFormatRegistry.get_format_from_filename("path/to/file.vtt")
-        log_input_expected_result("path/to/file.vtt", ".vtt", extension)
-        self.assertEqual(".vtt", extension)
+        self.assertLoggedEqual('path/to/file.vtt extension', '.vtt', extension)
 
     def test_DetectFormatAndLoadFile(self):
         
@@ -138,8 +125,7 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         
         try:
             data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
-            log_input_expected_result("metadata has detected_format", True, 'detected_format' in data.metadata)
-            self.assertIn('detected_format', data.metadata)
+            self.assertLoggedIn('metadata has detected_format', 'detected_format', data.metadata)
             self.assertIsInstance(data, SubtitleData)
         finally:
             os.unlink(temp_path)
@@ -168,21 +154,18 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
             mock_create.return_value = mock_handler
             
             data = SubtitleFormatRegistry.detect_format_and_load_file("test.srt")
-            log_input_expected_result("fallback encoding used", 2, mock_load.call_count)
-            self.assertEqual(2, mock_load.call_count)
+            self.assertLoggedEqual('fallback encoding used', 2, mock_load.call_count)
             self.assertIsInstance(data, SubtitleData)
 
     def test_ClearMethod(self):
         
         SubtitleFormatRegistry.discover()
         formats_before = len(SubtitleFormatRegistry.enumerate_formats())
-        log_input_expected_result("formats before clear", True, formats_before > 0)
-        self.assertGreater(formats_before, 0)
-        
+        self.assertLoggedGreater('formats before clear', formats_before, 0)
+
         SubtitleFormatRegistry.disable_autodiscovery()
         formats_after = len(SubtitleFormatRegistry.enumerate_formats())
-        log_input_expected_result("formats after clear", 0, formats_after)
-        self.assertEqual(0, formats_after)
+        self.assertLoggedEqual('formats after clear', 0, formats_after)
         
         SubtitleFormatRegistry.discover()
 
@@ -190,32 +173,26 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         
         SubtitleFormatRegistry.disable_autodiscovery()
         formats_before = len(SubtitleFormatRegistry.enumerate_formats())
-        log_input_expected_result("formats before discover", 0, formats_before)
-        self.assertEqual(0, formats_before)
-        
+        self.assertLoggedEqual('formats before discover', 0, formats_before)
+
         SubtitleFormatRegistry.discover()
         formats_after = len(SubtitleFormatRegistry.enumerate_formats())
-        log_input_expected_result("formats after discover", True, formats_after > 0)
-        self.assertGreater(formats_after, 0)
+        self.assertLoggedGreater('formats after discover', formats_after, 0)
 
     def test_EnsureDiscoveredBehavior(self):
         
         SubtitleFormatRegistry.disable_autodiscovery()
         formats_before = len(SubtitleFormatRegistry._handlers)
-        log_input_expected_result("handlers before access", 0, formats_before)
-        self.assertEqual(0, formats_before)
-        
+        self.assertLoggedEqual('handlers before access', 0, formats_before)
+
         SubtitleFormatRegistry.enable_autodiscovery()
         formats = SubtitleFormatRegistry.enumerate_formats()
         formats_after = len(SubtitleFormatRegistry._handlers)
-        log_input_expected_result("handlers after access", True, formats_after > 0)
-        self.assertGreater(formats_after, 0)
-        
-        log_input_expected_result("formats list non-empty", True, len(formats) > 0)
-        self.assertGreater(len(formats), 0)
-        
-        log_input_expected_result("discovered flag", True, SubtitleFormatRegistry._discovered)
-        self.assertTrue(SubtitleFormatRegistry._discovered)
+        self.assertLoggedGreater('handlers after access', formats_after, 0)
+
+        self.assertLoggedGreater('formats list non-empty', len(formats), 0)
+
+        self.assertLoggedTrue('discovered flag', SubtitleFormatRegistry._discovered)
 
     def test_RegisterHandlerWithLowerPriority(self):
         
@@ -237,13 +214,11 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         SubtitleFormatRegistry.disable_autodiscovery()
         SubtitleFormatRegistry.register_handler(SrtFileHandler)
         handler_before = SubtitleFormatRegistry.get_handler_by_extension('.srt')
-        log_input_expected_result('before lower priority', SrtFileHandler, handler_before)
-        self.assertIs(handler_before, SrtFileHandler)
+        self.assertLoggedIs('before lower priority', SrtFileHandler, handler_before)
         
         SubtitleFormatRegistry.register_handler(LowerPrioritySrtHandler)
         handler_after = SubtitleFormatRegistry.get_handler_by_extension('.srt')
-        log_input_expected_result('after lower priority', SrtFileHandler, handler_after)
-        self.assertIs(handler_after, SrtFileHandler)
+        self.assertLoggedIs('after lower priority', SrtFileHandler, handler_after)
         
         SubtitleFormatRegistry.clear()
 
@@ -252,26 +227,22 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         handler_lower = SubtitleFormatRegistry.get_handler_by_extension('.srt')
         handler_upper = SubtitleFormatRegistry.get_handler_by_extension('.SRT')
         handler_mixed = SubtitleFormatRegistry.get_handler_by_extension('.Srt')
-        
-        log_input_expected_result('case insensitive', True, handler_lower == handler_upper == handler_mixed)
-        self.assertEqual(handler_lower, handler_upper)
-        self.assertEqual(handler_upper, handler_mixed)
+
+        self.assertLoggedIs('lower vs upper handler', handler_lower, handler_upper)
+        self.assertLoggedIs('upper vs mixed handler', handler_upper, handler_mixed)
 
     def test_DisableAutodiscovery(self):
         
         SubtitleFormatRegistry.discover()
         formats_before = len(SubtitleFormatRegistry.enumerate_formats())
-        log_input_expected_result("formats before disable", True, formats_before > 0)
-        self.assertGreater(formats_before, 0)
-        
+        self.assertLoggedGreater('formats before disable', formats_before, 0)
+
         SubtitleFormatRegistry.disable_autodiscovery()
         formats_after = len(SubtitleFormatRegistry.enumerate_formats())
         discovered_flag = SubtitleFormatRegistry._discovered
-        
-        log_input_expected_result("formats after disable", 0, formats_after)
-        self.assertEqual(0, formats_after)
-        log_input_expected_result("discovered flag after disable", True, discovered_flag)
-        self.assertTrue(discovered_flag)
+
+        self.assertLoggedEqual('formats after disable', 0, formats_after)
+        self.assertLoggedTrue('discovered flag after disable', discovered_flag)
         
         SubtitleFormatRegistry.discover()
 
@@ -279,13 +250,11 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         
         SubtitleFormatRegistry.disable_autodiscovery()
         discovered_flag_before = SubtitleFormatRegistry._discovered
-        log_input_expected_result("discovered flag before enable", True, discovered_flag_before)
-        self.assertTrue(discovered_flag_before)
-        
+        self.assertLoggedTrue('discovered flag before enable', discovered_flag_before)
+
         SubtitleFormatRegistry.enable_autodiscovery()
         discovered_flag_after = SubtitleFormatRegistry._discovered
-        log_input_expected_result("discovered flag after enable", False, discovered_flag_after)
-        self.assertFalse(discovered_flag_after)
+        self.assertLoggedFalse('discovered flag after enable', discovered_flag_after)
         
         SubtitleFormatRegistry.discover()
 
@@ -299,12 +268,18 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         SubtitleFormatRegistry.discover()
         handlers_after_second = SubtitleFormatRegistry._handlers.copy()
         priorities_after_second = SubtitleFormatRegistry._priorities.copy()
+
+        self.assertLoggedEqual(
+            'handlers unchanged after double discovery',
+            handlers_after_first,
+            handlers_after_second,
+        )
         
-        log_input_expected_result("handlers unchanged after double discovery", handlers_after_first, handlers_after_second)
-        self.assertEqual(handlers_after_first, handlers_after_second)
-        
-        log_input_expected_result("priorities unchanged after double discovery", priorities_after_first, priorities_after_second)
-        self.assertEqual(priorities_after_first, priorities_after_second)
+        self.assertLoggedEqual(
+            'priorities unchanged after double discovery',
+            priorities_after_first,
+            priorities_after_second,
+        )
 
     # Phase 6: Enhanced Format Detection Tests
     def test_DetectSrtFormatWithTxtExtension(self):
@@ -318,11 +293,9 @@ class TestSubtitleFormatRegistry(unittest.TestCase):
         try:
             data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
             detected_format = data.metadata.get('detected_format')
-            log_input_expected_result(f"detected_format={detected_format}", ".srt", detected_format)
-            self.assertEqual(".srt", detected_format)
+            self.assertLoggedEqual('detected .srt format', '.srt', detected_format)
             lines_count = len(data.lines)
-            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
-            self.assertGreater(lines_count, 0)
+            self.assertLoggedGreater('srt lines count', lines_count, 0)
         finally:
             os.unlink(temp_path)
 
@@ -349,11 +322,9 @@ Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
         try:
             data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
             detected_format = data.metadata.get('detected_format')
-            log_input_expected_result(f"detected_format={detected_format}", ".ass", detected_format)
-            self.assertEqual(".ass", detected_format)
+            self.assertLoggedEqual('detected .ass format', '.ass', detected_format)
             lines_count = len(data.lines)
-            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
-            self.assertGreater(lines_count, 0)
+            self.assertLoggedGreater('ass lines count', lines_count, 0)
         finally:
             os.unlink(temp_path)
 
@@ -381,11 +352,9 @@ Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
             data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
             # SSA files are correctly detected as .ssa by pysubs2
             detected_format = data.metadata.get('detected_format')
-            log_input_expected_result(f"detected_format={detected_format}", ".ssa", detected_format)
-            self.assertEqual(".ssa", detected_format)
+            self.assertLoggedEqual('detected .ssa format', '.ssa', detected_format)
             lines_count = len(data.lines)
-            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
-            self.assertGreater(lines_count, 0)
+            self.assertLoggedGreater('ssa lines count', lines_count, 0)
         finally:
             os.unlink(temp_path)
 
@@ -404,8 +373,11 @@ Dialogue: Marked=0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Another line
             log_input_expected_error("malformed file content", SubtitleParseError, e.exception)
             # Verify the error message is user-friendly
             error_msg = str(e.exception)
-            log_input_expected_result(f"error_msg='{error_msg[:50]}...'", True, 'format' in error_msg.lower())
-            self.assertIn('format', error_msg.lower())
+            self.assertLoggedTrue(
+                'error message references format',
+                'format' in error_msg.lower(),
+                input_value=error_msg,
+            )
         finally:
             os.unlink(temp_path)
 
@@ -464,16 +436,12 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
         try:
             data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
             detected_format = data.metadata.get('detected_format')
-            log_input_expected_result(f"detected_format={detected_format}", ".ass", detected_format)
-            self.assertEqual(".ass", detected_format)
+            self.assertLoggedEqual('detected .ass format', '.ass', detected_format)
             # Check that original metadata from SSA file is preserved
-            has_info = 'info' in data.metadata
-            log_input_expected_result(f"'info' in metadata={has_info}", True, has_info)
-            self.assertIn('info', data.metadata)
+            self.assertLoggedIn("metadata includes 'info'", 'info', data.metadata)
             script_info = data.metadata['info']
             title = script_info.get('Title')
-            log_input_expected_result(f"script_info['Title']={title}", "Test Movie", title)
-            self.assertEqual("Test Movie", title)
+            self.assertLoggedEqual("script_info['Title']", 'Test Movie', title)
         finally:
             os.unlink(temp_path)
 
@@ -498,15 +466,12 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Test subtitle
         try:
             data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
             detected_format = data.metadata.get('detected_format')
-            log_input_expected_result(f"detected_format={detected_format}", ".srt", detected_format)
-            self.assertEqual(".srt", detected_format)
+            self.assertLoggedEqual('detected .srt format', '.srt', detected_format)
             lines_count = len(data.lines)
-            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
-            self.assertGreater(lines_count, 0)
+            self.assertLoggedGreater('srt lines count (non-utf)', lines_count, 0)
             # Verify content was loaded correctly
             first_line_text = data.lines[0].text if data.lines else ""
-            log_input_expected_result(f"first_line_text={first_line_text}", "Café à Paris", first_line_text)
-            self.assertEqual("Café à Paris", first_line_text)
+            self.assertLoggedEqual('first line text', 'Café à Paris', first_line_text)
         finally:
             os.unlink(temp_path)
 
@@ -535,15 +500,12 @@ Dialogue: 0,0:00:03.00,0:00:04.00,Default,,0,0,0,,Hôtel très cher
         try:
             data = SubtitleFormatRegistry.detect_format_and_load_file(temp_path)
             detected_format = data.metadata.get('detected_format')
-            log_input_expected_result(f"detected_format={detected_format}", ".ass", detected_format)
-            self.assertEqual(".ass", detected_format)
+            self.assertLoggedEqual('detected .ass format (non-utf)', '.ass', detected_format)
             lines_count = len(data.lines)
-            log_input_expected_result(f"len(data.lines)={lines_count}", True, lines_count > 0)
-            self.assertGreater(lines_count, 0)
+            self.assertLoggedGreater('ass lines count (non-utf)', lines_count, 0)
             # Verify content was loaded correctly
             first_line_text = data.lines[0].text if data.lines else ""
-            log_input_expected_result(f"first_line_text={first_line_text}", "Café à Paris", first_line_text)
-            self.assertEqual("Café à Paris", first_line_text)
+            self.assertLoggedEqual('first line text (ass)', 'Café à Paris', first_line_text)
         finally:
             os.unlink(temp_path)
 

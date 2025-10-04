@@ -4,7 +4,7 @@ import unittest
 from typing import Any
 
 import regex
-from PySubtrans.Helpers.Tests import log_test_name
+from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatch import SubtitleBatch
@@ -25,6 +25,132 @@ class LoggedTestCase(unittest.TestCase):
     def setUp(self) -> None:
         super().setUp()
         log_test_name(self._testMethodName)
+
+    @staticmethod
+    def _format_type_name(expected_type : type|tuple[type, ...]) -> str:
+        if isinstance(expected_type, tuple):
+            return ", ".join(t.__name__ for t in expected_type)
+        return expected_type.__name__
+
+    def _log_expected_result(self, description : Any, expected : Any, result : Any, input_value : Any|None = None) -> None:
+        log_input_expected_result(input_value if input_value is not None else description, expected, result)
+
+    def assertLoggedEqual(self, description : Any, expected : Any, actual : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        self._log_expected_result(description, expected, actual, input_value=input_value)
+        if msg is None:
+            self.assertEqual(actual, expected)
+        else:
+            self.assertEqual(actual, expected, msg)
+
+    def assertLoggedSequenceEqual(self, description : Any, expected : Any, actual : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        self._log_expected_result(description, expected, actual, input_value=input_value)
+        if msg is None:
+            self.assertSequenceEqual(actual, expected)
+        else:
+            self.assertSequenceEqual(actual, expected, msg)
+
+    def assertLoggedIsNone(self, description : Any, value : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        self._log_expected_result(description, None, value, input_value=input_value)
+        if msg is None:
+            self.assertIsNone(value)
+        else:
+            self.assertIsNone(value, msg)
+
+    def assertLoggedIsNotNone(self, description : Any, value : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        context = input_value if input_value is not None else description
+        self._log_expected_result(description, True, value is not None, input_value=context)
+        if msg is None:
+            self.assertIsNotNone(value)
+        else:
+            self.assertIsNotNone(value, msg)
+
+    def assertLoggedTrue(self, description : Any, condition : bool, msg : str|None = None, input_value : Any|None = None) -> None:
+        self._log_expected_result(description, True, condition, input_value=input_value)
+        if msg is None:
+            self.assertTrue(condition)
+        else:
+            self.assertTrue(condition, msg)
+
+    def assertLoggedFalse(self, description : Any, condition : bool, msg : str|None = None, input_value : Any|None = None) -> None:
+        self._log_expected_result(description, False, condition, input_value=input_value)
+        if msg is None:
+            self.assertFalse(condition)
+        else:
+            self.assertFalse(condition, msg)
+
+    def assertLoggedIn(self, description : Any, member : Any, container : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        context = input_value if input_value is not None else f"{description} -> {member} in container"
+        self._log_expected_result(description, True, member in container, input_value=context)
+        if msg is None:
+            self.assertIn(member, container)
+        else:
+            self.assertIn(member, container, msg)
+
+    def assertLoggedNotIn(self, description : Any, member : Any, container : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        context = input_value if input_value is not None else f"{description} -> {member} not in container"
+        self._log_expected_result(description, False, member in container, input_value=context)
+        if msg is None:
+            self.assertNotIn(member, container)
+        else:
+            self.assertNotIn(member, container, msg)
+
+    def assertLoggedIs(self, description : Any, expected : Any, actual : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        context = input_value if input_value is not None else f"{description} -> expected id {id(expected)}"
+        self._log_expected_result(description, expected, actual, input_value=context)
+        if msg is None:
+            self.assertIs(actual, expected)
+        else:
+            self.assertIs(actual, expected, msg)
+
+    def assertLoggedIsNot(self, description : Any, unexpected : Any, actual : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        context = input_value if input_value is not None else f"{description} -> unexpected id {id(unexpected)}"
+        self._log_expected_result(description, unexpected, actual, input_value=context)
+        if msg is None:
+            self.assertIsNot(actual, unexpected)
+        else:
+            self.assertIsNot(actual, unexpected, msg)
+
+    def assertLoggedGreater(self, description : Any, first : Any, second : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        context = input_value if input_value is not None else f"{description} -> {first} > {second}"
+        self._log_expected_result(description, True, first > second, input_value=context)
+        if msg is None:
+            self.assertGreater(first, second)
+        else:
+            self.assertGreater(first, second, msg)
+
+    def assertLoggedGreaterEqual(self, description : Any, first : Any, second : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        context = input_value if input_value is not None else f"{description} -> {first} >= {second}"
+        self._log_expected_result(description, True, first >= second, input_value=context)
+        if msg is None:
+            self.assertGreaterEqual(first, second)
+        else:
+            self.assertGreaterEqual(first, second, msg)
+
+    def assertLoggedLess(self, description : Any, first : Any, second : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        context = input_value if input_value is not None else f"{description} -> {first} < {second}"
+        self._log_expected_result(description, True, first < second, input_value=context)
+        if msg is None:
+            self.assertLess(first, second)
+        else:
+            self.assertLess(first, second, msg)
+
+    def assertLoggedLessEqual(self, description : Any, first : Any, second : Any, msg : str|None = None, input_value : Any|None = None) -> None:
+        context = input_value if input_value is not None else f"{description} -> {first} <= {second}"
+        self._log_expected_result(description, True, first <= second, input_value=context)
+        if msg is None:
+            self.assertLessEqual(first, second)
+        else:
+            self.assertLessEqual(first, second, msg)
+
+    def assertLoggedIsInstance(self, description : Any, value : Any, expected_type : type|tuple[type, ...], msg : str|None = None, input_value : Any|None = None) -> None:
+        type_name = self._format_type_name(expected_type)
+        actual_type = type(value).__name__
+        context = input_value if input_value is not None else f"{description} ({actual_type} is {type_name})"
+        self._log_expected_result(description, True, isinstance(value, expected_type), input_value=context)
+        if msg is None:
+            self.assertIsInstance(value, expected_type)
+        else:
+            self.assertIsInstance(value, expected_type, msg)
 
 
 class SubtitleTestCase(LoggedTestCase):

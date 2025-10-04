@@ -4,25 +4,23 @@ from datetime import timedelta
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 
 
-class TestSubtitleBuilder(unittest.TestCase):
+class TestSubtitleBuilder(LoggedTestCase):
 
     def setUp(self):
         """Set up test cases."""
-        log_test_name(self._testMethodName)
+        super().setUp()
 
     def test_empty_builder_initialization(self):
         """Test creating an empty SubtitleBuilder."""
         builder = SubtitleBuilder()
         subtitles = builder.Build()
 
-        log_input_expected_result("subtitles type", Subtitles, type(subtitles))
-        self.assertEqual(type(subtitles), Subtitles)
+        self.assertLoggedIsInstance("subtitles type", subtitles, Subtitles)
 
-        log_input_expected_result("subtitles.scenes length", 0, len(subtitles.scenes))
-        self.assertEqual(len(subtitles.scenes), 0)
+        self.assertLoggedEqual("subtitles.scenes length", 0, len(subtitles.scenes))
 
     def test_add_scene_creation(self):
         """Test adding a new scene."""
@@ -30,18 +28,14 @@ class TestSubtitleBuilder(unittest.TestCase):
         result = builder.AddScene(summary="Test scene")
         subtitles = builder.Build()
 
-        log_input_expected_result("AddScene return type", SubtitleBuilder, type(result))
-        self.assertEqual(type(result), SubtitleBuilder)
+        self.assertLoggedIsInstance("AddScene return type", result, SubtitleBuilder)
 
-        log_input_expected_result("scenes count", 1, len(subtitles.scenes))
-        self.assertEqual(len(subtitles.scenes), 1)
+        self.assertLoggedEqual("scenes count", 1, len(subtitles.scenes))
 
         scene = subtitles.scenes[0]
-        log_input_expected_result("scene number", 1, scene.number)
-        self.assertEqual(scene.number, 1)
+        self.assertLoggedEqual("scene number", 1, scene.number)
 
-        log_input_expected_result("scene summary", "Test scene", scene.summary)
-        self.assertEqual(scene.summary, "Test scene")
+        self.assertLoggedEqual("scene summary", "Test scene", scene.summary)
 
     def test_automatic_batch_creation(self):
         """Test that batches are created automatically when scene is finalized."""
@@ -49,21 +43,17 @@ class TestSubtitleBuilder(unittest.TestCase):
         builder.AddScene()
         result = builder.BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test line")
 
-        log_input_expected_result("AddLine return type", SubtitleBuilder, type(result))
-        self.assertEqual(type(result), SubtitleBuilder)
+        self.assertLoggedIsInstance("AddLine return type", result, SubtitleBuilder)
 
         # Batches are created when scene is finalized
         subtitles = builder.Build()
         scene = subtitles.scenes[0]
-        log_input_expected_result("batches created automatically", 1, len(scene.batches))
-        self.assertEqual(len(scene.batches), 1)
+        self.assertLoggedEqual("batches created automatically", 1, len(scene.batches))
 
         batch = scene.batches[0]
-        log_input_expected_result("batch number", 1, batch.number)
-        self.assertEqual(batch.number, 1)
+        self.assertLoggedEqual("batch number", 1, batch.number)
 
-        log_input_expected_result("batch has line", 1, len(batch.originals))
-        self.assertEqual(len(batch.originals), 1)
+        self.assertLoggedEqual("batch has line", 1, len(batch.originals))
 
     def test_add_line_without_scene(self):
         """Test that adding a line without a scene automatically adds the scene."""
@@ -72,8 +62,7 @@ class TestSubtitleBuilder(unittest.TestCase):
         builder.BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test")
 
         subtitles = builder.Build()
-        log_input_expected_result("scenes count", 1, len(subtitles.scenes))
-        self.assertEqual(len(subtitles.scenes), 1)
+        self.assertLoggedEqual("scenes count", 1, len(subtitles.scenes))
 
     def test_add_line(self):
         """Test adding a subtitle line."""
@@ -82,27 +71,21 @@ class TestSubtitleBuilder(unittest.TestCase):
 
         result = builder.BuildLine(timedelta(seconds=1), timedelta(seconds=3), "Test line")
 
-        log_input_expected_result("AddLine return type", SubtitleBuilder, type(result))
-        self.assertEqual(type(result), SubtitleBuilder)
+        self.assertLoggedIsInstance("AddLine return type", result, SubtitleBuilder)
 
         subtitles = builder.Build()
 
-        log_input_expected_result("scenes count", 1, len(subtitles.scenes))
-        self.assertEqual(len(subtitles.scenes), 1)
+        self.assertLoggedEqual("scenes count", 1, len(subtitles.scenes))
 
-        log_input_expected_result("batches count", 1, len(subtitles.scenes[0].batches))
-        self.assertEqual(len(subtitles.scenes[0].batches), 1)
+        self.assertLoggedEqual("batches count", 1, len(subtitles.scenes[0].batches))
 
         batch = subtitles.scenes[0].batches[0]
-        log_input_expected_result("batch originals count", 1, len(batch.originals))
-        self.assertEqual(len(batch.originals), 1)
+        self.assertLoggedEqual("batch originals count", 1, len(batch.originals))
 
         line = batch.originals[0]
-        log_input_expected_result("line number", 1, line.number)
-        self.assertEqual(line.number, 1)
+        self.assertLoggedEqual("line number", 1, line.number)
 
-        log_input_expected_result("line text", "Test line", line.text)
-        self.assertEqual(line.text, "Test line")
+        self.assertLoggedEqual("line text", "Test line", line.text)
 
     def test_add_lines_with_subtitle_line_objects(self):
         """Test adding multiple SubtitleLine objects."""
@@ -116,14 +99,12 @@ class TestSubtitleBuilder(unittest.TestCase):
 
         result = builder.AddLines(lines)
 
-        log_input_expected_result("AddLines return type", SubtitleBuilder, type(result))
-        self.assertEqual(type(result), SubtitleBuilder)
+        self.assertLoggedIsInstance("AddLines return type", result, SubtitleBuilder)
 
         # Batches are created when scene is finalized
         subtitles = builder.Build()
         batch = subtitles.scenes[0].batches[0]
-        log_input_expected_result("batch originals count", 2, len(batch.originals))
-        self.assertEqual(len(batch.originals), 2)
+        self.assertLoggedEqual("batch originals count", 2, len(batch.originals))
 
     def test_add_lines_with_tuples(self):
         """Test adding multiple lines as tuples."""
@@ -140,11 +121,9 @@ class TestSubtitleBuilder(unittest.TestCase):
         # Batches are created when scene is finalized
         subtitles = builder.Build()
         batch = subtitles.scenes[0].batches[0]
-        log_input_expected_result("batch originals count", 2, len(batch.originals))
-        self.assertEqual(len(batch.originals), 2)
+        self.assertLoggedEqual("batch originals count", 2, len(batch.originals))
 
-        log_input_expected_result("first line text", "Line 1", batch.originals[0].text)
-        self.assertEqual(batch.originals[0].text, "Line 1")
+        self.assertLoggedEqual("first line text", "Line 1", batch.originals[0].text)
 
     def test_multiple_scenes_and_batches(self):
         """Test creating multiple scenes and batches."""
@@ -160,14 +139,11 @@ class TestSubtitleBuilder(unittest.TestCase):
 
         # Finalize to create batches
         subtitles = builder.Build()
-        log_input_expected_result("scenes count", 2, len(subtitles.scenes))
-        self.assertEqual(len(subtitles.scenes), 2)
+        self.assertLoggedEqual("scenes count", 2, len(subtitles.scenes))
 
-        log_input_expected_result("scene 1 batches count", 1, len(subtitles.scenes[0].batches))
-        self.assertEqual(len(subtitles.scenes[0].batches), 1)
+        self.assertLoggedEqual("scene 1 batches count", 1, len(subtitles.scenes[0].batches))
 
-        log_input_expected_result("scene 2 batches count", 1, len(subtitles.scenes[1].batches))
-        self.assertEqual(len(subtitles.scenes[1].batches), 1)
+        self.assertLoggedEqual("scene 2 batches count", 1, len(subtitles.scenes[1].batches))
 
     def test_automatic_batch_splitting(self):
         """Test that batches are automatically split when they exceed max_batch_size."""
@@ -183,13 +159,15 @@ class TestSubtitleBuilder(unittest.TestCase):
         scene = subtitles.scenes[0]
 
         # Should have multiple batches due to intelligent splitting
-        log_input_expected_result("batches created", True, len(scene.batches) > 1)
-        self.assertTrue(len(scene.batches) > 1)
+        self.assertLoggedGreater("batches created", len(scene.batches), 1)
 
         # Verify all batches are within size limit
         for batch in scene.batches:
-            log_input_expected_result(f"batch {batch.number} size <= 5", True, len(batch.originals) <= 5)
-            self.assertTrue(len(batch.originals) <= 5)
+            self.assertLoggedLessEqual(
+                f"batch {batch.number} size",
+                len(batch.originals),
+                5,
+            )
 
     def test_no_split_when_within_limit(self):
         """Test that batches are not split when within max_batch_size."""
@@ -204,11 +182,9 @@ class TestSubtitleBuilder(unittest.TestCase):
         subtitles = builder.Build()
         scene = subtitles.scenes[0]
 
-        log_input_expected_result("single batch count", 1, len(scene.batches))
-        self.assertEqual(len(scene.batches), 1)
+        self.assertLoggedEqual("single batch count", 1, len(scene.batches))
 
-        log_input_expected_result("batch size", 5, len(scene.batches[0].originals))
-        self.assertEqual(len(scene.batches[0].originals), 5)
+        self.assertLoggedEqual("batch size", 5, len(scene.batches[0].originals))
 
     def test_build_finalizes_subtitles(self):
         """Test that Build() properly finalizes the subtitles structure."""
@@ -220,16 +196,13 @@ class TestSubtitleBuilder(unittest.TestCase):
                     .Build()
         )
 
-        log_input_expected_result("built subtitles type", Subtitles, type(subtitles))
-        self.assertEqual(type(subtitles), Subtitles)
+        self.assertLoggedIsInstance("built subtitles type", subtitles, Subtitles)
 
         # Check that flattened originals are properly set
-        log_input_expected_result("originals is not None", True, subtitles.originals is not None)
-        self.assertIsNotNone(subtitles.originals)
+        self.assertLoggedIsNotNone("originals is not None", subtitles.originals)
 
         if subtitles.originals:
-            log_input_expected_result("originals count", 1, len(subtitles.originals))
-            self.assertEqual(len(subtitles.originals), 1)
+            self.assertLoggedEqual("originals count", 1, len(subtitles.originals))
 
     def test_fluent_api_chaining(self):
         """Test that all methods support fluent API chaining."""
@@ -242,26 +215,21 @@ class TestSubtitleBuilder(unittest.TestCase):
                  .BuildLine(timedelta(seconds=4), timedelta(seconds=6), "World")
         )
 
-        log_input_expected_result("fluent API result type", SubtitleBuilder, type(result))
-        self.assertEqual(type(result), SubtitleBuilder)
+        self.assertLoggedIsInstance("fluent API result type", result, SubtitleBuilder)
 
         # Verify the structure was built correctly
         subtitles = result.Build()
 
-        log_input_expected_result("scenes count", 1, len(subtitles.scenes))
-        self.assertEqual(len(subtitles.scenes), 1)
+        self.assertLoggedEqual("scenes count", 1, len(subtitles.scenes))
         scene = subtitles.scenes[0]
 
-        log_input_expected_result("batches count", 1, len(scene.batches))
-        self.assertEqual(len(scene.batches), 1)
+        self.assertLoggedEqual("batches count", 1, len(scene.batches))
         batch = scene.batches[0]
 
-        log_input_expected_result("batch lines count", 2, len(batch.originals))
-        self.assertEqual(len(batch.originals), 2)
+        self.assertLoggedEqual("batch lines count", 2, len(batch.originals))
 
         batch_line_numbers = [line.number for line in batch.originals]
-        log_input_expected_result("batch line numbers", [1, 2], batch_line_numbers)
-        self.assertSequenceEqual(batch_line_numbers, [1, 2])
+        self.assertLoggedSequenceEqual("batch line numbers", [1, 2], batch_line_numbers)
 
     def test_build_line_with_metadata(self):
         """Test BuildLine with metadata parameter."""
@@ -273,8 +241,7 @@ class TestSubtitleBuilder(unittest.TestCase):
         subtitles = builder.Build()
         line = subtitles.scenes[0].batches[0].originals[0]
 
-        log_input_expected_result("line metadata", metadata, line.metadata)
-        self.assertEqual(line.metadata, metadata)
+        self.assertLoggedEqual("line metadata", metadata, line.metadata)
 
     def test_add_lines_with_metadata_tuples(self):
         """Test AddLines with 4-tuple format including metadata."""
@@ -292,11 +259,9 @@ class TestSubtitleBuilder(unittest.TestCase):
         subtitles = builder.Build()
         batch = subtitles.scenes[0].batches[0]
 
-        log_input_expected_result("first line metadata", metadata1, batch.originals[0].metadata)
-        self.assertEqual(batch.originals[0].metadata, metadata1)
+        self.assertLoggedEqual("first line metadata", metadata1, batch.originals[0].metadata)
 
-        log_input_expected_result("second line metadata", metadata2, batch.originals[1].metadata)
-        self.assertEqual(batch.originals[1].metadata, metadata2)
+        self.assertLoggedEqual("second line metadata", metadata2, batch.originals[1].metadata)
 
     def test_edge_case_batch_sizes(self):
         """Test builder with edge case batch sizes."""
@@ -307,13 +272,15 @@ class TestSubtitleBuilder(unittest.TestCase):
         subtitles = builder.Build()
         scene = subtitles.scenes[0]
 
-        log_input_expected_result("batches count with max_batch_size=1", True, len(scene.batches) >= 2)
-        self.assertTrue(len(scene.batches) >= 2)
+        self.assertLoggedGreaterEqual("batches count with max_batch_size=1", len(scene.batches), 2)
 
         # Each batch should have at most 1 line
         for i, batch in enumerate(scene.batches):
-            log_input_expected_result(f"batch {i+1} size <= 1", True, len(batch.originals) <= 1)
-            self.assertTrue(len(batch.originals) <= 1)
+            self.assertLoggedLessEqual(
+                f"batch {i+1} size",
+                len(batch.originals),
+                1,
+            )
 
 if __name__ == '__main__':
     unittest.main()

@@ -10,7 +10,6 @@ from PySubtrans.Instructions import Instructions
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
-    log_input_expected_result,
     skip_if_debugger_attached,
 )
 from PySubtrans.SettingsType import SettingsType, SettingType, SettingsError
@@ -47,8 +46,7 @@ class TestOptions(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"options.get('{key}')", expected, result)
         
         # Test boolean defaults
         bool_test_cases = [
@@ -63,8 +61,7 @@ class TestOptions(LoggedTestCase):
         for key, expected in bool_test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"options.get('{key}')", expected, result)
         
         # Test None values
         none_test_cases = [ 'last_used_path' ]
@@ -72,8 +69,7 @@ class TestOptions(LoggedTestCase):
         for key in none_test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", None, result)
-                self.assertIsNone(result)
+                self.assertLoggedIsNone(f"options.get('{key}')", result)
 
     def test_initialization_with_dict(self):
         """Test Options initialization with a dictionary"""
@@ -92,8 +88,7 @@ class TestOptions(LoggedTestCase):
         for key, expected in custom_test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"options.get('{key}')", expected, result)
         
         # Check that defaults are still present for unspecified options
         default_test_cases = [
@@ -104,8 +99,7 @@ class TestOptions(LoggedTestCase):
         for key, expected in default_test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"options.get('{key}')", expected, result)
 
     def test_initialization_with_options_object(self):
         """Test Options initialization with another Options object"""
@@ -123,8 +117,7 @@ class TestOptions(LoggedTestCase):
         for key, expected in copy_test_cases:
             with self.subTest(key=key):
                 result = copy_options.get(key)
-                log_input_expected_result(f"copy_options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"copy_options.get('{key}')", expected, result)
         
         # Verify it's a deep copy - modifying one doesn't affect the other
         copy_options.set('provider', 'Different Provider')
@@ -132,11 +125,9 @@ class TestOptions(LoggedTestCase):
         original_result = original.get('provider')
         copy_result = copy_options.get('provider')
         
-        log_input_expected_result("original.get('provider') (original unchanged)", 'Test Provider', original_result)
-        self.assertEqual(original_result, 'Test Provider')
-        
-        log_input_expected_result("copy_options.get('provider') (copy modified)", 'Different Provider', copy_result)
-        self.assertEqual(copy_result, 'Different Provider')
+        self.assertLoggedEqual("original.get('provider') (original unchanged)", 'Test Provider', original_result)
+
+        self.assertLoggedEqual("copy_options.get('provider') (copy modified)", 'Different Provider', copy_result)
 
     def test_initialization_with_kwargs(self):
         """Test Options initialization with keyword arguments"""
@@ -156,8 +147,7 @@ class TestOptions(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"options.get('{key}')", expected, result)
 
     def test_initialization_dict_and_kwargs(self):
         """Test Options initialization with both dict and kwargs (kwargs should override)"""
@@ -177,8 +167,7 @@ class TestOptions(LoggedTestCase):
         for key, expected in override_test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"options.get('{key}')", expected, result)
         
         # Dict values should still be present where not overridden
         preserved_test_cases = [
@@ -189,8 +178,7 @@ class TestOptions(LoggedTestCase):
         for key, expected in preserved_test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"options.get('{key}')", expected, result)
 
     def test_none_values_filtered(self):
         """Test that None values in input options are filtered out"""
@@ -214,13 +202,11 @@ class TestOptions(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"options.get('{key}')", expected, result)
         
         # Custom setting with None should not be in options (not in defaults)
         custom_result = options.get('custom_setting')
-        log_input_expected_result("options.get('custom_setting') (None custom setting filtered)", None, custom_result)
-        self.assertIsNone(custom_result)
+        self.assertLoggedIsNone("options.get('custom_setting') (None custom setting filtered)", custom_result)
 
     def test_get_method(self):
         """Test the get method with default values"""
@@ -236,18 +222,15 @@ class TestOptions(LoggedTestCase):
         for key, expected in existing_test_cases:
             with self.subTest(key=key):
                 result = options.get(key)
-                log_input_expected_result(f"options.get('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"options.get('{key}')", expected, result)
         
         # Test getting non-existing values with default
         default_result = options.get('non_existing', 'default')
-        log_input_expected_result("options.get('non_existing', 'default') (with default)", 'default', default_result)
-        self.assertEqual(default_result, 'default')
+        self.assertLoggedEqual("options.get('non_existing', 'default') (with default)", 'default', default_result)
         
         # Test getting non-existing values without default
         none_result = options.get('non_existing')
-        log_input_expected_result("options.get('non_existing') (no default)", None, none_result)
-        self.assertIsNone(none_result)
+        self.assertLoggedIsNone("options.get('non_existing') (no default)", none_result)
 
     def test_add_method(self):
         """Test the add method"""
@@ -574,13 +557,11 @@ class TestSettingsType(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_settings.get_bool(key)
-                log_input_expected_result(f"get_bool('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"get_bool('{key}')", expected, result)
         
         # Test custom default
         result = self.test_settings.get_bool('missing_key', True)
-        log_input_expected_result("get_bool with custom default True", True, result)
-        self.assertTrue(result)
+        self.assertLoggedTrue("get_bool with custom default True", result)
 
     def test_get_int(self):
         """Test SettingsType.get_int method"""
@@ -595,13 +576,11 @@ class TestSettingsType(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_settings.get_int(key)
-                log_input_expected_result(f"get_int('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"get_int('{key}')", expected, result)
         
         # Test custom default
         result = self.test_settings.get_int('missing_key', 999)
-        log_input_expected_result("get_int with custom default", 999, result)
-        self.assertEqual(result, 999)
+        self.assertLoggedEqual("get_int with custom default", 999, result)
 
     def test_get_float(self):
         """Test SettingsType.get_float method"""
@@ -617,13 +596,11 @@ class TestSettingsType(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_settings.get_float(key)
-                log_input_expected_result(f"get_float('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"get_float('{key}')", expected, result)
         
         # Test custom default
         result = self.test_settings.get_float('missing_key', 1.23)
-        log_input_expected_result("get_float with custom default", 1.23, result)
-        self.assertEqual(result, 1.23)
+        self.assertLoggedEqual("get_float with custom default", 1.23, result)
 
     def test_get_str(self):
         """Test SettingsType.get_str method"""
@@ -638,13 +615,11 @@ class TestSettingsType(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_settings.get_str(key)
-                log_input_expected_result(f"get_str('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"get_str('{key}')", expected, result)
         
         # Test custom default
         result = self.test_settings.get_str('missing_key', 'default_string')
-        log_input_expected_result("get_str with custom default", 'default_string', result)
-        self.assertEqual(result, 'default_string')
+        self.assertLoggedEqual("get_str with custom default", 'default_string', result)
 
     def test_get_timedelta(self):
         """Test SettingsType.get_timedelta method"""
@@ -654,13 +629,11 @@ class TestSettingsType(LoggedTestCase):
         # Test with valid seconds value
         result = self.test_settings.get_timedelta('timedelta_seconds', default_td)
         expected = timedelta(seconds=30.5)
-        log_input_expected_result("get_timedelta with float seconds", expected, result)
-        self.assertEqual(result, expected)
+        self.assertLoggedEqual("get_timedelta with float seconds", expected, result)
         
         # Test with missing key
         result = self.test_settings.get_timedelta('missing_key', default_td)
-        log_input_expected_result("get_timedelta with missing key", default_td, result)
-        self.assertEqual(result, default_td)
+        self.assertLoggedEqual("get_timedelta with missing key", default_td, result)
 
     def test_get_str_list(self):
         """Test SettingsType.get_str_list method"""
@@ -674,14 +647,12 @@ class TestSettingsType(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_settings.get_str_list(key)
-                log_input_expected_result(f"get_str_list('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"get_str_list('{key}')", expected, result)
         
         # Test custom default
         custom_default = ['default1', 'default2']
         result = self.test_settings.get_str_list('missing_key', custom_default)
-        log_input_expected_result("get_str_list with custom default", custom_default, result)
-        self.assertSequenceEqual(result, custom_default)
+        self.assertLoggedSequenceEqual("get_str_list with custom default", custom_default, result)
 
     def test_get_list(self):
         """Test SettingsType.get_list method"""
@@ -695,14 +666,12 @@ class TestSettingsType(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_settings.get_list(key)
-                log_input_expected_result(f"get_list('{key}')", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"get_list('{key}')", expected, result)
         
         # Test custom default
         custom_default = ['default', 123, True]
         result = self.test_settings.get_list('missing_key', custom_default)
-        log_input_expected_result("get_list with custom default", custom_default, result)
-        self.assertEqual(result, custom_default)
+        self.assertLoggedEqual("get_list with custom default", custom_default, result)
 
     def test_get_dict(self):
         """Test SettingsType.get_dict method and nested dict functionality"""
@@ -710,19 +679,16 @@ class TestSettingsType(LoggedTestCase):
         # Test getting nested dict
         result = self.test_settings.get_dict('nested_dict')
         expected = {'inner_str': 'nested_value', 'inner_int': 100, 'inner_bool': True}
-        log_input_expected_result("get_dict('nested_dict')", expected, result)
-        self.assertEqual(result, expected)
+        self.assertLoggedEqual("get_dict('nested_dict')", expected, result)
         
         # Test missing key returns empty dict
         result = self.test_settings.get_dict('missing_key')
-        log_input_expected_result("get_dict with missing key", {}, result)
-        self.assertEqual(result, {})
+        self.assertLoggedEqual("get_dict with missing key", {}, result)
         
         # Test custom default
         custom_default = SettingsType({'default_key': 'default_value'})
         result = self.test_settings.get_dict('missing_key', custom_default)
-        log_input_expected_result("get_dict with custom default", custom_default, result)
-        self.assertDictEqual(result, custom_default)
+        self.assertLoggedEqual("get_dict with custom default", custom_default, result)
         
         # Test that get_dict returns a mutable reference to nested dictionaries
         nested_dict = self.test_settings.get_dict('nested_dict')
@@ -733,15 +699,13 @@ class TestSettingsType(LoggedTestCase):
         # Verify the parent was updated
         updated_nested = self.test_settings.get_dict('nested_dict')
         self.assertIn('new_key', updated_nested)
-        log_input_expected_result("nested dict update propagated", 'new_value', updated_nested['new_key'])
-        self.assertEqual(updated_nested['new_key'], 'new_value')
+        self.assertLoggedEqual("nested dict update propagated", 'new_value', updated_nested['new_key'])
         
         # Also verify through direct access
         direct_nested = self.test_settings['nested_dict']
         if isinstance(direct_nested, SettingsType):
             self.assertIn('new_key', direct_nested)
-            log_input_expected_result("nested update visible in direct access", 'new_value', direct_nested['new_key'])
-            self.assertEqual(direct_nested['new_key'], 'new_value')
+            self.assertLoggedEqual("nested update visible in direct access", 'new_value', direct_nested['new_key'])
 
     def test_provider_settings_nested_updates(self):
         """Test that provider_settings properly handles nested updates"""
@@ -764,26 +728,20 @@ class TestSettingsType(LoggedTestCase):
         
         # Test that provider_settings returns a mutable mapping
         provider_settings = options.provider_settings
-        self.assertIsInstance(provider_settings, MutableMapping)
-        log_input_expected_result("provider_settings is MutableMapping", True, isinstance(provider_settings, MutableMapping))
-        
+        self.assertLoggedIsInstance("provider_settings is MutableMapping", provider_settings, MutableMapping)
+
         # Test accessing existing provider settings
         test_provider_settings = provider_settings['Test Provider']
-        self.assertIsInstance(test_provider_settings, SettingsType)
-        log_input_expected_result("provider settings is SettingsType", True, isinstance(test_provider_settings, SettingsType))
+        self.assertLoggedIsInstance("provider settings is SettingsType", test_provider_settings, SettingsType)
         
         # Test accessing values through typed getters
         model = test_provider_settings.get_str('model')
         temperature = test_provider_settings.get_float('temperature')
         api_key = test_provider_settings.get_str('api_key')
         
-        log_input_expected_result("provider model", 'test-model', model)
-        log_input_expected_result("provider temperature", 0.7, temperature)
-        log_input_expected_result("provider api_key", 'test-key', api_key)
-        
-        self.assertEqual(model, 'test-model')
-        self.assertEqual(temperature, 0.7)
-        self.assertEqual(api_key, 'test-key')
+        self.assertLoggedEqual("provider model", 'test-model', model)
+        self.assertLoggedEqual("provider temperature", 0.7, temperature)
+        self.assertLoggedEqual("provider api_key", 'test-key', api_key)
         
         # Test modifying provider settings updates the parent Options
         test_provider_settings['new_setting'] = 'new_value'
@@ -791,8 +749,7 @@ class TestSettingsType(LoggedTestCase):
         # Verify the change is reflected in the main options
         updated_provider_settings = options.provider_settings['Test Provider']
         self.assertIn('new_setting', updated_provider_settings)
-        log_input_expected_result("nested provider update propagated", 'new_value', updated_provider_settings['new_setting'])
-        self.assertEqual(updated_provider_settings['new_setting'], 'new_value')
+        self.assertLoggedEqual("nested provider update propagated", 'new_value', updated_provider_settings['new_setting'])
         
         # Test adding a new provider through the mutable mapping
         new_provider_settings = SettingsType({
@@ -804,16 +761,14 @@ class TestSettingsType(LoggedTestCase):
         # Verify the new provider is accessible
         self.assertIn('New Provider', options.provider_settings)
         new_settings = options.provider_settings['New Provider']
-        log_input_expected_result("new provider model", 'new-provider-model', new_settings.get_str('model'))
-        self.assertEqual(new_settings.get_str('model'), 'new-provider-model')
+        self.assertLoggedEqual("new provider model", 'new-provider-model', new_settings.get_str('model'))
         
         # Test current_provider_settings property
         current_settings = options.current_provider_settings
-        self.assertIsNotNone(current_settings)
+        self.assertLoggedIsNotNone("current provider settings", current_settings)
         if current_settings:
             current_model = current_settings.get_str('model')
-            log_input_expected_result("current provider model", 'test-model', current_model)
-            self.assertEqual(current_model, 'test-model')
+            self.assertLoggedEqual("current provider model", 'test-model', current_model)
             
             # Test that modifying current_provider_settings updates the main options
             current_settings['current_test'] = 'current_value'
@@ -825,8 +780,7 @@ class TestSettingsType(LoggedTestCase):
             if provider is not None:
                 updated_current : SettingsType = options.provider_settings[provider]
                 self.assertIn('current_test', updated_current)
-                log_input_expected_result("current provider update propagated", 'current_value', updated_current['current_test'])
-                self.assertEqual(updated_current['current_test'], 'current_value')
+                self.assertLoggedEqual("current provider update propagated", 'current_value', updated_current['current_test'])
 
 class TestSettingsHelpers(LoggedTestCase):
     """Unit tests for Settings helper functions"""
@@ -878,23 +832,19 @@ class TestSettingsHelpers(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_dict_settings.get_bool(key)
-                log_input_expected_result(f"dict['{key}']", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"dict['{key}']", expected, result)
                 result_opts = self.test_options_obj.get_bool(key)
-                log_input_expected_result(f"Options['{key}']", expected, result_opts)
-                self.assertEqual(result_opts, expected)
+                self.assertLoggedEqual(f"Options['{key}']", expected, result_opts)
         
         # Test custom default
         result = self.test_dict_settings.get_bool('missing_key', True)
-        log_input_expected_result("missing key with default True", True, result)
-        self.assertTrue(result)
+        self.assertLoggedTrue("missing key with default True", result)
         
         # Test None value
         settings_with_none = {'none_value': None}
         settings_with_none_obj = SettingsType(settings_with_none)
         result = settings_with_none_obj.get_bool('none_value')
-        log_input_expected_result("None value", False, result)
-        self.assertFalse(result)
+        self.assertLoggedFalse("None value", result)
 
     @skip_if_debugger_attached
     def test_get_bool_setting_errors(self):
@@ -920,14 +870,12 @@ class TestSettingsHelpers(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_dict_settings.get_int(key)
-                log_input_expected_result(key, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(key, expected, result)
         
         # Test None handling
         settings_with_none = SettingsType({'none_value': None})
         result = settings_with_none.get_int('none_value')
-        log_input_expected_result("None value", None, result)
-        self.assertIsNone(result)
+        self.assertLoggedIsNone("None value", result)
 
     @skip_if_debugger_attached
     def test_get_int_setting_errors(self):
@@ -949,13 +897,11 @@ class TestSettingsHelpers(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_dict_settings.get_float(key)
-                log_input_expected_result(key, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(key, expected, result)
         
         # Test None handling
         result = self.test_dict_settings.get_float('missing_key')
-        log_input_expected_result("missing key", None, result)
-        self.assertIsNone(result)
+        self.assertLoggedIsNone("missing key", result)
 
     @skip_if_debugger_attached
     def test_get_float_setting_errors(self):
@@ -978,13 +924,11 @@ class TestSettingsHelpers(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_dict_settings.get_str(key)
-                log_input_expected_result(key, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(key, expected, result)
         
         # Test None handling
         result = self.test_dict_settings.get_str('missing_key')
-        log_input_expected_result("missing key", None, result)
-        self.assertIsNone(result)
+        self.assertLoggedIsNone("missing key", result)
 
     def test_get_list_setting(self):
         """Test GetListSetting with various input types"""
@@ -998,13 +942,11 @@ class TestSettingsHelpers(LoggedTestCase):
         for key, expected in test_cases:
             with self.subTest(key=key):
                 result = self.test_dict_settings.get_list(key)
-                log_input_expected_result(key, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(key, expected, result)
         
         # Test missing key returns empty list
         result = self.test_dict_settings.get_list('missing_key')
-        log_input_expected_result("missing key", [], result)
-        self.assertEqual(result, [])
+        self.assertLoggedEqual("missing key", [], result)
         
     @skip_if_debugger_attached
     def test_get_list_setting_errors(self):
@@ -1020,16 +962,14 @@ class TestSettingsHelpers(LoggedTestCase):
         # Test with valid string list
         result = self.test_dict_settings.get_str_list('list_value')
         expected = ['apple', 'banana', 'cherry']
-        log_input_expected_result("valid string list", expected, result)
-        self.assertEqual(result, expected)
+        self.assertLoggedEqual("valid string list", expected, result)
         
         # Test with mixed types (should convert to strings)
         mixed_settings = {'mixed_list': [1, 'two', True, None]}
         mixed_settings_obj = SettingsType(mixed_settings)
         result = mixed_settings_obj.get_str_list('mixed_list')
         expected = ['1', 'two', 'True']
-        log_input_expected_result("mixed types", expected, result)
-        self.assertEqual(result, expected)
+        self.assertLoggedEqual("mixed types", expected, result)
 
     def test_get_timedelta_setting(self):
         """Test GetTimeDeltaSetting function"""
@@ -1044,14 +984,12 @@ class TestSettingsHelpers(LoggedTestCase):
             with self.subTest(key=key):
                 default = timedelta(minutes=1)  # Use a different default to distinguish from expected
                 result = self.test_dict_settings.get_timedelta(key, default)
-                log_input_expected_result(key, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(key, expected, result)
         
         # Test default value
         default = timedelta(minutes=5)
         result = self.test_dict_settings.get_timedelta('missing_key', default)
-        log_input_expected_result("missing key with default", default, result)
-        self.assertEqual(result, default)
+        self.assertLoggedEqual("missing key with default", default, result)
 
     @skip_if_debugger_attached
     def test_get_timedelta_setting_errors(self):
@@ -1075,18 +1013,15 @@ class TestSettingsHelpers(LoggedTestCase):
         for key, setting_type, expected in test_cases:
             with self.subTest(key=key):
                 result = get_optional_setting(self.test_dict_settings, key, setting_type)
-                log_input_expected_result(key, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(key, expected, result)
         
         # Test missing key returns None
         result = get_optional_setting(self.test_dict_settings, 'missing_key', str)
-        log_input_expected_result("missing key", None, result)
-        self.assertIsNone(result)
+        self.assertLoggedIsNone("missing key", result)
         
         # Test with Options object
         result = get_optional_setting(self.test_options_obj, 'bool_true', bool)
-        log_input_expected_result("Options object", True, result)
-        self.assertTrue(result)
+        self.assertLoggedTrue("Options object", result)
 
     @skip_if_debugger_attached
     def test_get_optional_setting_errors(self):
@@ -1108,8 +1043,7 @@ class TestSettingsHelpers(LoggedTestCase):
         for key, setting_type, expected in valid_cases:
             with self.subTest(key=key):
                 result = validate_setting_type(self.test_dict_settings, key, setting_type)
-                log_input_expected_result(f"'{key}' as {setting_type.__name__}", expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"'{key}' as {setting_type.__name__}", expected, result)
         
     @skip_if_debugger_attached
     def test_validate_setting_type_errors(self):
@@ -1117,13 +1051,11 @@ class TestSettingsHelpers(LoggedTestCase):
         
         # Test missing optional setting
         result = validate_setting_type(self.test_dict_settings, 'missing_key', str, required=False)
-        log_input_expected_result("missing optional setting", True, result)
-        self.assertTrue(result)
+        self.assertLoggedTrue("missing optional setting", result)
         
         # Test invalid type
         result = validate_setting_type(self.test_dict_settings, 'bool_str_invalid', bool)
-        log_input_expected_result("invalid type conversion", False, result)
-        self.assertFalse(result)
+        self.assertLoggedFalse("invalid type conversion", result)
 
         # Test required missing setting
         with self.assertRaises(SettingsError) as cm:

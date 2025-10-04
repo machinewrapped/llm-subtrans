@@ -1,11 +1,12 @@
 import unittest
 from datetime import timedelta
-from PySubtrans.Helpers.Tests import log_input_expected_error, log_input_expected_result, log_test_name
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Time import GetTimeDelta, TimedeltaToText
 
-class TestTimeHelpers(unittest.TestCase):
+
+class TestTimeHelpers(LoggedTestCase):
     def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+        super().setUp()
     get_timedelta_cases = [
         (timedelta(hours=1, minutes=30, seconds=45), timedelta(hours=1, minutes=30, seconds=45)),
         ("01:30:45,000", timedelta(hours=1, minutes=30, seconds=45)),
@@ -29,11 +30,17 @@ class TestTimeHelpers(unittest.TestCase):
                 error_expected = (expected == ValueError)
                 result = GetTimeDelta(value, raise_exception = not error_expected)
                 if error_expected:
-                    log_input_expected_error(value, expected, result)
-                    self.assertIsInstance(result, ValueError)
+                    self.assertLoggedIsInstance(
+                        f"GetTimeDelta({value!r}) error",
+                        result,
+                        ValueError,
+                    )
                 else:
-                    log_input_expected_result(value, expected, result)
-                    self.assertEqual(result, expected)
+                    self.assertLoggedEqual(
+                        f"GetTimeDelta({value!r})",
+                        expected,
+                        result,
+                    )
 
     timedelta_to_text_cases = [
         (timedelta(hours=2, minutes=34, seconds=56, microseconds=789000), "2:34:56,789", True),
@@ -76,8 +83,11 @@ class TestTimeHelpers(unittest.TestCase):
         for value, expected, include_milliseconds in self.timedelta_to_text_cases:
             with self.subTest(value=value):
                 result = TimedeltaToText(value, include_milliseconds=include_milliseconds)
-                log_input_expected_result((value, include_milliseconds), expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(
+                    f"TimedeltaToText({value}, include_milliseconds={include_milliseconds})",
+                    expected,
+                    result,
+                )
 
 if __name__ == '__main__':
     unittest.main()

@@ -2,7 +2,7 @@ from copy import deepcopy
 
 from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans.Helpers.TestCases import DummyProvider, PrepareSubtitles, SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name
+from PySubtrans.Helpers.Tests import log_info, log_test_name
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleEditor import SubtitleEditor
@@ -70,9 +70,8 @@ class SubtitleTranslatorTests(SubtitleTestCase):
 
         reference_batch = reference.GetBatch(batch.scene, batch.number)
 
-        log_input_expected_result("Line count", reference_batch.size, batch.size)
-        self.assertEqual(reference_batch.size, batch.size)
-
+        self.assertLoggedEqual("Line count", reference_batch.size, batch.size)
+        
         self.assertEqual(batch.first_line_number, reference_batch.first_line_number)
         self.assertEqual(batch.last_line_number, reference_batch.last_line_number)
         self.assertEqual(batch.start, reference_batch.start)
@@ -89,11 +88,8 @@ class SubtitleTranslatorTests(SubtitleTestCase):
         self.assertIsNotNone(scene.summary)
 
         reference_scene = reference.GetScene(scene.number)
-        log_input_expected_result("Batch count", reference_scene.size, scene.size)
-        log_input_expected_result("Line count", reference_scene.linecount, scene.linecount)
-
-        self.assertEqual(reference_scene.size, scene.size)
-        self.assertEqual(reference_scene.linecount, scene.linecount)
+        self.assertLoggedEqual("Batch count", reference_scene.size, scene.size)
+        self.assertLoggedEqual("Line count", reference_scene.linecount, scene.linecount)
 
 
     def test_PostProcessTranslation(self):
@@ -136,10 +132,8 @@ class SubtitleTranslatorTests(SubtitleTestCase):
             expected_differences = data['expected_postprocess_differences']
             expected_unchanged = data['expected_postprocess_unchanged']
 
-            log_input_expected_result("Differences", expected_differences, differences)
-            self.assertEqual(differences, expected_differences)
+            self.assertLoggedEqual("Differences", expected_differences, differences)
 
-            log_input_expected_result("Unchanged", expected_unchanged, unchanged)
-            self.assertEqual(unchanged, expected_unchanged)
+            self.assertLoggedEqual("Unchanged", expected_unchanged, unchanged)
 
 

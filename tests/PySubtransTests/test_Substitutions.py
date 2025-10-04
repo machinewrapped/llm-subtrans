@@ -1,10 +1,11 @@
 import unittest
 from PySubtrans.Substitutions import Substitutions
-from PySubtrans.Helpers.Tests import log_test_name, log_input_expected_result
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 
-class TestSubstitutions(unittest.TestCase):
+
+class TestSubstitutions(LoggedTestCase):
     def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+        super().setUp()
     parse_cases = [
         ([], {}),
         ("", {}),
@@ -17,8 +18,11 @@ class TestSubstitutions(unittest.TestCase):
         for value, expected in self.parse_cases:
             with self.subTest(value=value):
                 result = Substitutions.Parse(value)
-                log_input_expected_result(value, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(
+                    f"ParseSubstitutions({value!r})",
+                    expected,
+                    result,
+                )
 
     perform_cases = [
         (["before::after", "hello::world"], "before hello", "after world", Substitutions.Mode.WholeWords),
@@ -38,16 +42,22 @@ class TestSubstitutions(unittest.TestCase):
             with self.subTest(value=value):
                 helper = Substitutions(substitutions, mode)
                 result = helper.PerformSubstitutions(value)
-                log_input_expected_result((value, substitutions), expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(
+                    f"PerformSubstitutions({value!r}, mode={mode.name}) using {substitutions!r}",
+                    expected,
+                    result,
+                )
 
     def test_PerformSubstitutionsAuto(self):
         for substitutions, value, expected, _ in self.perform_cases:
             with self.subTest(value=value):
                 helper = Substitutions(substitutions, Substitutions.Mode.Auto)
                 result = helper.PerformSubstitutions(value)
-                log_input_expected_result((value, substitutions), expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(
+                    f"PerformSubstitutionsAuto({value!r}) using {substitutions!r}",
+                    expected,
+                    result,
+                )
 
 if __name__ == '__main__':
     unittest.main()

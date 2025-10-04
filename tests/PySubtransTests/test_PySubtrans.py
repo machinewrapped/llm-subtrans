@@ -13,21 +13,19 @@ from PySubtrans import (
     init_translator,
     init_translation_provider,
 )
-from PySubtrans.Helpers.TestCases import DummyProvider  # noqa: F401 - ensure provider is registered
+from PySubtrans.Helpers.TestCases import DummyProvider, LoggedTestCase  # noqa: F401 - ensure provider is registered
 from ..TestData.chinese_dinner import chinese_dinner_json_data
 from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
-    log_input_expected_result,
-    log_test_name,
     skip_if_debugger_attached,
 )
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError, TranslationImpossibleError
 
 
-class PySubtransConvenienceTests(unittest.TestCase):
+class PySubtransConvenienceTests(LoggedTestCase):
     def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+        super().setUp()
         self.srt_content = """1\n00:00:01,000 --> 00:00:04,000\nHello world\n\n2\n00:00:06,000 --> 00:00:09,000\nHow are you?\n"""
 
     def _create_options(self):
@@ -75,17 +73,13 @@ class PySubtransConvenienceTests(unittest.TestCase):
         log_input_expected_error("Translate without batching", TranslationImpossibleError, exc.exception)
 
         scenes = batch_subtitles(subtitles, scene_threshold=20.0, min_batch_size=1, max_batch_size=5)
+        self.assertLoggedEqual("scene count after batching", 1, len(scenes))
 
-        log_input_expected_result("scene count after batching", 1, len(scenes))
-        self.assertEqual(len(scenes), 1)
-
-        log_input_expected_result("batch count after batching", 1, len(scenes[0].batches))
-        self.assertEqual(len(scenes[0].batches), 1)
+        self.assertLoggedEqual("batch count after batching", 1, len(scenes[0].batches))
 
         translator.TranslateSubtitles(subtitles)
 
-        log_input_expected_result("scene count remains", 1, subtitles.scenecount)
-        self.assertEqual(subtitles.scenecount, 1)
+        self.assertLoggedEqual("scene count remains", 1, subtitles.scenecount)
 
     def test_init_subtitles_auto_batches(self) -> None:
         options = self._create_options()
@@ -96,28 +90,24 @@ class PySubtransConvenienceTests(unittest.TestCase):
             options=options,
         )
 
-        log_input_expected_result("auto batch created scenes", True, subtitles.scenecount > 0)
-        self.assertGreater(subtitles.scenecount, 0)
+        self.assertLoggedGreater(
+            "auto batch created scenes",
+            subtitles.scenecount,
+            0,
+        )
 
         batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
-        log_input_expected_result("auto batch created batches", True, batch_count > 0)
-        self.assertGreater(batch_count, 0)
+        self.assertLoggedGreater(
+            "auto batch created batches",
+            batch_count,
+            0,
+        )
 
         preprocess_setting = subtitles.settings.get('preprocess_subtitles')
-        log_input_expected_result(
-            "preprocess flag stored on subtitles",
-            None,
-            preprocess_setting,
-        )
-        self.assertIsNone(preprocess_setting)
+        self.assertLoggedIsNone("preprocess flag stored on subtitles", preprocess_setting)
 
         scene_threshold = subtitles.settings.get('scene_threshold')
-        log_input_expected_result(
-            "scene threshold stored on subtitles",
-            None,
-            scene_threshold,
-        )
-        self.assertIsNone(scene_threshold)
+        self.assertLoggedIsNone("scene threshold stored on subtitles", scene_threshold)
 
     def test_init_translation_provider_reuse(self) -> None:
         options = self._create_options()
@@ -130,46 +120,31 @@ class PySubtransConvenienceTests(unittest.TestCase):
 
         provider = init_translation_provider("Dummy Provider", options)
 
-        log_input_expected_result("provider initialised", "Dummy Provider", provider.name)
-        self.assertEqual(provider.name, "Dummy Provider")
+        self.assertLoggedEqual("provider initialised", "Dummy Provider", provider.name)
 
         translator = init_translator(options, translation_provider=provider)
 
-        log_input_expected_result(
+        self.assertLoggedIs(
             "translator provider reused",
-            provider.name,
-            translator.translation_provider.name,
+            provider,
+            translator.translation_provider,
         )
-        self.assertIs(translator.translation_provider, provider)
 
     def test_init_translation_provider_updates_provider(self) -> None:
         options = init_options(model="dummy-model")
 
-        log_input_expected_result("options provider before init", None, options.provider)
-        self.assertIsNone(options.provider)
+        self.assertLoggedIsNone("options provider before init", options.provider)
 
         provider = init_translation_provider("Dummy Provider", options)
 
-        log_input_expected_result("options provider after init", "Dummy Provider", options.provider)
-        self.assertEqual(options.provider, "Dummy Provider")
+        self.assertLoggedEqual("options provider after init", "Dummy Provider", options.provider)
 
-        log_input_expected_result("provider instance name", "Dummy Provider", provider.name)
-        self.assertEqual(provider.name, "Dummy Provider")
+        self.assertLoggedEqual("provider instance name", "Dummy Provider", provider.name)
 
-        log_input_expected_result(
-            "provider settings created",
-            True,
-            "Dummy Provider" in options.provider_settings,
-        )
-        self.assertIn("Dummy Provider", options.provider_settings)
+        self.assertLoggedIn("provider settings created", "Dummy Provider", options.provider_settings)
 
         provider_options = options.provider_settings['Dummy Provider']
-        log_input_expected_result(
-            "provider model stored",
-            "dummy-model",
-            provider_options.get('model'),
-        )
-        self.assertEqual(provider_options.get('model'), "dummy-model")
+        self.assertLoggedEqual("provider model stored", "dummy-model", provider_options.get('model'))
 
     def test_init_project_batches_on_creation(self) -> None:
         options = self._create_options()
@@ -181,30 +156,28 @@ class PySubtransConvenienceTests(unittest.TestCase):
         try:
             project = init_project(options, filepath=subtitle_path)
 
-            log_input_expected_result("scenes created", True, project.subtitles.scenecount > 0)
-            self.assertGreater(project.subtitles.scenecount, 0)
+            self.assertLoggedGreater(
+                "project scenes created",
+                project.subtitles.scenecount,
+                0,
+            )
             batch_count = sum(len(scene.batches) for scene in project.subtitles.scenes)
-            log_input_expected_result("batches created", True, batch_count > 0)
-            self.assertGreater(batch_count, 0)
+            self.assertLoggedGreater(
+                "project batches created",
+                batch_count,
+                0,
+            )
 
-            log_input_expected_result(
+            self.assertLoggedTrue(
                 "project options preprocess flag",
-                True,
                 options.get_bool('preprocess_subtitles'),
             )
-            self.assertTrue(options.get_bool('preprocess_subtitles'))
 
             preprocess_setting = project.subtitles.settings.get('preprocess_subtitles')
-            log_input_expected_result(
-                "project subtitles preprocess flag",
-                None,
-                preprocess_setting,
-            )
-            self.assertIsNone(preprocess_setting)
+            self.assertLoggedIsNone("project subtitles preprocess flag", preprocess_setting)
 
             scene_threshold = project.subtitles.settings.get('scene_threshold')
-            log_input_expected_result("project subtitles scene threshold", None, scene_threshold)
-            self.assertIsNone(scene_threshold)
+            self.assertLoggedIsNone("project subtitles scene threshold", scene_threshold)
 
         finally:
             if os.path.exists(subtitle_path):
@@ -218,8 +191,11 @@ class PySubtransConvenienceTests(unittest.TestCase):
         # Use the realistic test JSON data from chinese_dinner module
         json_data = chinese_dinner_json_data
 
-        log_input_expected_result("JSON scenes loaded", True, len(json_data["scenes"]) > 0)
-        self.assertGreater(len(json_data["scenes"]), 0)
+        self.assertLoggedGreater(
+            "JSON scenes loaded",
+            len(json_data["scenes"]),
+            0,
+        )
 
         # Build subtitles from JSON using SubtitleBuilder
         builder = SubtitleBuilder(max_batch_size=5)  # Small batch size to test multiple batches
@@ -246,29 +222,36 @@ class PySubtransConvenienceTests(unittest.TestCase):
             'target_language': json_data.get('target_language', 'English'),
         }))
 
-        log_input_expected_result("built subtitles line count", total_lines, subtitles.linecount)
-        self.assertEqual(subtitles.linecount, total_lines)
+        self.assertLoggedEqual("built subtitles line count", total_lines, subtitles.linecount)
 
-        log_input_expected_result("built subtitles scene count", len(json_data["scenes"]), subtitles.scenecount)
-        self.assertEqual(subtitles.scenecount, len(json_data["scenes"]))
+        self.assertLoggedEqual("built subtitles scene count", len(json_data["scenes"]), subtitles.scenecount)
 
         # Verify scenes have summaries
         for i, scene in enumerate(subtitles.scenes):
             expected_summary = json_data["scenes"][i]["summary"]
-            log_input_expected_result(f"scene {scene.number} summary", expected_summary, scene.context.get('summary'))
-            self.assertEqual(scene.context.get('summary'), expected_summary)
+            self.assertLoggedEqual(
+                f"scene {scene.number} summary",
+                expected_summary,
+                scene.context.get('summary')
+            )
 
         # The SubtitleBatcher creates batches based on timing gaps, not just max_batch_size
         # So we just verify we have a reasonable number of batches
         actual_batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
 
-        log_input_expected_result("total batch count", True, actual_batch_count >= len(json_data["scenes"]))
-        self.assertGreaterEqual(actual_batch_count, len(json_data["scenes"]))  # At least one batch per scene
+        self.assertLoggedGreaterEqual(
+            "total batch count",
+            actual_batch_count,
+            len(json_data["scenes"]),
+        )
 
         # Verify scene 1 has multiple batches (since it has 55 lines with max_batch_size=5)
         scene1_batch_count = len(subtitles.scenes[0].batches)
-        log_input_expected_result("scene 1 multiple batches", True, scene1_batch_count > 1)
-        self.assertGreater(scene1_batch_count, 1)
+        self.assertLoggedGreater(
+            "scene 1 multiple batches",
+            scene1_batch_count,
+            1,
+        )
 
         # Test event system with translation
         translation_provider = TranslationProvider.get_provider(options)
@@ -301,32 +284,41 @@ class PySubtransConvenienceTests(unittest.TestCase):
         translator.TranslateSubtitles(subtitles)
 
         # Verify events were fired
-        log_input_expected_result("batch events fired", actual_batch_count, len(batch_events))
-        self.assertEqual(len(batch_events), actual_batch_count)
+        self.assertLoggedEqual("batch events fired", actual_batch_count, len(batch_events))
 
-        log_input_expected_result("scene events fired", len(json_data["scenes"]), len(scene_events))
-        self.assertEqual(len(scene_events), len(json_data["scenes"]))
+        self.assertLoggedEqual("scene events fired", len(json_data["scenes"]), len(scene_events))
 
         # Verify event data accuracy
         for event in batch_events:
-            log_input_expected_result(f"batch event scene {event['scene']} size", True, event['size'] > 0)
-            self.assertGreater(event['size'], 0)
+            self.assertLoggedGreater(
+                f"batch event scene {event['scene']} size",
+                event['size'],
+                0,
+            )
 
         for i, event in enumerate(scene_events):
             expected_scene_num = i + 1
-            log_input_expected_result(f"scene event {i} number", expected_scene_num, event['scene'])
-            self.assertEqual(event['scene'], expected_scene_num)
+            self.assertLoggedEqual(f"scene event {i} number", expected_scene_num, event['scene'])
 
-            log_input_expected_result(f"scene event {i} linecount", True, event['linecount'] > 0)
-            self.assertGreater(event['linecount'], 0)
+            self.assertLoggedGreater(
+                f"scene event {i} linecount",
+                event['linecount'],
+                0,
+            )
 
         # Note: Translation may fail due to dummy provider limitations, but events should still fire
         # Just verify that we tried to translate (events fired properly)
-        log_input_expected_result("translation attempted", True, len(batch_events) > 0)
-        self.assertGreater(len(batch_events), 0)
+        self.assertLoggedGreater(
+            "translation attempted",
+            len(batch_events),
+            0,
+        )
 
-        log_input_expected_result("scene processing completed", True, len(scene_events) > 0)
-        self.assertGreater(len(scene_events), 0)
+        self.assertLoggedGreater(
+            "scene processing completed",
+            len(scene_events),
+            0,
+        )
 
     def test_explicit_prompt_overrides_instruction_file(self) -> None:
         """Test that explicit prompts take precedence over instruction file prompts"""
@@ -348,8 +340,7 @@ class PySubtransConvenienceTests(unittest.TestCase):
                 instruction_file=instruction_file_path
             )
 
-            log_input_expected_result("explicit prompt used", explicit_prompt, options.get('prompt'))
-            self.assertEqual(options.get('prompt'), explicit_prompt)
+            self.assertLoggedEqual("explicit prompt used", explicit_prompt, options.get('prompt'))
 
             # Test without explicit prompt - should use instruction file
             options_no_prompt = init_options(
@@ -358,8 +349,11 @@ class PySubtransConvenienceTests(unittest.TestCase):
                 instruction_file=instruction_file_path
             )
 
-            log_input_expected_result("instruction file prompt used", "Translate these subtitles from instruction file", options_no_prompt.get('prompt'))
-            self.assertEqual(options_no_prompt.get('prompt'), "Translate these subtitles from instruction file")
+            self.assertLoggedEqual(
+                "instruction file prompt used",
+                "Translate these subtitles from instruction file",
+                options_no_prompt.get('prompt')
+            )
 
         finally:
             if os.path.exists(instruction_file_path):
@@ -380,8 +374,7 @@ class PySubtransConvenienceTests(unittest.TestCase):
         # init_translator should NOT call InitialiseInstructions and should preserve user changes
         translator = init_translator(options)
 
-        log_input_expected_result("user modified prompt preserved", user_modified_prompt, translator.settings.get('prompt'))
-        self.assertEqual(translator.settings.get('prompt'), user_modified_prompt)
+        self.assertLoggedEqual("user modified prompt preserved", user_modified_prompt, translator.settings.get('prompt'))
 
     def test_instruction_file_without_explicit_prompt(self) -> None:
         """Test that instruction file values are used when no explicit prompt is provided"""
@@ -401,17 +394,13 @@ class PySubtransConvenienceTests(unittest.TestCase):
                 instruction_file=instruction_file_path
             )
 
-            log_input_expected_result("instruction file prompt", "Instruction file prompt", options.get('prompt'))
-            self.assertEqual(options.get('prompt'), "Instruction file prompt")
+            self.assertLoggedEqual("instruction file prompt", "Instruction file prompt", options.get('prompt'))
 
-            log_input_expected_result("instruction file instructions", "Instruction file instructions", options.get('instructions'))
-            self.assertEqual(options.get('instructions'), "Instruction file instructions")
+            self.assertLoggedEqual("instruction file instructions", "Instruction file instructions", options.get('instructions'))
 
-            log_input_expected_result("instruction file target_language", "French", options.get('target_language'))
-            self.assertEqual(options.get('target_language'), "French")
+            self.assertLoggedEqual("instruction file target_language", "French", options.get('target_language'))
 
-            log_input_expected_result("instruction file task_type", "CustomTask", options.get('task_type'))
-            self.assertEqual(options.get('task_type'), "CustomTask")
+            self.assertLoggedEqual("instruction file task_type", "CustomTask", options.get('task_type'))
 
         finally:
             if os.path.exists(instruction_file_path):

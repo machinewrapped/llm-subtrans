@@ -63,11 +63,6 @@ class TranslationEvents:
         self._default_warning_wrapper = lambda sender, message: logging.warning(message)
         self._default_info_wrapper = lambda sender, message: logging.info(message)
 
-        # Wrappers for custom logger (if connected)
-        self._custom_error_wrapper = None
-        self._custom_warning_wrapper = None
-        self._custom_info_wrapper = None
-
     def connect_default_loggers(self):
         """
         Connect default logging handlers to logging signals.

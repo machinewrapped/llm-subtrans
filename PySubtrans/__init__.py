@@ -452,6 +452,7 @@ __all__ = [
     'batch_subtitles',
     'init_project',
     'init_subtitles',
+    'init_translation_provider',
     'init_translator',
     'preprocess_subtitles',
 ]

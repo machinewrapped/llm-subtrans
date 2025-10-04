@@ -137,14 +137,38 @@ Example
 ```python
 from PySubtrans import init_options, init_translator, init_translation_provider
 
-options = init_options(provider="gemini", api_key="your-key")
-provider = init_translation_provider("gemini", options)
+options = init_options(provider="Gemini", api_key="your-key")
+provider = init_translation_provider("Gemini", options)
 translator = init_translator(options, translation_provider=provider)
 translator.events.scene_translated.connect(on_scene_translated)  # Subscribe to events
 translator.TranslateSubtitles(subtitles)
 ```
 
 Note that different providers may require different settings. See the [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/) documentation for details on supported providers.
+
+OpenRouter and DeepSeek are supported natively, along with connection to any server with an OpenAI chat-compatible API.
+
+```python
+from PySubtrans import init_options, init_translation_provider
+
+# Connect to deepseek
+options = init_options(
+    model="deepseek-chat", 
+    api_base="https://api.deepseek.com",
+    api_key="sk-..."
+)
+
+provider = init_translation_provider("DeepSeek", options)
+
+# Connect to locally hosted model server (e.g. LM Studio)
+options = init_options(
+    server_address='http://localhost:8000',
+    supports_conversation=True,
+    max_tokens=4096
+)
+
+provider = init_translation_provider("Custom Server", options)
+```
 
 #### Translation Events
 

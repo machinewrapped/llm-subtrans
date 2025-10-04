@@ -119,7 +119,7 @@ class TestableViewModel(ProjectViewModel):
     def assert_line_contents(self, test_data : list[tuple[int, int, int, str]]) -> None:
         """
         Helper to assert multiple line texts at once.
-        test_data: list of (scene_num, batch_num, line_idx, absolute_line_num, expected_text)
+        test_data: list of (scene_num, batch_num, line_idx, expected_text)
         line_idx can be negative to index from the end
         """
         all_text_matches : bool = True

@@ -3,22 +3,22 @@ from datetime import timedelta
 import tempfile
 import os
 
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Formats.VttFileHandler import VttFileHandler
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleData import SubtitleData
 from PySubtrans.SubtitleError import SubtitleParseError
 from PySubtrans.Helpers.Tests import (
-    log_input_expected_result,
     log_test_name,
     skip_if_debugger_attached,
 )
 
-class TestVttFileHandler(unittest.TestCase):
+class TestVttFileHandler(LoggedTestCase):
     """Test cases for WebVTT file handler."""
     
     def setUp(self) -> None:
         """Set up test fixtures."""
-        log_test_name(self._testMethodName)
+        super().setUp()
         self.handler = VttFileHandler()
         
         # Sample VTT content for testing
@@ -66,8 +66,7 @@ Third subtitle line with <i>formatting</i>
         expected = ['.vtt']
         result = self.handler.get_file_extensions()
         
-        log_input_expected_result("", expected, result)
-        self.assertEqual(result, expected)
+        self.assertLoggedEqual("VTT extensions", expected, result)
     
     def test_parse_string_basic(self):
         """Test parsing of basic WebVTT content."""
@@ -75,9 +74,8 @@ Third subtitle line with <i>formatting</i>
         data = self.handler.parse_string(self.sample_vtt_content)
         lines = data.lines
         
-        log_input_expected_result(self.sample_vtt_content[:100] + "...", len(self.expected_lines), len(lines))
+        self.assertLoggedEqual("Parsed line count", len(self.expected_lines), len(lines))
         
-        self.assertEqual(len(lines), len(self.expected_lines))
         
         for i, (expected, actual) in enumerate(zip(self.expected_lines, lines)):
             with self.subTest(line_number=i+1):
@@ -99,8 +97,7 @@ Third subtitle line with <i>formatting</i>
             os.remove(temp_path)
 
         lines = data.lines
-        log_input_expected_result("File content", 3, len(lines))
-        self.assertEqual(len(lines), 3)
+        self.assertLoggedEqual('File content', 3, len(lines))
         self.assertEqual(lines[0].text, "First subtitle line")
 
     def test_composition_variations(self):
@@ -196,8 +193,7 @@ Third subtitle line with <i>formatting</i>
                 
                 for expected_content in case["should_contain"]:
                     contains_content = expected_content in result
-                    log_input_expected_result(expected_content, True, contains_content)
-                    self.assertIn(expected_content, result)
+                    self.assertLoggedIn(expected_content, expected_content, result)
     
     @skip_if_debugger_attached
     def test_parse_invalid_vtt_content(self):
@@ -210,7 +206,8 @@ Third subtitle line with <i>formatting</i>
             self.handler.parse_string(invalid_content)
             assert_raised = False
         
-        log_input_expected_result("Invalid content", True, assert_raised)
+        self.assertLoggedTrue('Invalid content', assert_raised)
+    
     
     def test_round_trip_conversion(self):
         """Test that parsing and composing results in similar content."""
@@ -226,12 +223,10 @@ Third subtitle line with <i>formatting</i>
         round_trip_data = self.handler.parse_string(composed)
         round_trip_lines = round_trip_data.lines
         
-        log_input_expected_result("Original lines", len(original_lines), len(round_trip_lines))
-        self.assertEqual(len(original_lines), len(round_trip_lines))
+        self.assertLoggedEqual('Original lines', len(original_lines), len(round_trip_lines))
         
         # Validate metadata preservation
-        log_input_expected_result("Metadata preserved", True, True)
-        self.assertEqual(original_data.detected_format, round_trip_data.detected_format)
+        self.assertLoggedEqual("Metadata format preserved", original_data.detected_format, round_trip_data.detected_format)
         
         # Compare line properties
         for original, round_trip in zip(original_lines, round_trip_lines):
@@ -244,12 +239,10 @@ Third subtitle line with <i>formatting</i>
 
         data = self.handler.parse_string(self.sample_vtt_content)
 
-        log_input_expected_result("Detected format", ".vtt", data.detected_format)
-        self.assertEqual(data.detected_format, ".vtt")
+        self.assertLoggedEqual('Detected format', '.vtt', data.detected_format)
 
         composed = self.handler.compose(data)
-        log_input_expected_result("Round trip format", True, "WEBVTT" in composed)
-        self.assertIn("WEBVTT", composed)
+        self.assertLoggedIn('Round trip format', 'WEBVTT', composed)
     
     def test_timestamp_formatting_conversion(self):
         """Test that timestamp formatting works correctly."""
@@ -272,8 +265,7 @@ Third subtitle line with <i>formatting</i>
             with self.subTest(case=i):
                 result = self.handler._format_timestamp(test_timedelta)
                 
-                log_input_expected_result(test_timedelta, expected_string, result)
-                self.assertEqual(result, expected_string)
+                self.assertLoggedEqual(test_timedelta, expected_string, result)
     
     def test_vtt_cue_id_preservation(self):
         """Test that WebVTT cue IDs are preserved when present."""
@@ -300,16 +292,13 @@ Third subtitle with ID
         
         # Check that cue IDs are preserved in metadata where present
         if len(lines) >= 1 and 'cue_id' in lines[0].metadata:
-            log_input_expected_result("First cue ID", "cue1", lines[0].metadata['cue_id'])
-            self.assertEqual(lines[0].metadata['cue_id'], "cue1")
+            self.assertLoggedEqual('First cue ID', 'cue1', lines[0].metadata['cue_id'])
         
         # Second line should not have cue ID
-        log_input_expected_result("Second line has no cue ID", True, 'cue_id' not in lines[1].metadata)
-        self.assertNotIn('cue_id', lines[1].metadata)
+        self.assertLoggedNotIn('Second line has no cue ID', 'cue_id', lines[1].metadata)
         
         if len(lines) >= 3 and 'cue_id' in lines[2].metadata:
-            log_input_expected_result("Third cue ID", "cue3", lines[2].metadata['cue_id'])
-            self.assertEqual(lines[2].metadata['cue_id'], "cue3")
+            self.assertLoggedEqual('Third cue ID', 'cue3', lines[2].metadata['cue_id'])
     
 
     def test_vtt_parsing_variations(self):
@@ -384,41 +373,33 @@ Where did he go?
                 data = self.handler.parse_string(case["content"])
                 lines = data.lines
                 
-                log_input_expected_result(f'{case["test_name"]}_line_count', case["expected_lines"], len(lines))
-                self.assertEqual(len(lines), case["expected_lines"])
+                self.assertLoggedEqual(f"{case['test_name']}_line_count", case['expected_lines'], len(lines))
                 
                 if case.get("check_format"):
-                    log_input_expected_result(f'{case["test_name"]}_format', ".vtt", data.detected_format)
-                    self.assertEqual(data.detected_format, ".vtt")
+                    self.assertLoggedEqual(f"{case['test_name']}_format", '.vtt', data.detected_format)
                 
                 if case["expected_lines"] > 0:
                     if "first_start" in case:
-                        log_input_expected_result(case["first_start"], case["first_start"], lines[0].start)
-                        self.assertEqual(lines[0].start, case["first_start"])
+                        self.assertLoggedEqual(case['first_start'], case['first_start'], lines[0].start)
                     
                     if "first_text" in case:
-                        log_input_expected_result(case["first_text"], case["first_text"], lines[0].text)
-                        self.assertEqual(lines[0].text, case["first_text"])
+                        self.assertLoggedEqual(case['first_text'], case['first_text'], lines[0].text)
                     
                     if "first_cue_id" in case:
                         cue_id = lines[0].metadata.get('cue_id')
-                        log_input_expected_result(case["first_cue_id"], case["first_cue_id"], cue_id)
-                        self.assertEqual(cue_id, case["first_cue_id"])
+                        self.assertLoggedEqual(case['first_cue_id'], case['first_cue_id'], cue_id)
                     
                     if "first_settings" in case:
                         settings = lines[0].metadata.get('vtt_settings')
-                        log_input_expected_result(case["first_settings"], case["first_settings"], settings)
-                        self.assertEqual(settings, case["first_settings"])
+                        self.assertLoggedEqual(case['first_settings'], case['first_settings'], settings)
                 
                 if case["expected_lines"] > 1:
                     if "second_text" in case:
-                        log_input_expected_result(case["second_text"], case["second_text"], lines[1].text)
-                        self.assertEqual(lines[1].text, case["second_text"])
+                        self.assertLoggedEqual(case['second_text'], case['second_text'], lines[1].text)
                     
                     if case.get("second_no_cue_id"):
                         has_no_cue_id = 'cue_id' not in lines[1].metadata
-                        log_input_expected_result(True, True, has_no_cue_id)
-                        self.assertTrue(has_no_cue_id)
+                        self.assertLoggedTrue(f"{case['test_name']}_second_line_has_no_cue_id", has_no_cue_id)
 
     def test_note_block_without_inline_text(self):
         """Ensure NOTE blocks starting with just 'NOTE' are preserved."""
@@ -435,10 +416,8 @@ Subtitle
 
         data = self.handler.parse_string(vtt_content)
         notes = data.metadata.get('vtt_notes', [])
-        log_input_expected_result("Note count", 1, len(notes))
-        self.assertEqual(len(notes), 1)
-        log_input_expected_result("Note contains text", True, "This is a note" in notes[0])
-        self.assertIn("This is a note", notes[0])
+        self.assertLoggedEqual('Note count', 1, len(notes))
+        self.assertLoggedIn('Note contains text', 'This is a note', notes[0])
     
     def test_cue_settings_preservation(self):
         """Test that cue settings are preserved in metadata."""
@@ -459,22 +438,18 @@ I think he went down this lane.
         
         # Check first cue settings
         first_settings = lines[0].metadata.get('vtt_settings', '')
-        log_input_expected_result("First cue settings", "position:10%,line-left align:left size:35%", first_settings)
-        self.assertEqual(first_settings, "position:10%,line-left align:left size:35%")
+        self.assertLoggedEqual('First cue settings', 'position:10%,line-left align:left size:35%', first_settings)
         
         # Check second cue settings
         second_settings = lines[1].metadata.get('vtt_settings', '')
-        log_input_expected_result("Second cue settings", "position:90% align:right size:35%", second_settings)
-        self.assertEqual(second_settings, "position:90% align:right size:35%")
+        self.assertLoggedEqual('Second cue settings', 'position:90% align:right size:35%', second_settings)
         
         # Test round-trip preservation
         composed = self.handler.compose(data)
         round_trip_data = self.handler.parse_string(composed)
         round_trip_lines = round_trip_data.lines
         
-        log_input_expected_result("Round-trip settings preserved", True, 
-                                round_trip_lines[0].metadata.get('vtt_settings') == first_settings)
-        self.assertEqual(round_trip_lines[0].metadata.get('vtt_settings'), first_settings)
+        self.assertLoggedEqual("Round-trip settings preserved", first_settings, round_trip_lines[0].metadata.get('vtt_settings'))
         self.assertEqual(round_trip_lines[1].metadata.get('vtt_settings'), second_settings)
     
     def test_style_blocks_preservation(self):
@@ -503,8 +478,7 @@ Styled subtitle
         
         # Check that styles are captured
         vtt_styles = data.metadata.get('vtt_styles', [])
-        log_input_expected_result("Number of style blocks", 2, len(vtt_styles))
-        self.assertEqual(len(vtt_styles), 2)
+        self.assertLoggedEqual('Number of style blocks', 2, len(vtt_styles))
         
         # Check first style block content
         first_style = vtt_styles[0]
@@ -521,12 +495,10 @@ Styled subtitle
         round_trip_data = self.handler.parse_string(composed)
         
         rt_styles = round_trip_data.metadata.get('vtt_styles', [])
-        log_input_expected_result("Round-trip styles preserved", 2, len(rt_styles))
-        self.assertEqual(len(rt_styles), 2)
+        self.assertLoggedEqual('Round-trip styles preserved', 2, len(rt_styles))
         
         # Check content is preserved
-        log_input_expected_result("Style content preserved", True, "papayawhip" in rt_styles[0])
-        self.assertIn("papayawhip", rt_styles[0])
+        self.assertLoggedIn('Style content preserved', 'papayawhip', rt_styles[0])
         self.assertIn("peachpuff", rt_styles[1])
     
     def test_speaker_voice_tags(self):
@@ -555,8 +527,7 @@ Styled subtitle
         # Check speaker extraction - partial voice tags are ignored
         speakers = [line.metadata.get('speaker') for line in lines]
         expected_speakers = ['Esme', 'Mary', None, 'Mary']
-        log_input_expected_result("Extracted speakers", expected_speakers, speakers)
-        self.assertEqual(speakers, expected_speakers)
+        self.assertLoggedEqual('Extracted speakers', expected_speakers, speakers)
         
         # Check text processing (full-line voice tags removed, partial tags left)
         texts = [line.text for line in lines]
@@ -566,20 +537,17 @@ Styled subtitle
             "<v Esme>Hee!</v> <i>laughter</i>",
             "That's awesome!"
         ]
-        log_input_expected_result("Processed texts", expected_texts, texts)
-        self.assertEqual(texts, expected_texts)
+        self.assertLoggedEqual('Processed texts', expected_texts, texts)
         
         # Test round-trip (voice tags restored)
         composed = self.handler.compose(data)
-        log_input_expected_result("Voice tags restored", True, "<v Esme>" in composed and "<v Mary>" in composed)
-        self.assertIn("<v Esme>", composed)
+        self.assertLoggedIn('Voice tags restored', '<v Esme>', composed)
         self.assertIn("<v Mary>", composed)
         
         # Verify round-trip parsing
         round_trip_data = self.handler.parse_string(composed)
         rt_speakers = [line.metadata.get('speaker') for line in round_trip_data.lines]
-        log_input_expected_result("Round-trip speakers", expected_speakers, rt_speakers)
-        self.assertEqual(rt_speakers, expected_speakers)
+        self.assertLoggedEqual('Round-trip speakers', expected_speakers, rt_speakers)
     
     voice_tag_cases = {
         "<v Mary>Hello world</v>": "Hello world",
@@ -599,8 +567,7 @@ Styled subtitle
         for vtt_text, expected_clean in self.voice_tag_cases.items():
             with self.subTest(vtt_text=vtt_text):
                 result_text, _ = self.handler._process_vtt_text(vtt_text)
-                log_input_expected_result(vtt_text, expected_clean, result_text)
-                self.assertEqual(result_text, expected_clean)
+                self.assertLoggedEqual(vtt_text, expected_clean, result_text)
     
     voice_metadata_cases = {
         "<v Mary>Hello</v>": {"speaker": "Mary"},
@@ -619,8 +586,7 @@ Styled subtitle
         for vtt_text, expected_metadata in self.voice_metadata_cases.items():
             with self.subTest(vtt_text=vtt_text):
                 _, result = self.handler._process_vtt_text(vtt_text)
-                log_input_expected_result(vtt_text, expected_metadata, result)
-                self.assertEqual(result, expected_metadata)
+                self.assertLoggedEqual(vtt_text, expected_metadata, result)
     
     def test_voice_tag_round_trip(self):
         """Test that voice tags are preserved through parse/compose cycle."""
@@ -644,15 +610,13 @@ Styled subtitle
         # Verify clean text extraction
         clean_texts = [line.text for line in lines]
         expected_clean = ["Hyphenated class text", "Multiple classes", "Simple speaker"]
-        log_input_expected_result("Clean texts", expected_clean, clean_texts)
-        self.assertEqual(clean_texts, expected_clean)
+        self.assertLoggedEqual('Clean texts', expected_clean, clean_texts)
         
         # Compose back to VTT
         composed = self.handler.compose(data)
         
         # Verify tags are restored (no duplication)
-        log_input_expected_result("No tag duplication", False, "<v.first-second Mary><v.first-second Mary>" in composed)
-        self.assertNotIn("<v.first-second Mary><v.first-second Mary>", composed)
+        self.assertLoggedNotIn('No tag duplication', '<v.first-second Mary><v.first-second Mary>', composed)
         self.assertNotIn("</v></v>", composed)
         
         # Parse again to verify metadata preservation
@@ -662,8 +626,7 @@ Styled subtitle
         # Check metadata preservation
         first_metadata = rt_lines[0].metadata
         expected_first = {"voice_classes": ["first-second"], "speaker": "Mary"}
-        log_input_expected_result("Round-trip metadata", expected_first, {k: v for k, v in first_metadata.items() if k in ["voice_classes", "speaker"]})
-        self.assertEqual(first_metadata.get("voice_classes"), ["first-second"])
+        self.assertLoggedEqual('Round-trip metadata', expected_first, {k: v for k, v in first_metadata.items() if k in ['voice_classes', 'speaker']})
         self.assertEqual(first_metadata.get("speaker"), "Mary")
 
 if __name__ == '__main__':

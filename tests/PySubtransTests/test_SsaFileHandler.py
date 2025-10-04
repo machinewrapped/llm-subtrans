@@ -3,23 +3,21 @@ from datetime import timedelta
 import tempfile
 import os
 
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Formats.SSAFileHandler import SSAFileHandler
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleData import SubtitleData
 from PySubtrans.SubtitleError import SubtitleParseError
 from PySubtrans.Helpers.Tests import (
-    log_info,
-    log_input_expected_result,
-    log_test_name,
     skip_if_debugger_attached,
 )
 
-class TestSSAFileHandler(unittest.TestCase):
+class TestSSAFileHandler(LoggedTestCase):
     """Test cases for SSA file handler."""
     
     def setUp(self) -> None:
         """Set up test fixtures."""
-        log_test_name(self._testMethodName)
+        super().setUp()
         self.handler = SSAFileHandler()
         
         # Sample SSA content for testing
@@ -96,8 +94,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         expected = ['.ass', '.ssa']
         result = self.handler.get_file_extensions()
         
-        log_input_expected_result("", expected, result)
-        self.assertEqual(result, expected)
+        self.assertLoggedEqual("File extensions", expected, result)
     
     def test_parse_string_basic(self):
         """Test parsing of basic SSA content."""
@@ -105,9 +102,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         data = self.handler.parse_string(self.sample_ssa_content)
         lines = data.lines
         
-        log_input_expected_result(self.sample_ssa_content[:100] + "...", len(self.expected_lines), len(lines))
-        
-        self.assertEqual(len(lines), len(self.expected_lines))
+        self.assertLoggedEqual("Parsed line count", len(self.expected_lines), len(lines))
         
         for i, (expected, actual) in enumerate(zip(self.expected_lines, lines)):
             with self.subTest(line_number=i+1):
@@ -130,8 +125,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
             os.remove(temp_path)
 
         lines = data.lines
-        log_input_expected_result("File content", 3, len(lines))
-        self.assertEqual(len(lines), 3)
+        self.assertLoggedEqual("File content", 3, len(lines))
         self.assertEqual(lines[0].text, "First subtitle line")
     
     
@@ -155,7 +149,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         # Log before assertions
         expected_sections = ["[Script Info]", "[V4+ Styles]", "[Events]", "Dialogue: 0,0:00:01.50,0:00:03.00,Default,,0,0,0,,Test subtitle"]
         has_all_sections = all(section in result for section in expected_sections)
-        log_input_expected_result("1 line", True, has_all_sections)
+        self.assertLoggedTrue("Result contains all SSA sections", has_all_sections)
         
         # Check that the result contains key SSA sections
         self.assertIn("[Script Info]", result)
@@ -182,8 +176,7 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Third subtitle line
         # pysubs2 converts newlines back to \\N in SSA format output
         expected_text = "First line\\NSecond line"
         contains_expected = expected_text in result
-        log_input_expected_result("Contains SSA line break", True, contains_expected)
-        self.assertIn(expected_text, result)
+        self.assertLoggedIn("Contains SSA line break", expected_text, result)
     
     def test_parse_empty_events_section(self):
         """Test parsing SSA file with no events."""
@@ -202,8 +195,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         data = self.handler.parse_string(content_no_events)
         lines = data.lines
         
-        log_input_expected_result("SSA with no dialogue lines", 0, len(lines))
-        self.assertEqual(len(lines), 0)
+        self.assertLoggedEqual("SSA with no dialogue lines", 0, len(lines))
     
     @skip_if_debugger_attached
     def test_parse_invalid_ssa_content(self):
@@ -216,7 +208,7 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
             self.handler.parse_string(invalid_content)
             assert_raised = False
         
-        log_input_expected_result("Invalid content", True, assert_raised)
+        self.assertLoggedTrue("Invalid content raises", assert_raised)
     
     
     def test_round_trip_conversion(self):
@@ -233,15 +225,13 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
         round_trip_data = self.handler.parse_string(composed)
         round_trip_lines = round_trip_data.lines
         
-        log_input_expected_result("Original lines", len(original_lines), len(round_trip_lines))
-        self.assertEqual(len(original_lines), len(round_trip_lines))
+        self.assertLoggedEqual("Original line count", len(original_lines), len(round_trip_lines))
         
         # Validate metadata preservation
-        log_input_expected_result("Metadata preserved", True, True)
-        self.assertEqual(original_data.metadata['pysubs2_format'], round_trip_data.metadata['pysubs2_format'])
-        self.assertIn('styles', original_data.metadata)
-        self.assertIn('styles', round_trip_data.metadata)
-        self.assertEqual(original_data.metadata['styles'], round_trip_data.metadata['styles'])
+        self.assertLoggedEqual("Metadata format preserved", original_data.metadata['pysubs2_format'], round_trip_data.metadata['pysubs2_format'])
+        self.assertLoggedIn("Original metadata contains styles", 'styles', original_data.metadata)
+        self.assertLoggedIn("Round-trip metadata contains styles", 'styles', round_trip_data.metadata)
+        self.assertLoggedEqual("Styles preserved", original_data.metadata['styles'], round_trip_data.metadata['styles'])
         
         # Compare line properties
         for original, round_trip in zip(original_lines, round_trip_lines):
@@ -264,12 +254,10 @@ Format: Marked, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
 Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
 
         data = self.handler.parse_string(sample_ssa)
-        log_input_expected_result("SSA format", "ssa", data.metadata.get('pysubs2_format'))
-        self.assertEqual(data.metadata.get('pysubs2_format'), 'ssa')
+        self.assertLoggedEqual("SSA format", "ssa", data.metadata.get('pysubs2_format'))
 
         composed = self.handler.compose(data)
-        log_input_expected_result("Round trip format", True, "ScriptType: v4.00" in composed)
-        self.assertIn("ScriptType: v4.00", composed)
+        self.assertLoggedIn("Round trip format", "ScriptType: v4.00", composed)
     
     def test_subtitle_line_to_pysubs2_time_conversion(self):
         """Test that _subtitle_line_to_pysubs2 correctly converts timedelta to pysubs2 milliseconds."""
@@ -299,8 +287,7 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
                 # Convert to pysubs2 event
                 pysubs2_event = self.handler._subtitle_line_to_pysubs2(test_line)
                 
-                log_input_expected_result(f"Timedelta {test_timedelta}", expected_ms, pysubs2_event.start)
-                self.assertEqual(pysubs2_event.start, expected_ms)
+                self.assertLoggedEqual(f"Timedelta {test_timedelta}", expected_ms, pysubs2_event.start)
     
     def test_ssa_to_html_formatting_conversion(self):
         """Test SSA tag to HTML conversion."""
@@ -323,8 +310,7 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
         for ssa_input, expected_html in test_cases:
             with self.subTest(input=ssa_input):
                 result = self.handler._ssa_to_html(ssa_input)
-                log_input_expected_result(ssa_input, expected_html, result)
-                self.assertEqual(result, expected_html)
+                self.assertLoggedEqual(ssa_input, expected_html, result)
     
     def test_html_to_ssa_formatting_conversion(self):
         """Test HTML tag to SSA conversion."""
@@ -346,8 +332,7 @@ Dialogue: Marked=0,0:00:01.00,0:00:02.00,Default,,0000,0000,0000,,SSA line"""
         for html_input, expected_ass in test_cases:
             with self.subTest(input=html_input):
                 result = self.handler._html_to_ass(html_input)
-                log_input_expected_result(html_input, expected_ass, result)
-                self.assertEqual(result, expected_ass)
+                self.assertLoggedEqual(html_input, expected_ass, result)
     
     def test_formatting_round_trip_preservation(self):
         """Test that formatting is preserved through round-trip conversion."""
@@ -375,11 +360,9 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Normal text with\\Nline break
         # Verify HTML conversion occurred
         self.assertEqual(len(original_lines), 3)
         
-        log_input_expected_result("Italic line", "<i>This is italic text</i>", original_lines[0].text)
-        self.assertEqual(original_lines[0].text, "<i>This is italic text</i>")
+        self.assertLoggedEqual("Italic line", "<i>This is italic text</i>", original_lines[0].text)
         
-        log_input_expected_result("Mixed formatting", "<b>This is bold</b> and <i>this is italic</i>", original_lines[1].text)
-        self.assertEqual(original_lines[1].text, "<b>This is bold</b> and <i>this is italic</i>")
+        self.assertLoggedEqual("Mixed formatting", "<b>This is bold</b> and <i>this is italic</i>", original_lines[1].text)
         
         self.assertEqual(original_lines[2].text, "Normal text with\nline break")
         
@@ -391,17 +374,15 @@ Dialogue: 0,0:00:07.00,0:00:09.00,Default,,0,0,0,,Normal text with\\Nline break
         round_trip_lines = round_trip_data.lines
         
         # Verify formatting preserved
-        self.assertEqual(len(round_trip_lines), 3)
-        self.assertEqual(round_trip_lines[0].text, "<i>This is italic text</i>")
-        self.assertEqual(round_trip_lines[1].text, "<b>This is bold</b> and <i>this is italic</i>")
+        self.assertLoggedEqual("Round-trip line count", 3, len(round_trip_lines))
+        self.assertLoggedEqual("Round-trip italic text", "<i>This is italic text</i>", round_trip_lines[0].text)
+        self.assertLoggedEqual("Round-trip bold and italic text", "<b>This is bold</b> and <i>this is italic</i>", round_trip_lines[1].text)
         self.assertEqual(round_trip_lines[2].text, "Normal text with\nline break")
         
-        log_input_expected_result("Round-trip formatting preserved", True, True)
         
         # Verify original SSA tags are in composed output
-        log_input_expected_result("SSA tags in output", True, "{\\i1}" in composed_ass and "{\\b1}" in composed_ass)
-        self.assertIn("{\\i1}This is italic text{\\i0}", composed_ass)
-        self.assertIn("{\\b1}This is bold{\\b0}", composed_ass)
+        self.assertLoggedIn("Italic SSA tag in output", "{\\i1}This is italic text{\\i0}", composed_ass)
+        self.assertLoggedIn("Bold SSA tag in output", "{\\b1}This is bold{\\b0}", composed_ass)
     
     def test_comprehensive_ssa_tag_preservation(self):
         """Test that comprehensive SSA override tags are preserved in metadata."""
@@ -432,8 +413,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         
         # Test complex whole-line tags extraction
         complex_line = lines[0]
-        log_input_expected_result("Complex tags extracted", "{\\pos(100,200)\\an5\\fs20}", 
-                                complex_line.metadata.get('override_tags_start', ''))
+        self.assertLoggedEqual("Complex tags extracted", "{\\pos(100,200)\\an5\\fs20}", complex_line.metadata.get('override_tags_start', ''))
         
         self.assertEqual(complex_line.text, "Complex positioned text")
         self.assertIn('override_tags_start', complex_line.metadata)
@@ -441,8 +421,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         
         # Test multiple tag blocks
         multi_line = lines[1]
-        log_input_expected_result("Multiple blocks extracted", "{\\pos(50,100)}{\\c&H00FF00&}", 
-                                multi_line.metadata.get('override_tags_start', ''))
+        self.assertLoggedEqual("Multiple blocks extracted", "{\\pos(50,100)}{\\c&H00FF00&}", multi_line.metadata.get('override_tags_start', ''))
         
         self.assertEqual(multi_line.text, "Multiple tag blocks")
         self.assertIn('override_tags_start', multi_line.metadata)
@@ -450,7 +429,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         
         # Test normal text unchanged
         normal_line = lines[2]
-        log_input_expected_result("Normal text unchanged", "Normal text", normal_line.text)
+        self.assertLoggedEqual("Normal text unchanged", "Normal text", normal_line.text)
         
         self.assertEqual(normal_line.text, "Normal text")
         self.assertNotIn('override_tags_start', normal_line.metadata)
@@ -459,8 +438,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         inline_line = lines[3]
         self.assertIsNotNone(inline_line)
         if inline_line.text is not None:
-            log_input_expected_result("Inline tags preserved", True, 
-                                    "{\\c&H0000FF&}" in inline_line.text and "{\\c}" in inline_line.text)
+            self.assertLoggedTrue("Inline tags preserved", "{\\c&H0000FF&}" in inline_line.text and "{\\c}" in inline_line.text)
             
             self.assertIn("{\\c&H0000FF&}", inline_line.text)
             self.assertIn("{\\c}", inline_line.text)
@@ -468,10 +446,8 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         
         # Test mixed HTML and inline SSA tags
         mixed_line = lines[4]
-        log_input_expected_result("HTML conversion with inline preservation", 
-                                "<i>Italic with <b>bold</b> inside</i>", mixed_line.text)
+        self.assertLoggedEqual("HTML conversion with inline preservation", "<i>Italic with <b>bold</b> inside</i>", mixed_line.text)
         
-        self.assertEqual(mixed_line.text, "<i>Italic with <b>bold</b> inside</i>")
         self.assertNotIn('override_tags_start', mixed_line.metadata)
         
         # Test round-trip preservation
@@ -480,18 +456,15 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         round_trip_lines = round_trip_data.lines
         
         # Verify complex tags restored
-        log_input_expected_result("Complex tags restored", True, 
-                                "{\\pos(100,200)\\an5\\fs20}" in composed_ass)
-        log_input_expected_result("Multi-block tags restored", True, 
-                                "{\\pos(50,100)}{\\c&H00FF00&}" in composed_ass)
+        self.assertLoggedTrue("Complex tags restored", "{\\pos(100,200)\\an5\\fs20}" in composed_ass)
+        self.assertLoggedTrue("Multi-block tags restored", "{\\pos(50,100)}{\\c&H00FF00&}" in composed_ass)
         
         self.assertIn("{\\pos(100,200)\\an5\\fs20}Complex positioned text", composed_ass)
         self.assertIn("{\\pos(50,100)}{\\c&H00FF00&}Multiple tag blocks", composed_ass)
         
         # Verify round-trip preservation of metadata
         rt_complex = round_trip_lines[0]
-        log_input_expected_result("Round-trip metadata preserved", True, 
-                                rt_complex.metadata.get('override_tags_start', '') == "{\\pos(100,200)\\an5\\fs20}")
+        self.assertLoggedTrue("Round-trip metadata preserved", rt_complex.metadata.get('override_tags_start', '') == "{\\pos(100,200)\\an5\\fs20}")
         
         self.assertEqual(rt_complex.text, "Complex positioned text")
         self.assertEqual(rt_complex.metadata.get('override_tags_start', ''), "{\\pos(100,200)\\an5\\fs20}")
@@ -516,8 +489,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         for ssa_input, expected_metadata in extraction_cases:
             with self.subTest(input=ssa_input):
                 result = self.handler._extract_whole_line_tags(ssa_input)
-                log_input_expected_result(f"Extract: {ssa_input}", expected_metadata, result)
-                self.assertEqual(result, expected_metadata)
+                self.assertLoggedEqual(f"Extract: {ssa_input}", expected_metadata, result)
         
         # Test restoration function
         restoration_cases = [
@@ -534,8 +506,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         for text_input, metadata, expected_result in restoration_cases:
             with self.subTest(text=text_input, metadata=metadata):
                 result = self.handler._restore_whole_line_tags(text_input, metadata)
-                log_input_expected_result(f"Restore: {text_input} + {metadata}", expected_result, result)
-                self.assertEqual(result, expected_result)
+                self.assertLoggedEqual(f"Restore: {text_input} + {metadata}", expected_result, result)
         
         # Test HTML conversion with tag removal
         conversion_cases = [
@@ -552,8 +523,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         for ssa_input, expected_html in conversion_cases:
             with self.subTest(input=ssa_input):
                 result = self.handler._ssa_to_html(ssa_input)
-                log_input_expected_result(f"Convert: {ssa_input}", expected_html, result)
-                self.assertEqual(result, expected_html)
+                self.assertLoggedEqual(f"Convert: {ssa_input}", expected_html, result)
     
     def test_composite_tags_with_basic_formatting(self):
         """Test that basic formatting tags within composite blocks are preserved."""
@@ -575,8 +545,7 @@ Dialogue: 0,0:00:13.00,0:00:15.00,Default,,0,0,0,,{\\i1}Italic with {\\b1}bold{\
         for ssa_input, expected_html in test_cases:
             with self.subTest(input=ssa_input):
                 result = self.handler._ssa_to_html(ssa_input)
-                log_input_expected_result(f"Composite: {ssa_input}", expected_html, result)
-                self.assertEqual(result, expected_html)
+                self.assertLoggedEqual(f"Composite: {ssa_input}", expected_html, result)
         
         # Test round-trip preservation with composite tags
         composite_ssa_content = """[Script Info]
@@ -601,22 +570,18 @@ Dialogue: 0,0:00:04.00,0:00:06.00,Default,,0,0,0,,{\\c&H00FF00&\\b1}Green bold t
         
         # Verify italic formatting preserved in GUI
         italic_line = lines[0]
-        log_input_expected_result("Composite italic in GUI", "<i>Italic positioned text</i>", italic_line.text)
-        self.assertEqual(italic_line.text, "<i>Italic positioned text</i>")
+        self.assertLoggedEqual("Composite italic in GUI", "<i>Italic positioned text</i>", italic_line.text)
         self.assertEqual(italic_line.metadata.get('override_tags_start'), "{\\pos(100,200)}")
         
         # Verify bold formatting preserved in GUI
         bold_line = lines[1]
-        log_input_expected_result("Composite bold in GUI", "<b>Green bold text</b>", bold_line.text)
-        self.assertEqual(bold_line.text, "<b>Green bold text</b>")
+        self.assertLoggedEqual("Composite bold in GUI", "<b>Green bold text</b>", bold_line.text)
         self.assertEqual(bold_line.metadata.get('override_tags_start'), "{\\c&H00FF00&}")
         
         # Test round-trip - verify both positioning and formatting restored
         composed = self.handler.compose(data)
-        log_input_expected_result("Round-trip composite preservation", True, 
-                                "{\\pos(100,200)}{\\i1}Italic positioned text{\\i0}" in composed)
-        log_input_expected_result("Round-trip composite bold preservation", True,
-                                "{\\c&H00FF00&}{\\b1}Green bold text{\\b0}" in composed)
+        self.assertLoggedTrue("Round-trip composite preservation", "{\\pos(100,200)}{\\i1}Italic positioned text{\\i0}" in composed)
+        self.assertLoggedTrue("Round-trip composite bold preservation", "{\\c&H00FF00&}{\\b1}Green bold text{\\b0}" in composed)
         
         self.assertIn("{\\pos(100,200)}{\\i1}Italic positioned text{\\i0}", composed)
         self.assertIn("{\\c&H00FF00&}{\\b1}Green bold text{\\b0}", composed)

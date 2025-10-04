@@ -26,7 +26,7 @@ summary_lines = [
 def format_summary_line(label: str, run: int, failures: int, errors: int, skipped: int, ok: bool) -> str:
     return f"  {label:<12}: run: {run:>3} failures: {failures:>3} errors: {errors:>3} skipped: {skipped:>3} status={'OK ' if ok else 'FAIL'}"
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.WARNING)  # Only show warnings and above on console
 console_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))

@@ -30,10 +30,9 @@ class TestableViewModel(ProjectViewModel):
         Scene numbers are stable identifiers, not row positions.
         """
         scene_item = self.model.get(scene_number)
-        self.test.assertLoggedIsNotNone(f"scene {scene_number} exists", scene_item)
-        scene_item = cast(SceneItem, scene_item)
-        self.test.assertLoggedIsInstance(f"scene {scene_number} type", scene_item, SceneItem)
-        return scene_item
+        self.test.assertIsNotNone(scene_item, msg=f"scene {scene_number} does not exist")
+        self.test.assertIsInstance(scene_item, SceneItem, msg=f"scene {scene_number} is not a SceneItem")
+        return cast(SceneItem, scene_item)
 
     def test_get_batch_item(self, scene_number : int, batch_number : int) -> BatchItem:
         """
@@ -41,14 +40,9 @@ class TestableViewModel(ProjectViewModel):
         """
         scene_item = self.test_get_scene_item(scene_number)
         batch_item_qt = scene_item.child(batch_number - 1, 0)
-        self.test.assertLoggedIsNotNone(f"batch ({scene_number},{batch_number}) exists", batch_item_qt)
-        batch_item_qt = cast(BatchItem, batch_item_qt)
-        self.test.assertLoggedIsInstance(
-            f"batch ({scene_number},{batch_number}) type",
-            batch_item_qt,
-            BatchItem,
-        )
-        return batch_item_qt
+        self.test.assertIsNotNone(batch_item_qt, msg=f"batch ({scene_number},{batch_number}) does not exist")
+        self.test.assertIsInstance(batch_item_qt, BatchItem, msg=f"batch ({scene_number},{batch_number}) is not a BatchItem")
+        return cast(BatchItem, batch_item_qt)
 
     def get_line_numbers_in_batch(self, scene_number : int, batch_number : int) -> list[int]:
         """
@@ -78,20 +72,13 @@ class TestableViewModel(ProjectViewModel):
         """
         matching_signals = [s for s in self.signal_history if s['signal'] == signal_name]
         if expected_count is None:
-            self.test.assertLoggedGreater(
-                f"{signal_name} emitted count",
-                len(matching_signals),
-                0,
-                msg=f"Expected {signal_name} to be emitted",
-            )
+            self.test.assertGreater(len(matching_signals), 0, msg=f"Expected {signal_name} to be emitted")
         else:
             self.test.assertLoggedEqual(
                 f"{signal_name} count",
                 expected_count,
                 len(matching_signals),
-                msg=(
-                    f"Expected {signal_name} to be emitted {expected_count} times, got {len(matching_signals)}"
-                ),
+                msg=f"Expected {signal_name} to be emitted {expected_count} times, got {len(matching_signals)}",
             )
 
         return matching_signals
@@ -104,12 +91,8 @@ class TestableViewModel(ProjectViewModel):
             signal_name: Name of the signal ('dataChanged', 'layoutChanged', 'modelReset')
         """
         matching_signals = [s for s in self.signal_history if s['signal'] == signal_name]
-        self.test.assertLoggedEqual(
-            f"{signal_name} not emitted",
-            0,
-            len(matching_signals),
-            msg=(
-                f"Expected {signal_name} to NOT be emitted, but it was emitted {len(matching_signals)} times"
+        self.test.assertEqual(0, len(matching_signals), msg=(
+                f"{signal_name} was unexpectedly emitted {len(matching_signals)} times"
             ),
         )
 
@@ -121,11 +104,7 @@ class TestableViewModel(ProjectViewModel):
         for scene_num, field, expected in test_data:
             scene = self.test_get_scene_item(scene_num)
             actual = getattr(scene, field)
-            self.test.assertLoggedEqual(
-                f"scene {scene_num} {field}",
-                expected,
-                actual,
-            )
+            self.test.assertLoggedEqual(f"scene {scene_num} {field}", expected, actual)
 
     def assert_batch_fields(self, test_data : list[tuple[int, int, str, Any]]) -> None:
         """
@@ -135,28 +114,28 @@ class TestableViewModel(ProjectViewModel):
         for scene_num, batch_num, field, expected in test_data:
             batch = self.test_get_batch_item(scene_num, batch_num)
             actual = getattr(batch, field)
-            self.test.assertLoggedEqual(
-                f"batch ({scene_num},{batch_num}) {field}",
-                expected,
-                actual,
-            )
+            self.test.assertLoggedEqual(f"batch ({scene_num},{batch_num}) {field}", expected, actual)
 
-    def assert_line_contents(self, test_data : list[tuple[int, int, int, int, str]]) -> None:
+    def assert_line_contents(self, test_data : list[tuple[int, int, int, str]]) -> None:
         """
         Helper to assert multiple line texts at once.
-        test_data: list of (scene_num, batch_num, line_idx, line_num, expected_text)
+        test_data: list of (scene_num, batch_num, line_idx, absolute_line_num, expected_text)
         line_idx can be negative to index from the end
         """
-        for scene_num, batch_num, line_idx, absolute_line_num, expected_text in test_data:
+        all_text_matches : bool = True
+        for scene_num, batch_num, line_idx, expected_text in test_data:
             batch = self.test_get_batch_item(scene_num, batch_num)
             # Handle negative indices manually since Qt doesn't support them
             actual_idx = line_idx if line_idx >= 0 else batch.line_count + line_idx
             line = cast(LineItem, batch.child(actual_idx, 0))
-            self.test.assertLoggedEqual(
-                f"line ({absolute_line_num}) text",
-                expected_text,
-                line.line_text,
-            )
+            self.test.assertIsNotNone(line, msg=f"line index {line_idx} in batch ({scene_num},{batch_num}) does not exist")
+            self.test.assertIsInstance(line, LineItem, msg=f"line index {line_idx} in batch ({scene_num},{batch_num}) is not a LineItem")
+            self.test.assertEqual(expected_text, line.line_text, msg=f"line index {line_idx} in batch ({scene_num},{batch_num}) text mismatch")
+            if line.line_text != expected_text:
+                all_text_matches = False
+                break
+
+        self.test.assertLoggedTrue("all line texts match", all_text_matches)
 
     def assert_viewmodel_matches_subtitles(self, subtitles: Subtitles) -> None:
         """ 
@@ -197,27 +176,22 @@ class TestableViewModel(ProjectViewModel):
                 )
 
                 expected_line_numbers = [line.number for line in batch.originals]
-                actual_line_numbers = self.get_line_numbers_in_batch(scene.number, batch.number)
+                actual_line_numbers = [line_item.number for line_item in batch_item.lines.values() if isinstance(line_item, LineItem)]
                 self.test.assertLoggedSequenceEqual(
-                    f'batch ({scene.number},{batch.number}) line numbers',
-                    expected_line_numbers,
-                    actual_line_numbers,
-                )
+                    f'batch ({scene.number},{batch.number}) line numbers', expected_line_numbers, actual_line_numbers)
 
                 expected_line_texts = [line.text for line in batch.originals]
                 actual_line_items = [batch_item.lines.get(line.number) for line in batch.originals]
-                actual_line_types = [type(item) if item is not None else None for item in actual_line_items]
                 actual_line_texts = [item.line_text if isinstance(item, LineItem) else None for item in actual_line_items]
 
-                self.test.assertLoggedSequenceEqual(
-                    f'line ({scene.number},{batch.number}) item types',
-                    [LineItem]*len(actual_line_items),
-                    actual_line_types,
+                self.test.assertLoggedTrue(f"all line items in batch ({scene.number},{batch.number}) exist",
+                    all(isinstance(item, LineItem) for item in actual_line_items), 
+                    msg=f"Not all line items in batch ({scene.number},{batch.number}) are LineItems"
                 )
-                self.test.assertLoggedSequenceEqual(
-                    f'line ({scene.number},{batch.number}) texts',
-                    expected_line_texts,
-                    actual_line_texts,
+
+                self.test.assertLoggedTrue(f"all line texts in batch ({scene.number},{batch.number}) match", 
+                    all(actual_text == expected_text for actual_text, expected_text in zip(actual_line_texts, expected_line_texts)),
+                    msg=f"Not all line texts in batch ({scene.number},{batch.number}) match"
                 )
 
     def assert_expected_structure(self, expected: dict) -> None:
@@ -249,7 +223,7 @@ class TestableViewModel(ProjectViewModel):
         expected_scene_numbers = [scene_data['number'] for scene_data in expected_scenes]
         actual_scene_numbers = sorted(self.model.keys())
         self.test.assertLoggedSequenceEqual(
-            'expected scene numbers',
+            'scene numbers',
             expected_scene_numbers,
             actual_scene_numbers,
         )
@@ -260,19 +234,12 @@ class TestableViewModel(ProjectViewModel):
 
             if 'summary' in scene_data:
                 expected_summary = scene_data['summary']
-                self.test.assertLoggedEqual(
-                    f'scene {scene_number} expected summary',
-                    expected_summary,
-                    scene_item.summary,
-                )
+                self.test.assertLoggedEqual(f'scene {scene_number} summary', expected_summary, scene_item.summary)
 
             expected_batches = scene_data.get('batches', [])
             expected_batch_numbers = [batch_data['number'] for batch_data in expected_batches]
             actual_batch_numbers = sorted(scene_item.batches.keys())
-            self.test.assertLoggedSequenceEqual(
-                f'scene {scene_number} expected batches',
-                expected_batch_numbers,
-                actual_batch_numbers,
+            self.test.assertLoggedSequenceEqual(f'scene {scene_number} batches', expected_batch_numbers, actual_batch_numbers,
             )
 
             for batch_data in expected_batches:
@@ -281,46 +248,29 @@ class TestableViewModel(ProjectViewModel):
 
                 if 'summary' in batch_data:
                     expected_batch_summary = batch_data['summary']
-                    self.test.assertLoggedEqual(
-                        f'batch ({scene_number},{batch_number}) expected summary',
-                        expected_batch_summary,
-                        batch_item.summary,
-                    )
+                    self.test.assertLoggedEqual(f'batch ({scene_number},{batch_number}) summary', expected_batch_summary, batch_item.summary)
 
                 expected_line_count = batch_data.get('line_count')
                 if expected_line_count is not None:
-                    self.test.assertLoggedEqual(
-                        f'batch ({scene_number},{batch_number}) expected line count',
-                        expected_line_count,
-                        batch_item.line_count,
-                    )
+                    self.test.assertLoggedEqual(f'batch ({scene_number},{batch_number}) line count', expected_line_count, batch_item.line_count)
 
                 expected_line_numbers = batch_data.get('line_numbers')
                 if expected_line_numbers is not None:
-                    actual_line_numbers = self.get_line_numbers_in_batch(scene_number, batch_number)
-                    self.test.assertLoggedSequenceEqual(
-                        f'batch ({scene_number},{batch_number}) expected line numbers',
-                        expected_line_numbers,
-                        actual_line_numbers,
-                    )
+                    actual_line_numbers = [line_item.number for line_item in batch_item.lines.values() if isinstance(line_item, LineItem)]
+                    self.test.assertLoggedSequenceEqual(f'batch ({scene_number},{batch_number}) line numbers', expected_line_numbers, actual_line_numbers)
 
                 expected_line_texts = batch_data.get('line_texts', {})
                 if expected_line_texts:
                     expected_numbers = sorted(expected_line_texts.keys())
                     actual_line_items = [batch_item.lines.get(number) for number in expected_numbers]
-                    actual_line_types = [type(item) if item is not None else None for item in actual_line_items]
                     actual_texts = [item.line_text if isinstance(item, LineItem) else None for item in actual_line_items]
+                    expected_texts = [expected_line_texts[number] for number in expected_numbers]
 
-                    self.test.assertLoggedSequenceEqual(
-                        f'batch ({scene_number},{batch_number}) expected line item types',
-                        [LineItem]*len(expected_numbers),
-                        actual_line_types,
-                    )
-                    self.test.assertLoggedSequenceEqual(
-                        f'batch ({scene_number},{batch_number}) expected line texts',
-                        [expected_line_texts[number] for number in expected_numbers],
-                        actual_texts,
-                    )
+                    self.test.assertLoggedTrue(f"all line items in batch ({scene_number},{batch_number}) exist",
+                        all(isinstance(item, LineItem) for item in actual_line_items))
+                    
+                    self.test.assertLoggedTrue(f"all line texts in batch ({scene_number},{batch_number}) match",
+                        all(actual_text == expected_text for actual_text, expected_text in zip(actual_texts, expected_texts)))
 
 
     def _track_data_changed(self, topLeft : QModelIndex, bottomRight : QModelIndex, roles : list[int]) -> None:

@@ -4,7 +4,7 @@ from GuiSubtrans.Commands.DeleteLinesCommand import DeleteLinesCommand
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from .DataModelHelpers import CreateTestDataModelBatched
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name
+from PySubtrans.Helpers.Tests import log_info
 from PySubtrans.Subtitles import Subtitles
 from ..TestData.chinese_dinner import chinese_dinner_data
 
@@ -75,15 +75,13 @@ class DeleteLinesCommandTest(SubtitleTestCase):
             command = DeleteLinesCommand(lines_to_delete, datamodel=datamodel)
             self.assertTrue(command.execute())
 
-            log_input_expected_result("After Delete", expected_batch_size, len(batch.originals))
-            self.assertEqual(len(batch.originals), expected_batch_size)
+            self.assertLoggedEqual("batch size after delete", expected_batch_size, len(batch.originals))
             self.assertSequenceEqual([line.number for line in batch.originals], expected_line_numbers)
 
             self.assertTrue(command.can_undo)
             self.assertTrue(command.undo())
 
-            log_input_expected_result("After Undo", initial_batch_size, len(batch.originals))
-            self.assertEqual(len(batch.originals), initial_batch_size)
+            self.assertLoggedEqual("batch size after undo", initial_batch_size, len(batch.originals))
             self.assertSequenceEqual([line.number for line in batch.originals], initial_line_numbers)
             self.assertSequenceEqual([line.text for line in batch.originals], initial_line_contents)
             self.assertSequenceEqual([line.text for line in batch.translated], initial_translated_contents)

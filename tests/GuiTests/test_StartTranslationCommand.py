@@ -1,7 +1,7 @@
 from copy import deepcopy
 
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name
+from PySubtrans.Helpers.Tests import log_info, log_test_name
 
 from GuiSubtrans.Command import Command
 from GuiSubtrans.Commands.SaveProjectFile import SaveProjectFile
@@ -131,7 +131,7 @@ class StartTranslationCommandTests(SubtitleTestCase):
 
                 expected_commands_to_queue = list(command_data.get('expected_commands_to_queue'))
                 expected_translations = list(command_data.get('expected_translations'))
-                log_input_expected_result("Queued commands", queued_command_types, expected_commands_to_queue)
+                self.assertLoggedSequenceEqual("queued command types", expected_commands_to_queue, queued_command_types)
 
                 self.assertEqual(len(queued_commands), len(expected_commands_to_queue))
                 self.assertSequenceEqual(queued_command_types, expected_commands_to_queue)

@@ -10,7 +10,7 @@ from GuiSubtrans.ProjectDataModel import ProjectDataModel
 
 from .DataModelHelpers import CreateTestDataModelBatched
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
+from PySubtrans.Helpers.Tests import log_test_name
 from PySubtrans.Subtitles import Subtitles
 from ..TestData.chinese_dinner import chinese_dinner_data
 
@@ -169,28 +169,28 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         expected_merged_scene_batches = test_data['expected_merged_scene_batches']
 
         merge_result_scene_numbers = [scene.number for scene in file.scenes]
-        log_input_expected_result("Merged scenes", (expected_scene_count, expected_merged_scene_numbers), (len(file.scenes), merge_result_scene_numbers))
-        self.assertEqual(len(file.scenes), expected_scene_count)
-        self.assertSequenceEqual(merge_result_scene_numbers, expected_merged_scene_numbers)
-        self.assertSequenceEqual([scene.linecount for scene in file.scenes], expected_merged_linecounts)
+        self.assertLoggedEqual("merged scene count", expected_scene_count, len(file.scenes))
+        self.assertLoggedSequenceEqual("merged scene numbers", expected_merged_scene_numbers, merge_result_scene_numbers)
+        self.assertLoggedSequenceEqual("merged scene line counts", expected_merged_linecounts, [scene.linecount for scene in file.scenes])
 
         merged_scene = file.GetScene(merge_scene_numbers[0])
 
         merged_scene_batch_numbers = [batch.number for batch in merged_scene.batches]
-        log_input_expected_result("Merged scene batches", expected_merged_scene_batches, merged_scene_batch_numbers)
-        self.assertSequenceEqual(merged_scene_batch_numbers, expected_merged_scene_batches)
+        self.assertLoggedSequenceEqual("merged scene batches", expected_merged_scene_batches, merged_scene_batch_numbers)
 
         self.assertTrue(merge_scenes_command.can_undo)
         self.assertTrue(merge_scenes_command.undo())
 
         undo_merge_result_scene_numbers = [scene.number for scene in file.scenes]
-        log_input_expected_result("Scenes after undo", (undo_expected_scene_count, undo_expected_scene_numbers), (len(file.scenes), undo_merge_result_scene_numbers))
-
-        self.assertEqual(len(file.scenes), undo_expected_scene_count)
-        self.assertSequenceEqual(undo_merge_result_scene_numbers, undo_expected_scene_numbers)
-        self.assertSequenceEqual([scene.size for scene in file.scenes], undo_expected_scene_sizes)
-        self.assertSequenceEqual([scene.linecount for scene in file.scenes], undo_expected_scene_linecounts)
-        self.assertSequenceEqual([[batch.number for batch in scene.batches] for scene in file.scenes], undo_expected_scene_batches)
+        self.assertLoggedEqual("scene count after undo", undo_expected_scene_count, len(file.scenes))
+        self.assertLoggedSequenceEqual("scene numbers after undo", undo_expected_scene_numbers, undo_merge_result_scene_numbers)
+        self.assertLoggedSequenceEqual("scene sizes after undo", undo_expected_scene_sizes, [scene.size for scene in file.scenes])
+        self.assertLoggedSequenceEqual("scene line counts after undo", undo_expected_scene_linecounts,
+            [scene.linecount for scene in file.scenes],
+        )
+        self.assertLoggedSequenceEqual("scene batches after undo", undo_expected_scene_batches,
+            [[batch.number for batch in scene.batches] for scene in file.scenes],
+        )
 
     def MergeBatchesCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         scene_number = test_data['scene_number']
@@ -210,18 +210,22 @@ class MergeSplitCommandsTests(SubtitleTestCase):
 
         merged_scene_batch_numbers = [batch.number for batch in merge_scene.batches]
 
-        log_input_expected_result("Merged scene batches", (expected_batch_count, expected_batch_numbers), (len(merge_scene.batches), merged_scene_batch_numbers))
-        self.assertEqual(len(merge_scene.batches), expected_batch_count)
-        self.assertSequenceEqual(merged_scene_batch_numbers, expected_batch_numbers)
-        self.assertSequenceEqual([batch.size for batch in merge_scene.batches], expected_batch_sizes)
+        self.assertLoggedEqual("merged batch count", expected_batch_count, len(merge_scene.batches))
+        self.assertLoggedSequenceEqual("merged batch numbers", expected_batch_numbers, merged_scene_batch_numbers)
+        self.assertLoggedSequenceEqual("merged batch sizes", expected_batch_sizes,
+            [batch.size for batch in merge_scene.batches],
+        )
 
         self.assertTrue(merge_batches_command.can_undo)
         self.assertTrue(merge_batches_command.undo())
 
-        log_input_expected_result("Batches after undo", (undo_expected_batch_count, undo_expected_batch_numbers), (len(merge_scene.batches), [batch.number for batch in merge_scene.batches]))
-        self.assertEqual(len(merge_scene.batches), undo_expected_batch_count)
-        self.assertSequenceEqual([batch.number for batch in merge_scene.batches], undo_expected_batch_numbers)
-        self.assertSequenceEqual([batch.size for batch in merge_scene.batches], undo_expected_batch_sizes)
+        self.assertLoggedEqual("batch count after undo", undo_expected_batch_count, len(merge_scene.batches))
+        self.assertLoggedSequenceEqual("batch numbers after undo", undo_expected_batch_numbers,
+            [batch.number for batch in merge_scene.batches],
+        )
+        self.assertLoggedSequenceEqual("batch sizes after undo", undo_expected_batch_sizes,
+            [batch.size for batch in merge_scene.batches],
+        )
 
     def MergeScenesMergeBatchesCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         # Merge scenes, then merge batches in the merged scenes, then undo both
@@ -248,18 +252,21 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         expected_scene_batches = test_data['expected_scene_batches']
         expected_scene_batch_sizes = test_data['expected_scene_batch_sizes']
 
-        log_input_expected_result("Merged scenes", (expected_scene_count, expected_scene_numbers), (len(file.scenes), [scene.number for scene in file.scenes]))
-        self.assertEqual(len(file.scenes), expected_scene_count)
-        self.assertSequenceEqual([scene.number for scene in file.scenes], expected_scene_numbers)
-        self.assertSequenceEqual([scene.size for scene in file.scenes], expected_scene_sizes)
-        self.assertSequenceEqual([scene.linecount for scene in file.scenes], expected_scene_linecounts)
+        self.assertLoggedEqual("merged scene count", expected_scene_count, len(file.scenes))
+        self.assertLoggedSequenceEqual("merged scene numbers", expected_scene_numbers,
+            [scene.number for scene in file.scenes],
+        )
+        self.assertLoggedSequenceEqual("merged scene sizes", expected_scene_sizes,
+            [scene.size for scene in file.scenes],
+        )
+        self.assertLoggedSequenceEqual("merged scene line counts", expected_scene_linecounts,
+            [scene.linecount for scene in file.scenes],
+        )
 
         scene_batches = [[batch.number for batch in scene.batches] for scene in file.scenes]
-        log_input_expected_result("Merged scene batches", expected_scene_batches, scene_batches)
-        self.assertSequenceEqual(scene_batches, expected_scene_batches)
+        self.assertLoggedSequenceEqual("merged scene batches", expected_scene_batches, scene_batches)
         scene_batch_sizes = [[batch.size for batch in scene.batches] for scene in file.scenes]
-        log_input_expected_result("Merged scene batch sizes", expected_scene_batch_sizes, scene_batch_sizes)
-        self.assertSequenceEqual(scene_batch_sizes, expected_scene_batch_sizes)
+        self.assertLoggedSequenceEqual("merged scene batch sizes", expected_scene_batch_sizes, scene_batch_sizes)
 
         self.assertTrue(merge_batches_command.can_undo)
         self.assertTrue(merge_batches_command.undo())
@@ -268,14 +275,24 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         self.assertTrue(merge_scenes_command.undo())
 
         undo_merge_result_scene_numbers = [scene.number for scene in file.scenes]
-        log_input_expected_result("Scenes after undo", (undo_expected_scene_count, undo_expected_scene_numbers), (len(file.scenes), undo_merge_result_scene_numbers))
-
-        self.assertEqual(len(file.scenes), undo_expected_scene_count)
-        self.assertSequenceEqual(undo_merge_result_scene_numbers, undo_expected_scene_numbers)
-        self.assertSequenceEqual([scene.size for scene in file.scenes], undo_expected_scene_sizes)
-        self.assertSequenceEqual([scene.linecount for scene in file.scenes], undo_expected_scene_linecounts)
-        self.assertSequenceEqual([[batch.number for batch in scene.batches] for scene in file.scenes], undo_expected_scene_batches)
-        self.assertSequenceEqual([[batch.size for batch in scene.batches] for scene in file.scenes], undo_expected_scene_batch_sizes)
+        self.assertLoggedEqual("scene count after undo", undo_expected_scene_count, len(file.scenes))
+        self.assertLoggedSequenceEqual("scene numbers after undo", undo_expected_scene_numbers, undo_merge_result_scene_numbers)
+        self.assertLoggedSequenceEqual("scene sizes after undo", undo_expected_scene_sizes, [scene.size for scene in file.scenes])
+        self.assertLoggedSequenceEqual(
+            "scene line counts after undo",
+            undo_expected_scene_linecounts,
+            [scene.linecount for scene in file.scenes],
+        )
+        self.assertLoggedSequenceEqual(
+            "scene batches after undo",
+            undo_expected_scene_batches,
+            [[batch.number for batch in scene.batches] for scene in file.scenes],
+        )
+        self.assertLoggedSequenceEqual(
+            "scene batch sizes after undo",
+            undo_expected_scene_batch_sizes,
+            [[batch.size for batch in scene.batches] for scene in file.scenes],
+        )
 
     def MergeSplitScenesCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         # Merge scenes, then split the merged scene, then undo both
@@ -292,20 +309,17 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         self.assertTrue(merge_scenes_command.execute())
 
         expected_merge_scene_count = test_data['expected_merge_scene_count']
-        expected_merge_scene_numbers = test_data['expected_merge_scene_numbers']
         expected_merge_scene_batches = test_data['expected_merge_scene_batches']
         expected_merge_scene_linecount = test_data['expected_merge_scene_linecount']
 
-        log_input_expected_result("Merged scenes", (expected_merge_scene_count, expected_merge_scene_numbers), (len(file.scenes), [scene.number for scene in file.scenes]))
-        self.assertEqual(len(file.scenes), expected_merge_scene_count)
+        self.assertLoggedEqual("merged scene count", expected_merge_scene_count, len(file.scenes))
 
         merged_scene = file.GetScene(merge_scene_numbers[0])
         merged_scene_batches = [batch.number for batch in merged_scene.batches]
 
         self.assertEqual(merged_scene.linecount, expected_merge_scene_linecount)
 
-        log_input_expected_result("Merged scene batches", expected_merge_scene_batches, merged_scene_batches)
-        self.assertSequenceEqual(merged_scene_batches, expected_merge_scene_batches)
+        self.assertLoggedSequenceEqual("merged scene batches", expected_merge_scene_batches, merged_scene_batches)
 
         undo_split_expected_scene_count = len(file.scenes)
         undo_split_expected_scene_numbers = [scene.number for scene in file.scenes]
@@ -322,43 +336,66 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         expected_split_scene_linecount = test_data['expected_split_scene_linecount']
         expected_split_first_lines = test_data['expected_split_first_lines']
 
-        log_input_expected_result("Split scenes", (expected_split_scene_count, expected_split_scene_numbers), (len(file.scenes), [scene.number for scene in file.scenes]))
-        self.assertEqual(len(file.scenes), expected_split_scene_count)
-        self.assertSequenceEqual([scene.number for scene in file.scenes], expected_split_scene_numbers)
-        self.assertEqual([scene.linecount for scene in file.scenes], expected_split_scene_linecount)
+        self.assertLoggedEqual("split scene count", expected_split_scene_count, len(file.scenes))
+        self.assertLoggedSequenceEqual("split scene numbers", expected_split_scene_numbers, [scene.number for scene in file.scenes])
+        self.assertLoggedSequenceEqual("split scene line counts", expected_split_scene_linecount,
+            [scene.linecount for scene in file.scenes],
+        )
 
         split_scenes_batches = [[batch.number for batch in scene.batches] for scene in file.scenes]
-        log_input_expected_result("Split scene batches", expected_split_scene_batches, split_scenes_batches)
-        self.assertSequenceEqual(split_scenes_batches, expected_split_scene_batches)
+        self.assertLoggedSequenceEqual("split scene batches", expected_split_scene_batches, split_scenes_batches)
 
         for i in range(len(expected_split_first_lines)):
             scene = file.scenes[i]
             first_original = scene.batches[0].originals[0].text
             first_translated = scene.batches[0].translated[0].text
-            log_input_expected_result(f"Scene {scene.number} first line", expected_split_first_lines[i], (scene.first_line_number, first_original, first_translated))
-            self.assertEqual(scene.first_line_number, expected_split_first_lines[i][0])
-            self.assertEqual(first_original, expected_split_first_lines[i][1])
-            self.assertEqual(first_translated, expected_split_first_lines[i][2])
+            self.assertLoggedEqual(
+                f"scene {scene.number} first line",
+                expected_split_first_lines[i],
+                (scene.first_line_number, first_original, first_translated),
+            )
 
         # Undo split scene
         self.assertTrue(split_scenes_command.can_undo)
         self.assertTrue(split_scenes_command.undo())
 
-        log_input_expected_result("Scenes after undo split", (undo_split_expected_scene_count, undo_split_expected_scene_numbers), (len(file.scenes), [scene.number for scene in file.scenes]))
-        self.assertEqual(len(file.scenes), undo_split_expected_scene_count)
-        self.assertSequenceEqual([scene.number for scene in file.scenes], undo_split_expected_scene_numbers)
-        self.assertSequenceEqual([scene.linecount for scene in file.scenes], undo_split_expected_scene_linecount)
-        self.assertSequenceEqual([[(batch.number, batch.first_line_number) for batch in scene.batches] for scene in file.scenes], undo_split_expected_scene_batches)
+        self.assertLoggedEqual("scene count after undo split", undo_split_expected_scene_count, len(file.scenes))
+        self.assertLoggedSequenceEqual(
+            "scene numbers after undo split",
+            undo_split_expected_scene_numbers,
+            [scene.number for scene in file.scenes],
+        )
+        self.assertLoggedSequenceEqual(
+            "scene line counts after undo split",
+            undo_split_expected_scene_linecount,
+            [scene.linecount for scene in file.scenes],
+        )
+        self.assertLoggedSequenceEqual(
+            "scene batches after undo split",
+            undo_split_expected_scene_batches,
+            [[(batch.number, batch.first_line_number) for batch in scene.batches] for scene in file.scenes],
+        )
 
         # Undo merge scene
         self.assertTrue(merge_scenes_command.can_undo)
         self.assertTrue(merge_scenes_command.undo())
 
-        log_input_expected_result("Scenes after undo merge", (undo_merge_expected_scene_count, undo_merge_expected_scene_numbers), (len(file.scenes), [scene.number for scene in file.scenes]))
-        self.assertEqual(len(file.scenes), undo_merge_expected_scene_count)
-        self.assertSequenceEqual([scene.number for scene in file.scenes], undo_merge_expected_scene_numbers)
-        self.assertSequenceEqual([scene.linecount for scene in file.scenes], undo_merge_expected_scene_linecount)
-        self.assertSequenceEqual([[batch.number for batch in scene.batches] for scene in file.scenes], undo_merge_expected_scene_batches)
+        self.assertLoggedEqual("scene count after undo merge", undo_merge_expected_scene_count, len(file.scenes))
+        self.assertLoggedSequenceEqual(
+            "scene numbers after undo merge",
+            undo_merge_expected_scene_numbers,
+            [scene.number for scene in file.scenes],
+        )
+        self.assertLoggedSequenceEqual(
+            "scene line counts after undo merge",
+            undo_merge_expected_scene_linecount,
+            [scene.linecount for scene in file.scenes],
+        )
+        self.assertLoggedSequenceEqual(
+            "scene batches after undo merge",
+            undo_merge_expected_scene_batches,
+            [[batch.number for batch in scene.batches] for scene in file.scenes],
+        )
 
     def SplitBatchCommandTest(self, file: Subtitles, datamodel: ProjectDataModel, test_data: dict[str, Any]) -> None:
         scene_number, batch_number = test_data['batch_number']
@@ -379,32 +416,37 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         expected_batch_sizes = test_data['expected_batch_sizes']
         expected_batch_first_lines = test_data['expected_batch_first_lines']
 
-        log_input_expected_result("Split batch count", expected_batch_count, len(scene.batches))
-        self.assertEqual(len(scene.batches), expected_batch_count)
+        self.assertLoggedEqual("split batch count", expected_batch_count, len(scene.batches))
 
         split_scene_batches = [batch.number for batch in scene.batches]
-        log_input_expected_result("Split batch numbers", expected_batch_numbers, split_scene_batches)
-        self.assertSequenceEqual(split_scene_batches, expected_batch_numbers)
+        self.assertLoggedSequenceEqual("split batch numbers", expected_batch_numbers, split_scene_batches)
 
         split_scene_batch_sizes = [batch.size for batch in scene.batches]
-        log_input_expected_result("Split batch sizes", expected_batch_sizes, split_scene_batch_sizes)
-        self.assertSequenceEqual(split_scene_batch_sizes, expected_batch_sizes)
+        self.assertLoggedSequenceEqual(
+            "split batch sizes",
+            expected_batch_sizes,
+            split_scene_batch_sizes,
+        )
 
         for i in range(len(scene.batches)):
             batch = scene.batches[i]
             expected_line_number, expected_original, expected_translated = expected_batch_first_lines[i]
-            log_input_expected_result(f"Batch {batch.number} first line", (expected_line_number, expected_original), (batch.first_line_number, batch.originals[0].text))
-            self.assertEqual(batch.first_line_number, expected_line_number)
-            self.assertEqual(batch.originals[0].text, expected_original)
-            self.assertEqual(batch.translated[0].text, expected_translated)
+            self.assertLoggedEqual(
+                f"batch {batch.number} first line",
+                (expected_line_number, expected_original, expected_translated),
+                (
+                    batch.first_line_number,
+                    batch.originals[0].text,
+                    batch.translated[0].text,
+                ),
+            )
 
         self.assertTrue(split_batch_command.can_undo)
         self.assertTrue(split_batch_command.undo())
 
-        log_input_expected_result("Batches after undo", (undo_expected_batch_count, undo_expected_batch_numbers), (len(scene.batches), [batch.number for batch in scene.batches]))
-        self.assertEqual(len(scene.batches), undo_expected_batch_count)
-        self.assertSequenceEqual([batch.number for batch in scene.batches], undo_expected_batch_numbers)
-        self.assertSequenceEqual([batch.size for batch in scene.batches], undo_expected_batch_sizes)
+        self.assertLoggedEqual("batch count after undo", undo_expected_batch_count, len(scene.batches))
+        self.assertLoggedSequenceEqual("batch numbers after undo", undo_expected_batch_numbers, [batch.number for batch in scene.batches])
+        self.assertLoggedSequenceEqual("batch sizes after undo", undo_expected_batch_sizes, [batch.size for batch in scene.batches])
 
         for i in range(len(scene.batches)):
             batch = scene.batches[i]
@@ -441,17 +483,12 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         batch_line_numbers = [[line.number for line in batch.originals] for batch in scene.batches]
         batch_first_lines = [(batch.first_line_number, batch.originals[0].text, batch.translated[0].text) for batch in scene.batches]
 
-        log_input_expected_result("Split batch count", expected_batch_count, len(scene.batches))
-        log_input_expected_result("Split batch numbers", expected_batch_numbers, scene_batches)
-        log_input_expected_result("Split batch sizes", expected_batch_sizes, batch_sizes)
-        log_input_expected_result("Split batch line numbers", expected_batch_line_numbers, batch_line_numbers)
-
-        self.assertEqual(len(scene.batches), expected_batch_count)
-        self.assertSequenceEqual(scene_batches, expected_batch_numbers)
-        self.assertSequenceEqual(batch_sizes, expected_batch_sizes)
+        self.assertLoggedEqual("split batch count", expected_batch_count, len(scene.batches))
+        self.assertLoggedSequenceEqual("split batch numbers", expected_batch_numbers, scene_batches)
+        self.assertLoggedSequenceEqual("split batch sizes", expected_batch_sizes, batch_sizes)
         if expected_batch_line_numbers is not None:
-            self.assertSequenceEqual(batch_line_numbers, expected_batch_line_numbers)
-        self.assertSequenceEqual(batch_first_lines, expected_batch_first_lines)
+            self.assertLoggedSequenceEqual("split batch line numbers", expected_batch_line_numbers, batch_line_numbers)
+        self.assertLoggedSequenceEqual("split batch first lines", expected_batch_first_lines, batch_first_lines)
 
         self.assertTrue(auto_split_batch_command.can_undo)
         self.assertTrue(auto_split_batch_command.undo())
@@ -459,10 +496,8 @@ class MergeSplitCommandsTests(SubtitleTestCase):
         undo_line_numbers = [[line.number for line in batch.originals] for batch in scene.batches]
         undo_first_lines = [(batch.first_line_number, batch.originals[0].text, batch.translated[0].text) for batch in scene.batches]
 
-        log_input_expected_result("Batches after undo", (undo_expected_batch_count, undo_expected_batch_numbers), (len(scene.batches), [batch.number for batch in scene.batches]))
-        self.assertEqual(len(scene.batches), undo_expected_batch_count)
-        self.assertSequenceEqual([batch.number for batch in scene.batches], undo_expected_batch_numbers)
-        self.assertSequenceEqual([batch.size for batch in scene.batches], undo_expected_batch_sizes)
-        self.assertSequenceEqual(undo_line_numbers, undo_expected_line_numbers)
-        self.assertSequenceEqual(undo_first_lines, undo_expected_batch_first_lines)
-
+        self.assertLoggedEqual("batch count after undo", undo_expected_batch_count, len(scene.batches))
+        self.assertLoggedSequenceEqual("batch numbers after undo", undo_expected_batch_numbers, [batch.number for batch in scene.batches])
+        self.assertLoggedSequenceEqual("batch sizes after undo", undo_expected_batch_sizes, [batch.size for batch in scene.batches])
+        self.assertLoggedSequenceEqual("batch line numbers after undo", undo_expected_line_numbers, undo_line_numbers)
+        self.assertLoggedSequenceEqual("batch first lines after undo", undo_expected_batch_first_lines, undo_first_lines)

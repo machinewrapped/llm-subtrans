@@ -5,7 +5,6 @@ from typing import Any
 from GuiSubtrans.Commands.MergeLinesCommand import MergeLinesCommand
 from .DataModelHelpers import CreateTestDataModelBatched
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
 from PySubtrans.Subtitles import Subtitles
 from ..TestData.chinese_dinner import chinese_dinner_data
 
@@ -65,10 +64,14 @@ class MergeLinesCommandTest(SubtitleTestCase):
                 
                 translated_line = batch.GetTranslatedLine(line_number)
 
-                log_input_expected_result(f"Line {line_number}", (line.srt_start, line.srt_end), (line_data['start'], line_data['end']))
-                log_input_expected_result("Batch size", len(batch.originals), expected_batch_size)
-                log_input_expected_result("Original", line.text, line_data['original'])
-                log_input_expected_result("Translated", line.translation, line_data['translated'])
+                self.assertLoggedEqual(
+                    f"line {line_number} timing",
+                    (line_data['start'], line_data['end']),
+                    (line.srt_start, line.srt_end),
+                )
+                self.assertLoggedEqual("batch size", expected_batch_size, len(batch.originals))
+                self.assertLoggedEqual("original text", line_data['original'], line.text)
+                self.assertLoggedEqual("translated text", line_data['translated'], line.translation)
 
                 self.assertEqual(len(batch.originals), expected_batch_size)
                 self.assertEqual(line.srt_start, line_data['start'])

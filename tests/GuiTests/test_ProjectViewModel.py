@@ -4,7 +4,6 @@ from GuiSubtrans.GuiSubtitleTestCase import GuiSubtitleTestCase
 from GuiSubtrans.ViewModel.TestableViewModel import TestableViewModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, CreateDummyBatch, CreateDummyScene
-from PySubtrans.Helpers.Tests import log_input_expected_result
 from PySubtrans.SubtitleLine import SubtitleLine
 
 class ProjectViewModelTests(GuiSubtitleTestCase):

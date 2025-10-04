@@ -14,7 +14,6 @@ from GuiSubtrans.Commands.SplitSceneCommand import SplitSceneCommand
 from GuiSubtrans.GuiSubtitleTestCase import GuiSubtitleTestCase
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.TestableViewModel import TestableViewModel
-from PySubtrans.Helpers.Tests import log_input_expected_result
 from PySubtrans.Subtitles import Subtitles
 
 
@@ -248,11 +247,9 @@ class CommandsWithViewModelTests(GuiSubtitleTestCase):
         Execute the command and apply model updates it generates to the datamodel.
         """
         success = command.execute()
-        log_input_expected_result('command executed', True, success)
-        self.assertTrue(success)
+        self.assertLoggedTrue('command executed', success)
 
-        log_input_expected_result('model updates generated', True, bool(command.model_updates))
-        self.assertGreater(len(command.model_updates), 0)
+        self.assertLoggedGreater('model update count', len(command.model_updates), 0)
 
         for model_update in command.model_updates:
             datamodel.UpdateViewModel(model_update)

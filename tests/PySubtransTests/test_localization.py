@@ -1,11 +1,6 @@
-import sys
 import unittest
-
-from PySubtrans.Helpers.Tests import (
-    log_input_expected_result,
-    log_test_name,
-    skip_if_debugger_attached,
-)
+from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.Helpers.Localization import (
     initialize_localization,
     set_language,
@@ -15,48 +10,38 @@ from PySubtrans.Helpers.Localization import (
     get_locale_display_name,
 )
 
-
-class TestLocalization(unittest.TestCase):
-    def setUp(self) -> None:
-        log_test_name(self._testMethodName)
-
+class TestLocalization(LoggedTestCase):
     def test_initialize_default_english(self):
         initialize_localization("en")
         text = "Cancel"
         result = _(text)
-        log_input_expected_result(text, text, result)
-        self.assertEqual(result, text)
+        self.assertLoggedEqual("default english translation", text, result)
 
         # tr() should match _() when no context-specific entry exists
         ctx_result = tr("dialog", text)
-        log_input_expected_result(("dialog", text), text, ctx_result)
-        self.assertEqual(ctx_result, text)
+        self.assertLoggedEqual("context translation matches", text, ctx_result, input_value=("dialog", text))
 
     def test_switch_to_spanish_and_back(self):
         # Switch to Spanish and verify a commonly-translated label
         initialize_localization("es")
         es_result = _("Cancel")
-        log_input_expected_result("Cancel", "Cancelar", es_result)
-        self.assertEqual(es_result, "Cancelar")
+        self.assertLoggedEqual("spanish translation", "Cancelar", es_result)
 
         # tr() should also use the active language
         es_ctx_result = tr("menu", "Cancel")
-        log_input_expected_result(("menu", "Cancel"), "Cancelar", es_ctx_result)
-        self.assertEqual(es_ctx_result, "Cancelar")
+        self.assertLoggedEqual("spanish context translation", "Cancelar", es_ctx_result, input_value=("menu", "Cancel"))
 
         # Now switch back to English
         set_language("en")
         en_result = _("Cancel")
-        log_input_expected_result("Cancel", "Cancel", en_result)
-        self.assertEqual(en_result, "Cancel")
+        self.assertLoggedEqual("english translation after switch", "Cancel", en_result)
 
     @skip_if_debugger_attached
     def test_missing_language_fallback(self):
         initialize_localization("zz")  # non-existent locale
         # Should gracefully fall back to identity translation
         result = _("Cancel")
-        log_input_expected_result("Cancel", "Cancel", result)
-        self.assertEqual(result, "Cancel")
+        self.assertLoggedEqual("fallback translation", "Cancel", result)
 
     def test_placeholder_formatting(self):
         initialize_localization("es")
@@ -65,10 +50,13 @@ class TestLocalization(unittest.TestCase):
         translated = _(msgid)
         formatted = translated.format(file="ABC.srt")
         expected_start = "Ejecutando"
-        log_input_expected_result((msgid, "{file}=ABC.srt"), True, translated.startswith(expected_start))
-        self.assertTrue(translated.startswith(expected_start))
+        self.assertLoggedTrue(
+            "placeholder preserved",
+            translated.startswith(expected_start),
+            input_value=(msgid, "{file}=ABC.srt"),
+        )
         # Ensure placeholder survived translation and formats correctly
-        log_input_expected_result("formatted", "Ejecutando", formatted.split()[0])
+        self.assertLoggedEqual("formatted first word", "Ejecutando", formatted.split()[0], input_value=formatted)
         self.assertIn("ABC.srt", formatted)
 
     def test_available_locales_and_display_name(self):
@@ -79,7 +67,11 @@ class TestLocalization(unittest.TestCase):
 
         # Display name should be a non-empty string regardless of Babel availability
         name = get_locale_display_name("es")
-        log_input_expected_result("get_locale_display_name('es')", True, isinstance(name, str) and len(name) > 0)
+        self.assertLoggedTrue(
+            "locale display name present",
+            isinstance(name, str) and len(name) > 0,
+            input_value=name,
+        )
         self.assertIsInstance(name, str)
         self.assertGreater(len(name), 0)
 

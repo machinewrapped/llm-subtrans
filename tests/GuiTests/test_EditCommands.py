@@ -9,7 +9,7 @@ from GuiSubtrans.ProjectDataModel import ProjectDataModel
 
 from .DataModelHelpers import CreateTestDataModelBatched
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
+from PySubtrans.Helpers.Tests import log_test_name
 from PySubtrans.Subtitles import Subtitles
 from ..TestData.chinese_dinner import chinese_dinner_data
 
@@ -151,7 +151,7 @@ class EditCommandsTests(SubtitleTestCase):
 
         expected = (expected_number, expected_size, expected_linecount, expected_summary)
         actual = (scene.number, scene.size, scene.linecount, scene.summary)
-        log_input_expected_result("Edit Scene", expected, actual)
+        self.assertLoggedEqual("edit scene result", expected, actual)
 
         self.assertEqual(scene.number, expected_number)
         self.assertEqual(scene.size, expected_size)
@@ -186,9 +186,11 @@ class EditCommandsTests(SubtitleTestCase):
         expected_size = test_data.get('expected_size', original_size)
         expected_summary = test_data.get('expected_summary', original_summary)
 
-        log_input_expected_result("Edit Batch", 
-                                 (expected_scene_number, expected_batch_number, expected_size, expected_summary), 
-                                 (scene.number, batch.number, batch.size, batch.summary))
+        self.assertLoggedEqual(
+            "edit batch result",
+            (expected_scene_number, expected_batch_number, expected_size, expected_summary),
+            (scene.number, batch.number, batch.size, batch.summary),
+        )
 
         self.assertEqual(scene.number, expected_scene_number)
         self.assertEqual(batch.number, expected_batch_number)
@@ -222,9 +224,11 @@ class EditCommandsTests(SubtitleTestCase):
         expected_original = test_data.get('expected_original', original_text)
         expected_translation = test_data.get('expected_translation', original_translation)
 
-        log_input_expected_result("Edit Line",
-                                 (expected_line_number, expected_original, expected_translation),
-                                 (line.number, line.text, line.translation))
+        self.assertLoggedEqual(
+            "edit line result",
+            (expected_line_number, expected_original, expected_translation),
+            (line.number, line.text, line.translation),
+        )
 
         edited_line = batch.GetOriginalLine(line_number)
         self.assertIsNotNone(edited_line, f"Edited line {line_number} should exist")
@@ -237,18 +241,16 @@ class EditCommandsTests(SubtitleTestCase):
         # Test timing if specified in test data
         if 'expected_start' in test_data:
             expected_start = test_data['expected_start']
-            log_input_expected_result("Start time", expected_start, edited_line.srt_start)
-            self.assertEqual(edited_line.srt_start, expected_start)
+            self.assertLoggedEqual("start time", expected_start, edited_line.srt_start)
 
         if 'expected_end' in test_data:
             expected_end = test_data['expected_end']
-            log_input_expected_result("End time", expected_end, edited_line.srt_end)
-            self.assertEqual(edited_line.srt_end, expected_end)
+            self.assertLoggedEqual("end time", expected_end, edited_line.srt_end)
 
         # Test metadata if specified in test data
         if 'expected_metadata' in test_data:
             expected_metadata = test_data['expected_metadata']
-            log_input_expected_result("Metadata", expected_metadata, edited_line.metadata)
+            self.assertLoggedEqual("metadata", expected_metadata, edited_line.metadata)
             for key, expected_value in expected_metadata.items():
                 self.assertIn(key, edited_line.metadata)
                 self.assertEqual(edited_line.metadata[key], expected_value)
@@ -266,18 +268,16 @@ class EditCommandsTests(SubtitleTestCase):
             # If timing is being tested and we expect a translated line, verify timing sync
             if 'expected_start' in test_data:
                 expected_start = test_data['expected_start']
-                log_input_expected_result("Translated line start synced", expected_start, translated_line.srt_start)
-                self.assertEqual(translated_line.srt_start, expected_start)
+                self.assertLoggedEqual("translated start", expected_start, translated_line.srt_start)
 
             if 'expected_end' in test_data:
                 expected_end = test_data['expected_end']
-                log_input_expected_result("Translated line end synced", expected_end, translated_line.srt_end)
-                self.assertEqual(translated_line.srt_end, expected_end)
+                self.assertLoggedEqual("translated end", expected_end, translated_line.srt_end)
 
             # If metadata is being tested and we expect a translated line, verify metadata sync
             if 'expected_metadata' in test_data:
                 expected_metadata = test_data['expected_metadata']
-                log_input_expected_result("Translated line metadata synced", expected_metadata, translated_line.metadata)
+                self.assertLoggedEqual("translated metadata", expected_metadata, translated_line.metadata)
                 for key, expected_value in expected_metadata.items():
                     self.assertIn(key, translated_line.metadata)
                     self.assertEqual(translated_line.metadata[key], expected_value)

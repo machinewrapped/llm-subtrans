@@ -3,10 +3,7 @@ import tempfile
 import unittest
 
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import (
-    log_test_name,
-    skip_if_debugger_attached,
-)
+from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleProject import SubtitleProject
@@ -25,7 +22,7 @@ class SubtitleProjectTests(SubtitleTestCase):
 
     def setUp(self):
         """Set up test fixtures"""
-        log_test_name(self._testMethodName)
+        super().setUp()
 
         self.temp_dir = tempfile.mkdtemp()
         self.test_srt_file = os.path.join(self.temp_dir, "test.srt")

@@ -5,7 +5,7 @@ from datetime import timedelta
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Helpers.Text import split_sequences, standard_filler_words
 from PySubtrans.Helpers.TestCases import LoggedTestCase
-from PySubtrans.Helpers.Tests import log_info, log_input_expected_result
+from PySubtrans.Helpers.Tests import log_info
 from PySubtrans.Helpers.SubtitleHelpers import MergeSubtitles, MergeTranslations, FindSplitPoint, GetProportionalDuration
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 
@@ -46,8 +46,12 @@ class TestSubtitles(LoggedTestCase):
                 lines = [SubtitleLine(line) for line in source]
                 expected_line = SubtitleLine(expected)
                 result = MergeSubtitles(lines)
-                log_input_expected_result(lines, expected_line, result)
-                self.assertEqual(result, expected_line)
+                self.assertLoggedEqual(
+                    "merged subtitles",
+                    expected_line,
+                    result,
+                    input_value=lines,
+                )
 
     merge_translation_cases = [
         (
@@ -76,11 +80,11 @@ class TestSubtitles(LoggedTestCase):
         for group_1, group_2, expected in self.merge_translation_cases:
             with self.subTest(group_1=group_1, group_2=group_2):
                 merged_lines = MergeTranslations(group_1, group_2)
-                log_input_expected_result(f"Merged {len(group_1)} lines and {len(group_2)} lines",
-                                          expected,
-                                          merged_lines)
-
-                self.assertSequenceEqual(merged_lines, expected)
+                self.assertLoggedSequenceEqual(
+                    f"merged {len(group_1)} and {len(group_2)} lines",
+                    expected,
+                    merged_lines,
+                )
 
     split_point_cases = [
         ("1\n00:00:01,000 --> 00:00:05,000\nThis is a test subtitle, break after comma.", "This is a test subtitle,"),
@@ -115,8 +119,7 @@ class TestSubtitles(LoggedTestCase):
 
                 break_point = FindSplitPoint(line, split_patterns, min_duration, min_split_chars)
                 result = line.text[:break_point].strip()
-                log_input_expected_result(line, first_part, result)
-                self.assertEqual(result, first_part)
+                self.assertLoggedEqual("split point text", first_part, result, input_value=line)
 
     proportional_duration_cases = [
         (example_line_1, 6, timedelta(seconds=0.5), timedelta(seconds=0.5)),
@@ -131,8 +134,12 @@ class TestSubtitles(LoggedTestCase):
         for line, characters, min_duration, expected_duration in self.proportional_duration_cases:
             with self.subTest(line=line, characters=characters):
                 result = GetProportionalDuration(line, characters, min_duration=min_duration)
-                log_input_expected_result((line.text, characters, min_duration.total_seconds()), expected_duration, result)
-                self.assertEqual(result, expected_duration)
+                self.assertLoggedEqual(
+                    "proportional duration",
+                    expected_duration,
+                    result,
+                    input_value=(line.text, characters, min_duration.total_seconds()),
+                )
 
 class SubtitleProcessorTests(LoggedTestCase):
     example_line_1 = "1\n00:00:01,000 --> 00:00:02,000\nThis is line 1"

@@ -4,7 +4,6 @@ from GuiSubtrans.Commands.ReparseTranslationsCommand import ReparseTranslationsC
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from .DataModelHelpers import CreateTestDataModelBatched
 from PySubtrans.Helpers.TestCases import SubtitleTestCase, AddResponsesFromMap
-from PySubtrans.Helpers.Tests import log_info, log_input_expected_result, log_test_name
 from PySubtrans.Subtitles import Subtitles
 from ..TestData.chinese_dinner import chinese_dinner_data
 

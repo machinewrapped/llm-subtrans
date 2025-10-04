@@ -4,7 +4,7 @@ from copy import deepcopy
 from datetime import timedelta
 
 from PySubtrans.Helpers.TestCases import SubtitleTestCase, DummyTranslationClient
-from PySubtrans.Helpers.Tests import log_test_name, log_input_expected_result, log_info, skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import log_info, skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType, SettingType
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
@@ -162,11 +162,18 @@ class StreamingTests(SubtitleTestCase):
         translator.TranslateSubtitles(subtitles)
 
         # We know exactly what to expect: 3 streaming chunks = 3 batch_updated, 1 batch_translated
-        log_input_expected_result("batch_updated events count", 3, len(batch_updated_events))
-        log_input_expected_result("batch_translated events count", 1, len(batch_translated_events))
-
-        self.assertEqual(len(batch_updated_events), 3, "Should have 3 streaming update events (one per chunk)")
-        self.assertEqual(len(batch_translated_events), 1, "Should have 1 completion event")
+        self.assertLoggedEqual(
+            "batch_updated events count",
+            3,
+            len(batch_updated_events),
+            "Should have 3 streaming update events (one per chunk)",
+        )
+        self.assertLoggedEqual(
+            "batch_translated events count",
+            1,
+            len(batch_translated_events),
+            "Should have 1 completion event",
+        )
 
         # Validate event content
         for event in batch_updated_events:
@@ -207,8 +214,12 @@ class StreamingTests(SubtitleTestCase):
 
         # Validate partial updates - we sent 4 deltas with 2 complete line groups
         actual_update_count = len(partial_updates)
-        log_input_expected_result("Partial updates count", 2, actual_update_count)
-        self.assertEqual(actual_update_count, 2, "Should have exactly 2 partial updates for 2 complete line groups")
+        self.assertLoggedEqual(
+            "partial updates count",
+            2,
+            actual_update_count,
+            "Should have exactly 2 partial updates for 2 complete line groups",
+        )
 
         # Validate that updates are Translation objects
         for update in partial_updates:
@@ -218,8 +229,8 @@ class StreamingTests(SubtitleTestCase):
         final_response = request.accumulated_text
         contains_first = "As usual, don't let anyone in" in final_response
         contains_second = "Hoshino, ordering the usual" in final_response
-        log_input_expected_result("Contains first text", True, contains_first)
-        log_input_expected_result("Contains second text", True, contains_second)
+        self.assertLoggedTrue("contains first text", contains_first, input_value=final_response)
+        self.assertLoggedTrue("contains second text", contains_second, input_value=final_response)
         self.assertIn("As usual, don't let anyone in", final_response)
         self.assertIn("Hoshino, ordering the usual", final_response)
 
@@ -279,7 +290,11 @@ class StreamingTests(SubtitleTestCase):
 
         error_message = str(context.exception).lower()
         contains_interruption = "network interruption" in error_message
-        log_input_expected_result("Network error message contains 'network interruption'", True, contains_interruption)
+        self.assertLoggedTrue(
+            "network interruption mentioned",
+            contains_interruption,
+            input_value=error_message,
+        )
         self.assertIn("network interruption", error_message)
 
     @skip_if_debugger_attached
@@ -335,14 +350,12 @@ class StreamingTests(SubtitleTestCase):
 
         # Verify that errors were captured - we simulated exactly 1 API error
         error_count = len(translator.errors)
-        log_input_expected_result("Error count", 1, error_count)
-        self.assertEqual(error_count, 1)
+        self.assertLoggedEqual("error count", 1, error_count)
 
         # Verify the error message contains our simulated error
         error_messages = [str(error) for error in translator.errors]
         found_api_error = any("API error" in msg for msg in error_messages)
-        log_input_expected_result("Contains API error", True, found_api_error)
-        self.assertTrue(found_api_error)
+        self.assertLoggedTrue("contains API error", found_api_error, input_value=error_messages)
 
 
     def test_concurrent_streaming_requests(self):
@@ -406,11 +419,14 @@ class StreamingTests(SubtitleTestCase):
             thread.join(timeout=5.0)  # 5 second timeout
 
         # Validate exactly 3 results as expected
-        log_input_expected_result("Concurrent translation results", num_threads, len(results))
-        self.assertEqual(len(results), num_threads)
+        self.assertLoggedEqual("concurrent translation results", num_threads, len(results))
 
         # Validate all succeeded
         success_count = sum(1 for _, success, _ in results if success)
-        log_input_expected_result("Successful translations", num_threads, success_count)
-        self.assertEqual(success_count, num_threads, f"All {num_threads} concurrent translations should succeed")
+        self.assertLoggedEqual(
+            "successful translations",
+            num_threads,
+            success_count,
+            f"All {num_threads} concurrent translations should succeed",
+        )
 

@@ -3,7 +3,7 @@ from GuiSubtrans.Commands.BatchSubtitlesCommand import BatchSubtitlesCommand
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from .DataModelHelpers import CreateTestDataModel
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
+from PySubtrans.Helpers.Tests import log_test_name
 from PySubtrans.Subtitles import Subtitles
 from ..TestData.chinese_dinner import chinese_dinner_data
 
@@ -48,18 +48,13 @@ class BatchCommandTests(SubtitleTestCase):
         self.assertTrue(batch_command.execute())
         self.assertTrue(len(file.scenes) > 0)
 
-        log_input_expected_result("Scene count", expected_scene_count, len(file.scenes))
-        self.assertEqual(len(file.scenes), expected_scene_count)
+        self.assertLoggedEqual("scene count", expected_scene_count, len(file.scenes))
 
         scene_sizes = [scene.size for scene in file.scenes]
         scene_linecounts = [scene.linecount for scene in file.scenes]
         scene_batch_sizes = [[batch.size for batch in scene.batches] for scene in file.scenes]
 
-        log_input_expected_result("Scene size", expected_scene_sizes, scene_sizes)
-        log_input_expected_result("Scene line count", expected_scene_linecounts, scene_linecounts)
-        log_input_expected_result("Scene batch sizes", expected_scene_batch_sizes, scene_batch_sizes)
-
-        self.assertEqual(scene_sizes, expected_scene_sizes)
-        self.assertEqual(scene_linecounts, expected_scene_linecounts)
-        self.assertSequenceEqual(scene_batch_sizes, expected_scene_batch_sizes)
+        self.assertLoggedSequenceEqual("scene sizes", expected_scene_sizes, scene_sizes)
+        self.assertLoggedSequenceEqual("scene line counts", expected_scene_linecounts, scene_linecounts)
+        self.assertLoggedSequenceEqual("scene batch sizes", expected_scene_batch_sizes, scene_batch_sizes)
 

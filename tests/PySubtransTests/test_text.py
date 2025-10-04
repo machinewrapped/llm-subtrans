@@ -1,7 +1,7 @@
 import unittest
 import regex
 
-from PySubtrans.Helpers.Tests import log_input_expected_result, log_test_name
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Text import (
     EnsureFullWidthPunctuation,
     break_sequences,
@@ -22,9 +22,7 @@ from PySubtrans.Helpers.Text import (
     SanitiseSummary
     )
 
-class TestTextHelpers(unittest.TestCase):
-    def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+class TestTextHelpers(LoggedTestCase):
     dialog_marker = "- "
 
     linearise_cases = [
@@ -38,8 +36,7 @@ class TestTextHelpers(unittest.TestCase):
         for input, expected in self.linearise_cases:
             with self.subTest():
                 result = Linearise(input)
-                log_input_expected_result(str(input), expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("linearise", expected, result, input_value=str(input))
 
     remove_whitespace_and_punctuation_cases = [
         ("This is a test", "Thisisatest"),
@@ -51,8 +48,7 @@ class TestTextHelpers(unittest.TestCase):
         for text, expected in self.remove_whitespace_and_punctuation_cases:
             with self.subTest(text=text):
                 result = RemoveWhitespaceAndPunctuation(text)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("remove whitespace", expected, result, input_value=text)
 
     is_text_content_equal_cases = [
         ("This is a test", "This is a test", True),
@@ -68,8 +64,12 @@ class TestTextHelpers(unittest.TestCase):
         for text1, text2, expected in self.is_text_content_equal_cases:
             with self.subTest(text1=text1, text2=text2):
                 result = IsTextContentEqual(text1, text2)
-                log_input_expected_result([text1, text2], expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(
+                    "text content equal",
+                    expected,
+                    result,
+                    input_value=[text1, text2],
+                )
 
     normalise_tags_cases = {
         "This is a test": "This is a test",
@@ -85,8 +85,7 @@ class TestTextHelpers(unittest.TestCase):
         for text, expected in self.normalise_tags_cases.items():
             with self.subTest(text=text):
                 result = NormaliseDialogTags(text, self.dialog_marker)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("normalise dialog tags", expected, result, input_value=text)
 
     break_dialog_on_one_line_cases = {
         "This is a test": "This is a test",
@@ -102,12 +101,15 @@ class TestTextHelpers(unittest.TestCase):
         for text, expected in self.break_dialog_on_one_line_cases.items():
             with self.subTest(text=text):
                 result = BreakDialogOnOneLine(text, self.dialog_marker)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("break dialog", expected, result, input_value=text)
 
                 compiled_result = BreakDialogOnOneLine(text, compiled_pattern)
-                log_input_expected_result(text, expected, compiled_result)
-                self.assertEqual(compiled_result, expected)
+                self.assertLoggedEqual(
+                    "break dialog compiled",
+                    expected,
+                    compiled_result,
+                    input_value=text,
+                )
 
     break_long_line_cases = [
         ("This is a test", 100, 10, "This is a test"),
@@ -132,8 +134,12 @@ class TestTextHelpers(unittest.TestCase):
         for text, max_length, min_length, expected in self.break_long_line_cases:
             with self.subTest(text=text):
                 result = BreakLongLine(text, max_length, min_length, break_patterns)
-                log_input_expected_result((text, max_length, min_length), expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(
+                    "break long line",
+                    expected,
+                    result,
+                    input_value=(text, max_length, min_length),
+                )
 
     limit_text_length_cases = [
         # input is shorter than max_length
@@ -154,8 +160,7 @@ class TestTextHelpers(unittest.TestCase):
         for text, limit, expected in self.limit_text_length_cases:
             with self.subTest(text=text):
                 result = LimitTextLength(text, limit)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("limit text length", expected, result, input_value=text)
 
     contains_tags_cases = [
         ("This is a test", False),
@@ -174,8 +179,7 @@ class TestTextHelpers(unittest.TestCase):
         for text, expected in self.contains_tags_cases:
             with self.subTest(text=text):
                 result = ContainsTags(text)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("contains tags", expected, result, input_value=text)
 
     extract_tag_cases = [
         ("This test has no tags", "tag", ("This test has no tags", None)),
@@ -189,8 +193,7 @@ class TestTextHelpers(unittest.TestCase):
         for text, tagname, expected in self.extract_tag_cases:
             with self.subTest(text=text):
                 result = ExtractTag(tagname, text)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("extract tag", expected, result, input_value=text)
 
     extract_taglist_cases = [
         ("This test has no tags", "tag", ("This test has no tags", [])),
@@ -203,8 +206,7 @@ class TestTextHelpers(unittest.TestCase):
         for text, tagname, expected in self.extract_taglist_cases:
             with self.subTest(text=text):
                 result = ExtractTagList(tagname, text)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("extract tag list", expected, result, input_value=text)
 
     sanitise_summary_cases = [
         ("", None, None, None),
@@ -219,8 +221,7 @@ class TestTextHelpers(unittest.TestCase):
         for text, movie_name, max_length, expected in self.sanitise_summary_cases:
             with self.subTest(text=text):
                 result = SanitiseSummary(text, movie_name, max_length)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("sanitise summary", expected, result, input_value=text)
 
     remove_filler_cases = [
         ("This is a normal sentence", "This is a normal sentence"),
@@ -233,14 +234,12 @@ class TestTextHelpers(unittest.TestCase):
     def test_RemoveFillerWords(self):
         filler_patterns = CompileFillerWordsPattern(standard_filler_words)
         if not filler_patterns:
-            log_input_expected_result("Filler patterns", "list", filler_patterns)
-            return
+            self.skipTest("Filler patterns could not be compiled")
 
         for text, expected in self.remove_filler_cases:
             with self.subTest(text=text):
                 result = RemoveFillerWords(text, filler_patterns)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("remove filler words", expected, result, input_value=text)
 
     fullwidth_punctuation_cases = [
         ("你好,世界!", "你好，世界!"),
@@ -259,8 +258,7 @@ class TestTextHelpers(unittest.TestCase):
         for text, expected in self.fullwidth_punctuation_cases:
             with self.subTest(text=text):
                 result = EnsureFullWidthPunctuation(text)
-                log_input_expected_result(text, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual("fullwidth punctuation", expected, result, input_value=text)
 
 if __name__ == '__main__':
     unittest.main()

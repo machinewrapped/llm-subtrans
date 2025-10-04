@@ -1,6 +1,4 @@
-import unittest
-
-from PySubtrans.Helpers.Tests import log_input_expected_error, log_input_expected_result, log_test_name
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleLine import SubtitleLine
@@ -14,16 +12,12 @@ from PySubtrans.SubtitleError import (
 )
 
 
-class TestSubtitleValidator(unittest.TestCase):
-    def setUp(self) -> None:
-        log_test_name(self._testMethodName)
+class TestSubtitleValidator(LoggedTestCase):
     def test_ValidateTranslations_empty(self):
         validator = SubtitleValidator(Options())
         errors = validator.ValidateTranslations([])
-        log_input_expected_result("error_count", 1, len(errors))
-        self.assertEqual(len(errors), 1)
-        log_input_expected_error(errors[0], UntranslatedLinesError, errors[0])
-        self.assertEqual(type(errors[0]), UntranslatedLinesError)
+        self.assertLoggedEqual("error_count", 1, len(errors))
+        self.assertLoggedIsInstance("error type", errors[0], UntranslatedLinesError)
 
     def test_ValidateTranslations_detects_errors(self):
         options = Options({'max_characters': 10, 'max_newlines': 1})
@@ -36,13 +30,11 @@ class TestSubtitleValidator(unittest.TestCase):
 
         errors = validator.ValidateTranslations([line_no_number, line_no_text, line_too_long, line_too_many_newlines])
         expected_types = [UnmatchedLinesError, EmptyLinesError, LineTooLongError, TooManyNewlinesError]
-        log_input_expected_result("error_count", len(expected_types), len(errors))
-        self.assertEqual(len(errors), len(expected_types))
+        self.assertLoggedEqual("error_count", len(expected_types), len(errors))
 
         actual_error_types = {type(e) for e in errors}
         expected_error_types = set(expected_types)
-        log_input_expected_result("error types", expected_error_types, actual_error_types)
-        self.assertEqual(actual_error_types, expected_error_types)
+        self.assertLoggedEqual("error types", expected_error_types, actual_error_types)
 
     def test_ValidateBatch_adds_untranslated_error(self):
         validator = SubtitleValidator(Options())
@@ -53,10 +45,8 @@ class TestSubtitleValidator(unittest.TestCase):
         batch = SubtitleBatch({'originals': [orig1, orig2], 'translated': [trans1]})
 
         validator.ValidateBatch(batch)
-        log_input_expected_result("error_count", 1, len(batch.errors))
-        self.assertEqual(len(batch.errors), 1)
-        log_input_expected_error(batch.errors[0], UntranslatedLinesError, batch.errors[0])
-        self.assertEqual(type(batch.errors[0]), UntranslatedLinesError)
+        self.assertLoggedEqual("error_count", 1, len(batch.errors))
+        self.assertLoggedIsInstance("error type", batch.errors[0], UntranslatedLinesError)
 
     def test_ValidateBatch_includes_translation_errors(self):
         options = Options({'max_characters': 10})
@@ -71,6 +61,10 @@ class TestSubtitleValidator(unittest.TestCase):
         validator.ValidateBatch(batch)
 
         error_types = {type(e) for e in batch.errors}
-        log_input_expected_result("batch error types", {LineTooLongError, UntranslatedLinesError}, error_types)
+        self.assertLoggedEqual(
+            "batch error types",
+            {LineTooLongError, UntranslatedLinesError},
+            error_types,
+        )
         self.assertIn(LineTooLongError, error_types)
         self.assertIn(UntranslatedLinesError, error_types)

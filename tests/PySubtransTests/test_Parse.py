@@ -4,7 +4,6 @@ from enum import Enum
 from PySubtrans.Helpers import GetValueName, GetValueFromName
 from PySubtrans.Helpers.Parse import ParseDelayFromHeader, ParseNames
 from PySubtrans.Helpers.TestCases import LoggedTestCase
-from PySubtrans.Helpers.Tests import log_input_expected_result
 
 
 class TestParseDelayFromHeader(LoggedTestCase):
@@ -21,8 +20,7 @@ class TestParseDelayFromHeader(LoggedTestCase):
         for value, expected in self.test_cases:
             with self.subTest(value=value):
                 result = ParseDelayFromHeader(value)
-                log_input_expected_result(value, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"delay parsed from {value}", expected, result, input_value=value)
 
 
 class TestParseNames(LoggedTestCase):
@@ -39,8 +37,12 @@ class TestParseNames(LoggedTestCase):
         for value, expected in self.test_cases:
             with self.subTest(value=value):
                 result = ParseNames(value)
-                log_input_expected_result(value, expected, result)
-                self.assertSequenceEqual(result, expected)
+                self.assertLoggedSequenceEqual(
+                    f"names parsed from {value}",
+                    expected,
+                    result,
+                    input_value=value,
+                )
 
 class TestParseValues(LoggedTestCase):
     class TestEnum(Enum):
@@ -70,8 +72,7 @@ class TestParseValues(LoggedTestCase):
         for value, expected in self.get_value_name_cases:
             with self.subTest(value=value):
                 result = GetValueName(value)
-                log_input_expected_result(value, expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(f"name for {value}", expected, result, input_value=value)
 
     get_value_from_name_cases = [
         ("Test Name", ["Test Name", "Another Name", "Yet Another Name"], None, "Test Name"),
@@ -85,8 +86,12 @@ class TestParseValues(LoggedTestCase):
         for value, names, default, expected in self.get_value_from_name_cases:
             with self.subTest(value=value):
                 result = GetValueFromName(value, names, default)
-                log_input_expected_result((value, names, default), expected, result)
-                self.assertEqual(result, expected)
+                self.assertLoggedEqual(
+                    "value from name",
+                    expected,
+                    result,
+                    input_value=(value, names, default),
+                )
 
 if __name__ == '__main__':
     unittest.main()

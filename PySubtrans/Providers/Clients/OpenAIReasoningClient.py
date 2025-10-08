@@ -266,7 +266,7 @@ class OpenAIReasoningClient(OpenAIClient):
 
         for msg in content:
             if not isinstance(msg, dict):
-                continue
+                raise TranslationError(_("Content must be a list of message dicts for Responses API. Found item of type {type}.").format(type=type(msg).__name__))
 
             role = msg.get('role', 'user')
             msg_content = msg.get('content', '')

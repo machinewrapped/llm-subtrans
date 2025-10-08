@@ -1,17 +1,20 @@
 import logging
 
+from openai import BadRequestError
 from openai.types import responses as responses_types
 from openai.types.responses import (
-    ResponseStreamEvent,
+    EasyInputMessageParam,
+    ResponseInputParam,
     ResponseTextDeltaEvent,
     ResponseCompletedEvent,
     ResponseFailedEvent,
-    ResponseIncompleteEvent,
-    ResponseUsage
+    ResponseIncompleteEvent
 )
 from openai.types.completion_usage import CompletionTokensDetails
+from openai.types.shared_params.reasoning import Reasoning
+from openai.types.shared.reasoning_effort import ReasoningEffort
 
-from typing import Any
+from typing import Any, Literal, cast
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SettingsType import SettingsType
@@ -38,13 +41,14 @@ class OpenAIReasoningClient(OpenAIClient):
         self._is_streaming = False
 
     @property
-    def reasoning_effort(self) -> str:
-        return self.settings.get_str( 'reasoning_effort') or "low"
+    def reasoning_effort(self) -> ReasoningEffort:
+        effort = self.settings.get_str('reasoning_effort') or "low"
+        return cast(ReasoningEffort, effort)
 
     @property
     def is_streaming(self) -> bool:
         return self._is_streaming
-    
+
     def _send_messages(self, request: TranslationRequest, temperature: float|None) -> dict[str, Any] | None:
         """
         Make a request to OpenAI Responses API for translation
@@ -85,16 +89,25 @@ class OpenAIReasoningClient(OpenAIClient):
         if not prompt or not prompt.content or not isinstance(prompt.content, list):
             raise TranslationError(_("No content provided for translation"))
 
-        if request.is_streaming:
-            # Streaming: complex event loop with delta accumulation
-            return self._handle_streaming_response(request)
+        try:
+            if request.is_streaming:
+                # Streaming: complex event loop with delta accumulation
+                return self._handle_streaming_response(request)
 
-        return self.client.responses.create(
-            model=self.model,
-            input=prompt.content, # type: ignore[arg-type]
-            instructions=request.prompt.system_prompt,
-            reasoning={"effort": self.reasoning_effort} #type: ignore[arg-type]
-        )
+            # Convert message dicts to properly typed input parameters
+            input_params = self._convert_to_input_params(prompt.content)
+
+            return self.client.responses.create(
+                model=self.model,
+                input=input_params,
+                instructions=request.prompt.system_prompt,
+                reasoning=Reasoning(effort=self.reasoning_effort)
+            )
+        except BadRequestError as e:
+            error_msg = str(e)
+            if 'reasoning.effort' in error_msg or 'reasoning' in error_msg.lower():
+                raise TranslationError(_("Invalid reasoning configuration: {error}. Check that your model supports reasoning and the effort value is valid for your model.").format(error=error_msg))
+            raise TranslationError(_("Bad request to OpenAI API: {error}").format(error=error_msg))
 
     def _extract_text_content(self, openai_response : responses_types.Response):
         """Extract text content from OpenAI Responses API structure"""
@@ -193,12 +206,17 @@ class OpenAIReasoningClient(OpenAIClient):
         """
         assert self.client is not None
         assert self.model is not None
+        if not isinstance(request.prompt.content, list):
+            raise TranslationError(_("Content must be a list for streaming Responses API"))
+
+        # Convert message dicts to properly typed input parameters
+        input_params = self._convert_to_input_params(request.prompt.content)
 
         stream = self.client.responses.create(
             model=self.model,
-            input=request.prompt.content, # type: ignore[arg-type]
+            input=input_params,
             instructions=request.prompt.system_prompt,
-            reasoning={"effort": self.reasoning_effort}, #type: ignore[arg-type]
+            reasoning=Reasoning(effort=self.reasoning_effort),
             stream=True
         )
 
@@ -218,6 +236,12 @@ class OpenAIReasoningClient(OpenAIClient):
                 elif isinstance(event, (ResponseFailedEvent, ResponseIncompleteEvent)):
                     return event.response
 
+        except BadRequestError as e:
+            error_msg = str(e)
+            if 'reasoning.effort' in error_msg or 'reasoning' in error_msg.lower():
+                raise TranslationError(_("Invalid reasoning configuration: {error}. Check that the reasoning effort value is valid for your model.").format(error=error_msg))
+            raise TranslationError(_("Bad request to OpenAI API: {error}").format(error=error_msg))
+
         except Exception as e:
             logging.warning(f"Error during streaming: {e}")
 
@@ -227,7 +251,39 @@ class OpenAIReasoningClient(OpenAIClient):
         # If we get here without a completion event, something went wrong
         raise TranslationResponseError(_("Streaming did not complete successfully"), response=None)
 
+    def _convert_to_input_params(self, content: str|list[str]|list[dict[str, str]]) -> ResponseInputParam:
+        """
+        Convert message content to properly typed ResponseInputParam
+        """
+        if not isinstance(content, list):
+            raise TranslationError(_("Content must be a list for Responses API"))
 
+        # Content should always be a list of dictionaries for this client
+        if content and isinstance(content[0], str):
+            raise TranslationError(_("Content must be a list of message dicts for Responses API"))
 
+        input_params : list[EasyInputMessageParam] = []
 
+        for msg in content:
+            if not isinstance(msg, dict):
+                continue
+
+            role = msg.get('role', 'user')
+            msg_content = msg.get('content', '')
+
+            # Validate role is one of the accepted values
+            if role not in ('user', 'system', 'developer', 'assistant'):
+                role = 'user'
+
+            # EasyInputMessageParam requires role to be a specific literal type
+            typed_role = cast(Literal['user', 'system', 'developer', 'assistant'], role)
+
+            input_params.append(EasyInputMessageParam(
+                content=msg_content,
+                role=typed_role,
+                type='message'
+            ))
+
+        # ResponseInputParam is a List union type, so we cast our list to match
+        return cast(ResponseInputParam, input_params)
 

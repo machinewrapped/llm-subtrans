@@ -273,7 +273,7 @@ class OpenAIReasoningClient(OpenAIClient):
 
             # Validate role is one of the accepted values
             if role not in ('user', 'system', 'developer', 'assistant'):
-                role = 'user'
+                raise TranslationError(_("Invalid message role: {role}. Must be one of 'user', 'system', 'developer', or 'assistant'.").format(role=role))
 
             # EasyInputMessageParam requires role to be a specific literal type
             typed_role = cast(Literal['user', 'system', 'developer', 'assistant'], role)

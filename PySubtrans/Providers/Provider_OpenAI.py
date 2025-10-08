@@ -69,11 +69,17 @@ else:
 
             @property
             def is_instruct_model(self) -> bool:
-                return self.selected_model is not None and self.selected_model.find("instruct") >= 0
+                return self.selected_model is not None and self.model_is_instruct_model(self.selected_model)
 
             @property
             def is_reasoning_model(self) -> bool:
-                return self.selected_model is not None and not any(self.selected_model.startswith(model) for model in self.non_reasoning_models)
+                return self.selected_model is not None and self.model_is_reasoning_model(self.selected_model)
+
+            def model_is_instruct_model(self, model_name : str) -> bool:
+                return model_name.find("instruct") >= 0
+
+            def model_is_reasoning_model(self, model_name : str) -> bool:
+                return not any(model_name.startswith(model) for model in self.non_reasoning_models)
 
             def GetTranslationClient(self, settings : SettingsType) -> TranslationClient:
                 client_settings = SettingsType(self.settings.copy())
@@ -102,10 +108,11 @@ else:
                             'rate_limit': (float, _("Maximum OpenAI API requests per minute. Mainly useful if you are on the restricted free plan"))
                         })
 
-                        if self.is_instruct_model:
+                        model = settings.get_str('model') or self.selected_model or "gpt-5-mini"
+                        if self.model_is_instruct_model(model):
                             options['max_instruct_tokens'] = (int, _("Maximum tokens a completion can contain (only applicable for -instruct models)"))
 
-                        if self.is_reasoning_model:
+                        if self.model_is_reasoning_model(model):
                             options['reasoning_effort'] = (["minimal", "low", "medium", "high"], _("The level of reasoning effort to use for the model"))
                             options['stream_responses'] = (bool, _("Stream translations in realtime as they are generated"))
                         else:

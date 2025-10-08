@@ -106,7 +106,7 @@ class OpenAIReasoningClient(OpenAIClient):
         except BadRequestError as e:
             error_msg = str(e)
             if 'reasoning.effort' in error_msg or 'reasoning' in error_msg.lower():
-                raise TranslationError(_("Invalid reasoning configuration: {error}. Check that your model supports reasoning and the effort value is valid for your model.").format(error=error_msg))
+                raise TranslationError(_("Invalid reasoning configuration: {error}. Check that the reasoning effort value is valid for your model.").format(error=error_msg))
             raise TranslationError(_("Bad request to OpenAI API: {error}").format(error=error_msg))
 
     def _extract_text_content(self, openai_response : responses_types.Response):

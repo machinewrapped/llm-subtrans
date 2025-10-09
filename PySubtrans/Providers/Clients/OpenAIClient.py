@@ -83,6 +83,7 @@ class OpenAIClient(TranslationClient):
         raise NotImplementedError
 
     def _abort(self) -> None:
+        self.aborted = True
         if self.client:
             self.client.close()
         return super()._abort()

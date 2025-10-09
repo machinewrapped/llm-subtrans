@@ -141,4 +141,5 @@ class TranslationClient:
 
     def _abort(self) -> None:
         # Try to terminate ongoing requests
+        self.aborted = True
         pass

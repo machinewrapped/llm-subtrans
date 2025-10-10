@@ -1,6 +1,21 @@
 import logging
 
-from openai import BadRequestError
+from openai import (
+    APIConnectionError,
+    APIError,
+    APIResponseValidationError,
+    APIStatusError,
+    APITimeoutError,
+    AuthenticationError,
+    BadRequestError,
+    ConflictError,
+    InternalServerError,
+    NotFoundError,
+    OpenAIError,
+    PermissionDeniedError,
+    RateLimitError,
+    UnprocessableEntityError
+)
 from openai.types import responses as responses_types
 from openai.types.responses import (
     EasyInputMessageParam,
@@ -18,7 +33,11 @@ from typing import Any, Literal, cast
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleError import TranslationError, TranslationResponseError
+from PySubtrans.SubtitleError import (
+    TranslationError,
+    TranslationImpossibleError,
+    TranslationResponseError
+)
 from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 
@@ -103,11 +122,12 @@ class OpenAIReasoningClient(OpenAIClient):
                 instructions=request.prompt.system_prompt,
                 reasoning=Reasoning(effort=self.reasoning_effort)
             )
-        except BadRequestError as e:
-            error_msg = str(e)
-            if 'reasoning.effort' in error_msg or 'reasoning' in error_msg.lower():
-                raise TranslationError(_("Invalid reasoning configuration: {error}. Check that the reasoning effort value is valid for your model.").format(error=error_msg))
-            raise TranslationError(_("Bad request to OpenAI API: {error}").format(error=error_msg))
+        except RateLimitError:
+            raise
+        except (APITimeoutError, APIConnectionError):
+            raise
+        except OpenAIError as error:
+            self._raise_for_openai_error(error, _("creating the translation response"))
 
     def _extract_text_content(self, openai_response : responses_types.Response):
         """Extract text content from OpenAI Responses API structure"""
@@ -221,6 +241,8 @@ class OpenAIReasoningClient(OpenAIClient):
         )
 
         self._is_streaming = True
+        latest_response : responses_types.Response|None = None
+        stream_error : Exception|None = None
         try:
             for event in stream:
                 if self.aborted:
@@ -231,25 +253,44 @@ class OpenAIReasoningClient(OpenAIClient):
                     request.ProcessStreamingDelta(event.delta)
 
                 elif isinstance(event, ResponseCompletedEvent):
-                    return event.response
+                    latest_response = event.response
+                    return latest_response
 
                 elif isinstance(event, (ResponseFailedEvent, ResponseIncompleteEvent)):
-                    return event.response
+                    latest_response = event.response or latest_response
+                    stream_error = getattr(event, 'error', None)
+                    if not latest_response:
+                        break
+                    logging.warning(_("Streaming ended with an error but OpenAI returned a response: {error}").format(
+                        error=str(stream_error) if stream_error else _("unknown error")
+                    ))
+                    return latest_response
 
-        except BadRequestError as e:
-            error_msg = str(e)
-            if 'reasoning.effort' in error_msg or 'reasoning' in error_msg.lower():
-                raise TranslationError(_("Invalid reasoning configuration: {error}. Check that the reasoning effort value is valid for your model.").format(error=error_msg))
-            raise TranslationError(_("Bad request to OpenAI API: {error}").format(error=error_msg))
-
-        except Exception as e:
-            logging.warning(f"Error during streaming: {e}")
+        except RateLimitError:
+            raise
+        except (APITimeoutError, APIConnectionError):
+            raise
+        except OpenAIError as error:
+            stream_error = error
+        except Exception as error:
+            stream_error = error
+            logging.warning(f"Error during streaming: {error}")
 
         finally:
             self._is_streaming = False
 
+        if latest_response:
+            return latest_response
+
+        if stream_error:
+            if isinstance(stream_error, OpenAIError):
+                self._raise_for_openai_error(stream_error, _("streaming the translation response"))
+            raise TranslationError(_("Streaming failed before any response was received: {error}").format(
+                error=str(stream_error)
+            ))
+
         # If we get here without a completion event, something went wrong
-        raise TranslationResponseError(_("Streaming did not complete successfully"), response=None)
+        raise TranslationResponseError(_("OpenAI streaming ended without a completed response"), response=None)
 
     def _convert_to_input_params(self, content: str|list[str]|list[dict[str, str]]) -> ResponseInputParam:
         """
@@ -286,4 +327,58 @@ class OpenAIReasoningClient(OpenAIClient):
 
         # ResponseInputParam is a List union type, so we cast our list to match
         return cast(ResponseInputParam, input_params)
+
+    def _raise_for_openai_error(self, error : OpenAIError, context : str) -> None:
+        """Map OpenAI exceptions to actionable translation errors."""
+        error_message = str(error) or error.__class__.__name__
+
+        if isinstance(error, BadRequestError):
+            if 'reasoning.effort' in error_message or 'reasoning' in error_message.lower():
+                raise TranslationError(_("Invalid reasoning configuration: {error}. Try selecting a different reasoning effort or model.").format(
+                    error=error_message
+                )) from error
+            raise TranslationError(_("OpenAI could not process the translation request while {context}: {error}. Please try again or adjust the translation settings.").format(
+                context=context,
+                error=error_message
+            )) from error
+
+        if isinstance(error, AuthenticationError):
+            raise TranslationImpossibleError(_("OpenAI could not authenticate the request: {error}. Check the OpenAI API key configured in the settings.").format(
+                error=error_message
+            )) from error
+
+        if isinstance(error, PermissionDeniedError):
+            raise TranslationImpossibleError(_("OpenAI reported insufficient permissions: {error}. Confirm that your OpenAI account can use the selected model.").format(
+                error=error_message
+            )) from error
+
+        if isinstance(error, NotFoundError):
+            raise TranslationError(_("OpenAI could not find the requested resource while {context}: {error}. The model '{model}' may be unavailable for your account.").format(
+                context=context,
+                error=error_message,
+                model=self.model or _("unspecified")
+            )) from error
+
+        if isinstance(error, ConflictError):
+            raise TranslationError(_("OpenAI reported a conflict while {context}: {error}. Retry the request after a short delay.").format(
+                context=context,
+                error=error_message
+            )) from error
+
+        if isinstance(error, UnprocessableEntityError):
+            raise TranslationError(_("OpenAI could not process the request while {context}: {error}. Try shortening the prompt or simplifying the translation settings.").format(
+                context=context,
+                error=error_message
+            )) from error
+
+        if isinstance(error, (InternalServerError, APIError, APIStatusError, APIResponseValidationError)):
+            raise TranslationError(_("OpenAI returned an internal error while {context}: {error}. Please try again shortly.").format(
+                context=context,
+                error=error_message
+            )) from error
+
+        raise TranslationError(_("Unexpected error from OpenAI while {context}: {error}").format(
+            context=context,
+            error=error_message
+        )) from error
 

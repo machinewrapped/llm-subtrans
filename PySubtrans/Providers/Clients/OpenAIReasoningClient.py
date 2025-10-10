@@ -1,4 +1,6 @@
 import logging
+import json
+from typing import Any, Literal, cast
 
 from openai import BadRequestError
 from openai.types import responses as responses_types
@@ -8,13 +10,12 @@ from openai.types.responses import (
     ResponseTextDeltaEvent,
     ResponseCompletedEvent,
     ResponseFailedEvent,
-    ResponseIncompleteEvent
+    ResponseIncompleteEvent,
 )
 from openai.types.completion_usage import CompletionTokensDetails
 from openai.types.shared_params.reasoning import Reasoning
 from openai.types.shared.reasoning_effort import ReasoningEffort
 
-from typing import Any, Literal, cast
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SettingsType import SettingsType
@@ -23,6 +24,7 @@ from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 
 linesep = '\n'
+
 
 class OpenAIReasoningClient(OpenAIClient):
     """
@@ -49,6 +51,83 @@ class OpenAIReasoningClient(OpenAIClient):
     def is_streaming(self) -> bool:
         return self._is_streaming
 
+    # ----------------------------
+    # Internal logging helpers
+    # ----------------------------
+    def _log_bad_request_details(self, e: BadRequestError, where: str) -> None:
+        """
+        Dump as much structured info as possible from an OpenAI BadRequestError
+        so we can see the exact validation error returned by the API.
+        """
+        try:
+            status = getattr(e, "status_code", None) or getattr(e, "status", None)
+        except Exception:
+            status = None
+
+        try:
+            request_id = getattr(e, "request_id", None) or getattr(e, "requestId", None)
+        except Exception:
+            request_id = None
+
+        message = str(e)
+
+        body_repr = None
+        try:
+            resp = getattr(e, "response", None)
+            if resp is not None:
+                # httpx.Response in modern SDKs
+                try:
+                    body_json = resp.json()
+                    body_repr = json.dumps(body_json, indent=2, ensure_ascii=False)
+                except Exception:
+                    try:
+                        body_repr = resp.text
+                    except Exception:
+                        body_repr = "<no response body available>"
+            else:
+                body_repr = "<no response attached to exception>"
+        except Exception as ex:
+            body_repr = f"<failed extracting error body: {ex}>"
+
+        logging.error(
+            "OpenAI BadRequest during %s: status=%s request_id=%s message=%s",
+            where, status, request_id, message
+        )
+        # Keep big errors readable but bounded
+        if body_repr is not None:
+            max_len = 8000
+            clipped = (body_repr[:max_len] + " …[truncated]") if len(body_repr) > max_len else body_repr
+            logging.error("OpenAI BadRequest (%s) error body:\n%s", where, clipped)
+
+    def _log_stream_event_error(self, event: ResponseFailedEvent | ResponseIncompleteEvent) -> None:
+        """
+        Log details from streaming failure/incomplete events.
+        """
+        try:
+            err = getattr(event, "error", None)
+            if err:
+                err_type = getattr(err, "type", None)
+                err_code = getattr(err, "code", None)
+                err_msg = getattr(err, "message", None) or getattr(err, "error", None)
+                logging.error(
+                    "Streaming error event: type=%s code=%s message=%s",
+                    err_type, err_code, err_msg
+                )
+            else:
+                # Fall back to whatever we can get from the response
+                resp = getattr(event, "response", None)
+                stop_reason = getattr(resp, "stop_reason", None)
+                finish_reason = getattr(resp, "finish_reason", None)
+                logging.error(
+                    "Streaming failed/incomplete without explicit error object. stop_reason=%s finish_reason=%s",
+                    stop_reason, finish_reason
+                )
+        except Exception as ex:
+            logging.error("Failed to log streaming error event details: %s", ex)
+
+    # ----------------------------
+    # Main request/response flow
+    # ----------------------------
     def _send_messages(self, request: TranslationRequest, temperature: float|None) -> dict[str, Any] | None:
         """
         Make a request to OpenAI Responses API for translation
@@ -92,10 +171,18 @@ class OpenAIReasoningClient(OpenAIClient):
         try:
             if request.is_streaming:
                 # Streaming: complex event loop with delta accumulation
+                logging.debug("OpenAIReasoningClient: starting streaming responses.create()")
                 return self._handle_streaming_response(request)
 
             # Convert message dicts to properly typed input parameters
             input_params = self._convert_to_input_params(prompt.content)
+            logging.debug(
+                "OpenAIReasoningClient: non-streaming responses.create() "
+                "model=%s instructions_len=%s messages=%d",
+                self.model,
+                len(request.prompt.system_prompt or ""),
+                len(input_params) if isinstance(input_params, list) else 1
+            )
 
             return self.client.responses.create(
                 model=self.model,
@@ -104,6 +191,8 @@ class OpenAIReasoningClient(OpenAIClient):
                 reasoning=Reasoning(effort=self.reasoning_effort)
             )
         except BadRequestError as e:
+            # Log the full server-provided error before re-raising as TranslationError
+            self._log_bad_request_details(e, where="non-streaming")
             error_msg = str(e)
             if 'reasoning.effort' in error_msg or 'reasoning' in error_msg.lower():
                 raise TranslationError(_("Invalid reasoning configuration: {error}. Check that the reasoning effort value is valid for your model.").format(error=error_msg))
@@ -150,7 +239,6 @@ class OpenAIReasoningClient(OpenAIClient):
                 return text, reasoning
 
         raise TranslationResponseError(_("No text content found in response"), response=openai_response)
-
 
     def _extract_usage_info(self, openai_response : responses_types.Response) -> dict[str, Any]:
         """Extract token usage information with proper type safety"""
@@ -212,13 +300,29 @@ class OpenAIReasoningClient(OpenAIClient):
         # Convert message dicts to properly typed input parameters
         input_params = self._convert_to_input_params(request.prompt.content)
 
-        stream = self.client.responses.create(
-            model=self.model,
-            input=input_params,
-            instructions=request.prompt.system_prompt,
-            reasoning=Reasoning(effort=self.reasoning_effort),
-            stream=True
+        logging.debug(
+            "OpenAIReasoningClient: streaming responses.create() "
+            "model=%s instructions_len=%s messages=%d",
+            self.model,
+            len(request.prompt.system_prompt or ""),
+            len(input_params) if isinstance(input_params, list) else 1
         )
+
+        try:
+            stream = self.client.responses.create(
+                model=self.model,
+                input=input_params,
+                instructions=request.prompt.system_prompt,
+                reasoning=Reasoning(effort=self.reasoning_effort),
+                stream=True
+            )
+        except BadRequestError as e:
+            # If the server rejects the *initial* streaming request, we'll land here
+            self._log_bad_request_details(e, where="streaming (create)")
+            error_msg = str(e)
+            if 'reasoning.effort' in error_msg or 'reasoning' in error_msg.lower():
+                raise TranslationError(_("Invalid reasoning configuration: {error}. Check that the reasoning effort value is valid for your model.").format(error=error_msg))
+            raise TranslationError(_("Bad request to OpenAI API: {error}").format(error=error_msg))
 
         self._is_streaming = True
         try:
@@ -234,9 +338,13 @@ class OpenAIReasoningClient(OpenAIClient):
                     return event.response
 
                 elif isinstance(event, (ResponseFailedEvent, ResponseIncompleteEvent)):
+                    # Log any error metadata provided in the event
+                    self._log_stream_event_error(event)
                     return event.response
 
         except BadRequestError as e:
+            # Some SDKs may raise during iteration on protocol errors
+            self._log_bad_request_details(e, where="streaming (iterate)")
             error_msg = str(e)
             if 'reasoning.effort' in error_msg or 'reasoning' in error_msg.lower():
                 raise TranslationError(_("Invalid reasoning configuration: {error}. Check that the reasoning effort value is valid for your model.").format(error=error_msg))
@@ -268,8 +376,8 @@ class OpenAIReasoningClient(OpenAIClient):
             if not isinstance(msg, dict):
                 raise TranslationError(_("Content must be a list of message dicts for Responses API. Found item of type {type}.").format(type=type(msg).__name__))
 
-            role : str = msg.get('role', '')
-            msg_content : str = msg.get('content', '')
+            role = msg.get('role', 'user')
+            msg_content = msg.get('content', '')
 
             # Validate role is one of the accepted values
             if role not in ('user', 'system', 'developer', 'assistant'):
@@ -286,4 +394,3 @@ class OpenAIReasoningClient(OpenAIClient):
 
         # ResponseInputParam is a List union type, so we cast our list to match
         return cast(ResponseInputParam, input_params)
-

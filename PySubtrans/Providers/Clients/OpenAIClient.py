@@ -132,6 +132,15 @@ class OpenAIClient(TranslationClient):
                     time.sleep(backoff_time)
                     continue
 
+            except openai.APIStatusError as e:
+                if retry < self.max_retries and not self.aborted:
+                    logging.warning(_("API status error: {error}, retrying in {backoff_time} seconds...").format(
+                        error=str(e), backoff_time=backoff_time
+                    ))
+                    time.sleep(backoff_time)
+                    continue
+
+
             except JSONDecodeError as e:
                 if retry < self.max_retries and not self.aborted:
                     logging.warning(_("Invalid response received, retrying in {backoff_time} seconds...").format(
@@ -142,10 +151,18 @@ class OpenAIClient(TranslationClient):
 
             except openai.APIConnectionError as e:
                 if not self.aborted:
-                    raise TranslationError(str(e), error=e)
+                    raise TranslationError(str(e), error=e) from e
+
+            except TranslationImpossibleError:
+                if not self.aborted:
+                    raise
+
+            except TranslationError as e:
+                logging.warning(str(e))
+                pass
 
             except Exception as e:
-                raise TranslationImpossibleError(_("Unexpected error communicating with the provider"), error=e)
+                raise TranslationImpossibleError(_("Unexpected error communicating with the provider"), error=e) from e
 
         if not self.aborted:
             raise TranslationImpossibleError(_("Failed to communicate with provider after {max_retries} retries").format(

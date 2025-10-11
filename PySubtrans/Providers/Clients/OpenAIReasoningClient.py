@@ -68,6 +68,18 @@ class OpenAIReasoningClient(OpenAIClient):
     def is_streaming(self) -> bool:
         return self._is_streaming
 
+    def _abort(self) -> None:
+        """
+        Override abort to avoid closing client socket during streaming.
+        For non-streaming requests, use normal abort behavior.
+        """
+        if self.is_streaming:
+            # Don't close the client - let the streaming loop handle it gracefully
+            pass
+        else:
+            # Normal abort behavior for non-streaming requests
+            super()._abort()
+
     def _send_messages(self, request: TranslationRequest, temperature: float|None) -> dict[str, Any] | None:
         """
         Make a request to OpenAI Responses API for translation
@@ -106,7 +118,7 @@ class OpenAIReasoningClient(OpenAIClient):
         prompt : TranslationPrompt = request.prompt
 
         if not prompt or not prompt.content or not isinstance(prompt.content, list):
-            raise TranslationError(_("No content provided for translation"))
+            raise TranslationImpossibleError(_("No content provided for translation"))
 
         try:
             if request.is_streaming:
@@ -122,12 +134,119 @@ class OpenAIReasoningClient(OpenAIClient):
                 instructions=request.prompt.system_prompt,
                 reasoning=Reasoning(effort=self.reasoning_effort)
             )
+
+        except (RateLimitError, APITimeoutError, APIConnectionError):
+            raise
+        except OpenAIError as error:
+            self._raise_for_openai_error(error)
+
+    def _handle_streaming_response(self, request: TranslationRequest) -> responses_types.Response|None:
+        """
+        Handle streaming response with delta accumulation and partial updates
+        """
+        assert self.client is not None
+        assert self.model is not None
+        if not isinstance(request.prompt.content, list):
+            raise TranslationImpossibleError(_("Content must be a list for streaming Responses API"))
+
+        # Convert message dicts to properly typed input parameters
+        input_params = self._convert_to_input_params(request.prompt.content)
+
+        stream = self.client.responses.create(
+            model=self.model,
+            input=input_params,
+            instructions=request.prompt.system_prompt,
+            reasoning=Reasoning(effort=self.reasoning_effort),
+            stream=True
+        )
+
+        self._is_streaming = True
+        latest_response : responses_types.Response|None = None
+        stream_error : Exception|None = None
+        try:
+            for event in stream:
+                if self.aborted:
+                    return
+
+                # Handle relevant streaming events
+                if isinstance(event, ResponseTextDeltaEvent):
+                    request.ProcessStreamingDelta(event.delta)
+
+                elif isinstance(event, ResponseCompletedEvent):
+                    latest_response = event.response
+                    return latest_response
+
+                elif isinstance(event, (ResponseFailedEvent, ResponseIncompleteEvent)):
+                    latest_response = event.response or latest_response
+                    stream_error = getattr(event, 'error', None)
+                    if not latest_response:
+                        break
+                    logging.warning(_("Streaming ended with an error but OpenAI returned a response: {error}").format(
+                        error=str(stream_error) if stream_error else _("unknown error")
+                    ))
+                    return latest_response
+
         except RateLimitError:
             raise
         except (APITimeoutError, APIConnectionError):
             raise
         except OpenAIError as error:
-            self._raise_for_openai_error(error, _("creating the translation response"))
+            stream_error = error
+        except Exception as error:
+            stream_error = error
+            logging.warning(f"Error during streaming: {error}")
+
+        finally:
+            self._is_streaming = False
+
+        if latest_response:
+            return latest_response
+
+        if stream_error:
+            if isinstance(stream_error, OpenAIError):
+                self._raise_for_openai_error(stream_error)
+            raise TranslationError(_("Streaming failed before any response was received: {error}").format(
+                error=str(stream_error)
+            ))
+
+        # If we get here without a completion event, something went wrong
+        raise TranslationResponseError(_("OpenAI streaming ended without a completed response"), response=None)
+
+    def _convert_to_input_params(self, content: str|list[str]|list[dict[str, str]]) -> ResponseInputParam:
+        """
+        Convert message content to properly typed ResponseInputParam
+        """
+        if not isinstance(content, list):
+            raise TranslationImpossibleError(_("Content must be a list for Responses API"))
+
+        # Content should always be a list of dictionaries for this client
+        if content and isinstance(content[0], str):
+            raise TranslationImpossibleError(_("Content must be a list of message dicts for Responses API"))
+
+        input_params : list[EasyInputMessageParam] = []
+
+        for msg in content:
+            if not isinstance(msg, dict):
+                raise TranslationImpossibleError(_("Content must be a list of message dicts for Responses API. Found item of type {type}.").format(type=type(msg).__name__))
+
+            role : str = msg.get('role', '')
+            msg_content : str = msg.get('content', '')
+
+            # Validate role is one of the accepted values
+            if role not in ('user', 'system', 'developer', 'assistant'):
+                raise TranslationImpossibleError(_("Invalid message role: {role}. Must be one of 'user', 'system', 'developer', or 'assistant'.").format(role=role))
+
+            # EasyInputMessageParam requires role to be a specific literal type
+            typed_role = cast(Literal['user', 'system', 'developer', 'assistant'], role)
+
+            input_params.append(EasyInputMessageParam(
+                content=msg_content,
+                role=typed_role,
+                type='message'
+            ))
+
+        # ResponseInputParam is a List union type, so we cast our list to match
+        return cast(ResponseInputParam, input_params)
 
     def _extract_text_content(self, openai_response : responses_types.Response):
         """Extract text content from OpenAI Responses API structure"""
@@ -203,182 +322,40 @@ class OpenAIReasoningClient(OpenAIClient):
 
         return {k: v for k, v in info.items() if v is not None}
 
-    def _abort(self) -> None:
-        """
-        Override abort to avoid closing client socket during streaming.
-        For non-streaming requests, use normal abort behavior.
-        """
-        if self.is_streaming:
-            # Don't close the client - let the streaming loop handle it gracefully
-            pass
-        else:
-            # Normal abort behavior for non-streaming requests
-            super()._abort()
-
     def _normalize_finish_reason(self, result):
         """Normalize finish reason to legacy format"""
         finish = getattr(result, 'stop_reason', None) or getattr(result, 'finish_reason', None)
         return 'length' if finish == 'max_output_tokens' else finish
 
-    def _handle_streaming_response(self, request: TranslationRequest) -> responses_types.Response|None:
-        """
-        Handle streaming response with delta accumulation and partial updates
-        """
-        assert self.client is not None
-        assert self.model is not None
-        if not isinstance(request.prompt.content, list):
-            raise TranslationError(_("Content must be a list for streaming Responses API"))
-
-        # Convert message dicts to properly typed input parameters
-        input_params = self._convert_to_input_params(request.prompt.content)
-
-        stream = self.client.responses.create(
-            model=self.model,
-            input=input_params,
-            instructions=request.prompt.system_prompt,
-            reasoning=Reasoning(effort=self.reasoning_effort),
-            stream=True
-        )
-
-        self._is_streaming = True
-        latest_response : responses_types.Response|None = None
-        stream_error : Exception|None = None
-        try:
-            for event in stream:
-                if self.aborted:
-                    return
-
-                # Handle relevant streaming events
-                if isinstance(event, ResponseTextDeltaEvent):
-                    request.ProcessStreamingDelta(event.delta)
-
-                elif isinstance(event, ResponseCompletedEvent):
-                    latest_response = event.response
-                    return latest_response
-
-                elif isinstance(event, (ResponseFailedEvent, ResponseIncompleteEvent)):
-                    latest_response = event.response or latest_response
-                    stream_error = getattr(event, 'error', None)
-                    if not latest_response:
-                        break
-                    logging.warning(_("Streaming ended with an error but OpenAI returned a response: {error}").format(
-                        error=str(stream_error) if stream_error else _("unknown error")
-                    ))
-                    return latest_response
-
-        except RateLimitError:
-            raise
-        except (APITimeoutError, APIConnectionError):
-            raise
-        except OpenAIError as error:
-            stream_error = error
-        except Exception as error:
-            stream_error = error
-            logging.warning(f"Error during streaming: {error}")
-
-        finally:
-            self._is_streaming = False
-
-        if latest_response:
-            return latest_response
-
-        if stream_error:
-            if isinstance(stream_error, OpenAIError):
-                self._raise_for_openai_error(stream_error, _("streaming the translation response"))
-            raise TranslationError(_("Streaming failed before any response was received: {error}").format(
-                error=str(stream_error)
-            ))
-
-        # If we get here without a completion event, something went wrong
-        raise TranslationResponseError(_("OpenAI streaming ended without a completed response"), response=None)
-
-    def _convert_to_input_params(self, content: str|list[str]|list[dict[str, str]]) -> ResponseInputParam:
-        """
-        Convert message content to properly typed ResponseInputParam
-        """
-        if not isinstance(content, list):
-            raise TranslationError(_("Content must be a list for Responses API"))
-
-        # Content should always be a list of dictionaries for this client
-        if content and isinstance(content[0], str):
-            raise TranslationError(_("Content must be a list of message dicts for Responses API"))
-
-        input_params : list[EasyInputMessageParam] = []
-
-        for msg in content:
-            if not isinstance(msg, dict):
-                raise TranslationError(_("Content must be a list of message dicts for Responses API. Found item of type {type}.").format(type=type(msg).__name__))
-
-            role : str = msg.get('role', '')
-            msg_content : str = msg.get('content', '')
-
-            # Validate role is one of the accepted values
-            if role not in ('user', 'system', 'developer', 'assistant'):
-                raise TranslationError(_("Invalid message role: {role}. Must be one of 'user', 'system', 'developer', or 'assistant'.").format(role=role))
-
-            # EasyInputMessageParam requires role to be a specific literal type
-            typed_role = cast(Literal['user', 'system', 'developer', 'assistant'], role)
-
-            input_params.append(EasyInputMessageParam(
-                content=msg_content,
-                role=typed_role,
-                type='message'
-            ))
-
-        # ResponseInputParam is a List union type, so we cast our list to match
-        return cast(ResponseInputParam, input_params)
-
-    def _raise_for_openai_error(self, error : OpenAIError, context : str) -> None:
+    def _raise_for_openai_error(self, error : OpenAIError) -> None:
         """Map OpenAI exceptions to actionable translation errors."""
         error_message = str(error) or error.__class__.__name__
 
+        body = getattr(error, 'body', None)
+        if body and isinstance(body, dict):
+            error_message = body.get('message', error_message)
+
         if isinstance(error, BadRequestError):
             if 'reasoning.effort' in error_message or 'reasoning' in error_message.lower():
-                raise TranslationError(_("Invalid reasoning configuration: {error}. Try selecting a different reasoning effort or model.").format(
+                raise TranslationImpossibleError(_("Unsupported reasoning effort: {error}. Choose a different reasoning effort or model.").format(
                     error=error_message
                 )) from error
-            raise TranslationError(_("OpenAI could not process the translation request while {context}: {error}. Please try again or adjust the translation settings.").format(
-                context=context,
-                error=error_message
-            )) from error
+            else:
+                raise TranslationImpossibleError(_("API could not process the request: {error}.").format(error=error_message)) from error
 
         if isinstance(error, AuthenticationError):
-            raise TranslationImpossibleError(_("OpenAI could not authenticate the request: {error}. Check the OpenAI API key configured in the settings.").format(
-                error=error_message
-            )) from error
+            raise TranslationImpossibleError(_("Authentication failed: {error}").format(error=error_message)) from error
 
         if isinstance(error, PermissionDeniedError):
-            raise TranslationImpossibleError(_("OpenAI reported insufficient permissions: {error}. Confirm that your OpenAI account can use the selected model.").format(
-                error=error_message
-            )) from error
+            raise TranslationImpossibleError(_("Permission denied: {error}").format(error=error_message)) from error
 
         if isinstance(error, NotFoundError):
-            raise TranslationError(_("OpenAI could not find the requested resource while {context}: {error}. The model '{model}' may be unavailable for your account.").format(
-                context=context,
-                error=error_message,
-                model=self.model or _("unspecified")
-            )) from error
-
-        if isinstance(error, ConflictError):
-            raise TranslationError(_("OpenAI reported a conflict while {context}: {error}. Retry the request after a short delay.").format(
-                context=context,
-                error=error_message
+            raise TranslationImpossibleError(_("Requested resource not found: {error}. '{model}' may not be available for your account.").format(
+                error=error_message, model=self.model or "unknown"
             )) from error
 
         if isinstance(error, UnprocessableEntityError):
-            raise TranslationError(_("OpenAI could not process the request while {context}: {error}. Try shortening the prompt or simplifying the translation settings.").format(
-                context=context,
-                error=error_message
-            )) from error
+            raise TranslationImpossibleError(_("API could not process the request: {error}").format(error=error_message)) from error
 
-        if isinstance(error, (InternalServerError, APIError, APIStatusError, APIResponseValidationError)):
-            raise TranslationError(_("OpenAI returned an internal error while {context}: {error}. Please try again shortly.").format(
-                context=context,
-                error=error_message
-            )) from error
-
-        raise TranslationError(_("Unexpected error from OpenAI while {context}: {error}").format(
-            context=context,
-            error=error_message
-        )) from error
+        raise error
 

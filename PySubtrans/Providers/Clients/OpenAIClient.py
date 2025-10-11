@@ -158,8 +158,12 @@ class OpenAIClient(TranslationClient):
                     raise
 
             except TranslationError as e:
-                logging.warning(str(e))
-                pass
+                if retry < self.max_retries and not self.aborted:
+                    logging.warning(_("Translation error: {error}, retrying in {backoff_time} seconds...").format(
+                        error=str(e), backoff_time=backoff_time
+                    ))
+                    time.sleep(backoff_time)
+                    continue
 
             except Exception as e:
                 raise TranslationImpossibleError(_("Unexpected error communicating with the provider"), error=e) from e

@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from openai.types import responses as responses_types
+from openai.types.responses import (
+    ResponseOutputMessage,
+    ResponseOutputText,
+    ResponseReasoningItem
+)
+from openai.types.responses.response_usage import ResponseUsage
+
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
 from PySubtrans.Providers.Clients.OpenAIReasoningClient import OpenAIReasoningClient
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleError import TranslationError
+from PySubtrans.SubtitleError import TranslationError, TranslationResponseError
 
 
 class OpenAIReasoningClientTests(LoggedTestCase):
@@ -58,12 +66,10 @@ class OpenAIReasoningClientTests(LoggedTestCase):
         ]
         result = self.client._convert_to_input_params(messages)
         self.assertLoggedEqual('converted message count', 4, len(result))
-        self.assertLoggedEqual('first message role', 'user', result[0].get('role'))
-        self.assertLoggedEqual('second message role', 'assistant', result[1].get('role'))
-        self.assertLoggedEqual('third message role', 'system', result[2].get('role'))
-        self.assertLoggedEqual('fourth message role', 'developer', result[3].get('role'))
-        self.assertLoggedEqual('first message content', 'First message', result[0].get('content'))
-        self.assertLoggedEqual('fourth message content', 'Fourth message', result[3].get('content'))
+        self.assertLoggedSequenceEqual('message roles', ['user', 'assistant', 'system', 'developer'],
+                                       [msg.get('role') for msg in result])
+        self.assertLoggedSequenceEqual('message contents', ['First message', 'Second message', 'Third message', 'Fourth message'],
+                                       [msg.get('content') for msg in result])
 
     def test_convert_to_input_params_with_empty_list(self) -> None:
         """Ensure empty message lists are handled correctly."""
@@ -87,3 +93,95 @@ class OpenAIReasoningClientTests(LoggedTestCase):
         with self.assertRaises(TranslationError) as context:
             self.client._convert_to_input_params(invalid_messages)  # type: ignore[arg-type]
         log_input_expected_error(invalid_messages, TranslationError, context.exception)
+
+    def test_extract_text_content_with_text_only(self) -> None:
+        """Validate text extraction from real API response structure (reasoning item + message item)."""
+        # Construct actual Response object matching real API structure
+        response = responses_types.Response.model_construct(
+            id="resp_test",
+            created_at=1700000000.0,
+            model="gpt-5-mini-test",
+            object="response",
+            status="completed",
+            output=[
+                ResponseReasoningItem.model_construct(
+                    id="rs_test",
+                    type="reasoning",
+                    content=None,       # OpenAI does not currently return reasoning traces via the API
+                    summary=[]
+                ),
+                ResponseOutputMessage.model_construct(
+                    id="msg_test",
+                    type="message",
+                    role="assistant",
+                    status="completed",
+                    content=[
+                        ResponseOutputText.model_construct(
+                            type="output_text",
+                            text="Bonjour."
+                        )
+                    ]
+                )
+            ],
+            usage=ResponseUsage.model_construct(
+                input_tokens=10,
+                output_tokens=5,
+                total_tokens=15
+            )
+        )
+
+        text, reasoning = self.client._extract_text_content(response)
+        self.assertLoggedEqual('extracted text', 'Bonjour.', text)
+        self.assertLoggedIsNone('reasoning', reasoning)
+
+    def test_extract_text_content_with_multiple_content_items(self) -> None:
+        """Validate text extraction combines multiple content items with newlines."""
+        response = responses_types.Response.model_construct(
+            id="resp_test",
+            created_at=1700000000.0,
+            model="gpt-5-mini-test",
+            object="response",
+            status="completed",
+            output=[
+                ResponseReasoningItem.model_construct(
+                    id="rs_test",
+                    type="reasoning",
+                    content=None,
+                    summary=[]
+                ),
+                ResponseOutputMessage.model_construct(
+                    id="msg_test",
+                    type="message",
+                    role="assistant",
+                    status="completed",
+                    content=[
+                        ResponseOutputText.model_construct(
+                            type="output_text",
+                            text="First line of text."
+                        ),
+                        ResponseOutputText.model_construct(
+                            type="output_text",
+                            text="Second line of text."
+                        )
+                    ]
+                )
+            ]
+        )
+
+        text, reasoning = self.client._extract_text_content(response)
+        self.assertLoggedEqual('extracted text', 'First line of text.\nSecond line of text.', text)
+        self.assertLoggedIsNone('reasoning', reasoning)
+
+    @skip_if_debugger_attached
+    def test_extract_text_content_raises_on_empty_response(self) -> None:
+        """Validate error is raised when response has no text content."""
+        response = responses_types.Response.model_construct(
+            id="resp_test",
+            created_at=1700000000.0,
+            model="gpt-5-mini-test",
+            object="response",
+            status="completed",
+            output=[]
+        )
+        with self.assertRaises(TranslationResponseError):
+            self.client._extract_text_content(response)

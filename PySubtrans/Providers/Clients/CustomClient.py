@@ -27,11 +27,11 @@ class CustomClient(TranslationClient):
         if self.api_key:
             self.headers['Authorization'] = f"Bearer {self.api_key}"
 
-        logging.info(_("Translating with server at {server_address}{endpoint}").format(
+        self._emit_info(_("Translating with server at {server_address}{endpoint}").format(
             server_address=self.server_address, endpoint=self.endpoint
         ))
         if self.model:
-            logging.info(_("Using model: {model}").format(model=self.model))
+            self._emit_info(_("Using model: {model}").format(model=self.model))
 
     @property
     def server_address(self) -> str|None:
@@ -113,19 +113,19 @@ class CustomClient(TranslationClient):
 
             except httpx.ConnectError as e:
                 if not self.aborted:
-                    logging.error(_("Failed to connect to server at {server_address}{endpoint}").format(
+                    self._emit_error(_("Failed to connect to server at {server_address}{endpoint}").format(
                         server_address=self.server_address, endpoint=self.endpoint
                     ))
 
             except httpx.NetworkError as e:
                 if not self.aborted:
-                    logging.error(_("Network error communicating with server: {error}").format(
+                    self._emit_error(_("Network error communicating with server: {error}").format(
                         error=str(e)
                     ))
 
             except httpx.ReadTimeout as e:
                 if not self.aborted:
-                    logging.error(_("Request to server timed out: {error}").format(
+                    self._emit_error(_("Request to server timed out: {error}").format(
                         error=str(e)
                     ))
 
@@ -141,7 +141,7 @@ class CustomClient(TranslationClient):
                 ))
 
             sleep_time = self.backoff_time * 2.0**retry
-            logging.warning(_("Retrying in {sleep_time} seconds...").format(
+            self._emit_warning(_("Retrying in {sleep_time} seconds...").format(
                 sleep_time=sleep_time
             ))
             time.sleep(sleep_time)
@@ -234,7 +234,7 @@ class CustomClient(TranslationClient):
                     ))
                 else:
                     # Some data received, try to return partial response
-                    logging.warning(f"Streaming connection interrupted after {chunks_processed} chunks: {e}")
+                    self._emit_warning(f"Streaming connection interrupted after {chunks_processed} chunks: {e}")
                     if request.accumulated_text:
                         accumulated_response['text'] = request.accumulated_text
                         accumulated_response['finish_reason'] = 'interrupted'
@@ -282,7 +282,7 @@ class CustomClient(TranslationClient):
             return json.loads(data_part)
         except json.JSONDecodeError as e:
             # More specific logging for debugging
-            logging.warning(f"Failed to parse SSE data chunk as JSON: {data_part[:100]}... Error: {e}")
+            self._emit_warning(f"Failed to parse SSE data chunk as JSON: {data_part[:100]}... Error: {e}")
             return None
 
     def _process_streaming_chunk(self, request: TranslationRequest, chunk_data: dict[str, Any], accumulated_response: dict[str, Any]) -> None:

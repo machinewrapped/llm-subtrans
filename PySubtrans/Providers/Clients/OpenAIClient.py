@@ -31,8 +31,8 @@ class OpenAIClient(TranslationClient):
         if not openai.api_key:
             raise TranslationImpossibleError(_("API key must be set in .env or provided as an argument"))
 
-        logging.info(_("Translating with model {model}, Using API Base: {api_base}").format(
-            model=self.model or _("default"), 
+        self._emit_info(_("Translating with model {model}, Using API Base: {api_base}").format(
+            model=self.model or _("default"),
             api_base=self.api_base or openai.base_url
         ))
 
@@ -105,7 +105,7 @@ class OpenAIClient(TranslationClient):
             
             except TranslationResponseError as e:
                 if retry < self.max_retries and not self.aborted:
-                    logging.warning(_("Translation response error: {error}, retrying in {backoff_time} seconds...").format(
+                    self._emit_warning(_("Translation response error: {error}, retrying in {backoff_time} seconds...").format(
                         error=str(e), backoff_time=backoff_time
                     ))
                     time.sleep(backoff_time)
@@ -116,7 +116,7 @@ class OpenAIClient(TranslationClient):
                     retry_after = e.response.headers.get('x-ratelimit-reset-requests') or e.response.headers.get('Retry-After')
                     if retry_after:
                         backoff_time = ParseDelayFromHeader(retry_after)
-                        logging.warning(_("Rate limit hit, retrying in {backoff_time} seconds...").format(
+                        self._emit_warning(_("Rate limit hit, retrying in {backoff_time} seconds...").format(
                             backoff_time=backoff_time
                         ))
                         time.sleep(backoff_time)
@@ -126,7 +126,7 @@ class OpenAIClient(TranslationClient):
 
             except openai.APITimeoutError as e:
                 if retry < self.max_retries and not self.aborted:
-                    logging.warning(_("API Timeout, retrying in {backoff_time} seconds...").format(
+                    self._emit_warning(_("API Timeout, retrying in {backoff_time} seconds...").format(
                         backoff_time=backoff_time
                     ))
                     time.sleep(backoff_time)
@@ -134,7 +134,7 @@ class OpenAIClient(TranslationClient):
 
             except JSONDecodeError as e:
                 if retry < self.max_retries and not self.aborted:
-                    logging.warning(_("Invalid response received, retrying in {backoff_time} seconds...").format(
+                    self._emit_warning(_("Invalid response received, retrying in {backoff_time} seconds...").format(
                         backoff_time=backoff_time
                     ))
                     time.sleep(backoff_time)

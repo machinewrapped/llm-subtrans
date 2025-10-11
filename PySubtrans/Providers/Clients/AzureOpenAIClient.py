@@ -34,7 +34,7 @@ class AzureOpenAIClient(TranslationClient):
         if not self.deployment_name:
             raise TranslationImpossibleError(_("Deployment name must be set in .env or provided as an argument"))
 
-        logging.info(_("Translating with Azure OpenAI deployment {deployment_name}, API-version {api_version}, API Base: {api_base}").format(
+        self._emit_info(_("Translating with Azure OpenAI deployment {deployment_name}, API-version {api_version}, API Base: {api_base}").format(
             deployment_name=self.deployment_name,
             api_version=self.api_version,
             api_base=self.api_base
@@ -122,7 +122,7 @@ class AzureOpenAIClient(TranslationClient):
                 retry_after = e.response.headers.get('x-ratelimit-reset-requests') or e.response.headers.get('Retry-After')
                 if retry_after:
                     retry_seconds = ParseDelayFromHeader(retry_after)
-                    logging.warning(_("Rate limit hit, retrying in {retry_seconds} seconds...").format(
+                    self._emit_warning(_("Rate limit hit, retrying in {retry_seconds} seconds...").format(
                         retry_seconds=retry_seconds
                     ))
                     time.sleep(retry_seconds)
@@ -133,7 +133,7 @@ class AzureOpenAIClient(TranslationClient):
             except openai.APITimeoutError as e:
                 if retry < self.max_retries and not self.aborted:
                     sleep_time = self.backoff_time * 2.0**retry
-                    logging.warning(_("OpenAI error {error}, retrying in {sleep_time}...").format(
+                    self._emit_warning(_("OpenAI error {error}, retrying in {sleep_time}...").format(
                         error=str(e), sleep_time=sleep_time
                     ))
                     time.sleep(sleep_time)

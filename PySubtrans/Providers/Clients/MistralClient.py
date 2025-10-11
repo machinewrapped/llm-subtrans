@@ -24,7 +24,7 @@ class MistralClient(TranslationClient):
         if not self.api_key:
             raise TranslationImpossibleError(_("API key must be set in .env or provided as an argument"))
 
-        logging.info(_("Translating with Mistral model {model}, using server: {server_url}").format(
+        self._emit_info(_("Translating with Mistral model {model}, using server: {server_url}").format(
             model=self.model or _("default"),
             server_url=self.server_url or _("default")
         ))

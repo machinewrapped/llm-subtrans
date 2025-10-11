@@ -1,5 +1,3 @@
-import logging
-
 from openai import BadRequestError
 from openai.types import responses as responses_types
 from openai.types.responses import (
@@ -243,7 +241,7 @@ class OpenAIReasoningClient(OpenAIClient):
             raise TranslationError(_("Bad request to OpenAI API: {error}").format(error=error_msg))
 
         except Exception as e:
-            logging.warning(f"Error during streaming: {e}")
+            self._emit_warning(f"Error during streaming: {e}")
 
         finally:
             self._is_streaming = False

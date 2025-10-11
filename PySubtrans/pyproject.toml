@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pysubtrans"
-version = "1.5.5"
+version = "1.5.6"
 description = "Core subtitle translation toolkit used by LLM-Subtrans"
 readme = "README.md"
 requires-python = ">=3.10"

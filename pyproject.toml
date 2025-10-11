@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-subtrans"
-version = "1.5.4"
+version = "1.5.6"
 description = "Subtitle translation tools using large language models"
 readme = "readme.md"
 requires-python = ">=3.10"

@@ -50,7 +50,7 @@ else:
                     'max_instruct_tokens': settings.get_int('max_instruct_tokens', int(os.getenv('MAX_INSTRUCT_TOKENS', '2048'))),
                     'use_httpx': settings.get_bool('use_httpx', os.getenv('OPENAI_USE_HTTPX', "False") == "True"),
                     'reasoning_effort': settings.get_str('reasoning_effort', os.getenv('OPENAI_REASONING_EFFORT', "low")),
-                    'stream_responses': settings.get_bool('stream_responses', os.getenv('OPENAI_STREAM_RESPONSES', "True") == "True"),
+                    'stream_responses': settings.get_bool('stream_responses', os.getenv('OPENAI_STREAM_RESPONSES', "False") == "True"),
                 }))
 
                 self.refresh_when_changed = ['api_key', 'api_base', 'model']

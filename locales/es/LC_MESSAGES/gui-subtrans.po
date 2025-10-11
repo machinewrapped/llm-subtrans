@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2025-10-09 18:47+0000\n"
+"POT-Creation-Date: 2025-10-11 08:03+0000\n"
 "PO-Revision-Date: 2025-01-01 00:00+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Spanish <EMAIL@ADDRESS>\n"
@@ -52,9 +52,17 @@ msgstr "Tiempo de espera de la API agotado, reintentando en {backoff_time} segun
 msgid "API base must be set in .env or provided as an argument"
 msgstr "La base de la API debe configurarse en .env o proporcionarse como argumento"
 
-#: PySubtrans/Providers/Clients/OpenAIClient.py:168
+#: PySubtrans/Providers/Clients/OpenAIClient.py:191
 msgid "API base must be set when using httpx"
 msgstr "La base de la API debe configurarse al usar httpx"
+
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:353
+msgid "API could not process the request: {error}"
+msgstr "La API no pudo procesar la solicitud: {error}"
+
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:339
+msgid "API could not process the request: {error}."
+msgstr "La API no pudo procesar la solicitud: {error}."
 
 #: PySubtrans/Providers/Provider_Custom.py:107
 msgid "API key if needed (this is normally not needed for a local server)"
@@ -65,6 +73,10 @@ msgstr "Clave API si es necesaria (normalmente no es necesaria para un servidor 
 #: PySubtrans/Providers/Clients/OpenAIClient.py:32
 msgid "API key must be set in .env or provided as an argument"
 msgstr "La clave de la API debe configurarse en .env o proporcionarse como argumento"
+
+#: PySubtrans/Providers/Clients/OpenAIClient.py:137
+msgid "API status error: {error}, retrying in {backoff_time} seconds..."
+msgstr "Error de estado de la API: {error}, reintentando en {backoff_time} segundos..."
 
 #: PySubtrans/Providers/Clients/AzureOpenAIClient.py:32
 msgid "API version must be set in .env or provided as an argument"
@@ -200,6 +212,10 @@ msgstr "Cuota de la cuenta de Anthropic alcanzada, por favor actualice su plan o
 msgid "Attempt to communicate with the endpoint using chat format"
 msgstr "Intentar comunicarse con el endpoint usando formato de chat"
 
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:342
+msgid "Authentication failed: {error}"
+msgstr "Autenticación fallida: {error}"
+
 #: GuiSubtrans/Widgets/SelectionView.py:87
 msgid "Auto-Split Batch"
 msgstr "Dividir lote automáticamente"
@@ -219,11 +235,6 @@ msgstr "Guardar automáticamente el proyecto/traducción después de traducir ca
 #: GuiSubtrans/SettingsDialog.py:70
 msgid "Avoid creating a new batch smaller than this"
 msgstr "Evitar crear un lote nuevo más pequeño que esto"
-
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:110
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:243
-msgid "Bad request to OpenAI API: {error}"
-msgstr "Solicitud incorrecta a la API de OpenAI: {error}"
 
 #: GuiSubtrans/Commands/EditBatchCommand.py:36
 #: GuiSubtrans/Commands/EditBatchCommand.py:64
@@ -332,7 +343,7 @@ msgstr "Error del cliente: {status_code} {text}"
 
 #: PySubtrans/Providers/Clients/AnthropicClient.py:105
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:33
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:57
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:83
 msgid "Client is not initialized"
 msgstr "El cliente no está inicializado"
 
@@ -344,19 +355,19 @@ msgstr "Lista separada por comas de filler_words para eliminar"
 msgid "Consider a new scene to have started after this many seconds without subtitles"
 msgstr "Considerar que empieza una nueva escena después de este número de segundos sin subtítulos"
 
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:259
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:215
 msgid "Content must be a list for Responses API"
 msgstr "El contenido debe ser una lista para la API de Respuestas"
 
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:210
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:145
 msgid "Content must be a list for streaming Responses API"
 msgstr "El contenido debe ser una lista para la API de Respuestas en streaming"
 
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:263
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:219
 msgid "Content must be a list of message dicts for Responses API"
 msgstr "El contenido debe ser una lista de diccionarios de mensajes para la API de Respuestas"
 
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:269
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:225
 msgid "Content must be a list of message dicts for Responses API. Found item of type {type}."
 msgstr "El contenido debe ser una lista de diccionarios de mensajes para la API de Respuestas. Elemento de tipo {type} encontrado."
 
@@ -499,6 +510,10 @@ msgstr "Error al comunicarse con el proveedor"
 msgid "Error decoding JSON file: {}"
 msgstr "Error al decodificar el archivo JSON: {}"
 
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:192
+msgid "Error during streaming: {error}"
+msgstr "Error durante la transmisión: {error}"
+
 #: GuiSubtrans/Command.py:99
 msgid "Error executing {type}: {str}"
 msgstr "Error al ejecutar {type}: {str}"
@@ -590,7 +605,7 @@ msgstr "Se esperaba un diccionario de parches"
 #: PySubtrans/Providers/Clients/AzureOpenAIClient.py:149
 #: PySubtrans/Providers/Clients/GeminiClient.py:111
 #: PySubtrans/Providers/Clients/MistralClient.py:130
-#: PySubtrans/Providers/Clients/OpenAIClient.py:151
+#: PySubtrans/Providers/Clients/OpenAIClient.py:174
 msgid "Failed to communicate with provider after {max_retries} retries"
 msgstr "No se pudo comunicar con el proveedor después de {max_retries} reintentos"
 
@@ -818,16 +833,11 @@ msgstr "Archivo WebVTT inválido: falta el encabezado WEBVTT"
 msgid "Invalid batch"
 msgstr "Lote no válido"
 
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:276
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:232
 msgid "Invalid message role: {role}. Must be one of 'user', 'system', 'developer', or 'assistant'."
 msgstr "Rol de mensaje inválido: {role}. Debe ser uno de 'usuario', 'sistema', 'desarrollador' o 'asistente'."
 
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:109
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:242
-msgid "Invalid reasoning configuration: {error}. Check that the reasoning effort value is valid for your model."
-msgstr "Configuración de razonamiento inválida: {error}. Verifique que el valor del esfuerzo de razonamiento sea válido para su modelo."
-
-#: PySubtrans/Providers/Clients/OpenAIClient.py:137
+#: PySubtrans/Providers/Clients/OpenAIClient.py:146
 msgid "Invalid response received, retrying in {backoff_time} seconds..."
 msgstr "Se recibió una respuesta no válida, reintentando en {backoff_time} segundos..."
 
@@ -1074,7 +1084,7 @@ msgstr "No se devolvieron opciones en la respuesta"
 #: PySubtrans/Providers/Clients/GeminiClient.py:84
 #: PySubtrans/Providers/Clients/MistralClient.py:54
 #: PySubtrans/Providers/Clients/MistralClient.py:82
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:90
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:116
 #: PySubtrans/TranslationPrompt.py:153
 msgid "No content provided for translation"
 msgstr "No se proporcionó contenido para la traducción"
@@ -1120,7 +1130,7 @@ msgstr "No se eliminaron líneas"
 #: PySubtrans/Providers/Clients/GeminiClient.py:100
 #: PySubtrans/Providers/Clients/GeminiClient.py:127
 #: PySubtrans/Providers/Clients/MistralClient.py:79
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:60
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:86
 msgid "No model specified"
 msgstr "No se especificó ningún modelo"
 
@@ -1231,7 +1241,7 @@ msgstr "No se tradujeron subtítulos"
 msgid "No system prompt provided"
 msgstr "No se proporcionó ninguna instrucción del sistema"
 
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:152
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:286
 msgid "No text content found in response"
 msgstr "No se encontró contenido de texto en la respuesta"
 
@@ -1342,6 +1352,10 @@ msgstr "Cuota de la cuenta de OpenAI alcanzada, por favor actualice su plan"
 msgid "OpenAI error {error}, retrying in {sleep_time}..."
 msgstr "Error de OpenAI {error}, reintentando en {sleep_time}..."
 
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:208
+msgid "OpenAI streaming ended without a completed response"
+msgstr "La transmisión de OpenAI terminó sin una respuesta completada"
+
 #: PySubtrans/Providers/Provider_Claude.py:123
 msgid "Optional proxy server to use for requests (e.g. https://api.not-anthropic.com/"
 msgstr "Servidor proxy opcional para usar en las solicitudes (por ejemplo, https://api.not-anthropic.com/"
@@ -1357,6 +1371,10 @@ msgstr "Formato de subtítulos de salida"
 #: GuiSubtrans/MainWindow.py:120
 msgid "Performing {action}"
 msgstr "Realizando {action}"
+
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:345
+msgid "Permission denied: {error}"
+msgstr "Permiso denegado: {error}"
 
 #: GuiSubtrans/GuiInterface.py:439
 msgid "Please configure the translation provider settings"
@@ -1535,6 +1553,10 @@ msgstr "La solicitud al servidor excedió el tiempo de espera: {error}"
 #: PySubtrans/Providers/Clients/GeminiClient.py:225
 msgid "Request was blocked by Gemini: {block_info}"
 msgstr "La solicitud fue bloqueada por Gemini: {block_info}"
+
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:348
+msgid "Requested resource not found: {error}. '{model}' may not be available for your account."
+msgstr "Recurso solicitado no encontrado: {error}. '{model}' puede no estar disponible para tu cuenta."
 
 #: GuiSubtrans/Widgets/Editors.py:127
 msgid "Response"
@@ -1719,13 +1741,17 @@ msgstr "Detener traducción"
 msgid "Stream translations in realtime as they are generated"
 msgstr "Transmitir traducciones en tiempo real a medida que se generan"
 
-#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:252
-msgid "Streaming did not complete successfully"
-msgstr "El streaming no se completó exitosamente"
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:179
+msgid "Streaming ended with an error but OpenAI returned a response: {error}"
+msgstr "La transmisión terminó con un error, pero OpenAI devolvió una respuesta: {error}"
 
 #: PySubtrans/Providers/Clients/CustomClient.py:219
 msgid "Streaming error: {error}"
 msgstr "Error de streaming: {error}"
+
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:203
+msgid "Streaming failed before any response was received: {error}"
+msgstr "La transmisión falló antes de recibir alguna respuesta: {error}"
 
 #: GuiSubtrans/Widgets/ProjectSettings.py:135
 msgid "Substitution Mode"
@@ -1962,6 +1988,10 @@ msgstr "Traduciendo {linecount} líneas en {scenecount} escenas"
 msgid "Translation aborted"
 msgstr "Traducción cancelada"
 
+#: PySubtrans/Providers/Clients/OpenAIClient.py:164
+msgid "Translation error: {error}, retrying in {backoff_time} seconds..."
+msgstr "Error de traducción: {error}, reintentando en {backoff_time} segundos..."
+
 #: PySubtrans/SubtitleProject.py:433
 msgid "Translation failed, saving partial results"
 msgstr "La traducción falló, guardando resultados parciales"
@@ -2127,7 +2157,7 @@ msgid "Unexpected error communicating with server"
 msgstr "Error inesperado al comunicarse con el servidor"
 
 #: PySubtrans/Providers/Clients/MistralClient.py:128
-#: PySubtrans/Providers/Clients/OpenAIClient.py:148
+#: PySubtrans/Providers/Clients/OpenAIClient.py:171
 msgid "Unexpected error communicating with the provider"
 msgstr "Error inesperado al comunicarse con el proveedor"
 
@@ -2147,6 +2177,10 @@ msgstr "Formato de subtítulos desconocido: {extension}. Formatos disponibles: {
 #: GuiSubtrans/Command.py:88
 msgid "Unrecoverable error in {name}"
 msgstr "Error irrecuperable en {name}"
+
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:335
+msgid "Unsupported reasoning effort: {error}. Choose a different reasoning effort or model."
+msgstr "Esfuerzo de razonamiento no compatible: {error}. Elige un esfuerzo de razonamiento o modelo diferente."
 
 #: PySubtrans/SubtitleTranslator.py:148
 msgid "Untranslated > {number}. {text}"
@@ -2567,6 +2601,10 @@ msgstr "Tiempo De Espera"
 msgid "ui_language"
 msgstr "Idioma Interfaz"
 
+#: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:180
+msgid "unknown error"
+msgstr "error desconocido"
+
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 msgid "use_default_model"
 msgstr "Usar modelo predeterminado"
@@ -2654,6 +2692,15 @@ msgstr "{} líneas estaban vacías y no se escribieron en el archivo de salida"
 #: PySubtrans/Formats/SrtFileHandler.py:75
 msgid "{} lines were invalid and were not written to the output file"
 msgstr "{} líneas no eran válidas y no se escribieron en el archivo de salida"
+
+#~ msgid "Bad request to OpenAI API: {error}"
+#~ msgstr "Solicitud incorrecta a la API de OpenAI: {error}"
+
+#~ msgid "Invalid reasoning configuration: {error}. Check that the reasoning effort value is valid for your model."
+#~ msgstr "Configuración de razonamiento inválida: {error}. Verifique que el valor del esfuerzo de razonamiento sea válido para su modelo."
+
+#~ msgid "Streaming did not complete successfully"
+#~ msgstr "El streaming no se completó exitosamente"
 
 #~ msgid "Error parsing file... trying with fallback encoding: {}"
 #~ msgstr "Error al analizar el archivo... intentando con codificación alternativa: {}"

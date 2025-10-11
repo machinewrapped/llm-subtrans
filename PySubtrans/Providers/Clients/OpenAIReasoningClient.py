@@ -2,14 +2,9 @@ import logging
 
 from openai import (
     APIConnectionError,
-    APIError,
-    APIResponseValidationError,
-    APIStatusError,
     APITimeoutError,
     AuthenticationError,
     BadRequestError,
-    ConflictError,
-    InternalServerError,
     NotFoundError,
     OpenAIError,
     PermissionDeniedError,

@@ -127,7 +127,7 @@ class TranslationClient:
         """
         Return a parser that can process the provider's response
         """
-        return TranslationParser(task_type, self.settings)  # type: ignore
+        return TranslationParser(task_type, Options(self.settings))
 
     def AbortTranslation(self) -> None:
         self.aborted = True
@@ -135,7 +135,9 @@ class TranslationClient:
         pass
 
     def SetEvents(self, events : TranslationEvents) -> None:
-        """Attach translation events used for emitting log messages."""
+        """
+        Attach translation events to use for  log messages.
+        """
         self.events = events
 
     def _emit_error(self, message : str) -> None:

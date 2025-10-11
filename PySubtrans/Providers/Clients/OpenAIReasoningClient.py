@@ -174,7 +174,7 @@ class OpenAIReasoningClient(OpenAIClient):
                     stream_error = getattr(event, 'error', None)
                     if not latest_response:
                         break
-                    logging.warning(_("Streaming ended with an error but OpenAI returned a response: {error}").format(
+                    self._emit_warning(_("Streaming ended with an error but OpenAI returned a response: {error}").format(
                         error=str(stream_error) if stream_error else _("unknown error")
                     ))
                     return latest_response
@@ -187,7 +187,7 @@ class OpenAIReasoningClient(OpenAIClient):
             stream_error = error
         except Exception as error:
             stream_error = error
-            logging.warning(_("Error during streaming: {error}").format(error=error))
+            self._emit_warning(_("Error during streaming: {error}").format(error=error))
 
         finally:
             self._is_streaming = False

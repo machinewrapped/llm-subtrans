@@ -285,9 +285,10 @@ class OpenAIReasoningClient(OpenAIClient):
         if stream_error:
             if isinstance(stream_error, OpenAIError):
                 self._raise_for_openai_error(stream_error, _("streaming the translation response"))
-            raise TranslationError(_("Streaming failed before any response was received: {error}").format(
-                error=str(stream_error)
-            ))
+            else:
+                raise TranslationError(_("Streaming failed before any response was received: {error}").format(
+                    error=str(stream_error)
+                )) from stream_error
 
         # If we get here without a completion event, something went wrong
         raise TranslationResponseError(_("OpenAI streaming ended without a completed response"), response=None)

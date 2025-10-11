@@ -22,7 +22,7 @@ class AnthropicClient(TranslationClient):
     def __init__(self, settings : SettingsType):
         super().__init__(settings)
 
-        logging.info(_("Translating with Anthropic {model}").format(
+        self._emit_info(_("Translating with Anthropic {model}").format(
             model=self.model or _("default model")
         ))
 
@@ -176,7 +176,7 @@ class AnthropicClient(TranslationClient):
             except (anthropic.APITimeoutError, anthropic.RateLimitError) as e:
                 if retry < self.max_retries and not self.aborted:
                     sleep_time = self.backoff_time * 2.0**retry
-                    logging.warning(_("Anthropic API error: {error}, retrying in {sleep_time} seconds...").format(
+                    self._emit_warning(_("Anthropic API error: {error}, retrying in {sleep_time} seconds...").format(
                         error=self._get_error_message(e), sleep_time=sleep_time
                     ))
                     time.sleep(sleep_time)

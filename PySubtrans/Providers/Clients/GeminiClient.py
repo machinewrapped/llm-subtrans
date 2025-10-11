@@ -35,7 +35,7 @@ class GeminiClient(TranslationClient):
     def __init__(self, settings : SettingsType):
         super().__init__(settings)
 
-        logging.info(_("Translating with Gemini {model} model").format(
+        self._emit_info(_("Translating with Gemini {model} model").format(
             model=self.model or _("default")
         ))
 
@@ -114,7 +114,7 @@ class GeminiClient(TranslationClient):
 
                 if not self.aborted:
                     sleep_time = self.backoff_time * 2.0**retry
-                    logging.warning(_("Gemini request failure {error}, retrying in {sleep_time} seconds...").format(
+                    self._emit_warning(_("Gemini request failure {error}, retrying in {sleep_time} seconds...").format(
                         error=str(e), sleep_time=sleep_time
                     ))
                     time.sleep(sleep_time)

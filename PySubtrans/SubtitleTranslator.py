@@ -87,6 +87,8 @@ class SubtitleTranslator:
         if not self.client:
             raise ProviderError(_("Unable to create translation client"), translation_provider)
 
+        self.client.SetEvents(self.events)
+
         self.postprocessor = SubtitleProcessor(settings) if settings.get('postprocess_translation') else None
         self.validator = SubtitleValidator(settings)
 

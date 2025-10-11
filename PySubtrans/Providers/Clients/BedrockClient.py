@@ -19,7 +19,7 @@ class BedrockClient(TranslationClient):
     def __init__(self, settings : SettingsType):
         super().__init__(settings)
 
-        logging.info(_("Translating with Bedrock model {model_id}, using region: {aws_region}").format(
+        self._emit_info(_("Translating with Bedrock model {model_id}, using region: {aws_region}").format(
             model_id=self.model_id, aws_region=self.aws_region
         ))
 

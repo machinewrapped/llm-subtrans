@@ -10,6 +10,7 @@ from PySubtrans.TranslationParser import TranslationParser
 from PySubtrans.TranslationPrompt import TranslationPrompt, default_prompt_template
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationRequest import TranslationRequest, StreamingCallback
+from PySubtrans.TranslationEvents import TranslationEvents
 
 linesep = '\n'
 
@@ -26,6 +27,7 @@ class TranslationClient:
         self.retry_instructions: str|None = settings.get_str('retry_instructions')
         self.enable_streaming: bool = settings.get_bool('stream_responses', False) and self.supports_streaming
         self.aborted: bool = False
+        self.events: TranslationEvents|None = None
 
         if not self.instructions:
             raise TranslationError("No instructions provided for the translator")
@@ -125,12 +127,36 @@ class TranslationClient:
         """
         Return a parser that can process the provider's response
         """
-        return TranslationParser(task_type, self.settings)  # type: ignore
+        return TranslationParser(task_type, Options(self.settings))
 
     def AbortTranslation(self) -> None:
         self.aborted = True
         self._abort()
         pass
+
+    def SetEvents(self, events : TranslationEvents) -> None:
+        """
+        Attach translation events to use for  log messages.
+        """
+        self.events = events
+
+    def _emit_error(self, message : str) -> None:
+        if self.events:
+            self.events.error.send(self, message=message)
+        else:
+            logging.error(message)
+
+    def _emit_warning(self, message : str) -> None:
+        if self.events:
+            self.events.warning.send(self, message=message)
+        else:
+            logging.warning(message)
+
+    def _emit_info(self, message : str) -> None:
+        if self.events:
+            self.events.info.send(self, message=message)
+        else:
+            logging.info(message)
 
     def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """

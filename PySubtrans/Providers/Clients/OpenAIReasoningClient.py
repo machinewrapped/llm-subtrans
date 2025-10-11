@@ -189,7 +189,7 @@ class OpenAIReasoningClient(OpenAIClient):
             stream_error = error
         except Exception as error:
             stream_error = error
-            logging.warning(f"Error during streaming: {error}")
+            logging.warning(_("Error during streaming: {error}").format(error=error))
 
         finally:
             self._is_streaming = False

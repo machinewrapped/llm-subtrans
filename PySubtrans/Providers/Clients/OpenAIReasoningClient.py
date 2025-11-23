@@ -332,7 +332,7 @@ class OpenAIReasoningClient(OpenAIClient):
                 raise TranslationImpossibleError(_("Unsupported reasoning effort: {error}. Choose a different reasoning effort or model.").format(
                     error=error_message
                 )) from error
-            else:
+            elif param:
                 error_message = f"{param}: {error_message}"
 
         if isinstance(error, BadRequestError):

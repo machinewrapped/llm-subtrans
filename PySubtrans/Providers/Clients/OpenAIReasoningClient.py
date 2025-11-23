@@ -327,14 +327,16 @@ class OpenAIReasoningClient(OpenAIClient):
         body = getattr(error, 'body', None)
         if body and isinstance(body, dict):
             error_message = body.get('message', error_message)
-
-        if isinstance(error, BadRequestError):
-            if 'reasoning.effort' in error_message or 'reasoning' in error_message.lower():
+            param = body['param'] if 'param' in body else None
+            if param == 'reasoning.effort':
                 raise TranslationImpossibleError(_("Unsupported reasoning effort: {error}. Choose a different reasoning effort or model.").format(
                     error=error_message
                 )) from error
             else:
-                raise TranslationImpossibleError(_("API could not process the request: {error}.").format(error=error_message)) from error
+                error_message = f"{param}: {error_message}"
+
+        if isinstance(error, BadRequestError):
+            raise TranslationImpossibleError(_("API could not process the request: {error}.").format(error=error_message)) from error
 
         if isinstance(error, AuthenticationError):
             raise TranslationImpossibleError(_("Authentication failed: {error}").format(error=error_message)) from error

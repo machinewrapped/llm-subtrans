@@ -113,7 +113,7 @@ else:
                             options['max_instruct_tokens'] = (int, _("Maximum tokens a completion can contain (only applicable for -instruct models)"))
 
                         if self.model_is_reasoning_model(model):
-                            options['reasoning_effort'] = (["minimal", "low", "medium", "high"], _("The level of reasoning effort to use for the model"))
+                            options['reasoning_effort'] = (["none", "minimal", "low", "medium", "high"], _("The level of reasoning effort to use for the model (valid options are model-dependent)"))
                             options['stream_responses'] = (bool, _("Stream translations in realtime as they are generated"))
                         else:
                             options['temperature'] = (float, _("Amount of random variance to add to translations. Generally speaking, none is best"))

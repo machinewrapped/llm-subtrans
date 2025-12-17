@@ -130,7 +130,16 @@ class GeminiClient(TranslationClient):
         if not isinstance(prompt.content, str):
             raise TranslationImpossibleError(_("Content must be a string for Gemini"))
 
-        gemini_client = genai.Client(api_key=self.api_key, http_options={'api_version': 'v1alpha'})
+        # Configure http_options with proxy if specified
+        http_options = {'api_version': 'v1alpha'}
+        proxy = self.settings.get_str('proxy')
+        if proxy:
+            http_options['proxies'] = {
+                'http://': proxy,
+                'https://': proxy
+            }
+
+        gemini_client = genai.Client(api_key=self.api_key, http_options=http_options)
         config = GenerateContentConfig(
             candidate_count=1,
             temperature=temperature,

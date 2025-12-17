@@ -21,12 +21,13 @@ default_model = os.getenv('GEMINI_MODEL') or "Gemini 2.0 Flash"
 parser = CreateArgParser(f"Translates subtitles using a Google Gemini model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Gemini API Key (https://makersuite.google.com/app/apikey)")
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
+parser.add_argument('--proxy', type=str, default=None, help="SOCKS proxy URL (e.g., socks://127.0.0.1:1089)")
 args = parser.parse_args()
 
 logger_options = InitLogger("gemini-subtrans", args.debug)
 
 try:
-    options : Options = CreateOptions(args, provider, model=args.model or default_model)
+    options : Options = CreateOptions(args, provider, model=args.model or default_model, proxy=args.proxy)
 
     # Create a project for the translation
     project : SubtitleProject = CreateProject(options, args)

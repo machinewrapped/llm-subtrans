@@ -22,6 +22,7 @@ parser = CreateArgParser(f"Translates subtitles using an Mistral model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Mistral API Key (https://console.mistral.ai/api-keys/)")
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
 parser.add_argument('--server_url', type=str, default=None, help="Server URL (leave blank for default).")
+parser.add_argument('--proxy', type=str, default=None, help="SOCKS proxy URL (e.g., socks://127.0.0.1:1089)")
 args = parser.parse_args()
 
 logger_options = InitLogger("mistral-subtrans", args.debug)
@@ -31,7 +32,8 @@ try:
         args,
         provider,
         server_url=args.server_url,
-        model=args.model or default_model
+        model=args.model or default_model,
+        proxy=args.proxy
     )
 
     # Create a project for the translation

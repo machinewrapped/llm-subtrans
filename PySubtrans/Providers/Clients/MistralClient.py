@@ -3,6 +3,7 @@ import logging
 from PySubtrans.Options import SettingsType
 from PySubtrans.SubtitleError import TranslationResponseError
 
+import httpx
 import mistralai
 from mistralai.models import ChatCompletionResponse as ChatCompletion
 
@@ -29,7 +30,17 @@ class MistralClient(TranslationClient):
             server_url=self.server_url or _("default")
         ))
 
-        self.client = mistralai.Mistral(api_key=self.api_key, server_url=self.server_url)
+        # Configure proxy if specified
+        http_client = None
+        proxy = self.settings.get_str('proxy')
+        if proxy:
+            proxies = {
+                'http://': proxy,
+                'https://': proxy
+            }
+            http_client = httpx.Client(proxies=proxies)
+
+        self.client = mistralai.Mistral(api_key=self.api_key, server_url=self.server_url, client=http_client)
 
     @property
     def api_key(self) -> str|None:

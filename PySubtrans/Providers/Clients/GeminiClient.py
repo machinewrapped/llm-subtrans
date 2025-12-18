@@ -14,6 +14,7 @@ from google.genai.types import (
     GenerateContentResponseUsageMetadata,
     HarmBlockThreshold,
     HarmCategory,
+    HttpOptions,
     Part,
     SafetySetting,
     ThinkingConfig
@@ -131,13 +132,11 @@ class GeminiClient(TranslationClient):
             raise TranslationImpossibleError(_("Content must be a string for Gemini"))
 
         # Configure http_options with proxy if specified
-        http_options = {'api_version': 'v1alpha'}
         proxy = self.settings.get_str('proxy')
-        if proxy:
-            http_options['proxies'] = {
-                'http://': proxy,
-                'https://': proxy
-            }
+        http_options = HttpOptions(
+            api_version='v1alpha',
+            client_args={'proxies': {'http://': proxy, 'https://': proxy}} if proxy else None
+        )
 
         gemini_client = genai.Client(api_key=self.api_key, http_options=http_options)
         config = GenerateContentConfig(

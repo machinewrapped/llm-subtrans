@@ -31,14 +31,8 @@ class MistralClient(TranslationClient):
         ))
 
         # Configure proxy if specified
-        http_client = None
-        proxy = self.settings.get_str('proxy')
-        if proxy:
-            proxies = {
-                'http://': proxy,
-                'https://': proxy
-            }
-            http_client = httpx.Client(proxies=proxies)
+        proxy_url = self.settings.get_str('proxy')
+        http_client = httpx.Client(proxy=proxy_url) if proxy_url else None
 
         self.client = mistralai.Mistral(api_key=self.api_key, server_url=self.server_url, client=http_client)
 

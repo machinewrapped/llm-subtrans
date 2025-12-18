@@ -101,21 +101,15 @@ class CustomClient(TranslationClient):
                     raise TranslationImpossibleError(_("Server address or endpoint is not set"))
 
                 # Configure proxy if specified
-                client_kwargs = {
-                    'base_url': self.server_address,
-                    'follow_redirects': True,
-                    'timeout': self.timeout,
-                    'headers': self.headers
-                }
+                proxy_url = self.settings.get_str('proxy')
 
-                proxy = self.settings.get_str('proxy')
-                if proxy:
-                    client_kwargs['proxies'] = {
-                        'http://': proxy,
-                        'https://': proxy
-                    }
-
-                self.client = httpx.Client(**client_kwargs)
+                self.client = httpx.Client(
+                    base_url=self.server_address,
+                    follow_redirects=True,
+                    timeout=self.timeout,
+                    headers=self.headers,
+                    proxy=proxy_url
+                )
 
                 # Handle streaming vs non-streaming requests
                 if request.is_streaming and self.enable_streaming:

@@ -22,7 +22,7 @@ else:
         class MistralProvider(TranslationProvider):
             name = "Mistral"
 
-            default_model = "mistral-small-2506"
+            default_model = "mistral-small-latest"
 
             information = """
             <p>Select the <a href="https://docs.mistral.ai/getting-started/models/models_overview/">model</a> to use as a translator.</p>

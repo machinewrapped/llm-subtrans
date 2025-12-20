@@ -44,7 +44,8 @@ else:
                     'enable_thinking': settings.get_bool('enable_thinking', os.getenv('GEMINI_ENABLE_THINKING', "False") == "True"),
                     'thinking_budget': settings.get_int('thinking_budget', env_int('GEMINI_THINKING_BUDGET', 100)) or 100,
                     'temperature': settings.get_float('temperature', env_float('GEMINI_TEMPERATURE', 0.0)),
-                    'rate_limit': settings.get_float('rate_limit', env_float('GEMINI_RATE_LIMIT', 60.0))
+                    'rate_limit': settings.get_float('rate_limit', env_float('GEMINI_RATE_LIMIT', 60.0)),
+                    'proxy': settings.get_str('proxy') or os.getenv('GEMINI_PROXY'),
                 }))
 
                 self.refresh_when_changed = ['api_key', 'model', 'enable_thinking']

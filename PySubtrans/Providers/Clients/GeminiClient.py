@@ -138,8 +138,9 @@ class GeminiClient(TranslationClient):
             client_args={'proxies': {'http://': proxy, 'https://': proxy}} if proxy else None
         )
 
-        gemini_client = genai.Client(api_key=self.api_key, http_options=http_options)
+        gemini_client = genai.Client(api_key=self.api_key)
         config = GenerateContentConfig(
+            http_options=http_options,
             candidate_count=1,
             temperature=temperature,
             system_instruction=prompt.system_prompt,

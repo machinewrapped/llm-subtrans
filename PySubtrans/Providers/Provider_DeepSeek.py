@@ -33,6 +33,7 @@ class DeepSeekProvider(TranslationProvider):
             'rate_limit': settings.get_float('rate_limit', env_float('DEEPSEEK_RATE_LIMIT')),
             'reuse_client': settings.get_bool('reuse_client', False),
             'endpoint': settings.get_str('endpoint', '/v1/chat/completions'),
+            'proxy': settings.get_str('proxy') or os.getenv('DEEPSEEK_PROXY'),
             'stream_responses': settings.get_bool('stream_responses', True),
         }))
         self.refresh_when_changed = ['api_key', 'api_base', 'model', 'endpoint']

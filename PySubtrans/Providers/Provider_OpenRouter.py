@@ -37,6 +37,7 @@ class OpenRouterProvider(TranslationProvider):
             'max_tokens': settings.get_int('max_tokens', env_int('OPENROUTER_MAX_TOKENS', 0)),
             'temperature': settings.get_float('temperature', env_float('OPENROUTER_TEMPERATURE', 0.0)),
             'rate_limit': settings.get_float('rate_limit', env_float('OPENROUTER_RATE_LIMIT')),
+            'proxy': settings.get_str('proxy') or os.getenv('OPENROUTER_PROXY'),
             'reuse_client': settings.get_bool('reuse_client', True),
         }))
 

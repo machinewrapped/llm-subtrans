@@ -94,6 +94,8 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--reparse', action='store_true', help="Reparse previous translation responses, reconstructing the translated subtitles")
     parser.add_argument('--reload', action='store_true', help="Reload the subtitles from the original file, ignoring existing subtitles in the project file")
     parser.add_argument('--ratelimit', type=int, default=None, help="Maximum number of batches per minute to process")
+    parser.add_argument('--proxy', type=str, default=None, help="Proxy URL (e.g., http://127.0.0.1:8888 or socks5://127.0.0.1:1080)")
+    parser.add_argument('--proxycert', type=str, default=None, help="Path to a custom certificate bundle (PEM) to use for SSL verification")
     parser.add_argument('--scenethreshold', type=float, default=None, help="Number of seconds between lines to consider a new scene")
     parser.add_argument('--substitution', action='append', type=str, default=None, help="A pair of strings separated by ::, to subsitute in source or translation")
     parser.add_argument('--temperature', type=float, default=0.0, help="A higher temperature increases the random variance of translations.")
@@ -112,6 +114,10 @@ def HandleFormatListing(args: Namespace) -> None:
 
 def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
     """ Create options with additional arguments """
+    if getattr(args, 'proxycert', None):
+        os.environ['SSL_CERT_FILE'] = args.proxycert
+        logging.info(f"Using custom SSL certificate bundle: {args.proxycert}")
+
     settings = {
         'api_key': args.apikey,
         'description': args.description,
@@ -134,6 +140,7 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'retranslate': args.retranslate,
         'reload': args.reload,
         'rate_limit': args.ratelimit,
+        'proxy': getattr(args, 'proxy', None),
         'scene_threshold': args.scenethreshold,
         'substitutions': Substitutions.Parse(args.substitution),
         'target_language': args.target_language,

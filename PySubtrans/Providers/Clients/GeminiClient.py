@@ -131,16 +131,20 @@ class GeminiClient(TranslationClient):
         if not isinstance(prompt.content, str):
             raise TranslationImpossibleError(_("Content must be a string for Gemini"))
 
-        # Configure http_options with proxy if specified
+        # Configure http options (proxy support for both sync httpx and async aiohttp)
         proxy = self.settings.get_str('proxy')
-        http_options = HttpOptions(
-            api_version='v1alpha',
-            client_args={'proxies': {'http://': proxy, 'https://': proxy}} if proxy else None
-        )
+        client_args = None
+        async_client_args = None
+        if proxy:
+            # httpx 0.28+ uses 'proxy' (singular); aiohttp uses per-request 'proxy'
+            client_args = {'proxy': proxy}
+            async_client_args = {'proxy': proxy}
+            self._emit_info(_(f"Using proxy: {proxy}"))
 
-        gemini_client = genai.Client(api_key=self.api_key)
+        http_options = HttpOptions(api_version='v1beta', client_args=client_args, async_client_args=async_client_args)
+
+        gemini_client = genai.Client(api_key=self.api_key, http_options=http_options)
         config = GenerateContentConfig(
-            http_options=http_options,
             candidate_count=1,
             temperature=temperature,
             system_instruction=prompt.system_prompt,

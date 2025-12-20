@@ -24,7 +24,6 @@ parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your OpenAI
 parser.add_argument('-b', '--apibase', type=str, default="https://api.openai.com/v1", help="API backend base address.")
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
 parser.add_argument('--httpx', action='store_true', help="Use the httpx library for custom api_base requests. May help if you receive a 307 redirect error.")
-parser.add_argument('--proxy', type=str, default=None, help="SOCKS proxy URL (e.g., socks://127.0.0.1:1089)")
 args = parser.parse_args()
 
 logger_options = InitLogger("gpt-subtrans", args.debug)
@@ -35,7 +34,6 @@ try:
         provider,
         use_httpx=args.httpx,
         api_base=args.apibase,
-        proxy=args.proxy,
         model=args.model or default_model
     )
 

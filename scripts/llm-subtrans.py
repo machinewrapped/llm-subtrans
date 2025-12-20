@@ -23,7 +23,6 @@ parser.add_argument('-m', '--model', type=str, default=None, help="Model to use 
 parser.add_argument('--auto', action='store_true', help="Use OpenRouter's automatic model selection")
 parser.add_argument('--chat', action='store_true', help="Use chat format requests for the endpoint")
 parser.add_argument('--systemmessages', action='store_true', help="Indicates that the endpoint supports system messages in chat requests")
-parser.add_argument('--proxy', type=str, default=None, help="SOCKS proxy URL (e.g., socks://127.0.0.1:1089)")
 args = parser.parse_args()
 
 # Determine provider based on whether server is specified
@@ -39,7 +38,6 @@ try:
             api_key=args.apikey,
             model=args.model,
             use_default_model=args.auto,
-            proxy=args.proxy
         )
     else:
         options : Options = CreateOptions(
@@ -51,7 +49,6 @@ try:
             server_address=args.server,
             supports_conversation=args.chat,
             supports_system_messages=args.systemmessages,
-            proxy=args.proxy
         )
 
     # Create a project for the translation

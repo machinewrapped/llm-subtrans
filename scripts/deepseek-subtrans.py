@@ -22,7 +22,6 @@ parser = CreateArgParser(f"Translates subtitles using an DeepSeek model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your DeepSeek API Key (https://platform.deepseek.com/api_keys)")
 parser.add_argument('-b', '--apibase', type=str, default="https://api.deepseek.com", help="API backend base address.")
 parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
-parser.add_argument('--proxy', type=str, default=None, help="SOCKS proxy URL (e.g., socks://127.0.0.1:1089)")
 args = parser.parse_args()
 
 logger_options = InitLogger("deepseek-subtrans", args.debug)
@@ -32,8 +31,7 @@ try:
         args,
         provider,
         api_base=args.apibase,
-        model=args.model or default_model,
-        proxy=args.proxy
+        model=args.model or default_model
     )
 
     # Create a project for the translation

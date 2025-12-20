@@ -13,7 +13,7 @@ else:
         from collections import defaultdict
 
         from google import genai
-        from google.genai.types import ListModelsConfig
+        from google.genai.types import ListModelsConfig, HttpOptions
         from google.api_core.exceptions import FailedPrecondition
 
         from PySubtrans.Helpers.Localization import _
@@ -124,7 +124,14 @@ else:
                     return []
 
                 try:
-                    gemini_client = genai.Client(api_key=self.api_key, http_options={'api_version': 'v1alpha'})
+                    # Respect proxy when listing models too (strongly typed HttpOptions)
+                    proxy = self.settings.get_str('proxy')
+                    http_options = HttpOptions(api_version='v1beta')
+                    if proxy:
+                        http_options.client_args = {'proxy': proxy}
+                        http_options.async_client_args = {'proxy': proxy}
+                        logging.debug(_(f"Using proxy for Gemini model listing: {proxy}"))
+                    gemini_client = genai.Client(api_key=self.api_key, http_options=http_options)
                     config = ListModelsConfig(query_base=True)
                     all_models = gemini_client.models.list(config=config)
                     generate_models = [ m for m in all_models if m.supported_actions and 'generateContent' in m.supported_actions ]

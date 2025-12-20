@@ -132,7 +132,7 @@ else:
                     if proxy:
                         http_options.client_args = {'proxy': proxy}
                         http_options.async_client_args = {'proxy': proxy}
-                        logging.debug(_(f"Using proxy for Gemini model listing: {proxy}"))
+                        logging.debug(f"Using proxy for Gemini model listing: {proxy}")
                     gemini_client = genai.Client(api_key=self.api_key, http_options=http_options)
                     config = ListModelsConfig(query_base=True)
                     all_models = gemini_client.models.list(config=config)

@@ -51,6 +51,7 @@ else:
                     'use_httpx': settings.get_bool('use_httpx', os.getenv('OPENAI_USE_HTTPX', "False") == "True"),
                     'reasoning_effort': settings.get_str('reasoning_effort', os.getenv('OPENAI_REASONING_EFFORT', "low")),
                     'stream_responses': settings.get_bool('stream_responses', os.getenv('OPENAI_STREAM_RESPONSES', "False") == "True"),
+                    'proxy': settings.get_str('proxy') or os.getenv('OPENAI_PROXY'),
                 }))
 
                 self.refresh_when_changed = ['api_key', 'api_base', 'model']

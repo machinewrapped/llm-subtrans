@@ -38,7 +38,8 @@ else:
                     "max_tokens": settings.get_int('max_tokens', 8192),
                     #TODO: add options for supports system messages and prompt?
                     'temperature': settings.get_float('temperature', 0.0),
-                    "rate_limit": settings.get_float('rate_limit')
+                    "rate_limit": settings.get_float('rate_limit'),
+                    'proxy': settings.get_str('proxy') or os.getenv('BEDROCK_PROXY'),
                 }))
 
                 self.refresh_when_changed = ['access_key', 'secret_access_key', 'aws_region']

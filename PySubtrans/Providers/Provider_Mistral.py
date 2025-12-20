@@ -2,6 +2,8 @@ import importlib.util
 import logging
 import os
 
+import httpx
+
 from PySubtrans.Options import SettingsType, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
@@ -36,6 +38,7 @@ else:
                     "model": settings.get_str('model', os.getenv('MISTRAL_MODEL', "open-mistral-nemo")),
                     'temperature': settings.get_float('temperature', env_float('MISTRAL_TEMPERATURE', 0.0)),
                     'rate_limit': settings.get_float('rate_limit', env_float('MISTRAL_RATE_LIMIT')),
+                    'proxy': settings.get_str('proxy') or os.getenv('MISTRAL_PROXY'),
                 }))
 
                 self.refresh_when_changed = ['api_key', 'server_url', 'model']
@@ -93,7 +96,7 @@ else:
                     client = mistralai.Mistral(
                         api_key=self.api_key,
                         server_url=self.server_url or None,
-                        http_client=http_client
+                        client=http_client
                     )
                     response = client.models.list()
 

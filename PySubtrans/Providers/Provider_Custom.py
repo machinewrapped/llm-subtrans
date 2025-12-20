@@ -40,7 +40,8 @@ class Provider_CustomServer(TranslationProvider):
             'timeout': settings.get_int('timeout', env_int('CUSTOM_TIMEOUT', 300)),
             "api_key": settings.get_str('api_key', os.getenv('CUSTOM_API_KEY')),
             "model": settings.get_str('model', os.getenv('CUSTOM_MODEL')),
-            'supports_parallel_threads': settings.get_bool('supports_parallel_threads', env_bool('CUSTOM_SUPPORTS_PARALLEL_THREADS', False))
+            'supports_parallel_threads': settings.get_bool('supports_parallel_threads', env_bool('CUSTOM_SUPPORTS_PARALLEL_THREADS', False)),
+            'proxy': settings.get_str('proxy'),
             }))
 
         #TODO: Add additional parameters option

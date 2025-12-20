@@ -135,9 +135,12 @@ else:
                         logging.debug("No OpenAI API key provided")
                         return []
 
+                    proxy_url = self.settings.get_str('proxy')
+                    http_client = httpx.Client(proxy=proxy_url) if proxy_url else None
                     client = openai.OpenAI(
                         api_key=self.api_key,
-                        base_url=self.api_base or None
+                        base_url=self.api_base or None,
+                        http_client=http_client
                     )
                     response = client.models.list()
 

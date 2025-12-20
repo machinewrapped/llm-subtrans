@@ -137,7 +137,9 @@ else:
                     return []
 
                 try:
-                    client = anthropic.Anthropic(api_key=self.api_key)
+                    proxy_url = self.settings.get_str('proxy')
+                    http_client = anthropic.DefaultHttpxClient(proxy=proxy_url) if proxy_url else None
+                    client = anthropic.Anthropic(api_key=self.api_key, http_client=http_client)
                     model_list = client.models.list()
 
                     return [ m for m in model_list if m.type == 'model' ]

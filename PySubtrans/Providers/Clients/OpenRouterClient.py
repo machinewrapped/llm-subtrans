@@ -11,7 +11,7 @@ class OpenRouterClient(CustomClient):
         settings.setdefault('supports_conversation', True)
         settings.setdefault('supports_streaming', True)
         settings.setdefault('server_address', 'https://openrouter.ai/api/')
-        settings.setdefault('endpoint', '/v1/chat/completions')
+        settings.setdefault('endpoint', 'v1/chat/completions')
         settings.setdefault('additional_headers', {
             'HTTP-Referer': 'https://github.com/machinewrapped/llm-subtrans',
             'X-Title': 'LLM-Subtrans'

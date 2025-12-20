@@ -14,9 +14,10 @@ from scripts.subtrans_common import (
 from PySubtrans import init_translator
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Providers.Provider_Mistral import MistralProvider
 
 provider = "Mistral"
-default_model = os.getenv('MISTRAL_MODEL') or "open-mistral-nemo"
+default_model = os.getenv('MISTRAL_MODEL') or MistralProvider.default_model
 
 parser = CreateArgParser(f"Translates subtitles using an Mistral model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Mistral API Key (https://console.mistral.ai/api-keys/)")

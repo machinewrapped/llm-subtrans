@@ -14,9 +14,10 @@ from scripts.subtrans_common import (
 from PySubtrans import init_translator
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Providers.Provider_DeepSeek import DeepSeekProvider
 
 provider = "DeepSeek"
-default_model = os.getenv('DEEPSEEK_MODEL') or "deepseek-chat"
+default_model = os.getenv('DEEPSEEK_MODEL') or DeepSeekProvider.default_model
 
 parser = CreateArgParser(f"Translates subtitles using an DeepSeek model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your DeepSeek API Key (https://platform.deepseek.com/api_keys)")

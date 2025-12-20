@@ -14,9 +14,10 @@ from scripts.subtrans_common import (
 from PySubtrans import init_translator
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Providers.Provider_Gemini import GeminiProvider
 
 provider = "Gemini"
-default_model = os.getenv('GEMINI_MODEL') or "Gemini 2.0 Flash"
+default_model = os.getenv('GEMINI_MODEL') or GeminiProvider.default_model
 
 parser = CreateArgParser(f"Translates subtitles using a Google Gemini model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Gemini API Key (https://makersuite.google.com/app/apikey)")

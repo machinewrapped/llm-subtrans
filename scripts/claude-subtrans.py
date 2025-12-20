@@ -14,9 +14,10 @@ from scripts.subtrans_common import (
 from PySubtrans import init_translator
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Providers.Provider_Claude import ClaudeProvider
 
 provider = "Claude"
-default_model = os.getenv('CLAUDE_MODEL') or "claude-3-haiku-20240307"
+default_model = os.getenv('CLAUDE_MODEL') or ClaudeProvider.default_model
 
 parser = CreateArgParser(f"Translates subtitles using Anthropic's Claude AI")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Anthropic API Key (https://console.anthropic.com/settings/keys)")

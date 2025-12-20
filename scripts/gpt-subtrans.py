@@ -14,10 +14,10 @@ from scripts.subtrans_common import (
 from PySubtrans import init_translator
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Providers.Provider_OpenAi import OpenAiProvider
 
-# We'll write separate scripts for other providers
 provider = "OpenAI"
-default_model = os.getenv('OPENAI_MODEL') or "gpt-5-mini"
+default_model = os.getenv('OPENAI_MODEL') or OpenAiProvider.default_model
 
 parser = CreateArgParser(f"Translates subtitles using an OpenAI model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your OpenAI API Key (https://platform.openai.com/account/api-keys)")

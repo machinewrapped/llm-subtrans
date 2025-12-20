@@ -22,6 +22,8 @@ else:
         class MistralProvider(TranslationProvider):
             name = "Mistral"
 
+            default_model = "mistral-small-2506"
+
             information = """
             <p>Select the <a href="https://docs.mistral.ai/getting-started/models/models_overview/">model</a> to use as a translator.</p>
             """
@@ -35,7 +37,7 @@ else:
                 super().__init__(self.name, SettingsType({
                     "api_key": settings.get_str('api_key', os.getenv('MISTRAL_API_KEY')),
                     "server_url": settings.get_str('server_url', os.getenv('MISTRAL_SERVER_URL')),
-                    "model": settings.get_str('model', os.getenv('MISTRAL_MODEL', "open-mistral-nemo")),
+                    "model": settings.get_str('model', os.getenv('MISTRAL_MODEL', self.default_model)),
                     'temperature': settings.get_float('temperature', env_float('MISTRAL_TEMPERATURE', 0.0)),
                     'rate_limit': settings.get_float('rate_limit', env_float('MISTRAL_RATE_LIMIT')),
                     'proxy': settings.get_str('proxy') or os.getenv('MISTRAL_PROXY'),

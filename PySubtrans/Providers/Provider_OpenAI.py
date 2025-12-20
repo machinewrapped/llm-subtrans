@@ -22,6 +22,8 @@ else:
         class OpenAiProvider(TranslationProvider):
             name = "OpenAI"
 
+            default_model = "gpt-5-mini"
+
             information = """
             <p>Select the AI <a href="https://platform.openai.com/docs/models">model</a> to use as a translator.</p>
             <p>Note that different models have different <a href="https://openai.com/pricing">costs</a> and limitations.</p>
@@ -43,7 +45,7 @@ else:
                 super().__init__(self.name, SettingsType({
                     "api_key": settings.get_str('api_key', os.getenv('OPENAI_API_KEY')),
                     "api_base": settings.get_str('api_base', os.getenv('OPENAI_API_BASE')),
-                    "model": settings.get_str('model', os.getenv('OPENAI_MODEL', "gpt-5-mini")),
+                    "model": settings.get_str('model', os.getenv('OPENAI_MODEL', self.default_model)),
                     'temperature': settings.get_float('temperature', env_float('OPENAI_TEMPERATURE', 0.0)),
                     'rate_limit': settings.get_float('rate_limit', env_float('OPENAI_RATE_LIMIT')),
                     "free_plan": settings.get_bool('free_plan', os.getenv('OPENAI_FREE_PLAN') == "True"),

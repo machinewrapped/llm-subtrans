@@ -24,6 +24,8 @@ else:
         class GeminiProvider(TranslationProvider):
             name = "Gemini"
 
+            default_model = "gemini-3-flash-preview"
+
             information = """
             <p>Select the <a href="https://ai.google.dev/models/gemini">AI model</a> to use as a translator.</p>
             <p>Please note that the Gemini API can currently only be accessed from IP addresses in <a href="https://ai.google.dev/available_regions">certain regions</a>.</p>
@@ -39,7 +41,7 @@ else:
             def __init__(self, settings : SettingsType):
                 super().__init__(self.name, SettingsType({
                     "api_key": settings.get_str('api_key') or os.getenv('GEMINI_API_KEY'),
-                    "model": settings.get_str('model') or os.getenv('GEMINI_MODEL', 'gemini-3-flash-preview'),
+                    "model": settings.get_str('model') or os.getenv('GEMINI_MODEL', self.default_model),
                     'stream_responses': settings.get_bool('stream_responses', os.getenv('GEMINI_STREAM_RESPONSES', "True") == "True"),
                     'enable_thinking': settings.get_bool('enable_thinking', os.getenv('GEMINI_ENABLE_THINKING', "False") == "True"),
                     'thinking_budget': settings.get_int('thinking_budget', env_int('GEMINI_THINKING_BUDGET', 100)) or 100,

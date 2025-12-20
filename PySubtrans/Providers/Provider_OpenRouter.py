@@ -12,6 +12,8 @@ from PySubtrans.TranslationProvider import TranslationProvider
 
 class OpenRouterProvider(TranslationProvider):
     name = "OpenRouter"
+
+    default_model = "google/gemini-3-flash-preview"
     
     information = """
     <p>Select the <a href="https://openrouter.ai/models">model</a> to use as a translator.</p>
@@ -33,7 +35,7 @@ class OpenRouterProvider(TranslationProvider):
             'stream_responses': settings.get_bool('stream_responses', os.getenv('OPENROUTER_STREAM_RESPONSES', "True") == "True"),
             'model_family': settings.get_str('model_family', os.getenv('OPENROUTER_MODEL_FAMILY', "Google")),
             'only_translation_models': settings.get_bool('only_translation_models', True),
-            "model": settings.get_str('model', os.getenv('OPENROUTER_MODEL', "google/gemini-3-flash-preview")),
+            "model": settings.get_str('model', os.getenv('OPENROUTER_MODEL', self.default_model)),
             'max_tokens': settings.get_int('max_tokens', env_int('OPENROUTER_MAX_TOKENS', 0)),
             'temperature': settings.get_float('temperature', env_float('OPENROUTER_TEMPERATURE', 0.0)),
             'rate_limit': settings.get_float('rate_limit', env_float('OPENROUTER_RATE_LIMIT')),

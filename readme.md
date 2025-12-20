@@ -345,9 +345,6 @@ Some additional arguments are available for specific providers.
 - `-m`, `--model`:
   Specify the [AI model](https://platform.openai.com/docs/models) to use for translation
 
-- `--proxy`:
-  SOCKS proxy URL
-
 #### Gemini
 - `-k`, `--apikey`:
   Your [Google Gemini API Key](https://aistudio.google.com/app/apikey). (the app will look for GEMINI_API_KEY in the environment if this is not provided)
@@ -428,14 +425,31 @@ Some additional arguments are available for specific providers.
   If using a conversation endpoint, translation instructions will be sent as the "system" user if this flag is specified.
 
 
-### Proxy
+## Proxy Support
 
-If you need to use proxy in your location, you can use socks proxy by using command line
+LLM-Subtrans has support for proxies across most providers.
+
+### Configuration
+
+You can configure a proxy using the following arguments:
+
+- `--proxy <URL>`:
+  Specify the proxy URL. Supports both HTTP and SOCKS proxies.
+  *Example*: `--proxy http://127.0.0.1:8888` or `--proxy socks5://127.0.0.1:1080`
+
+- `--proxycert <PATH>`:
+  Path to a custom CA certificate bundle (PEM format). This is required when using an intercepting proxy (like `mitmproxy` or `Fiddler`) that uses a self-signed certificate.
+  *Example*: `--proxycert C:\Users\name\.mitmproxy\mitmproxy-ca-cert.pem`
+
+### Example Usage
 
 ```sh
-python3 gpt-subtrans.py <path_to_subtitle_file> --target_language <target_language> --proxy socks://127.0.0.1:1089
+# Use a SOCKS proxy for OpenRouter
+llm-subtrans --auto -l Spanish input.srt --proxy socks5://127.0.0.1:1080
+
+# Use mitmdump with a custom certificate
+llm-subtrans --auto -l French input.srt --proxy http://127.0.0.1:8080 --proxycert ./mitmproxy-ca-cert.pem
 ```
-Remember to change the local port to yours and turn on your proxy tools such as v2ray, naiveproxy and clash.
 
 ### batch process
 

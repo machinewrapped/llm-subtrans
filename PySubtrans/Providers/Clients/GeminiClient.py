@@ -136,10 +136,9 @@ class GeminiClient(TranslationClient):
         client_args = None
         async_client_args = None
         if proxy:
-            # httpx 0.28+ uses 'proxy' (singular); aiohttp uses per-request 'proxy'
             client_args = {'proxy': proxy}
             async_client_args = {'proxy': proxy}
-            self._emit_info(_(f"Using proxy: {proxy}"))
+            self._emit_info(_("Using proxy: {proxy}").format(proxy=proxy))
 
         http_options = HttpOptions(api_version='v1beta', client_args=client_args, async_client_args=async_client_args)
 

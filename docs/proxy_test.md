@@ -166,6 +166,7 @@ Simply replace `http://127.0.0.1:8888` with your actual proxy URL.
 The following providers support the `--proxy` argument:
 
 - ✅ OpenAI (`gpt-subtrans.py`)
+- ✅ Claude (`claude-subtrans.py`)
 - ✅ Gemini (`gemini-subtrans.py`)
 - ✅ Mistral (`mistral-subtrans.py`)
 - ✅ OpenRouter (`llm-subtrans.py`)

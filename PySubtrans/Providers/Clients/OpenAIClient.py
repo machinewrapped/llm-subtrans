@@ -177,14 +177,10 @@ class OpenAIClient(TranslationClient):
 
     def _create_client(self) -> None:
         http_client: httpx.Client|None = None
+
         proxy = self.settings.get_str( 'proxy')
         if proxy:
-            # Use httpx with SOCKS proxy support
-            proxies = {
-                'http://': proxy,
-                'https://': proxy
-            }
-            http_client = httpx.Client(proxies=proxies) #type: ignore
+            http_client = httpx.Client(proxy=proxy)
 
         elif self.settings.get_bool( 'use_httpx'):
             if self.api_base is None:

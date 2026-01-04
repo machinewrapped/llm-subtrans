@@ -268,8 +268,7 @@ translator.TranslateSubtitles(subtitles)
 
 ```python
   from PySubtrans import SubtitleTranslator, SettingsType
-  from PySubtrans.Providers.Provider_OpenRouter import
-  OpenRouterProvider
+  from PySubtrans.Providers.Provider_OpenRouter import OpenRouterProvider
 
   openrouter = OpenRouterProvider(SettingsType({
       'api_key': 'your_openrouter_api_key',

@@ -10,7 +10,7 @@ from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import default_prompt_template
 from PySubtrans.TranslationProvider import TranslationProvider
 
-class Provider_CustomServer(TranslationProvider):
+class CustomServerProvider(TranslationProvider):
     name = "Custom Server"
 
     information = """

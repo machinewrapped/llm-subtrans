@@ -29,7 +29,7 @@ else:
                     "api_base": settings.get_str('api_base', env_str('AZURE_API_BASE')),
                     "api_version": settings.get_str('api_version', env_str('AZURE_API_VERSION')),
                     "deployment_name": settings.get_str('deployment_name', env_str('AZURE_DEPLOYMENT_NAME')),
-                    'proxy': settings.get_str('proxy') or os.getenv('AZURE_PROXY'),
+                    'proxy': settings.get_str('proxy') or env_str('AZURE_PROXY'),
                 }))
 
                 self.refresh_when_changed = ['api_key', 'api_base', 'api_version', 'deployment_name']

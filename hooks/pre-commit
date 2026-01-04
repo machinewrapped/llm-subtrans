@@ -1,0 +1,73 @@
+#!/bin/sh
+#
+# Pre-commit hook to run pyright type checking
+# Prevents commits if type errors are found
+#
+
+echo "Running pyright type checking..."
+
+# Detect Python path based on OS
+if [ -f "./envsubtrans/Scripts/python.exe" ]; then
+    # Windows
+    PYTHON="./envsubtrans/Scripts/python.exe"
+elif [ -f "./envsubtrans/bin/python" ]; then
+    # Linux/Mac
+    PYTHON="./envsubtrans/bin/python"
+else
+    echo "Error: Could not find Python in virtual environment"
+    exit 1
+fi
+
+# Run pyright and capture output using Python to parse JSON
+$PYTHON -c "
+import subprocess
+import json
+import sys
+import os
+
+# Determine Python executable path for subprocess
+if os.path.exists('./envsubtrans/Scripts/python.exe'):
+    python_exe = './envsubtrans/Scripts/python.exe'
+elif os.path.exists('./envsubtrans/bin/python'):
+    python_exe = './envsubtrans/bin/python'
+else:
+    print('Error: Could not find Python in virtual environment')
+    sys.exit(1)
+
+try:
+    result = subprocess.run(
+        [python_exe, '-m', 'pyright', '--outputjson', '.'],
+        capture_output=True,
+        text=True,
+        timeout=120
+    )
+
+    output = json.loads(result.stdout)
+    error_count = output.get('summary', {}).get('errorCount', 0)
+    warning_count = output.get('summary', {}).get('warningCount', 0)
+    files_analyzed = output.get('summary', {}).get('filesAnalyzed', 0)
+
+    if error_count > 0:
+        print(f'Type checking failed with {error_count} error(s)')
+        print('')
+        print(f'Run: {python_exe} -m pyright')
+        print('to see detailed error messages')
+        print('')
+        print('To skip this check, use: git commit --no-verify')
+        sys.exit(1)
+    else:
+        print(f'Type checking passed ({files_analyzed} files analyzed, 0 errors)')
+        if warning_count > 0:
+            print(f'  (with {warning_count} warning(s))')
+        sys.exit(0)
+
+except subprocess.TimeoutExpired:
+    print('Error: Pyright timed out')
+    sys.exit(1)
+except json.JSONDecodeError as e:
+    print(f'Error: Failed to parse pyright output: {e}')
+    sys.exit(1)
+except Exception as e:
+    print(f'Error running pyright: {e}')
+    sys.exit(1)
+"

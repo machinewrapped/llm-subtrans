@@ -26,13 +26,7 @@ import sys
 import os
 
 # Determine Python executable path for subprocess
-if os.path.exists('./envsubtrans/Scripts/python.exe'):
-    python_exe = './envsubtrans/Scripts/python.exe'
-elif os.path.exists('./envsubtrans/bin/python'):
-    python_exe = './envsubtrans/bin/python'
-else:
-    print('Error: Could not find Python in virtual environment')
-    sys.exit(1)
+python_exe = sys.executable
 
 try:
     result = subprocess.run(

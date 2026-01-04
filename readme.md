@@ -505,6 +505,20 @@ Create a new branch for your changes using the following command:
 git checkout -b feature/your-new-feature
 ```
 
+Install pyright as a pre-commit hook (optional but encouraged):
+
+```sh
+# Install pyright for type checking
+pip install pyright
+
+# Install git hooks (runs type checking before commits)
+# Windows:
+hooks\install.bat
+
+# Linux/Mac:
+./hooks/install.sh
+```
+
 Make your changes to the code and commit them with a descriptive commit message.
 
 Push your changes to your forked repository.

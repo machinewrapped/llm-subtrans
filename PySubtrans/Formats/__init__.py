@@ -7,6 +7,8 @@ dependencies from the core business logic.
 
 # Explicitly import all format handler modules to ensure they're registered
 # This is required for pip-installed packages where dynamic discovery may fail
+# pyright: reportUnusedImport=false
+
 from . import SrtFileHandler
 from . import SSAFileHandler
 from . import VttFileHandler

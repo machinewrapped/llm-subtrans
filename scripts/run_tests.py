@@ -329,8 +329,7 @@ if __name__ == "__main__":
     create_logfile(results_directory, "run_tests.log")
 
     # Run type checking first (fail fast on type errors)
-    type_check_success : bool = run_type_checking(results_directory)
-    overall_success = type_check_success
+    overall_success : bool = run_type_checking(results_directory)
 
     # Only run unit tests if type checking passed
     if overall_success:

@@ -61,8 +61,8 @@ def _run_pyright(base_path: str) -> tuple[bool, dict|None]:
         )
 
         json_output = json.loads(result.stdout)
-        logging.info("Pyright output:")
-        logging.info(result.stdout)
+        logging.debug("Pyright output:")
+        logging.debug(result.stdout)
 
         return (True, json_output)
 

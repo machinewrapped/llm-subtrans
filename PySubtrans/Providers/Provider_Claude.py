@@ -23,7 +23,7 @@ else:
         class ClaudeProvider(TranslationProvider):
             name = "Claude"
 
-            default_model = "claude-haiku-4-5"
+            default_model = "Claude Haiku 4.5"
 
             information = """
             <p>Select the <a href="https://docs.anthropic.com/claude/docs/models-overview">AI model</a> to use as a translator.</p>

@@ -2,7 +2,6 @@ import os
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QLabel, QFrame, QHBoxLayout, QPushButton, QSizePolicy
 
-from GuiSubtrans.GuiInterface import GuiInterface
 from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectSelection import ProjectSelection
 from PySubtrans.Instructions import DEFAULT_TASK_TYPE

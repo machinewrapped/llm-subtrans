@@ -8,7 +8,6 @@ from PySubtrans.Options import SettingsType
 
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
-from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
 

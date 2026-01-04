@@ -11,8 +11,6 @@ from GuiSubtrans.GuiHelpers import GetThemeNames
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget
 from PySubtrans.Options import Options
 from PySubtrans.Helpers.Localization import _, get_locale_display_items
-from PySubtrans.Helpers.Resources import GetResourcePath
-import os
 
 class FirstRunOptions(QDialog):
     OPTIONS = {

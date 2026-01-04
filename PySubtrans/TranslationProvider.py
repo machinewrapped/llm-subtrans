@@ -1,4 +1,3 @@
-import logging
 from typing import cast
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType

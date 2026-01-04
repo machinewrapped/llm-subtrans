@@ -1,6 +1,6 @@
 import logging
 
-from PySide6.QtCore import Qt, QObject, Signal, Slot
+from PySide6.QtCore import Qt, Signal, Slot
 from PySide6.QtGui import QTextCursor, QTextCharFormat, QColor
 from PySide6.QtWidgets import QTextEdit
 

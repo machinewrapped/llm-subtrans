@@ -1,4 +1,4 @@
-from GuiSubtrans.Command import Command, CommandError
+from GuiSubtrans.Command import Command
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleProject import SubtitleProject
 

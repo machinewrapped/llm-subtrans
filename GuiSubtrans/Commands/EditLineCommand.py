@@ -1,11 +1,8 @@
-from datetime import timedelta
 import logging
 from copy import deepcopy
-from math import e
 from GuiSubtrans.Command import Command, CommandError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
-from PySubtrans.Helpers.Time import GetTimeDelta
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleEditor import SubtitleEditor

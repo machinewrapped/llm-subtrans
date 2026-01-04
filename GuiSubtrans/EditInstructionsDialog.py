@@ -13,7 +13,7 @@ from PySide6.QtWidgets import (
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget
 
 from PySubtrans.Options import MULTILINE_OPTION, Options
-from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
+from PySubtrans.Instructions import Instructions
 from PySubtrans.Helpers.InstructionsHelpers import GetInstructionsFiles, GetInstructionsUserPath, LoadInstructions, LoadInstructionsFile, SaveInstructions
 from PySubtrans.Helpers.Localization import _
 

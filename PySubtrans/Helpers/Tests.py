@@ -3,7 +3,6 @@ import functools
 import logging
 import os
 import sys
-import unittest
 from datetime import datetime
 from typing import Any
 

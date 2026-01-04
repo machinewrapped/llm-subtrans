@@ -1,14 +1,10 @@
 import logging
-from typing import TYPE_CHECKING
 
 from GuiSubtrans.Command import Command, CommandError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleProject import SubtitleProject
-
-if TYPE_CHECKING:
-    from PySubtrans.SubtitleEditor import SubtitleEditor
 
 class SplitSceneCommand(Command):
     def __init__(self, scene_number : int, batch_number : int, datamodel: ProjectDataModel|None = None):

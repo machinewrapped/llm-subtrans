@@ -4,7 +4,6 @@ from PySubtrans.Helpers.TestCases import SubtitleTestCase
 from PySubtrans.Helpers.Tests import log_info, log_test_name
 
 from GuiSubtrans.Command import Command
-from GuiSubtrans.Commands.SaveProjectFile import SaveProjectFile
 from GuiSubtrans.Commands.SaveTranslationFile import SaveTranslationFile
 from GuiSubtrans.Commands.StartTranslationCommand import StartTranslationCommand
 from GuiSubtrans.Commands.TranslateSceneCommand import TranslateSceneCommand

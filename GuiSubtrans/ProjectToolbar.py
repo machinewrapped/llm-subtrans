@@ -1,10 +1,9 @@
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QAction, QIcon
+from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QToolBar, QStyle, QApplication
 
 from GuiSubtrans.ProjectActions import ProjectActions
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Resources import GetResourcePath
 
 class ProjectToolbar(QToolBar):
     _show_options = True

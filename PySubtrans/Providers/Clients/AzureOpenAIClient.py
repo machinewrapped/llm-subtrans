@@ -7,7 +7,6 @@ from PySubtrans.Helpers.Parse import ParseDelayFromHeader
 from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
-from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
 from PySubtrans.Options import SettingsType

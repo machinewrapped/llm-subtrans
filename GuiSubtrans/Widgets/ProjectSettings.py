@@ -19,7 +19,6 @@ from GuiSubtrans.ProjectDataModel import ProjectDataModel
 
 from GuiSubtrans.Widgets.Widgets import OptionsGrid, TextBoxEditor
 from PySubtrans.Helpers import GetValueName
-from PySubtrans.Options import Options
 from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.Substitutions import Substitutions

@@ -1,6 +1,5 @@
 import logging
 import os
-from typing import Any
 
 from PySubtrans.Instructions import Instructions, DEFAULT_TASK_TYPE, default_instructions, default_retry_instructions
 from PySubtrans.Helpers.Localization import _

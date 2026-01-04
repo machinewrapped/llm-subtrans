@@ -14,7 +14,7 @@ from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationProvider import TranslationProvider
-from PySubtrans.TranslationRequest import TranslationRequest, StreamingCallback
+from PySubtrans.TranslationRequest import TranslationRequest
 
 class MockStreamingTranslationClient(DummyTranslationClient):
     """Mock streaming client for testing streaming functionality"""

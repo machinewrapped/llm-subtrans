@@ -1,5 +1,4 @@
 from copy import deepcopy
-import logging
 
 from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans.Helpers.TestCases import DummyProvider, PrepareSubtitles, SubtitleTestCase

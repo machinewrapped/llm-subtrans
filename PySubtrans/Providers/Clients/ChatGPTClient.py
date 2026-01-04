@@ -1,4 +1,3 @@
-import logging
 from typing import Any
 
 from openai.types.chat import ChatCompletion    # type: ignore
@@ -7,7 +6,6 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import SettingsType
 from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SubtitleError import TranslationError, TranslationResponseError
-from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 
 linesep = '\n'

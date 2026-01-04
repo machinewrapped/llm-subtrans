@@ -1,6 +1,5 @@
 from copy import deepcopy
 import logging
-from typing import TYPE_CHECKING
 
 from GuiSubtrans.Command import Command, CommandError
 from GuiSubtrans.Commands.SaveProjectFile import SaveProjectFile
@@ -11,9 +10,6 @@ from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleProject import SubtitleProject
-
-if TYPE_CHECKING:
-    from PySubtrans.SubtitleEditor import SubtitleEditor
 
 class BatchSubtitlesCommand(Command):
     """

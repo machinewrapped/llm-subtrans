@@ -4,7 +4,7 @@ import os
 from typing import cast
 
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QRecursiveMutex, QMutexLocker
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QDialogButtonBox, QFormLayout, QFrame, QLabel, QWidget, QLayout)
+from PySide6.QtWidgets import (QDialog, QVBoxLayout, QDialogButtonBox, QFormLayout, QFrame, QLabel)
 
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, DropdownOptionWidget, OptionWidget

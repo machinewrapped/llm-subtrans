@@ -12,7 +12,6 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleError import TranslationError, TranslationImpossibleError
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
-from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 
 class MistralClient(TranslationClient):

@@ -24,7 +24,6 @@ from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
-from PySubtrans.Instructions import Instructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import ProviderConfigurationError, SubtitleError

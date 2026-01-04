@@ -13,14 +13,14 @@ from PySubtrans import (
     init_translator,
     init_translation_provider,
 )
-from PySubtrans.Helpers.TestCases import DummyProvider, LoggedTestCase  # noqa: F401 - ensure provider is registered
+from PySubtrans.Helpers.TestCases import DummyProvider, LoggedTestCase  # type: ignore
 from ..TestData.chinese_dinner import chinese_dinner_json_data
 from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
     skip_if_debugger_attached,
 )
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleError import SubtitleError, TranslationImpossibleError
+from PySubtrans.SubtitleError import TranslationImpossibleError
 
 
 class PySubtransConvenienceTests(LoggedTestCase):

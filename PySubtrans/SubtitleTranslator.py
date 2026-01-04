@@ -5,7 +5,7 @@ from typing import Any
 
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
-from PySubtrans.Helpers.Localization import _, tr
+from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Text import Linearise, SanitiseSummary
 from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
 from PySubtrans.SettingsType import SettingsType

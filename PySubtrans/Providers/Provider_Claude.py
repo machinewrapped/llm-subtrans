@@ -2,7 +2,7 @@ import importlib.util
 import logging
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Options import env_float, env_int, env_bool
+from PySubtrans.Options import env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
 if not importlib.util.find_spec("anthropic"):

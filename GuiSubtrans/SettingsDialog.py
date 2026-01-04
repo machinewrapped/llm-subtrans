@@ -9,7 +9,7 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.TranslationProvider import TranslationProvider
-from PySubtrans.Helpers.Localization import LocaleDisplayItem, _, get_locale_display_items, get_locale_display_name
+from PySubtrans.Helpers.Localization import LocaleDisplayItem, _, get_locale_display_items
 
 class SettingsDialog(QDialog):
     """

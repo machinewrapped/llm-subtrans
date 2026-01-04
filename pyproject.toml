@@ -44,6 +44,8 @@ namespaces = true
 include = ["PySubtrans", "GuiSubtrans", "scripts", "tests"]
 pythonVersion = "3.10"
 typeCheckingMode = "basic"
+venvPath = "."
+venv = "envsubtrans"
 
 # Stricter checking
 reportMissingImports = "error"

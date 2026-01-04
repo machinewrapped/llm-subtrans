@@ -1,14 +1,10 @@
 import logging
-from typing import TYPE_CHECKING
 
 from GuiSubtrans.Command import Command, CommandError, UndoError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Subtitles import Subtitles
-
-if TYPE_CHECKING:
-    from PySubtrans.SubtitleEditor import SubtitleEditor
 
 class MergeScenesCommand(Command):
     """

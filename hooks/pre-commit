@@ -33,7 +33,7 @@ try:
         [python_exe, '-m', 'pyright', '--outputjson', '.'],
         capture_output=True,
         text=True,
-        timeout=120
+        timeout=20
     )
 
     output = json.loads(result.stdout)

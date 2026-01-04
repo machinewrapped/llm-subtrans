@@ -14,7 +14,7 @@ from scripts.subtrans_common import (
 from PySubtrans import init_translator
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.Providers.Provider_OpenAi import OpenAiProvider
+from PySubtrans.Providers.Provider_OpenAI import OpenAiProvider
 
 provider = "OpenAI"
 default_model = os.getenv('OPENAI_MODEL') or OpenAiProvider.default_model

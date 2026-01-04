@@ -20,7 +20,7 @@ else:
         from PySubtrans.TranslationProvider import TranslationProvider
         from PySubtrans.Options import SettingsType
 
-        class Provider_Claude(TranslationProvider):
+        class ClaudeProvider(TranslationProvider):
             name = "Claude"
 
             default_model = "claude-haiku-4-5"

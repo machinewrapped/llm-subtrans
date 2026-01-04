@@ -1,8 +1,9 @@
 from __future__ import annotations
+from collections.abc import Callable
+from datetime import timedelta
+from typing import Any
 
 import logging
-from datetime import timedelta
-from typing import Any, Callable
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Time import GetTimeDelta

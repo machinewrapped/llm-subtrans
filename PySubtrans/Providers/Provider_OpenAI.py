@@ -2,6 +2,8 @@ import importlib.util
 import logging
 import os
 
+import httpx
+
 from PySubtrans.Options import SettingsType, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 

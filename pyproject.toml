@@ -39,3 +39,16 @@ bedrock = ["boto3"]
 where = ["."]
 include = ["PySubtrans*", "GuiSubtrans*", "scripts*"]
 namespaces = true
+
+[tool.pyright]
+include = ["PySubtrans", "GuiSubtrans", "scripts", "tests"]
+pythonVersion = "3.10"
+typeCheckingMode = "basic"
+
+# Stricter checking
+reportMissingImports = "error"
+reportUndefinedVariable = "error"
+reportGeneralTypeIssues = "error"
+reportMissingTypeStubs = "warning"
+reportUnusedImport = "warning"
+reportUnusedVariable = "warning"

@@ -74,8 +74,8 @@ class TestOpenAIPromptCache(LoggedTestCase):
         self.assertLoggedEqual("saved cached_tokens", 15, response.get('cached_tokens'))
 
     @patch('PySubtrans.Providers.Clients.OpenAIClient.openai.OpenAI')
-    @patch('PySubtrans.Providers.Clients.OpenAIReasoningClient.SettingsType') # Patch SettingsType used in init if needed, though we pass it
-    def test_reasoning_client_uses_prompt_cache_key(self, mock_settings_type, mock_openai):
+    @patch('PySubtrans.Providers.Clients.OpenAIClient.openai.OpenAI')
+    def test_reasoning_client_uses_prompt_cache_key(self, mock_openai):
         # Setup
         key = "test-reasoning-key"
         settings = SettingsType({'api_key': 'sk-test', 'model': 'o1', 'prompt_cache_key': key, 'instructions': 'Test'})

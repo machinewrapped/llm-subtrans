@@ -7,7 +7,8 @@ from openai import (
     OpenAIError,
     PermissionDeniedError,
     RateLimitError,
-    UnprocessableEntityError
+    UnprocessableEntityError,
+    omit
 )
 from openai.types import responses as responses_types
 from openai.types.responses import (
@@ -125,7 +126,8 @@ class OpenAIReasoningClient(OpenAIClient):
                 model=self.model,
                 input=input_params,
                 instructions=request.prompt.system_prompt,
-                reasoning=Reasoning(effort=self.reasoning_effort)
+                reasoning=Reasoning(effort=self.reasoning_effort),
+                prompt_cache_key=self.settings.get_str('prompt_cache_key') or omit
             )
 
         except (RateLimitError, APITimeoutError, APIConnectionError):
@@ -150,7 +152,8 @@ class OpenAIReasoningClient(OpenAIClient):
             input=input_params,
             instructions=request.prompt.system_prompt,
             reasoning=Reasoning(effort=self.reasoning_effort),
-            stream=True
+            stream=True,
+            prompt_cache_key=self.settings.get_str('prompt_cache_key') or omit
         )
 
         self._is_streaming = True
@@ -296,6 +299,11 @@ class OpenAIReasoningClient(OpenAIClient):
             'total_tokens': usage.total_tokens,
             'response_time': getattr(openai_response, 'response_ms', 0)
         }
+
+        # Add cached tokens from prompt tokens details
+        prompt_tokens_details = getattr(usage, 'prompt_tokens_details', None)
+        if prompt_tokens_details:
+             info['cached_tokens'] = getattr(prompt_tokens_details, 'cached_tokens', 0)
 
         # Add reasoning-specific tokens from output details
         if hasattr(usage, 'output_tokens_details') and usage.output_tokens_details:

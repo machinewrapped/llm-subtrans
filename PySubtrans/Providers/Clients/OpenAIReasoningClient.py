@@ -303,7 +303,7 @@ class OpenAIReasoningClient(OpenAIClient):
         # Add cached tokens from input tokens details
         input_tokens_details = getattr(usage, 'input_tokens_details', None)
         if input_tokens_details:
-             info['cached_tokens'] = getattr(input_tokens_details, 'cached_tokens', 0)
+            info['cached_tokens'] = getattr(input_tokens_details, 'cached_tokens', 0)
 
         # Add reasoning-specific tokens from output details
         if hasattr(usage, 'output_tokens_details') and usage.output_tokens_details:

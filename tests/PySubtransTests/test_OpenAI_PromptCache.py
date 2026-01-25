@@ -3,6 +3,7 @@ import uuid
 from openai.types.chat import ChatCompletion, ChatCompletionMessage
 from openai.types.chat.chat_completion import Choice
 from openai.types.completion_usage import CompletionUsage, PromptTokensDetails
+from openai.types.responses.response_usage import InputTokensDetails
 from openai.types.responses import Response, ResponseUsage, ResponseOutputMessage, ResponseOutputText
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
@@ -74,7 +75,6 @@ class TestOpenAIPromptCache(LoggedTestCase):
         self.assertLoggedEqual("saved cached_tokens", 15, response.get('cached_tokens'))
 
     @patch('PySubtrans.Providers.Clients.OpenAIClient.openai.OpenAI')
-    @patch('PySubtrans.Providers.Clients.OpenAIClient.openai.OpenAI')
     def test_reasoning_client_uses_prompt_cache_key(self, mock_openai):
         # Setup
         key = "test-reasoning-key"
@@ -103,7 +103,7 @@ class TestOpenAIPromptCache(LoggedTestCase):
                 input_tokens=20,
                 output_tokens=10,
                 total_tokens=30,
-                prompt_tokens_details=PromptTokensDetails.model_construct(cached_tokens=18)
+                input_tokens_details=InputTokensDetails.model_construct(cached_tokens=18)
             )
         )
         mock_instance.responses.create.return_value = mock_response

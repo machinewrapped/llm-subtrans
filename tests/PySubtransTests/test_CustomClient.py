@@ -150,7 +150,7 @@ class TestCustomClientErrorHandling(LoggedTestCase):
         with patch('httpx.Client', return_value=mock_httpx_client):
             try:
                 client._make_request(_create_test_request(streaming=True), temperature=0.0)
-            except (TranslationImpossibleError, ServerResponseError):
+            except TranslationImpossibleError:
                 pass
 
         self.assertLoggedTrue("response.read() was called", mock_resp.read.called)

@@ -8,7 +8,7 @@ from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Helpers.Parse import ParseErrorMessageFromText
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import SettingsType
-from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
+from PySubtrans.SubtitleError import ClientResponseError, ServerResponseError, TranslationImpossibleError, TranslationResponseError
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
@@ -122,6 +122,11 @@ class CustomClient(TranslationClient):
                 else:
                     return self._handle_non_streaming_request(request_body)
 
+            except ServerResponseError as e:
+                # Server errors (5xx) are potentially transient, allow retry
+                if not self.aborted:
+                    self._emit_error(str(e))
+
             except TranslationResponseError:
                 raise
 
@@ -142,6 +147,9 @@ class CustomClient(TranslationClient):
                     self._emit_error(_("Request to server timed out: {error}").format(
                         error=str(e)
                     ))
+
+            except TranslationImpossibleError:
+                raise
 
             except Exception as e:
                 raise TranslationImpossibleError(_("Unexpected error communicating with server"), error=e)
@@ -174,11 +182,11 @@ class CustomClient(TranslationClient):
             parsed_message = ParseErrorMessageFromText(result.text)
             summary_text = parsed_message if parsed_message else result.text
             if result.is_client_error:
-                raise TranslationResponseError(_("Client error: {status_code} {text}").format(
+                raise ClientResponseError(_("Client error: {status_code} {text}").format(
                     status_code=result.status_code, text=summary_text
                 ), response=result)
             else:
-                raise TranslationResponseError(_("Server error: {status_code} {text}").format(
+                raise ServerResponseError(_("Server error: {status_code} {text}").format(
                     status_code=result.status_code, text=summary_text
                 ), response=result)
 
@@ -200,15 +208,16 @@ class CustomClient(TranslationClient):
                 return None
 
             if response.is_error:
+                response.read()
                 error_text = response.text
                 parsed_message = ParseErrorMessageFromText(error_text)
                 summary_text = parsed_message if parsed_message else error_text
                 if response.is_client_error:
-                    raise TranslationResponseError(_("Client error: {status_code} {text}").format(
+                    raise ClientResponseError(_("Client error: {status_code} {text}").format(
                         status_code=response.status_code, text=summary_text
                     ), response=response)
                 else:
-                    raise TranslationResponseError(_("Server error: {status_code} {text}").format(
+                    raise ServerResponseError(_("Server error: {status_code} {text}").format(
                         status_code=response.status_code, text=summary_text
                     ), response=response)
 

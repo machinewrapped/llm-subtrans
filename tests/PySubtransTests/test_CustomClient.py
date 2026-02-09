@@ -7,7 +7,6 @@ from PySubtrans.Providers.Clients.CustomClient import CustomClient
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import (
     ClientResponseError,
-    ServerResponseError,
     TranslationImpossibleError,
 )
 from PySubtrans.TranslationPrompt import TranslationPrompt

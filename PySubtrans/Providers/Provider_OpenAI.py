@@ -3,6 +3,8 @@ import logging
 import os
 
 import httpx
+import uuid
+
 
 from PySubtrans.Options import SettingsType, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
@@ -57,6 +59,9 @@ else:
                     'stream_responses': settings.get_bool('stream_responses', os.getenv('OPENAI_STREAM_RESPONSES', "False") == "True"),
                     'proxy': settings.get_str('proxy') or os.getenv('OPENAI_PROXY'),
                 }))
+                
+                self.prompt_cache_key = str(uuid.uuid4())
+
 
                 self.refresh_when_changed = ['api_key', 'api_base', 'model']
 
@@ -89,6 +94,8 @@ else:
             def GetTranslationClient(self, settings : SettingsType) -> TranslationClient:
                 client_settings = SettingsType(self.settings.copy())
                 client_settings.update(settings)
+                client_settings.update({'prompt_cache_key': self.prompt_cache_key})
+
                 if self.is_instruct_model:
                     raise ProviderError("Instruct models are no longer supported", provider=self)
                 elif self.is_reasoning_model:

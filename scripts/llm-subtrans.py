@@ -1,5 +1,3 @@
-import logging
-
 from check_imports import check_required_imports
 check_required_imports(['PySubtrans'])
 
@@ -8,6 +6,7 @@ from scripts.subtrans_common import (
     CreateArgParser,
     CreateOptions,
     CreateProject,
+    LogTranslationStatus,
 )
 
 from PySubtrans import init_translator
@@ -29,6 +28,7 @@ args = parser.parse_args()
 provider = "Custom Server" if args.server else "OpenRouter"
 
 logger_options = InitLogger("llm-subtrans", args.debug)
+project : SubtitleProject|None = None
 
 try:
     if provider == "OpenRouter":
@@ -52,16 +52,19 @@ try:
         )
 
     # Create a project for the translation
-    project : SubtitleProject = CreateProject(options, args)
+    project = CreateProject(options, args)
 
     translator = init_translator(options)
 
     project.TranslateSubtitles(translator)
 
     if project.use_project_file:
-        logging.info(f"Writing project data to {str(project.projectfile)}")
-        project.SaveProjectFile()
+        project.UpdateProjectFile()
+
+    LogTranslationStatus(project, preview=args.preview)
 
 except Exception as e:
+    if project:
+        LogTranslationStatus(project, preview=args.preview)
     print("Error:", e)
     raise

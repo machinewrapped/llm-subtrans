@@ -216,19 +216,28 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
 
     return project
 
-def LogTranslationStatus(project : SubtitleProject, preview : bool = False) -> None:
+def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_error : bool = False) -> None:
     """Log a clear completion summary for the translation run."""
     subtitles = project.subtitles
     if not subtitles:
         logging.error("Translation status: no subtitles loaded")
         return
 
+    total_lines : int = subtitles.linecount
+    translated_lines : int = len(subtitles.translated) if subtitles.translated else 0
+
+    if has_error:
+        if preview:
+            logging.error("Translation status: preview failed")
+        elif translated_lines > 0:
+            logging.warning(f"Translation status: failed after partial progress ({translated_lines}/{total_lines} lines translated)")
+        else:
+            logging.error(f"Translation status: failed (0/{total_lines} lines translated)")
+        return
+
     if preview:
         logging.info("Translation status: preview completed (no translation was requested)")
         return
-
-    total_lines : int = subtitles.linecount
-    translated_lines : int = len(subtitles.translated) if subtitles.translated else 0
 
     if project.all_translated:
         logging.info(f"Translation status: completed ({translated_lines}/{total_lines} lines translated)")

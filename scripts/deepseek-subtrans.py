@@ -50,6 +50,6 @@ try:
 
 except Exception as e:
     if project:
-        LogTranslationStatus(project, preview=args.preview)
+        LogTranslationStatus(project, preview=args.preview, has_error=True)
     print("Error:", e)
     raise

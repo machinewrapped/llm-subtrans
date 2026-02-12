@@ -1,3 +1,5 @@
+import logging
+
 from check_imports import check_required_imports
 check_required_imports(['PySubtrans'])
 
@@ -66,5 +68,5 @@ try:
 except Exception as e:
     if project:
         LogTranslationStatus(project, preview=args.preview, has_error=True)
-    print("Error:", e)
+    logging.error(f"Error during subtitle translation: {e}")
     raise

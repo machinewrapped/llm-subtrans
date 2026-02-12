@@ -1,3 +1,4 @@
+import logging
 import os
 
 from check_imports import check_required_imports
@@ -51,5 +52,5 @@ try:
 except Exception as e:
     if project:
         LogTranslationStatus(project, preview=args.preview, has_error=True)
-    print("Error:", e)
+    logging.error(f"Error during subtitle translation: {e}")
     raise

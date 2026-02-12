@@ -9,6 +9,7 @@ from scripts.subtrans_common import (
     CreateArgParser,
     CreateOptions,
     CreateProject,
+    LogTranslationStatus,
 )
 from PySubtrans import init_translator
 from PySubtrans.Options import Options
@@ -29,9 +30,10 @@ parser.add_argument('-m', '--model', type=str, default=None, help="Model ID to u
 args = parser.parse_args()
 
 logger_options = InitLogger("bedrock-subtrans", args.debug)
+project : SubtitleProject|None = None
 
 try:
-    options: Options = CreateOptions(
+    options : Options = CreateOptions(
         args,
         provider,
         access_key=args.accesskey or access_key,
@@ -45,16 +47,19 @@ try:
         raise ValueError("AWS Access Key, Secret Key, Region, and Model ID must be specified.")
 
     # Create a project for the translation
-    project: SubtitleProject = CreateProject(options, args)
+    project = CreateProject(options, args)
 
     # Translate the subtitles
     translator = init_translator(options)
     project.TranslateSubtitles(translator)
 
     if project.use_project_file:
-        logging.info(f"Writing project data to {str(project.projectfile)}")
-        project.SaveProjectFile()
+        project.UpdateProjectFile()
+
+    LogTranslationStatus(project, preview=args.preview)
 
 except Exception as e:
+    if project:
+        LogTranslationStatus(project, preview=args.preview, has_error=True)
     logging.error(f"Error during subtitle translation: {e}")
     raise

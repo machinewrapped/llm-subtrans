@@ -437,6 +437,12 @@ class SubtitleProject:
             raise
 
         finally:
+            if self.use_project_file and self.needs_writing:
+                try:
+                    self.UpdateProjectFile()
+                except Exception as e:
+                    logging.error(_("Failed to save project file after translation: {}").format(str(e)))
+
             translator.events.preprocessed.disconnect(self._on_preprocessed)
             translator.events.batch_translated.disconnect(self._on_batch_translated)
             translator.events.scene_translated.disconnect(self._on_scene_translated)

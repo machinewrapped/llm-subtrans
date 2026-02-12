@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 from check_imports import check_required_imports
 check_required_imports(['PySubtrans', 'openai'], 'azure')
@@ -9,6 +9,7 @@ from scripts.subtrans_common import (
     CreateArgParser,
     CreateOptions,
     CreateProject,
+    LogTranslationStatus,
 )
 from PySubtrans import init_translator
 from PySubtrans.Options import Options
@@ -30,6 +31,7 @@ parser.add_argument('--deploymentname', type=str, default=None, help="Azure depl
 args = parser.parse_args()
 
 logger_options = InitLogger("azure-subtrans", args.debug)
+project : SubtitleProject|None = None
 
 try:
     options : Options = CreateOptions(
@@ -41,16 +43,19 @@ try:
     )
 
     # Create a project for the translation
-    project : SubtitleProject = CreateProject(options, args)
+    project = CreateProject(options, args)
 
     # Translate the subtitles
     translator = init_translator(options)
     project.TranslateSubtitles(translator)
 
     if project.use_project_file:
-        logging.info(f"Writing project data to {str(project.projectfile)}")
-        project.SaveProjectFile()
+        project.UpdateProjectFile()
+
+    LogTranslationStatus(project, preview=args.preview)
 
 except Exception as e:
-    print("Error:", e)
+    if project:
+        LogTranslationStatus(project, preview=args.preview, has_error=True)
+    logging.error(f"Error during subtitle translation: {e}")
     raise

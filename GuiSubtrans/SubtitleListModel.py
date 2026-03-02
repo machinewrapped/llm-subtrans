@@ -157,6 +157,13 @@ class SubtitleListModel(QAbstractProxyModel):
 
         return self.createIndex(row, column, line)
 
+    def parent(self, index : QModelIndex|QPersistentModelIndex = QModelIndex()) -> QModelIndex:
+        """
+        Returns the parent of the model item with the given index.
+        Since this is a flat model (no hierarchy), all items have the root as parent.
+        """
+        return QModelIndex()
+
     def data(self, index, role : int = Qt.ItemDataRole.DisplayRole):
         """
         Fetch the data for an index in the proxy model from the source model

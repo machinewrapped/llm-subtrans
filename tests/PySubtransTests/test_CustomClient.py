@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from unittest.mock import MagicMock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
@@ -159,7 +160,7 @@ class TestCustomClientErrorHandling(LoggedTestCase):
 class TestCustomClientProcessApiResponse(LoggedTestCase):
     """Tests for _process_api_response handling of reasoning fields."""
 
-    def _make_api_response_body(self, content : str, message_extra : dict = None) -> str:
+    def _make_api_response_body(self, content : str, message_extra : dict[str, Any]|None = None) -> str:
         """Build a minimal /v1/chat/completions response body."""
         message = {'role': 'assistant', 'content': content}
         if message_extra:
@@ -181,8 +182,10 @@ class TestCustomClientProcessApiResponse(LoggedTestCase):
         with patch('httpx.Client', return_value=mock_httpx_client):
             result = client._make_request(_create_test_request(), temperature=0.0)
 
-        self.assertLoggedEqual("text", 'Hello world', result.get('text'))
-        self.assertLoggedEqual("reasoning not set", None, result.get('reasoning'))
+        self.assertLoggedIsNotNone("result", result)
+        if result:
+            self.assertLoggedEqual("text", 'Hello world', result.get('text'))
+            self.assertLoggedEqual("reasoning not set", None, result.get('reasoning'))
 
     def test_reasoning_content_field_is_captured(self) -> None:
         """OpenAI-style reasoning_content field is captured into response['reasoning']."""
@@ -196,8 +199,10 @@ class TestCustomClientProcessApiResponse(LoggedTestCase):
         with patch('httpx.Client', return_value=mock_httpx_client):
             result = client._make_request(_create_test_request(), temperature=0.0)
 
-        self.assertLoggedEqual("text", 'The answer.', result.get('text'))
-        self.assertLoggedEqual("reasoning", 'I thought about it.', result.get('reasoning'))
+        self.assertLoggedIsNotNone("result", result)
+        if result:
+            self.assertLoggedEqual("text", 'The answer.', result.get('text'))
+            self.assertLoggedEqual("reasoning", 'I thought about it.', result.get('reasoning'))
 
     def test_ollama_reasoning_field_is_captured(self) -> None:
         """Ollama-style 'reasoning' field is captured into response['reasoning']."""
@@ -211,8 +216,10 @@ class TestCustomClientProcessApiResponse(LoggedTestCase):
         with patch('httpx.Client', return_value=mock_httpx_client):
             result = client._make_request(_create_test_request(), temperature=0.0)
 
-        self.assertLoggedEqual("text", 'The answer.', result.get('text'))
-        self.assertLoggedEqual("reasoning", 'I thought about it.', result.get('reasoning'))
+        self.assertLoggedIsNotNone("result", result)
+        if result:
+            self.assertLoggedEqual("text", 'The answer.', result.get('text'))
+            self.assertLoggedEqual("reasoning", 'I thought about it.', result.get('reasoning'))
 
     def test_ollama_thinking_model_empty_content_falls_back_to_reasoning(self) -> None:
         """When content is empty and reasoning is set (Ollama Qwen3), text falls back to reasoning."""
@@ -226,8 +233,10 @@ class TestCustomClientProcessApiResponse(LoggedTestCase):
         with patch('httpx.Client', return_value=mock_httpx_client):
             result = client._make_request(_create_test_request(), temperature=0.0)
 
-        self.assertLoggedEqual("text falls back to reasoning", 'The real translation.', result.get('text'))
-        self.assertLoggedEqual("reasoning preserved", 'The real translation.', result.get('reasoning'))
+        self.assertLoggedIsNotNone("result", result)
+        if result:
+            self.assertLoggedEqual("text falls back to reasoning", 'The real translation.', result.get('text'))
+            self.assertLoggedEqual("reasoning preserved", 'The real translation.', result.get('reasoning'))
 
     @skip_if_debugger_attached
     def test_empty_content_and_no_reasoning_raises_error(self) -> None:

@@ -266,6 +266,10 @@ class CustomClient(TranslationClient):
             if not accumulated_response.get('text') and request.accumulated_text:
                 accumulated_response['text'] = request.accumulated_text
 
+            # Fall back to reasoning if content is empty (e.g. Ollama thinking models)
+            if not accumulated_response.get('text') and accumulated_response.get('reasoning'):
+                accumulated_response['text'] = accumulated_response['reasoning']
+
             return accumulated_response
 
     def _parse_sse_chunk(self, line: str) -> dict[str, Any]|None:
@@ -323,8 +327,8 @@ class CustomClient(TranslationClient):
         if content and isinstance(content, str):
             request.ProcessStreamingDelta(content)
 
-        # Handle reasoning content if present (some providers include this)
-        reasoning_content = delta.get('reasoning_content')
+        # Handle reasoning content if present (OpenAI uses reasoning_content, Ollama uses reasoning)
+        reasoning_content = delta.get('reasoning_content') or delta.get('reasoning')
         if reasoning_content and isinstance(reasoning_content, str):
             if 'reasoning' not in accumulated_response:
                 accumulated_response['reasoning'] = ''
@@ -353,7 +357,7 @@ class CustomClient(TranslationClient):
         finish_reason = choice.get('finish_reason')
         if finish_reason:
             accumulated_response['finish_reason'] = finish_reason
-            accumulated_response['text'] = request.accumulated_text
+            accumulated_response['text'] = request.accumulated_text or accumulated_response.get('reasoning') or ''
 
     def _process_api_response(self, content: dict[str, Any], result: httpx.Response) -> dict[str, Any]:
         """Process standard API response content"""

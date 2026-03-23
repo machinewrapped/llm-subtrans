@@ -380,8 +380,10 @@ class CustomClient(TranslationClient):
                 response['finish_reason'] = choice.get('finish_reason')
                 if 'reasoning_content' in message:
                     response['reasoning'] = message['reasoning_content']
+                elif 'reasoning' in message:
+                    response['reasoning'] = message['reasoning']
 
-                response['text'] = message.get('content')
+                response['text'] = message.get('content') or response.get('reasoning')
                 break
 
             if 'text' in choice:

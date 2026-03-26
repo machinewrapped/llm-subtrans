@@ -106,7 +106,7 @@ def FindBestSplitIndex(lines : list[SubtitleLine], min_size : int = 1) -> int|No
     best_index : int|None = None
     best_score = 0
 
-    for i in range(min_size, len(lines) - min_size):
+    for i in range(min_size, len(lines) - min_size + 1):
         gap = lines[i].start - lines[i - 1].end
         proximity = midpoint - abs(i - midpoint)
         score = proximity * (gap / timedelta(milliseconds=1))

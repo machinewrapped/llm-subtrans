@@ -257,11 +257,12 @@ class SubtitleTranslator:
                     self.ProcessBatchTranslation(batch, translation, line_numbers)
 
             # Consider splitting the batch in half if there were errors
+            split_performed = False
             if batch.errors and self.split_on_error and len(batch.originals) >= 2:
-                self._TranslateSplitBatch(batch, line_numbers, context or {})
+                split_performed = self._TranslateSplitBatch(batch, line_numbers, context or {})
 
-            # Consider retrying if there were errors (split_on_error takes priority)
-            elif batch.errors and self.retry_on_error:
+            # Consider retrying if there were errors (split_on_error takes priority, but only if a split occurred)
+            if not split_performed and batch.errors and self.retry_on_error:
                 logging.warning(_("Scene {scene} batch {batch} failed validation, requesting retranslation").format(scene=batch.scene, batch=batch.number))
                 self.RequestRetranslation(batch, line_numbers=line_numbers, context=context)
 
@@ -410,20 +411,21 @@ class SubtitleTranslator:
         else:
             self._emit_info(_("Retry passed validation"))
 
-    def _TranslateSplitBatch(self, batch : SubtitleBatch, line_numbers : list[int]|None, context : dict[str,Any]):
+    def _TranslateSplitBatch(self, batch : SubtitleBatch, line_numbers : list[int]|None, context : dict[str,Any]) -> bool:
         """
         Split the batch originals in half and translate each half separately, merging results.
         Used as a fallback when a full-batch translation has errors.
+        Returns True if a split was attempted, False if no split could be performed.
         """
         originals = batch.originals
 
         split_index = FindBestSplitIndex(originals)
         if split_index is None:
-            return
+            return False
 
         instructions = self.instructions.instructions
         if not instructions:
-            return
+            return False
 
         self._emit_info(_("Splitting scene {scene} batch {batch} into two halves for retranslation...").format(
             scene=batch.scene, batch=batch.number))
@@ -433,7 +435,7 @@ class SubtitleTranslator:
 
         for half_originals in [originals[:split_index], originals[split_index:]]:
             if self.aborted:
-                return
+                return False
 
             prompt = self.client.BuildTranslationPrompt(self.user_prompt, instructions, half_originals, context)
             translation : Translation|None = self.client.RequestTranslation(prompt)
@@ -458,14 +460,18 @@ class SubtitleTranslator:
             translated.extend(half_translated)
             errors.extend(err for err in parser.errors if isinstance(err, str) or isinstance(err, SubtitleError))
 
+        batch.errors = errors
+
         if translated:
-            batch._translated = MergeTranslations([], translated)
-            batch.errors = errors
+            batch._translated = MergeTranslations(batch.translated or [], translated)
+            batch.translation = None
 
         if batch.errors:
             self._emit_warning(_("Split retranslation has errors: {errors}").format(errors=FormatErrorMessages(batch.errors)))
         else:
             self._emit_info(_("Split retranslation passed validation"))
+
+        return True
 
     def _get_best_summary(self, candidates : list[str|None]) -> str|None:
         """

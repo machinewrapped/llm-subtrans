@@ -203,6 +203,16 @@ class FindBestSplitIndexTests(SubtitleTestCase):
         self.assertLoggedIsNone("Single line returns None", FindBestSplitIndex(single_line))
         self.assertLoggedIsNone("Empty list returns None", FindBestSplitIndex([]))
 
+    def test_FindBestSplitIndex_two_lines(self):
+        """FindBestSplitIndex should return a valid split index for a 2-line list"""
+        lines = [
+            SubtitleLine.Construct(1, timedelta(seconds=0), timedelta(seconds=1), "Line 1"),
+            SubtitleLine.Construct(2, timedelta(seconds=2), timedelta(seconds=3), "Line 2"),
+        ]
+        result = FindBestSplitIndex(lines)
+        self.assertLoggedEqual("Two lines splits at index 1", 1, result)
+
+
 
 class SplitBatchTranslationTests(SubtitleTestCase):
     def __init__(self, methodName):

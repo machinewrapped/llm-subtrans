@@ -247,21 +247,20 @@ class SubtitleTranslator:
             # Process the response first — translation may be complete even if the token limit was hit
             self.ProcessBatchTranslation(batch, translation, line_numbers)
 
-            # Only retry without context if parsing found errors AND the token limit was reached
-            if batch.errors and translation.reached_token_limit:
-                # TODO: better to split the batch into smaller chunks
+            # Consider splitting the batch in half if there were errors (preferred strategy)
+            split_performed = False
+            if batch.errors and self.split_on_error and len(batch.originals) >= 2:
+                split_performed = self._TranslateSplitBatch(batch, line_numbers, context or {})
+
+            # If no split was performed, retry without context when the token limit was reached with errors
+            if not split_performed and batch.errors and translation.reached_token_limit:
                 logging.warning(_("Hit API token limit with errors, retrying batch without context..."))
                 batch.prompt.GenerateMessages(instructions, batch.originals, {})
                 translation = self.client.RequestTranslation(batch.prompt, streaming_callback=streaming_callback)
                 if translation and not self.aborted:
                     self.ProcessBatchTranslation(batch, translation, line_numbers)
 
-            # Consider splitting the batch in half if there were errors
-            split_performed = False
-            if batch.errors and self.split_on_error and len(batch.originals) >= 2:
-                split_performed = self._TranslateSplitBatch(batch, line_numbers, context or {})
-
-            # Consider retrying if there were errors (split_on_error takes priority, but only if a split occurred)
+            # Consider retrying if there were errors and no other recovery strategy was applied
             if not split_performed and batch.errors and self.retry_on_error:
                 logging.warning(_("Scene {scene} batch {batch} failed validation, requesting retranslation").format(scene=batch.scene, batch=batch.number))
                 self.RequestRetranslation(batch, line_numbers=line_numbers, context=context)

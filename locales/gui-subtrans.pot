@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-03-23 21:31+0000\n"
+"POT-Creation-Date: 2026-03-26 21:44+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "MIME-Version: 1.0\n"
@@ -53,7 +53,7 @@ msgstr ""
 msgid "API could not process the request: {error}."
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:108
+#: PySubtrans/Providers/Provider_Custom.py:110
 msgid "API key if needed (this is normally not needed for a local server)"
 msgstr ""
 
@@ -133,7 +133,7 @@ msgstr ""
 msgid "All scenes are fully translated"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:106
+#: PySubtrans/Providers/Provider_Custom.py:108
 msgid "Alternative to max_tokens for some servers"
 msgstr ""
 
@@ -189,7 +189,7 @@ msgstr ""
 msgid "Anthropic account quota reached, please upgrade your plan or wait until it renews"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:97
+#: PySubtrans/Providers/Provider_Custom.py:99
 msgid "Attempt to communicate with the endpoint using chat format"
 msgstr ""
 
@@ -313,7 +313,7 @@ msgstr ""
 msgid "CheckProviderSettings: {error}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:185 PySubtrans/Providers/Clients/CustomClient.py:216
+#: PySubtrans/Providers/Clients/CustomClient.py:195 PySubtrans/Providers/Clients/CustomClient.py:226
 msgid "Client error: {status_code} {text}"
 msgstr ""
 
@@ -573,11 +573,11 @@ msgstr ""
 msgid "Failed to communicate with provider after {max_retries} retries"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:161
+#: PySubtrans/Providers/Clients/CustomClient.py:171
 msgid "Failed to communicate with server after {max_retries} retries"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:135
+#: PySubtrans/Providers/Clients/CustomClient.py:145
 msgid "Failed to connect to server at {server_address}{endpoint}"
 msgstr ""
 
@@ -589,7 +589,7 @@ msgstr ""
 msgid "Failed to detect subtitle format: {}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:255
+#: PySubtrans/Providers/Clients/CustomClient.py:265
 msgid "Failed to establish streaming connection: {error}"
 msgstr ""
 
@@ -669,11 +669,11 @@ msgstr ""
 msgid "Format cannot be deduced from filename or extension '{name}'. Available formats: {formats}"
 msgstr ""
 
-#: PySubtrans/TranslationParser.py:175
+#: PySubtrans/TranslationParser.py:176
 msgid "Found fuzzy match for line {number} in translations"
 msgstr ""
 
-#: PySubtrans/TranslationParser.py:204
+#: PySubtrans/TranslationParser.py:205
 msgid "Found unclosed tag {tag} in translation"
 msgstr ""
 
@@ -749,16 +749,20 @@ msgstr ""
 msgid "High-level instructions for the translator"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:104
+#: PySubtrans/Providers/Provider_Custom.py:106
 msgid "Higher temperature introduces more randomness to the translation (default 0.0)"
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:246
-msgid "Hit API token limit, retrying batch without context..."
+#: PySubtrans/SubtitleTranslator.py:253
+msgid "Hit API token limit with errors, retrying batch without context..."
 msgstr ""
 
 #: PySubtrans/Subtitles.py:258
 msgid "I don't know where to save the translated subtitles"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:41
+msgid "If a batch fails validation, split it in half and retry each half separately"
 msgstr ""
 
 #: GuiSubtrans/SettingsDialog.py:42
@@ -781,7 +785,7 @@ msgstr ""
 msgid "Instructions for the translation provider to follow"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:100
+#: PySubtrans/Providers/Provider_Custom.py:102
 msgid "Instructions will be sent as system messages rather than the user prompt"
 msgstr ""
 
@@ -889,11 +893,11 @@ msgstr ""
 msgid "Logo generated with <a href=\"https://qwen.ai/home\">Qwen3</a>"
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:286
+#: PySubtrans/SubtitleTranslator.py:291
 msgid "Made substitutions in input:\n{replaced}"
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:344
+#: PySubtrans/SubtitleTranslator.py:349
 msgid "Made substitutions in output:\n{replaced}"
 msgstr ""
 
@@ -977,6 +981,10 @@ msgstr ""
 msgid "Minimum number of characters to split a line at"
 msgstr ""
 
+#: PySubtrans/Providers/Provider_Custom.py:114
+msgid "Minimum probability threshold for token sampling (0.0 to disable)"
+msgstr ""
+
 #: PySubtrans/Providers/Provider_Mistral.py:12
 msgid "Mistral SDK is not installed. Mistral provider will not be available"
 msgstr ""
@@ -1013,7 +1021,7 @@ msgstr ""
 msgid "Names"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:141
+#: PySubtrans/Providers/Clients/CustomClient.py:151
 msgid "Network error communicating with server: {error}"
 msgstr ""
 
@@ -1021,7 +1029,7 @@ msgstr ""
 msgid "No batches found for lines to merge"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/AzureOpenAIClient.py:115 PySubtrans/Providers/Clients/ChatGPTClient.py:58 PySubtrans/Providers/Clients/ChatGPTClient.py:74 PySubtrans/Providers/Clients/CustomClient.py:378 PySubtrans/Providers/Clients/MistralClient.py:109 PySubtrans/Providers/Clients/MistralClient.py:125
+#: PySubtrans/Providers/Clients/AzureOpenAIClient.py:115 PySubtrans/Providers/Clients/ChatGPTClient.py:58 PySubtrans/Providers/Clients/ChatGPTClient.py:74 PySubtrans/Providers/Clients/CustomClient.py:388 PySubtrans/Providers/Clients/MistralClient.py:109 PySubtrans/Providers/Clients/MistralClient.py:125
 msgid "No choices returned in the response"
 msgstr ""
 
@@ -1113,7 +1121,7 @@ msgstr ""
 msgid "No scenes selected for translation"
 msgstr ""
 
-#: scripts/subtrans_common.py:204
+#: scripts/subtrans_common.py:206
 msgid "No scenes were created from the subtitles"
 msgstr ""
 
@@ -1149,7 +1157,7 @@ msgstr ""
 msgid "No text content found in response"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:399
+#: PySubtrans/Providers/Clients/CustomClient.py:409
 msgid "No text returned in the response"
 msgstr ""
 
@@ -1163,6 +1171,10 @@ msgstr ""
 
 #: GuiSubtrans/GuiInterface.py:416 GuiSubtrans/GuiInterface.py:417
 msgid "No translation providers available. Please install one or more providers."
+msgstr ""
+
+#: PySubtrans/SubtitleTranslator.py:442
+msgid "No translation returned for batch half"
 msgstr ""
 
 #: GuiSubtrans/Commands/EditBatchCommand.py:57 GuiSubtrans/Commands/EditLineCommand.py:77 GuiSubtrans/Commands/EditSceneCommand.py:52 GuiSubtrans/Commands/MergeLinesCommand.py:81
@@ -1267,6 +1279,10 @@ msgstr ""
 
 #: GuiSubtrans/NewProjectSettings.py:39 GuiSubtrans/NewProjectSettings.py:63
 msgid "Output subtitle format"
+msgstr ""
+
+#: PySubtrans/Providers/Provider_Custom.py:113
+msgid "Penalise token repetition — values > 1.0 reduce repetitive output (0.0 to disable)"
 msgstr ""
 
 #: GuiSubtrans/MainWindow.py:120
@@ -1445,7 +1461,7 @@ msgstr ""
 msgid "Reparsing scene {scene} batch {batch} with {count} lines..."
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:147
+#: PySubtrans/Providers/Clients/CustomClient.py:157
 msgid "Request to server timed out: {error}"
 msgstr ""
 
@@ -1473,15 +1489,15 @@ msgstr ""
 msgid "Resuming translation"
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:404
+#: PySubtrans/SubtitleTranslator.py:409
 msgid "Retry failed validation: {errors}"
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:406
+#: PySubtrans/SubtitleTranslator.py:411
 msgid "Retry passed validation"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:166
+#: PySubtrans/Providers/Clients/CustomClient.py:176
 msgid "Retrying in {sleep_time} seconds..."
 msgstr ""
 
@@ -1541,11 +1557,11 @@ msgstr ""
 msgid "Scene {scene} batch {batch} already translated {lines} lines..."
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:260
+#: PySubtrans/SubtitleTranslator.py:265
 msgid "Scene {scene} batch {batch} failed validation, requesting retranslation"
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:353
+#: PySubtrans/SubtitleTranslator.py:358
 msgid "Scene {scene} batch {batch}: {translated} lines and {untranslated} untranslated."
 msgstr ""
 
@@ -1569,11 +1585,11 @@ msgstr ""
 msgid "Selection {task_type}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:109
+#: PySubtrans/Providers/Clients/CustomClient.py:119
 msgid "Server address or endpoint is not set"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:189 PySubtrans/Providers/Clients/CustomClient.py:220
+#: PySubtrans/Providers/Clients/CustomClient.py:199 PySubtrans/Providers/Clients/CustomClient.py:230
 msgid "Server error: {status_code} {text}"
 msgstr ""
 
@@ -1593,8 +1609,20 @@ msgstr ""
 msgid "Split Scene"
 msgstr ""
 
+#: PySubtrans/SubtitleTranslator.py:466
+msgid "Split retranslation has errors: {errors}"
+msgstr ""
+
+#: PySubtrans/SubtitleTranslator.py:468
+msgid "Split retranslation passed validation"
+msgstr ""
+
 #: GuiSubtrans/Commands/SplitSceneCommand.py:16
 msgid "Splitting batch {scene} at batch {batch}"
+msgstr ""
+
+#: PySubtrans/SubtitleTranslator.py:428
+msgid "Splitting scene {scene} batch {batch} into two halves for retranslation..."
 msgstr ""
 
 #: GuiSubtrans/Commands/SplitBatchCommand.py:20
@@ -1637,7 +1665,7 @@ msgstr ""
 msgid "Streaming ended with an error but OpenAI returned a response: {error}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:242
+#: PySubtrans/Providers/Clients/CustomClient.py:252
 msgid "Streaming error: {error}"
 msgstr ""
 
@@ -1653,7 +1681,7 @@ msgstr ""
 msgid "Substitutions"
 msgstr ""
 
-#: scripts/subtrans_common.py:174
+#: scripts/subtrans_common.py:176
 msgid "Subtitle file contains no translatable content"
 msgstr ""
 
@@ -1685,11 +1713,11 @@ msgstr ""
 msgid "Summary"
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:423
+#: PySubtrans/SubtitleTranslator.py:485
 msgid "Summary was truncated from {original} to {truncated} characters"
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:361
+#: PySubtrans/SubtitleTranslator.py:366
 msgid "Summary: {summary}"
 msgstr ""
 
@@ -1713,7 +1741,7 @@ msgstr ""
 msgid "Target Language"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:103
+#: PySubtrans/Providers/Provider_Custom.py:105
 msgid "Template for the prompt to send to the server (use {prompt} and {context} tags)"
 msgstr ""
 
@@ -1729,7 +1757,7 @@ msgstr ""
 msgid "The AI translation service to use"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:93
+#: PySubtrans/Providers/Provider_Custom.py:95
 msgid "The API function to call on the server"
 msgstr ""
 
@@ -1745,7 +1773,7 @@ msgstr ""
 msgid "The OpenAI library is out of date and must be updated"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:92
+#: PySubtrans/Providers/Provider_Custom.py:94
 msgid "The address of the server"
 msgstr ""
 
@@ -1777,7 +1805,7 @@ msgstr ""
 msgid "The maximum number of requests to make per minute"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:105
+#: PySubtrans/Providers/Provider_Custom.py:107
 msgid "The maximum number of tokens the AI should generate in the response (0 for unlimited)"
 msgstr ""
 
@@ -1793,7 +1821,7 @@ msgstr ""
 msgid "The maximum number of tokens to use for translations"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:109
+#: PySubtrans/Providers/Provider_Custom.py:111
 msgid "The model ID (for local servers this is usually not required"
 msgstr ""
 
@@ -1813,7 +1841,7 @@ msgstr ""
 msgid "The translation provider to use"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:107
+#: PySubtrans/Providers/Provider_Custom.py:109
 msgid "Timeout for the request in seconds (default 300)"
 msgstr ""
 
@@ -1893,7 +1921,7 @@ msgstr ""
 msgid "Translation response error: {error}, retrying in {backoff_time} seconds..."
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:297
+#: PySubtrans/SubtitleTranslator.py:302
 msgid "Truncating batch to remain within max_lines"
 msgstr ""
 
@@ -1949,7 +1977,7 @@ msgstr ""
 msgid "Unable to load {file} ({error})"
 msgstr ""
 
-#: PySubtrans/SubtitleTranslator.py:336
+#: PySubtrans/SubtitleTranslator.py:341
 msgid "Unable to match {count} lines with a source line"
 msgstr ""
 
@@ -2029,7 +2057,7 @@ msgstr ""
 msgid "Unexpected error communicating with OpenAI"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:155
+#: PySubtrans/Providers/Clients/CustomClient.py:165
 msgid "Unexpected error communicating with server"
 msgstr ""
 
@@ -2061,7 +2089,7 @@ msgstr ""
 msgid "Untranslated > {number}. {text}"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Custom.py:110
+#: PySubtrans/Providers/Provider_Custom.py:112
 msgid "Use parallel threads for translation requests (may be faster but may not work with the server)"
 msgstr ""
 
@@ -2123,6 +2151,10 @@ msgstr ""
 
 #: PySubtrans/Options.py:92
 msgid "autosave"
+msgstr ""
+
+#: PySubtrans/Options.py:85
+msgid "autosplit_on_error"
 msgstr ""
 
 #: PySubtrans/Providers/Provider_Bedrock.py:0
@@ -2261,6 +2293,10 @@ msgstr ""
 msgid "min_line_duration"
 msgstr ""
 
+#: PySubtrans/Providers/Provider_Custom.py:0
+msgid "min_p"
+msgstr ""
+
 #: PySubtrans/Options.py:66
 msgid "min_single_line_length"
 msgstr ""
@@ -2347,6 +2383,10 @@ msgstr ""
 
 #: PySubtrans/Options.py:95
 msgid "reparse"
+msgstr ""
+
+#: PySubtrans/Providers/Provider_Custom.py:0
+msgid "repetition_penalty"
 msgstr ""
 
 #: PySubtrans/Options.py:94

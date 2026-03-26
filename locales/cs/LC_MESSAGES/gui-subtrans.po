@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-03-23 21:31+0000\n"
+"POT-Creation-Date: 2026-03-26 21:39+0000\n"
 "PO-Revision-Date: 2025-08-09 21:00+0000\n"
 "Last-Translator: AI Assistant\n"
 "Language-Team: Czech\n"
@@ -64,7 +64,7 @@ msgstr "API nemohlo zpracovat požadavek: {error}"
 msgid "API could not process the request: {error}."
 msgstr "API nemohlo zpracovat požadavek: {error}."
 
-#: PySubtrans/Providers/Provider_Custom.py:108
+#: PySubtrans/Providers/Provider_Custom.py:110
 msgid "API key if needed (this is normally not needed for a local server)"
 msgstr "API klíč, pokud je potřeba (pro místní server obvykle není potřeba)"
 
@@ -147,7 +147,7 @@ msgstr "Všechny dávky přeloženy"
 msgid "All scenes are fully translated"
 msgstr "Všechny scény jsou plně přeloženy"
 
-#: PySubtrans/Providers/Provider_Custom.py:106
+#: PySubtrans/Providers/Provider_Custom.py:108
 msgid "Alternative to max_tokens for some servers"
 msgstr "Alternativa k max_tokens pro některé servery"
 
@@ -208,7 +208,7 @@ msgstr "Anthropic SDK není nainstalováno. Poskytovatel Claude nebude k dispozi
 msgid "Anthropic account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Kvóta účtu Anthropic byla dosažena, prosím, upgradujte si plán nebo počkejte na jeho obnovení"
 
-#: PySubtrans/Providers/Provider_Custom.py:97
+#: PySubtrans/Providers/Provider_Custom.py:99
 msgid "Attempt to communicate with the endpoint using chat format"
 msgstr "Pokusit se komunikovat s koncovým bodem pomocí formátu chatu"
 
@@ -336,8 +336,8 @@ msgstr "Zkontrolujte, zda je API klíč autorizován, a zkuste to znovu"
 msgid "CheckProviderSettings: {error}"
 msgstr "KontrolaNastaveníPoskytovatele: {error}"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:185
-#: PySubtrans/Providers/Clients/CustomClient.py:216
+#: PySubtrans/Providers/Clients/CustomClient.py:195
+#: PySubtrans/Providers/Clients/CustomClient.py:226
 msgid "Client error: {status_code} {text}"
 msgstr "Chyba klienta: {status_code} {text}"
 
@@ -609,11 +609,11 @@ msgstr "Očekáván slovník s opravami"
 msgid "Failed to communicate with provider after {max_retries} retries"
 msgstr "Nepodařilo se navázat spojení s poskytovatelem po {max_retries} pokusech"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:161
+#: PySubtrans/Providers/Clients/CustomClient.py:171
 msgid "Failed to communicate with server after {max_retries} retries"
 msgstr "Nepodařilo se navázat spojení se serverem po {max_retries} pokusech"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:135
+#: PySubtrans/Providers/Clients/CustomClient.py:145
 msgid "Failed to connect to server at {server_address}{endpoint}"
 msgstr "Nepodařilo se připojit k serveru na adrese {server_address}{endpoint}"
 
@@ -626,7 +626,7 @@ msgstr "Nepodařilo se vytvořit novou dávku po rozdělení"
 msgid "Failed to detect subtitle format: {}"
 msgstr "Selhání detekce formátu titulků: {}"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:255
+#: PySubtrans/Providers/Clients/CustomClient.py:265
 msgid "Failed to establish streaming connection: {error}"
 msgstr "Selhání navázání streamovacího připojení: {error}"
 
@@ -679,7 +679,7 @@ msgstr "Selhání parsování titulků: {}"
 
 #: PySubtrans/SubtitleProject.py:444
 msgid "Failed to save project file after translation: {}"
-msgstr ""
+msgstr "Nepodařilo se uložit soubor projektu po překladu: {}"
 
 #: GuiSubtrans/GuiInterface.py:202
 msgid "Failed to switch language - restart the application: {error}"
@@ -709,11 +709,11 @@ msgstr "Možnosti prvního spuštění"
 msgid "Format cannot be deduced from filename or extension '{name}'. Available formats: {formats}"
 msgstr "Formát nelze odvodit z názvu souboru nebo přípony '{name}'. Dostupné formáty: {formats}"
 
-#: PySubtrans/TranslationParser.py:175
+#: PySubtrans/TranslationParser.py:176
 msgid "Found fuzzy match for line {number} in translations"
 msgstr "Nalezena neostrá shoda pro řádek {number} v překladech"
 
-#: PySubtrans/TranslationParser.py:204
+#: PySubtrans/TranslationParser.py:205
 msgid "Found unclosed tag {tag} in translation"
 msgstr "Nalezen neuzavřený tag {tag} v překladu"
 
@@ -792,17 +792,21 @@ msgstr "Skrýt/Zobrazit možnosti projektu"
 msgid "High-level instructions for the translator"
 msgstr "Obecné pokyny pro překladatele"
 
-#: PySubtrans/Providers/Provider_Custom.py:104
+#: PySubtrans/Providers/Provider_Custom.py:106
 msgid "Higher temperature introduces more randomness to the translation (default 0.0)"
 msgstr "Vyšší teplota vnáší do překladu více náhodnosti (výchozí 0.0)"
 
-#: PySubtrans/SubtitleTranslator.py:246
-msgid "Hit API token limit, retrying batch without context..."
-msgstr "Byl dosažen limit tokenů API, opakuje se dávka bez kontextu..."
+#: PySubtrans/SubtitleTranslator.py:253
+msgid "Hit API token limit with errors, retrying batch without context..."
+msgstr "Dosažen limit tokenů API s chybami, opakuji dávku bez kontextu..."
 
 #: PySubtrans/Subtitles.py:258
 msgid "I don't know where to save the translated subtitles"
 msgstr "Nevím, kam uložit přeložené titulky"
+
+#: GuiSubtrans/SettingsDialog.py:41
+msgid "If a batch fails validation, split it in half and retry each half separately"
+msgstr "Pokud dávka neprojde validací, rozdělte ji na polovinu a každou polovinu opakujte samostatně"
 
 #: GuiSubtrans/SettingsDialog.py:42
 msgid "If true, translations that fail validation will be retried with a note about the error"
@@ -824,7 +828,7 @@ msgstr "Zahrnout původní text do přeložených titulků"
 msgid "Instructions for the translation provider to follow"
 msgstr "Pokyny pro poskytovatele překladu"
 
-#: PySubtrans/Providers/Provider_Custom.py:100
+#: PySubtrans/Providers/Provider_Custom.py:102
 msgid "Instructions will be sent as system messages rather than the user prompt"
 msgstr "Pokyny budou odeslány jako systémové zprávy, nikoli jako uživatelská výzva"
 
@@ -936,13 +940,13 @@ msgstr "Zaznamenávání do {path}"
 msgid "Logo generated with <a href=\"https://qwen.ai/home\">Qwen3</a>"
 msgstr "Logo vygenerováno pomocí <a href=\"https://qwen.ai/home\">Qwen3</a>"
 
-#: PySubtrans/SubtitleTranslator.py:286
+#: PySubtrans/SubtitleTranslator.py:291
 msgid "Made substitutions in input:\n{replaced}"
 msgstr ""
 "Provedeny záměny ve vstupu:\n"
 "{replaced}"
 
-#: PySubtrans/SubtitleTranslator.py:344
+#: PySubtrans/SubtitleTranslator.py:349
 msgid "Made substitutions in output:\n{replaced}"
 msgstr ""
 "Provedeny záměny ve výstupu:\n"
@@ -1032,6 +1036,10 @@ msgstr "Minimální délka jednoho řádku titulků"
 msgid "Minimum number of characters to split a line at"
 msgstr "Minimální počet znaků pro rozdělení řádku"
 
+#: PySubtrans/Providers/Provider_Custom.py:114
+msgid "Minimum probability threshold for token sampling (0.0 to disable)"
+msgstr "Minimální prahová hodnota pravděpodobnosti pro vzorkování tokenů (0.0 pro vypnutí)"
+
 #: PySubtrans/Providers/Provider_Mistral.py:12
 msgid "Mistral SDK is not installed. Mistral provider will not be available"
 msgstr "Mistral SDK není nainstalováno. Poskytovatel Mistral nebude k dispozici"
@@ -1068,7 +1076,7 @@ msgstr "Název filmu"
 msgid "Names"
 msgstr "Jména"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:141
+#: PySubtrans/Providers/Clients/CustomClient.py:151
 msgid "Network error communicating with server: {error}"
 msgstr "Chyba sítě při komunikaci se serverem: {error}"
 
@@ -1079,7 +1087,7 @@ msgstr "Nebyly nalezeny žádné dávky pro sloučení řádků"
 #: PySubtrans/Providers/Clients/AzureOpenAIClient.py:115
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:58
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:74
-#: PySubtrans/Providers/Clients/CustomClient.py:378
+#: PySubtrans/Providers/Clients/CustomClient.py:388
 #: PySubtrans/Providers/Clients/MistralClient.py:109
 #: PySubtrans/Providers/Clients/MistralClient.py:125
 msgid "No choices returned in the response"
@@ -1209,7 +1217,7 @@ msgstr "Žádné scény v titulkách"
 msgid "No scenes selected for translation"
 msgstr "Nebyly vybrány žádné scény k překladu"
 
-#: scripts/subtrans_common.py:204
+#: scripts/subtrans_common.py:206
 msgid "No scenes were created from the subtitles"
 msgstr "Žádné scény nebyly vytvořeny z titulků"
 
@@ -1252,7 +1260,7 @@ msgstr "Nebyla poskytnuta žádná systémová výzva"
 msgid "No text content found in response"
 msgstr "V odpovědi nebyl nalezen žádný textový obsah"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:399
+#: PySubtrans/Providers/Clients/CustomClient.py:409
 msgid "No text returned in the response"
 msgstr "V odpovědi nebyl vrácen žádný text"
 
@@ -1267,6 +1275,10 @@ msgstr "Není nakonfigurován žádný poskytovatel překladu"
 #: GuiSubtrans/GuiInterface.py:416 GuiSubtrans/GuiInterface.py:417
 msgid "No translation providers available. Please install one or more providers."
 msgstr "Nejsou k dispozici žádní poskytovatelé překladu. Nainstalujte prosím jednoho nebo více poskytovatelů."
+
+#: PySubtrans/SubtitleTranslator.py:442
+msgid "No translation returned for batch half"
+msgstr "Pro polovinu dávky nebyl vrácen žádný překlad"
 
 #: GuiSubtrans/Commands/EditBatchCommand.py:57
 #: GuiSubtrans/Commands/EditLineCommand.py:77
@@ -1374,6 +1386,10 @@ msgstr "Původní řádek {line} nebyl nalezen v dávce {batch}"
 #: GuiSubtrans/NewProjectSettings.py:39 GuiSubtrans/NewProjectSettings.py:63
 msgid "Output subtitle format"
 msgstr "Výstupní formát titulků"
+
+#: PySubtrans/Providers/Provider_Custom.py:113
+msgid "Penalise token repetition — values > 1.0 reduce repetitive output (0.0 to disable)"
+msgstr "Penalizace opakování tokenů — hodnoty > 1.0 snižují opakující se výstup (0.0 pro vypnutí)"
 
 #: GuiSubtrans/MainWindow.py:120
 msgid "Performing {action}"
@@ -1553,7 +1569,7 @@ msgstr "Znovu analyzovat dávky {batches}"
 msgid "Reparsing scene {scene} batch {batch} with {count} lines..."
 msgstr "Znovu se analyzuje scéna {scene} dávky {batch} s {count} řádky..."
 
-#: PySubtrans/Providers/Clients/CustomClient.py:147
+#: PySubtrans/Providers/Clients/CustomClient.py:157
 msgid "Request to server timed out: {error}"
 msgstr "Vypršel časový limit požadavku na server: {error}"
 
@@ -1581,15 +1597,15 @@ msgstr "Pokračování"
 msgid "Resuming translation"
 msgstr "Pokračuje se v překladu"
 
-#: PySubtrans/SubtitleTranslator.py:404
+#: PySubtrans/SubtitleTranslator.py:409
 msgid "Retry failed validation: {errors}"
 msgstr "Opakování po neúspěšné validaci: {errors}"
 
-#: PySubtrans/SubtitleTranslator.py:406
+#: PySubtrans/SubtitleTranslator.py:411
 msgid "Retry passed validation"
 msgstr "Opakování úspěšně prošlo validací"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:166
+#: PySubtrans/Providers/Clients/CustomClient.py:176
 msgid "Retrying in {sleep_time} seconds..."
 msgstr "Opakuji za {sleep_time} sekund..."
 
@@ -1652,11 +1668,11 @@ msgstr "Scéna {scene} již má přeloženo {linecount} řádků..."
 msgid "Scene {scene} batch {batch} already translated {lines} lines..."
 msgstr "Scéna {scene} dávky {batch} již má přeloženo {lines} řádků..."
 
-#: PySubtrans/SubtitleTranslator.py:260
+#: PySubtrans/SubtitleTranslator.py:265
 msgid "Scene {scene} batch {batch} failed validation, requesting retranslation"
 msgstr "Scéna {scene} dávky {batch} neprošla validací, požaduje se nový překlad"
 
-#: PySubtrans/SubtitleTranslator.py:353
+#: PySubtrans/SubtitleTranslator.py:358
 msgid "Scene {scene} batch {batch}: {translated} lines and {untranslated} untranslated."
 msgstr "Scéna {scene} dávky {batch}: {translated} přeložených řádků a {untranslated} nepřeložených."
 
@@ -1680,12 +1696,12 @@ msgstr "Vyberte projekt, ze kterého chcete kopírovat nastavení"
 msgid "Selection {task_type}"
 msgstr "Výběr {task_type}"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:109
+#: PySubtrans/Providers/Clients/CustomClient.py:119
 msgid "Server address or endpoint is not set"
 msgstr "Adresa serveru nebo koncový bod není nastaven"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:189
-#: PySubtrans/Providers/Clients/CustomClient.py:220
+#: PySubtrans/Providers/Clients/CustomClient.py:199
+#: PySubtrans/Providers/Clients/CustomClient.py:230
 msgid "Server error: {status_code} {text}"
 msgstr "Chyba serveru: {status_code} {text}"
 
@@ -1705,9 +1721,21 @@ msgstr "Rozdělit dávku"
 msgid "Split Scene"
 msgstr "Rozdělit scénu"
 
+#: PySubtrans/SubtitleTranslator.py:466
+msgid "Split retranslation has errors: {errors}"
+msgstr "Dělený zpětný překlad obsahuje chyby: {errors}"
+
+#: PySubtrans/SubtitleTranslator.py:468
+msgid "Split retranslation passed validation"
+msgstr "Dělený zpětný překlad prošel validací"
+
 #: GuiSubtrans/Commands/SplitSceneCommand.py:16
 msgid "Splitting batch {scene} at batch {batch}"
 msgstr "Rozdělování dávky {scene} u dávky {batch}"
+
+#: PySubtrans/SubtitleTranslator.py:428
+msgid "Splitting scene {scene} batch {batch} into two halves for retranslation..."
+msgstr "Rozdělování scény {scene} dávky {batch} na dvě poloviny pro zpětný překlad..."
 
 #: GuiSubtrans/Commands/SplitBatchCommand.py:20
 msgid "Splitting scene {scene} batch: {batch} at line {line}"
@@ -1752,7 +1780,7 @@ msgstr "Streamovat překlady v reálném čase jak jsou generovány"
 msgid "Streaming ended with an error but OpenAI returned a response: {error}"
 msgstr "Streamování skončilo s chybou, ale OpenAI vrátilo odpověď: {error}"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:242
+#: PySubtrans/Providers/Clients/CustomClient.py:252
 msgid "Streaming error: {error}"
 msgstr "Chyba streamování: {error}"
 
@@ -1768,7 +1796,7 @@ msgstr "Režim nahrazování"
 msgid "Substitutions"
 msgstr "Nahrazení"
 
-#: scripts/subtrans_common.py:174
+#: scripts/subtrans_common.py:176
 msgid "Subtitle file contains no translatable content"
 msgstr "Soubor titulků neobsahuje žádný překladatelný obsah"
 
@@ -1800,11 +1828,11 @@ msgstr "Úspěšně přeloženo {count} řádků!"
 msgid "Summary"
 msgstr "Shrnutí"
 
-#: PySubtrans/SubtitleTranslator.py:423
+#: PySubtrans/SubtitleTranslator.py:485
 msgid "Summary was truncated from {original} to {truncated} characters"
 msgstr "Souhrn byl zkrácen z {original} na {truncated} znaků"
 
-#: PySubtrans/SubtitleTranslator.py:361
+#: PySubtrans/SubtitleTranslator.py:366
 msgid "Summary: {summary}"
 msgstr "Souhrn: {summary}"
 
@@ -1830,7 +1858,7 @@ msgstr "Je vyžadována systémová výzva"
 msgid "Target Language"
 msgstr "Cílový jazyk"
 
-#: PySubtrans/Providers/Provider_Custom.py:103
+#: PySubtrans/Providers/Provider_Custom.py:105
 msgid "Template for the prompt to send to the server (use {prompt} and {context} tags)"
 msgstr "Šablona pro výzvu k odeslání na server (použijte značky {prompt} a {context})"
 
@@ -1846,7 +1874,7 @@ msgstr "(Stručný) pokyn pro každou dávku titulků. Některé [značky] se vy
 msgid "The AI translation service to use"
 msgstr "AI překladová služba k použití"
 
-#: PySubtrans/Providers/Provider_Custom.py:93
+#: PySubtrans/Providers/Provider_Custom.py:95
 msgid "The API function to call on the server"
 msgstr "Funkce API, která se má volat na serveru"
 
@@ -1863,7 +1891,7 @@ msgstr "Základní URL Azure API pro požadavky."
 msgid "The OpenAI library is out of date and must be updated"
 msgstr "Knihovna OpenAI je zastaralá a musí být aktualizována"
 
-#: PySubtrans/Providers/Provider_Custom.py:92
+#: PySubtrans/Providers/Provider_Custom.py:94
 msgid "The address of the server"
 msgstr "Adresa serveru"
 
@@ -1889,13 +1917,13 @@ msgstr "Jazyk uživatelského rozhraní aplikace"
 
 #: PySubtrans/Providers/Provider_OpenAI.py:121
 msgid "The level of reasoning effort to use for the model (valid options are model-dependent)"
-msgstr ""
+msgstr "Úroveň úsilí při uvažování, které má model použít (platné možnosti závisí na modelu)"
 
 #: PySubtrans/Providers/Provider_Bedrock.py:93
 msgid "The maximum number of requests to make per minute"
 msgstr "Maximální počet požadavků za minutu"
 
-#: PySubtrans/Providers/Provider_Custom.py:105
+#: PySubtrans/Providers/Provider_Custom.py:107
 msgid "The maximum number of tokens the AI should generate in the response (0 for unlimited)"
 msgstr "Maximální počet tokenů, které by měla AI vygenerovat v odpovědi (0 pro neomezeně)"
 
@@ -1911,7 +1939,7 @@ msgstr "Maximální počet tokenů pro přemýšlení"
 msgid "The maximum number of tokens to use for translations"
 msgstr "Maximální počet tokenů pro překlady"
 
-#: PySubtrans/Providers/Provider_Custom.py:109
+#: PySubtrans/Providers/Provider_Custom.py:111
 msgid "The model ID (for local servers this is usually not required"
 msgstr "ID modelu (u místních serverů obvykle není potřeba)"
 
@@ -1931,7 +1959,7 @@ msgstr "Teplota pro překlady (výchozí 0.0)"
 msgid "The translation provider to use"
 msgstr "Poskytovatel překladu k použití"
 
-#: PySubtrans/Providers/Provider_Custom.py:107
+#: PySubtrans/Providers/Provider_Custom.py:109
 msgid "Timeout for the request in seconds (default 300)"
 msgstr "Časový limit pro požadavek v sekundách (výchozí 300)"
 
@@ -2015,7 +2043,7 @@ msgstr "Nastavení poskytovatele překladu jsou neplatná. Zkontrolujte prosím 
 msgid "Translation response error: {error}, retrying in {backoff_time} seconds..."
 msgstr "Chyba odpovědi překladu: {error}, opakuji za {backoff_time} sekund..."
 
-#: PySubtrans/SubtitleTranslator.py:297
+#: PySubtrans/SubtitleTranslator.py:302
 msgid "Truncating batch to remain within max_lines"
 msgstr "Dávka se zkracuje, aby zůstala v limitu max_lines"
 
@@ -2074,7 +2102,7 @@ msgstr "Nelze načíst titulky ze souboru {file}"
 msgid "Unable to load {file} ({error})"
 msgstr "Nelze načíst {file} ({error})"
 
-#: PySubtrans/SubtitleTranslator.py:336
+#: PySubtrans/SubtitleTranslator.py:341
 msgid "Unable to match {count} lines with a source line"
 msgstr "Nepodařilo se spárovat {count} řádků se zdrojovým řádkem"
 
@@ -2159,7 +2187,7 @@ msgstr "Vracení úpravy řádku {line}"
 msgid "Unexpected error communicating with OpenAI"
 msgstr "Nečekaná chyba při komunikaci s OpenAI"
 
-#: PySubtrans/Providers/Clients/CustomClient.py:155
+#: PySubtrans/Providers/Clients/CustomClient.py:165
 msgid "Unexpected error communicating with server"
 msgstr "Nečekaná chyba při komunikaci se serverem"
 
@@ -2193,7 +2221,7 @@ msgstr "Nepodporované úsilí o uvažování: {error}. Vyberte jiné úsilí o 
 msgid "Untranslated > {number}. {text}"
 msgstr "Nepřeloženo > {number}. {text}"
 
-#: PySubtrans/Providers/Provider_Custom.py:110
+#: PySubtrans/Providers/Provider_Custom.py:112
 msgid "Use parallel threads for translation requests (may be faster but may not work with the server)"
 msgstr "Použít paralelní vlákna pro požadavky na překlad (může být rychlejší, ale nemusí fungovat se serverem)"
 
@@ -2218,7 +2246,7 @@ msgstr "Používá se model: {model}"
 #: PySubtrans/Providers/Clients/CustomClient.py:35
 #: PySubtrans/Providers/Clients/GeminiClient.py:141
 msgid "Using proxy: {proxy}"
-msgstr ""
+msgstr "Používám proxy: {proxy}"
 
 #: GuiSubtrans/SettingsDialog.py:76
 msgid "Validator: Maximum number of characters to allow in a single translated line"
@@ -2268,6 +2296,10 @@ msgstr "Verze API"
 #: PySubtrans/Options.py:92
 msgid "autosave"
 msgstr "Automatické ukládání"
+
+#: PySubtrans/Options.py:85
+msgid "autosplit_on_error"
+msgstr "Automatické rozdělení při chybě"
 
 #: PySubtrans/Providers/Provider_Bedrock.py:0
 msgid "aws_region"
@@ -2413,6 +2445,10 @@ msgstr "Minimální velikost dávky"
 msgid "min_line_duration"
 msgstr "Minimální délka řádku"
 
+#: PySubtrans/Providers/Provider_Custom.py:0
+msgid "min_p"
+msgstr "Minimální pravděpodobnost (min_p)"
+
 #: PySubtrans/Options.py:66
 msgid "min_single_line_length"
 msgstr "Minimální délka jednoho řádku"
@@ -2521,6 +2557,10 @@ msgstr "Odstranit výplňková slova"
 #: PySubtrans/Options.py:95
 msgid "reparse"
 msgstr "znovu parsovat"
+
+#: PySubtrans/Providers/Provider_Custom.py:0
+msgid "repetition_penalty"
+msgstr "Penalizace opakování"
 
 #: PySubtrans/Options.py:94
 msgid "retranslate"
@@ -2714,6 +2754,9 @@ msgstr "{} řádků bylo prázdných a nebylo zapsáno do výstupního souboru"
 #: PySubtrans/Formats/SrtFileHandler.py:75
 msgid "{} lines were invalid and were not written to the output file"
 msgstr "{} řádků bylo neplatných a nebylo zapsáno do výstupního souboru"
+
+#~ msgid "Hit API token limit, retrying batch without context..."
+#~ msgstr "Byl dosažen limit tokenů API, opakuje se dávka bez kontextu..."
 
 #~ msgid "The level of reasoning effort to use for the model"
 #~ msgstr "Úroveň úsilí pro uvažování, kterou má model použít"

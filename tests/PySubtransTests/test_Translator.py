@@ -208,7 +208,7 @@ class SplitBatchTranslationTests(SubtitleTestCase):
     def __init__(self, methodName):
         super().__init__(methodName, custom_options={
             'max_batch_size': 100,
-            'autosplit_incomplete': True,
+            'autosplit_on_error': True,
         })
 
     def test_TranslateSplitBatch_translates_all_lines(self):

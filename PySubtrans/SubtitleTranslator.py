@@ -46,7 +46,7 @@ class SubtitleTranslator:
         self.max_history = settings.get_int('max_context_summaries')
         self.stop_on_error = settings.get_bool('stop_on_error')
         self.retry_on_error = settings.get_bool('retry_on_error')
-        self.split_on_error = settings.get_bool('autosplit_incomplete')
+        self.split_on_error = settings.get_bool('autosplit_on_error')
         self.max_summary_length = settings.get_int('max_summary_length')
         self.retranslate = settings.get_bool('retranslate')
         self.reparse = settings.get_bool('reparse')

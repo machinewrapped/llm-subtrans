@@ -82,7 +82,7 @@ default_settings = {
     'full_width_punctuation': env_bool('FULL_WIDTH_PUNCTUATION', False),
     'convert_wide_dashes': env_bool('CONVERT_WIDE_DASHES', True),
     'retry_on_error': env_bool('RETRY_ON_ERROR', True),
-    'autosplit_incomplete': env_bool('AUTOSPLIT_INCOMPLETE', False),
+    'autosplit_on_error': env_bool('AUTOSPLIT_ON_ERROR', False),
     'max_lines': env_int('MAX_LINES', None),
     'max_threads': env_int('MAX_THREADS', 4),
     'max_retries': env_int('MAX_RETRIES', 1),

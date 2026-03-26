@@ -164,7 +164,9 @@ provider = init_translation_provider("DeepSeek", options)
 options = init_options(
     server_address='http://localhost:8000',
     supports_conversation=True,
-    max_tokens=4096
+    max_tokens=4096,
+    repetition_penalty=1.1,  # Helps suppress degenerate repetition loops in small models
+    min_p=0.05,               # Alternative sampling parameter supported by llama.cpp / vLLM
 )
 
 provider = init_translation_provider("Custom Server", options)
@@ -194,6 +196,8 @@ The Options class provides a wide range of options to configure the translation 
 `max_batch_size`: controls how many lines will be sent to the LLM in one request. The default value (30) is very conservative, for maximum compatibility. Models like Gemini 2.5 Flash can easily handle batches of 150 lines or more, which allows for faster translation.
 
 `scene_threshold`: subtitles are divided into scenes before batching, using this time value as a heuristic to indicate that a scene transition has happened. The default of 60 seconds is very coarse, and may end up with only one scene for dialogue heavy movies or dozens of scenes with only a few lines each for minimalist arthouse films. Depending on your use case, consider setting this very high and relying on the batcher instead.
+
+`autosplit_on_error`: When a batch fails validation, split it at the largest time-gap nearest the midpoint and retry each half independently. More effective than a straight retry for small local models that struggle with long contexts. Takes priority over `retry_on_error` when both are set.
 
 `postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines. The post-processor can perform a range of operations, each of which is enabled by another setting, e.g. `break_dialog_on_one_line`, `normalise_dialog_tags`, `whitespaces_to_newline`, `remove_filler_words`.
 

@@ -76,6 +76,7 @@ class TranslationParser:
                 break
 
         if not matches:
+            logging.warning(f"No matches found in response (first 200 chars): {self.text[:200]!r}")
             raise TranslationError(f"No matches found in translation text using patterns: {self.regex_patterns}", translation=translation)
 
         logging.debug(f"Matches: {str(matches)}")

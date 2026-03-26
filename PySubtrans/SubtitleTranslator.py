@@ -240,20 +240,21 @@ class SubtitleTranslator:
         streaming_callback = self._create_streaming_callback(batch, line_numbers) if self.client.enable_streaming else None
         translation : Translation|None = self.client.RequestTranslation(batch.prompt, streaming_callback=streaming_callback)
 
-        if (translation and translation.reached_token_limit) and not self.aborted:
-            # Try again without the context to keep the tokens down
-            # TODO: better to split the batch into smaller chunks
-            logging.warning(_("Hit API token limit, retrying batch without context..."))
-            batch.prompt.GenerateMessages(instructions, batch.originals, {})
-
-            translation = self.client.RequestTranslation(batch.prompt, streaming_callback=streaming_callback)
-
         if not self.aborted:
             if not translation:
                 raise TranslationError(f"Unable to translate scene {batch.scene} batch {batch.number}")
 
-            # Process the response
+            # Process the response first — translation may be complete even if the token limit was hit
             self.ProcessBatchTranslation(batch, translation, line_numbers)
+
+            # Only retry without context if parsing found errors AND the token limit was reached
+            if batch.errors and translation.reached_token_limit:
+                # TODO: better to split the batch into smaller chunks
+                logging.warning(_("Hit API token limit with errors, retrying batch without context..."))
+                batch.prompt.GenerateMessages(instructions, batch.originals, {})
+                translation = self.client.RequestTranslation(batch.prompt, streaming_callback=streaming_callback)
+                if translation and not self.aborted:
+                    self.ProcessBatchTranslation(batch, translation, line_numbers)
 
             # Consider retrying if there were errors
             if batch.errors and self.retry_on_error:
@@ -261,7 +262,7 @@ class SubtitleTranslator:
                 self.RequestRetranslation(batch, line_numbers=line_numbers, context=context)
 
             # Update the context, unless it's a retranslation pass
-            if not self.retranslate and not self.aborted:
+            if translation and not self.retranslate and not self.aborted:
                 context['summary'] = self._get_best_summary([translation.summary, batch.summary])
                 context['scene'] = self._get_best_summary([translation.scene, context.get('scene')])
                 context['synopsis'] = translation.synopsis or context.get('synopsis', "")

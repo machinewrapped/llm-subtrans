@@ -70,6 +70,16 @@ class CustomClient(TranslationClient):
     def max_completion_tokens(self) -> int|None:
         max_completion_tokens = self.settings.get_int( 'max_completion_tokens', 0)
         return max_completion_tokens if max_completion_tokens != 0 else None
+
+    @property
+    def repetition_penalty(self) -> float|None:
+        value = self.settings.get_float('repetition_penalty', 0.0)
+        return value if value else None
+
+    @property
+    def min_p(self) -> float|None:
+        value = self.settings.get_float('min_p', 0.0)
+        return value if value else None
     
     @property
     def timeout(self) -> int:
@@ -414,6 +424,12 @@ class CustomClient(TranslationClient):
 
         if self.model:
             request_body['model'] = self.model
+
+        if self.repetition_penalty:
+            request_body['repetition_penalty'] = self.repetition_penalty
+
+        if self.min_p:
+            request_body['min_p'] = self.min_p
 
         prompt : TranslationPrompt = request.prompt
         if self.supports_conversation:

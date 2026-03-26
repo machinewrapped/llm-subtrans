@@ -1,11 +1,15 @@
 from copy import deepcopy
+from datetime import timedelta
 
+from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.Parse import ParseNames
+from PySubtrans.Helpers.SubtitleHelpers import FindBestSplitIndex
 from PySubtrans.Helpers.TestCases import DummyProvider, PrepareSubtitles, SubtitleTestCase
 from PySubtrans.Helpers.Tests import log_info, log_test_name
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleEditor import SubtitleEditor
+from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
@@ -180,5 +184,59 @@ class TranslationEventsTests(SubtitleTestCase):
         self.assertLoggedEqual("Error message", "Test error", received_messages[0][1])
         self.assertLoggedEqual("Warning message", "Test warning", received_messages[1][1])
         self.assertLoggedEqual("Info message", "Test info", received_messages[2][1])
+
+
+class FindBestSplitIndexTests(SubtitleTestCase):
+    def test_FindBestSplitIndex_picks_largest_gap(self):
+        """FindBestSplitIndex should prefer the index with the largest time gap closest to the midpoint"""
+        # 8 lines, uniform 1s timing/gaps EXCEPT a large gap (93s) between index 3 and 4 (the midpoint)
+        lines = [SubtitleLine.Construct(i + 1, timedelta(seconds=i * 2), timedelta(seconds=i * 2 + 1), f"Line {i + 1}") for i in range(4)]
+        lines.append(SubtitleLine.Construct(5, timedelta(seconds=100), timedelta(seconds=101), "Line 5"))
+        lines += [SubtitleLine.Construct(i + 1, timedelta(seconds=100 + (i - 4) * 2), timedelta(seconds=100 + (i - 4) * 2 + 1), f"Line {i + 1}") for i in range(5, 8)]
+
+        result = FindBestSplitIndex(lines)
+        self.assertLoggedEqual("Split index at large gap", 4, result)
+
+    def test_FindBestSplitIndex_too_small(self):
+        """FindBestSplitIndex should return None when the list is too small to split"""
+        single_line = [SubtitleLine.Construct(1, timedelta(seconds=0), timedelta(seconds=1), "Line 1")]
+        self.assertLoggedIsNone("Single line returns None", FindBestSplitIndex(single_line))
+        self.assertLoggedIsNone("Empty list returns None", FindBestSplitIndex([]))
+
+
+class SplitBatchTranslationTests(SubtitleTestCase):
+    def __init__(self, methodName):
+        super().__init__(methodName, custom_options={
+            'max_batch_size': 100,
+            'autosplit_incomplete': True,
+        })
+
+    def test_TranslateSplitBatch_translates_all_lines(self):
+        """_TranslateSplitBatch should split the batch, translate each half, and merge all lines"""
+        provider = DummyProvider(data=chinese_dinner_data)
+
+        originals = PrepareSubtitles(chinese_dinner_data, 'original')
+        batcher = SubtitleBatcher(self.options)
+        with SubtitleEditor(originals) as editor:
+            editor.AutoBatch(batcher)
+
+        translator = SubtitleTranslator(self.options, translation_provider=provider)
+
+        scene_1 = originals.GetScene(1)
+        self.assertIsNotNone(scene_1)
+        batch_1 = scene_1.GetBatch(1) if scene_1 else None
+        self.assertIsNotNone(batch_1)
+
+        if not batch_1:
+            return
+
+        context = GetBatchContext(originals, 1, 1)
+
+        self.assertLoggedGreater("Batch has enough lines to split", len(batch_1.originals), 2)
+
+        translator._TranslateSplitBatch(batch_1, None, context)
+
+        self.assertLoggedEqual("All lines translated", len(batch_1.originals), len(batch_1.translated or []))
+        self.assertLoggedEqual("No errors after split", 0, len(batch_1.errors or []))
 
 

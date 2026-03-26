@@ -4,7 +4,7 @@ import threading
 from typing import Any
 
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
-from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
+from PySubtrans.Helpers.SubtitleHelpers import FindBestSplitIndex, MergeTranslations
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Text import Linearise, SanitiseSummary
 from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
@@ -46,7 +46,7 @@ class SubtitleTranslator:
         self.max_history = settings.get_int('max_context_summaries')
         self.stop_on_error = settings.get_bool('stop_on_error')
         self.retry_on_error = settings.get_bool('retry_on_error')
-        # self.split_on_error = options.get('autosplit_incomplete')
+        self.split_on_error = settings.get_bool('autosplit_incomplete')
         self.max_summary_length = settings.get_int('max_summary_length')
         self.retranslate = settings.get_bool('retranslate')
         self.reparse = settings.get_bool('reparse')
@@ -256,8 +256,12 @@ class SubtitleTranslator:
                 if translation and not self.aborted:
                     self.ProcessBatchTranslation(batch, translation, line_numbers)
 
-            # Consider retrying if there were errors
-            if batch.errors and self.retry_on_error:
+            # Consider splitting the batch in half if there were errors
+            if batch.errors and self.split_on_error and len(batch.originals) >= 2:
+                self._TranslateSplitBatch(batch, line_numbers, context or {})
+
+            # Consider retrying if there were errors (split_on_error takes priority)
+            elif batch.errors and self.retry_on_error:
                 logging.warning(_("Scene {scene} batch {batch} failed validation, requesting retranslation").format(scene=batch.scene, batch=batch.number))
                 self.RequestRetranslation(batch, line_numbers=line_numbers, context=context)
 
@@ -405,6 +409,63 @@ class SubtitleTranslator:
             self._emit_warning(_("Retry failed validation: {errors}").format(errors=FormatErrorMessages(batch.errors)))
         else:
             self._emit_info(_("Retry passed validation"))
+
+    def _TranslateSplitBatch(self, batch : SubtitleBatch, line_numbers : list[int]|None, context : dict[str,Any]):
+        """
+        Split the batch originals in half and translate each half separately, merging results.
+        Used as a fallback when a full-batch translation has errors.
+        """
+        originals = batch.originals
+
+        split_index = FindBestSplitIndex(originals)
+        if split_index is None:
+            return
+
+        instructions = self.instructions.instructions
+        if not instructions:
+            return
+
+        self._emit_info(_("Splitting scene {scene} batch {batch} into two halves for retranslation...").format(
+            scene=batch.scene, batch=batch.number))
+
+        translated : list[SubtitleLine] = []
+        errors : list[str|SubtitleError] = []
+
+        for half_originals in [originals[:split_index], originals[split_index:]]:
+            if self.aborted:
+                return
+
+            prompt = self.client.BuildTranslationPrompt(self.user_prompt, instructions, half_originals, context)
+            translation : Translation|None = self.client.RequestTranslation(prompt)
+
+            if not translation:
+                errors.append(TranslationError(_("No translation returned for batch half")))
+                continue
+
+            parser : TranslationParser = self.client.GetParser(self.task_type)
+
+            try:
+                parser.ProcessTranslation(translation)
+            except TranslationError as e:
+                errors.append(e)
+                continue
+
+            half_translated, _unmatched = parser.MatchTranslations(half_originals)
+
+            if line_numbers:
+                half_translated = [line for line in half_translated if line.number in line_numbers]
+
+            translated.extend(half_translated)
+            errors.extend(err for err in parser.errors if isinstance(err, str) or isinstance(err, SubtitleError))
+
+        if translated:
+            batch._translated = MergeTranslations([], translated)
+            batch.errors = errors
+
+        if batch.errors:
+            self._emit_warning(_("Split retranslation has errors: {errors}").format(errors=FormatErrorMessages(batch.errors)))
+        else:
+            self._emit_info(_("Split retranslation passed validation"))
 
     def _get_best_summary(self, candidates : list[str|None]) -> str|None:
         """

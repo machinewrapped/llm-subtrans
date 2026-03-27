@@ -250,7 +250,7 @@ class SubtitleTranslator:
             # Consider splitting the batch in half if there were errors (preferred strategy)
             split_performed = False
             if batch.errors and self.split_on_error and len(batch.originals) >= 2:
-                split_performed = self._TranslateSplitBatch(batch, line_numbers, context or {})
+                split_performed = self._translate_split_batch(batch, line_numbers, context or {})
 
             # If no split was performed, retry without context when the token limit was reached with errors
             if not split_performed and batch.errors and translation.reached_token_limit:
@@ -410,7 +410,7 @@ class SubtitleTranslator:
         else:
             self._emit_info(_("Retry passed validation"))
 
-    def _TranslateSplitBatch(self, batch : SubtitleBatch, line_numbers : list[int]|None, context : dict[str,Any]) -> bool:
+    def _translate_split_batch(self, batch : SubtitleBatch, line_numbers : list[int]|None, context : dict[str,Any]) -> bool:
         """
         Split the batch originals in half and translate each half separately, merging results.
         Used as a fallback when a full-batch translation has errors.

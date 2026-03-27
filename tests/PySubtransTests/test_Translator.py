@@ -1,5 +1,6 @@
 from copy import deepcopy
 from datetime import timedelta
+from unittest.mock import patch
 
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.Parse import ParseNames
@@ -9,6 +10,7 @@ from PySubtrans.Helpers.Tests import log_info, log_test_name
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleEditor import SubtitleEditor
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
@@ -212,6 +214,29 @@ class FindBestSplitIndexTests(SubtitleTestCase):
         result = FindBestSplitIndex(lines)
         self.assertLoggedEqual("Two lines splits at index 1", 1, result)
 
+    def test_FindBestSplitIndex_uniform_gaps_picks_midpoint(self):
+        """With uniform gaps, FindBestSplitIndex should split at the midpoint (highest proximity score)"""
+        # 8 lines with identical 1s gaps between every pair — proximity weighting picks the midpoint
+        lines = [SubtitleLine.Construct(i + 1, timedelta(seconds=i * 2), timedelta(seconds=i * 2 + 1), f"Line {i + 1}") for i in range(8)]
+        midpoint = len(lines) // 2  # 4
+        result = FindBestSplitIndex(lines)
+        self.assertLoggedEqual("Uniform gaps splits at midpoint", midpoint, result)
+
+    def test_FindBestSplitIndex_off_center_gap_wins_when_large_enough(self):
+        """An off-center gap should beat the midpoint only when it is large enough to overcome proximity weighting"""
+        # 8 lines; midpoint is at index 4 (proximity 4) with a 1s gap.
+        # Index 2 (proximity 2) has a 10s gap. Score at 4 = 4*1000 = 4000, score at 2 = 2*10000 = 20000.
+        # Index 2 should win.
+        lines = [SubtitleLine.Construct(i + 1, timedelta(seconds=i * 2), timedelta(seconds=i * 2 + 1), f"Line {i + 1}") for i in range(8)]
+        # Place a 10s gap between lines[1] (end=3s) and lines[2] (start=13s)
+        lines[2] = SubtitleLine.Construct(3, timedelta(seconds=13), timedelta(seconds=14), "Line 3")
+        lines[3] = SubtitleLine.Construct(4, timedelta(seconds=15), timedelta(seconds=16), "Line 4")
+        lines[4] = SubtitleLine.Construct(5, timedelta(seconds=17), timedelta(seconds=18), "Line 5")
+        lines[5] = SubtitleLine.Construct(6, timedelta(seconds=19), timedelta(seconds=20), "Line 6")
+        lines[6] = SubtitleLine.Construct(7, timedelta(seconds=21), timedelta(seconds=22), "Line 7")
+        lines[7] = SubtitleLine.Construct(8, timedelta(seconds=23), timedelta(seconds=24), "Line 8")
+        result = FindBestSplitIndex(lines)
+        self.assertLoggedEqual("Large off-center gap beats midpoint", 2, result)
 
 
 class SplitBatchTranslationTests(SubtitleTestCase):
@@ -221,32 +246,110 @@ class SplitBatchTranslationTests(SubtitleTestCase):
             'autosplit_on_error': True,
         })
 
-    def test_TranslateSplitBatch_translates_all_lines(self):
-        """_TranslateSplitBatch should split the batch, translate each half, and merge all lines"""
+    def setUp(self):
+        super().setUp()
         provider = DummyProvider(data=chinese_dinner_data)
-
-        originals = PrepareSubtitles(chinese_dinner_data, 'original')
+        self.originals = PrepareSubtitles(chinese_dinner_data, 'original')
         batcher = SubtitleBatcher(self.options)
-        with SubtitleEditor(originals) as editor:
+        with SubtitleEditor(self.originals) as editor:
             editor.AutoBatch(batcher)
+        self.translator = SubtitleTranslator(self.options, translation_provider=provider)
+        scene_1 = self.originals.GetScene(1)
+        if scene_1 is None:
+            self.fail("Scene 1 not found in test data")
+        batch_1 = scene_1.GetBatch(1)
+        if batch_1 is None:
+            self.fail("Batch 1 not found in scene 1")
+        self.batch_1 : SubtitleBatch = batch_1
+        self.context = GetBatchContext(self.originals, 1, 1)
 
-        translator = SubtitleTranslator(self.options, translation_provider=provider)
+    def test_TranslateSplitBatch_translates_all_lines(self):
+        """_translate_split_batch should split the batch, translate each half, and merge all lines"""
+        self.assertLoggedGreater("Batch has enough lines to split", len(self.batch_1.originals), 2)
 
-        scene_1 = originals.GetScene(1)
-        self.assertIsNotNone(scene_1)
-        batch_1 = scene_1.GetBatch(1) if scene_1 else None
-        self.assertIsNotNone(batch_1)
+        result = self.translator._translate_split_batch(self.batch_1, None, self.context)
 
-        if not batch_1:
-            return
+        self.assertLoggedEqual("Returns True on success", True, result)
+        self.assertLoggedEqual("All lines translated", len(self.batch_1.originals), len(self.batch_1.translated or []))
+        self.assertLoggedEqual("No errors after split", 0, len(self.batch_1.errors or []))
 
-        context = GetBatchContext(originals, 1, 1)
+    def test_TranslateSplitBatch_line_numbers_filtering(self):
+        """_translate_split_batch should only include lines matching line_numbers when provided"""
+        line_numbers = [line.number for line in self.batch_1.originals[:3]]
 
-        self.assertLoggedGreater("Batch has enough lines to split", len(batch_1.originals), 2)
+        result = self.translator._translate_split_batch(self.batch_1, line_numbers, self.context)
 
-        translator._TranslateSplitBatch(batch_1, None, context)
+        self.assertLoggedEqual("Returns True", True, result)
+        self.assertLoggedEqual("Only filtered lines in result", len(line_numbers), len(self.batch_1.translated or []))
 
-        self.assertLoggedEqual("All lines translated", len(batch_1.originals), len(batch_1.translated or []))
-        self.assertLoggedEqual("No errors after split", 0, len(batch_1.errors or []))
+    def test_TranslateSplitBatch_partial_failure_records_errors(self):
+        """When one batch half fails to translate, errors are recorded but split still returns True"""
+        call_count = [0]
+        original_request = self.translator.client.RequestTranslation
+
+        def fail_on_second_call(prompt, temperature=None, streaming_callback=None):
+            call_count[0] += 1
+            if call_count[0] == 2:
+                return None
+            return original_request(prompt, temperature, streaming_callback)
+
+        with patch.object(self.translator.client, 'RequestTranslation', side_effect=fail_on_second_call):
+            result = self.translator._translate_split_batch(self.batch_1, None, self.context)
+
+        self.assertLoggedEqual("Returns True (split was attempted)", True, result)
+        self.assertLoggedGreater("Errors recorded for failed half", len(self.batch_1.errors or []), 0)
+
+    def test_split_triggered_when_errors_and_split_on_error(self):
+        """TranslateBatch should call _translate_split_batch when batch has errors and split_on_error is True"""
+        original_process = self.translator.ProcessBatchTranslation
+
+        def inject_errors(batch, translation, line_numbers=None):
+            original_process(batch, translation, line_numbers)
+            batch.errors = [SubtitleError("Injected test error")]
+
+        with patch.object(self.translator, 'ProcessBatchTranslation', side_effect=inject_errors):
+            with patch.object(self.translator, '_translate_split_batch', return_value=True) as mock_split:
+                self.translator.TranslateBatch(self.batch_1, None, self.context)
+
+        self.assertLoggedGreater("Split was triggered by batch errors", mock_split.call_count, 0)
+
+    def test_split_not_triggered_when_split_on_error_disabled(self):
+        """TranslateBatch should not call _translate_split_batch when split_on_error is False"""
+        options = deepcopy(self.options)
+        options.add('autosplit_on_error', False)
+        provider = DummyProvider(data=chinese_dinner_data)
+        translator = SubtitleTranslator(options, translation_provider=provider)
+
+        original_process = translator.ProcessBatchTranslation
+
+        def inject_errors(batch, translation, line_numbers=None):
+            original_process(batch, translation, line_numbers)
+            batch.errors = [SubtitleError("Injected test error")]
+
+        with patch.object(translator, 'ProcessBatchTranslation', side_effect=inject_errors):
+            with patch.object(translator, '_translate_split_batch') as mock_split:
+                translator.TranslateBatch(self.batch_1, None, self.context)
+
+        self.assertLoggedEqual("Split not triggered when disabled", 0, mock_split.call_count)
+
+    def test_split_suppresses_retry_on_error(self):
+        """When split_on_error fires successfully, retry_on_error should not also be triggered"""
+        options = deepcopy(self.options)
+        options.add('retry_on_error', True)
+        provider = DummyProvider(data=chinese_dinner_data)
+        translator = SubtitleTranslator(options, translation_provider=provider)
+
+        original_process = translator.ProcessBatchTranslation
+
+        def inject_errors(batch, translation, line_numbers=None):
+            original_process(batch, translation, line_numbers)
+            batch.errors = [SubtitleError("Injected test error")]
+
+        with patch.object(translator, 'ProcessBatchTranslation', side_effect=inject_errors):
+            with patch.object(translator, '_translate_split_batch', return_value=True):
+                with patch.object(translator, 'RequestRetranslation') as mock_retry:
+                    translator.TranslateBatch(self.batch_1, None, self.context)
+
+        self.assertLoggedEqual("Retry not triggered when split succeeded", 0, mock_retry.call_count)
 
 

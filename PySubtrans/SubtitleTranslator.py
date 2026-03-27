@@ -448,14 +448,18 @@ class SubtitleTranslator:
                 half_translations.append(half_translation)
 
         # Phase 2: merge translation texts and delegate all output handling to ProcessBatchTranslation
+        if not half_translations:
+            batch.errors = api_errors
+            return False
+
         merged_text = "\n".join(t.text for t in half_translations if t.text)
         merged_translation = Translation({'text': merged_text})
 
         try:
             self.ProcessBatchTranslation(batch, merged_translation, line_numbers)
         except TranslationError as e:
-            batch.errors = [e] + api_errors
-            return True
+            batch.errors = (batch.errors or []) + [e] + api_errors
+            return False
 
         if api_errors:
             batch.errors = (batch.errors or []) + api_errors

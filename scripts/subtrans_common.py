@@ -99,7 +99,7 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--scenethreshold', type=float, default=None, help="Number of seconds between lines to consider a new scene")
     parser.add_argument('--substitution', action='append', type=str, default=None, help="A pair of strings separated by ::, to subsitute in source or translation")
     parser.add_argument('--temperature', type=float, default=0.0, help="A higher temperature increases the random variance of translations.")
-    parser.add_argument('--autosplit', action='store_true', help="Split batches that fail validation in half and retry each half separately")
+    parser.add_argument('--autosplit', action='store_true', default=None, help="Split batches that fail validation in half and retry each half separately")
     parser.add_argument('--writebackup', action='store_true', help="Write a backup of the project file when it is loaded (if it exists)")
     return parser
 

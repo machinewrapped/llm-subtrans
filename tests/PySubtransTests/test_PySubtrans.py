@@ -184,7 +184,7 @@ class PySubtransConvenienceTests(LoggedTestCase):
             if os.path.exists(subtitle_path):
                 os.remove(subtitle_path)
 
-    def test_init_project_resume_preserves_state(self) -> None:
+    def TestInitProjectResumePreservesState(self) -> None:
         """Resuming an existing project must not re-batch or re-preprocess (issue #410)"""
         options = self._create_options()
 

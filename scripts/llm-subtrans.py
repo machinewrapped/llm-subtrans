@@ -8,12 +8,10 @@ from scripts.subtrans_common import (
     CreateArgParser,
     CreateOptions,
     CreateProject,
-    LogTranslationStatus,
+    TranslateProject,
 )
 
-from PySubtrans import init_translator
-from PySubtrans.Options import Options
-from PySubtrans.SubtitleProject import SubtitleProject
+
 
 # Parse command line arguments
 parser = CreateArgParser("Translates subtitles using OpenRouter or a custom AI model server")
@@ -30,11 +28,10 @@ args = parser.parse_args()
 provider = "Custom Server" if args.server else "OpenRouter"
 
 logger_options = InitLogger("llm-subtrans", args.debug)
-project : SubtitleProject|None = None
 
 try:
     if provider == "OpenRouter":
-        options : Options = CreateOptions(
+        options = CreateOptions(
             args,
             provider,
             api_key=args.apikey,
@@ -42,7 +39,7 @@ try:
             use_default_model=args.auto,
         )
     else:
-        options : Options = CreateOptions(
+        options = CreateOptions(
             args,
             provider,
             api_key=args.apikey,
@@ -53,20 +50,9 @@ try:
             supports_system_messages=args.systemmessages,
         )
 
-    # Create a project for the translation
     project = CreateProject(options, args)
-
-    translator = init_translator(options)
-
-    project.TranslateSubtitles(translator)
-
-    if project.use_project_file:
-        project.UpdateProjectFile()
-
-    LogTranslationStatus(project, preview=args.preview)
+    TranslateProject(project, options, verbose=args.verbose, preview=args.preview)
 
 except Exception as e:
-    if project:
-        LogTranslationStatus(project, preview=args.preview, has_error=True)
     logging.error(f"Error during subtitle translation: {e}")
     raise

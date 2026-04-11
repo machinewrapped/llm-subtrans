@@ -9,12 +9,9 @@ from scripts.subtrans_common import (
     CreateArgParser,
     CreateOptions,
     CreateProject,
-    LogTranslationStatus,
+    TranslateProject,
 )
 
-from PySubtrans import init_translator
-from PySubtrans.Options import Options
-from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Providers.Provider_Gemini import GeminiProvider
 
 provider = "Gemini"
@@ -26,25 +23,12 @@ parser.add_argument('-m', '--model', type=str, default=None, help="The model to 
 args = parser.parse_args()
 
 logger_options = InitLogger("gemini-subtrans", args.debug)
-project : SubtitleProject|None = None
 
 try:
-    options : Options = CreateOptions(args, provider, model=args.model or default_model)
-
-    # Create a project for the translation
+    options = CreateOptions(args, provider, model=args.model or default_model)
     project = CreateProject(options, args)
-
-    # Translate the subtitles
-    translator = init_translator(options)
-    project.TranslateSubtitles(translator)
-
-    if project.use_project_file:
-        project.UpdateProjectFile()
-
-    LogTranslationStatus(project, preview=args.preview)
+    TranslateProject(project, options, verbose=args.verbose, preview=args.preview)
 
 except Exception as e:
-    if project:
-        LogTranslationStatus(project, preview=args.preview, has_error=True)
     logging.error(f"Error during subtitle translation: {e}")
     raise

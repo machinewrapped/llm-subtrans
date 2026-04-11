@@ -9,11 +9,9 @@ from scripts.subtrans_common import (
     CreateArgParser,
     CreateOptions,
     CreateProject,
-    LogTranslationStatus,
+    TranslateProject,
 )
-from PySubtrans import init_translator
-from PySubtrans.Options import Options
-from PySubtrans.SubtitleProject import SubtitleProject
+
 
 # Update when newer ones are available - https://learn.microsoft.com/en-us/azure/ai-services/openai/reference
 latest_azure_api_version = "2024-02-01"
@@ -31,31 +29,18 @@ parser.add_argument('--deploymentname', type=str, default=None, help="Azure depl
 args = parser.parse_args()
 
 logger_options = InitLogger("azure-subtrans", args.debug)
-project : SubtitleProject|None = None
 
 try:
-    options : Options = CreateOptions(
+    options = CreateOptions(
         args,
         provider,
         deployment_name=args.deploymentname or deployment_name,
         api_base=args.apibase or api_base,
         api_version=args.apiversion or api_version,
     )
-
-    # Create a project for the translation
     project = CreateProject(options, args)
-
-    # Translate the subtitles
-    translator = init_translator(options)
-    project.TranslateSubtitles(translator)
-
-    if project.use_project_file:
-        project.UpdateProjectFile()
-
-    LogTranslationStatus(project, preview=args.preview)
+    TranslateProject(project, options, verbose=args.verbose, preview=args.preview)
 
 except Exception as e:
-    if project:
-        LogTranslationStatus(project, preview=args.preview, has_error=True)
     logging.error(f"Error during subtitle translation: {e}")
     raise

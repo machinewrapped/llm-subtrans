@@ -9,12 +9,10 @@ from scripts.subtrans_common import (
     CreateArgParser,
     CreateOptions,
     CreateProject,
-    LogTranslationStatus,
+    TranslateProject,
 )
 
-from PySubtrans import init_translator
-from PySubtrans.Options import Options
-from PySubtrans.SubtitleProject import SubtitleProject
+
 from PySubtrans.Providers.Provider_OpenAI import OpenAiProvider
 
 provider = "OpenAI"
@@ -28,31 +26,18 @@ parser.add_argument('--httpx', action='store_true', help="Use the httpx library 
 args = parser.parse_args()
 
 logger_options = InitLogger("gpt-subtrans", args.debug)
-project : SubtitleProject|None = None
 
 try:
-    options : Options = CreateOptions(
+    options = CreateOptions(
         args,
         provider,
         use_httpx=args.httpx,
         api_base=args.apibase,
         model=args.model or default_model
     )
-
-    # Create a project for the translation
     project = CreateProject(options, args)
-
-    # Translate the subtitles
-    translator = init_translator(options)
-    project.TranslateSubtitles(translator)
-
-    if project.use_project_file:
-        project.UpdateProjectFile()
-
-    LogTranslationStatus(project, preview=args.preview)
+    TranslateProject(project, options, verbose=args.verbose, preview=args.preview)
 
 except Exception as e:
-    if project:
-        LogTranslationStatus(project, preview=args.preview, has_error=True)
     logging.error(f"Error during subtitle translation: {e}")
     raise

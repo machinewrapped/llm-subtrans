@@ -2,13 +2,15 @@ import os
 import logging
 
 from argparse import ArgumentParser, Namespace
-from dataclasses import dataclass
+from contextlib import contextmanager
+from dataclasses import dataclass, field
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import ParseNames
-from PySubtrans import batch_subtitles, preprocess_subtitles, init_options
+from PySubtrans import batch_subtitles, init_options, init_translator, preprocess_subtitles
 from PySubtrans.Options import Options, config_dir
+from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
@@ -17,6 +19,84 @@ from PySubtrans.SubtitleProject import SubtitleProject
 class LoggerOptions():
     file_handler: logging.FileHandler|None
     log_path: str
+
+
+@dataclass
+class TokenUsage():
+    """Accumulated token usage across all translated batches."""
+    prompt_tokens: int = field(default=0)
+    output_tokens: int = field(default=0)
+
+    def add(self, content : dict) -> None:
+        """Add token counts from a translation response content dict."""
+        self.prompt_tokens += content.get('prompt_tokens') or 0
+        self.output_tokens += content.get('output_tokens') or 0
+
+    @property
+    def has_data(self) -> bool:
+        return self.prompt_tokens > 0 or self.output_tokens > 0
+
+    @property
+    def total_tokens(self) -> int:
+        return self.prompt_tokens + self.output_tokens
+
+
+class TranslationProgressLogger():
+    """
+    Connects to SubtitleTranslator events and logs batch-level progress to the console.
+
+    Attach before calling TranslateSubtitles and detach (or use the context manager)
+    afterwards so that the event subscriptions are cleaned up properly.
+    """
+
+    def __init__(self, verbose : bool = False) -> None:
+        self._verbose = verbose
+        self._total_lines : int = 0
+        self._processed_lines : int = 0
+        self.token_usage : TokenUsage = TokenUsage()
+
+    @contextmanager
+    def track(self, translator : SubtitleTranslator):
+        """Context manager that attaches/detaches progress tracking around a translation."""
+        self._attach(translator)
+        try:
+            yield self
+        finally:
+            self._detach(translator)
+
+    def _attach(self, translator : SubtitleTranslator) -> None:
+        self._total_lines = 0
+        self._processed_lines = 0
+        self.token_usage = TokenUsage()
+        translator.events.preprocessed.connect(self._on_preprocessed)
+        translator.events.batch_translated.connect(self._on_batch_translated)
+
+    def _detach(self, translator : SubtitleTranslator) -> None:
+        translator.events.preprocessed.disconnect(self._on_preprocessed)
+        translator.events.batch_translated.disconnect(self._on_batch_translated)
+
+    def _on_preprocessed(self, _sender, scenes : list) -> None:
+        self._total_lines = sum(scene.linecount for scene in scenes)
+
+    def _on_batch_translated(self, _sender, batch) -> None:
+        self._processed_lines += batch.size
+        label = f"{batch.scene}.{batch.number}"
+
+        pct = f"{100 * self._processed_lines // self._total_lines}%" if self._total_lines else ""
+        progress = f"{self._processed_lines}/{self._total_lines} lines{f' ({pct})' if pct else ''}"
+
+        if self._verbose and batch.translation:
+            content = batch.translation.content
+            prompt = content.get('prompt_tokens') or 0
+            output = content.get('output_tokens') or 0
+            token_info = f" [{prompt} in / {output} out tokens]"
+            self.token_usage.add(content)
+        else:
+            token_info = ""
+            if batch.translation:
+                self.token_usage.add(batch.translation.content)
+
+        logging.info("Translated batch %s: %s%s", label, progress, token_info)
 
 def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
     """ Initialise the logger with a file handler and return the path to the log file """
@@ -73,6 +153,7 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('-l', '--target_language', type=str, default=None, help="The target language for the translation")
     parser.add_argument('--batchthreshold', type=float, default=None, help="Number of seconds between lines to consider for batching")
     parser.add_argument('--debug', action='store_true', help="Run with DEBUG log level")
+    parser.add_argument('--verbose', action='store_true', help="Log detailed progress and token usage for each batch")
     parser.add_argument('--description', type=str, default=None, help="A brief description of the film to give context")
     parser.add_argument('--addrtlmarkers', action='store_true', help="Add RTL markers to translated lines if they contains primarily right-to-left script")
     parser.add_argument('--includeoriginal', action='store_true', help="Include the original text in the translated subtitles")
@@ -218,7 +299,7 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
 
     return project
 
-def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_error : bool = False) -> None:
+def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_error : bool = False, token_usage : TokenUsage|None = None) -> None:
     """Log a clear completion summary for the translation run."""
     subtitles = project.subtitles
     if not subtitles:
@@ -247,4 +328,31 @@ def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_
         logging.warning(f"Translation status: incomplete ({translated_lines}/{total_lines} lines translated)")
     else:
         logging.error(f"Translation status: failed (0/{total_lines} lines translated)")
+
+    if token_usage and token_usage.has_data:
+        logging.info(f"Token usage: {token_usage.prompt_tokens} in / {token_usage.output_tokens} out ({token_usage.total_tokens} total)")
+
+def TranslateProject(project : SubtitleProject, options : Options, verbose : bool = False, preview : bool = False) -> None:
+    """
+    Translate a prepared project, logging progress and final status.
+
+    Creates the translator, attaches progress tracking, runs the translation,
+    saves the project file if needed, and logs the completion status.
+    Callers only need to handle errors raised before the project is ready.
+    """
+    progress_logger : TranslationProgressLogger = TranslationProgressLogger(verbose=verbose)
+    translator : SubtitleTranslator = init_translator(options)
+
+    try:
+        with progress_logger.track(translator):
+            project.TranslateSubtitles(translator)
+
+        if project.use_project_file:
+            project.UpdateProjectFile()
+
+        LogTranslationStatus(project, preview=preview, token_usage=progress_logger.token_usage)
+
+    except Exception:
+        LogTranslationStatus(project, preview=preview, has_error=True, token_usage=progress_logger.token_usage)
+        raise
 

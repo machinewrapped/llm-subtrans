@@ -351,7 +351,7 @@ def init_project(
                 options.update(project_settings)
             else:
                 # User precedence: project settings only fill keys the caller did not supply
-                options.update({k: v for k, v in project_settings.items() if k not in options})
+                options.update({k: v for k, v in project_settings.items() if k not in (settings or {})})
 
         if settings:
             project.UpdateProjectSettings(settings)

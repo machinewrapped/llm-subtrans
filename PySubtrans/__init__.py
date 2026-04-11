@@ -290,7 +290,7 @@ def init_project(
     filepath: str|None = None,
     persistent: bool = False,
     auto_batch: bool = True,
-    settings_precedence: SettingsPrecedence = SettingsPrecedence.User,
+    settings_precedence : SettingsPrecedence = SettingsPrecedence.User,
 ) -> SubtitleProject:
     """
     Create a :class:`SubtitleProject`, optionally load subtitles from *filepath* and prepare it for translation.

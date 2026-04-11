@@ -1,5 +1,6 @@
 import os
 import logging
+import sys
 
 from argparse import ArgumentParser, Namespace
 from contextlib import contextmanager
@@ -109,14 +110,26 @@ def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
         level_name = os.getenv('LOG_LEVEL', 'INFO').upper()
         logging_level = getattr(logging, level_name, logging.INFO)
 
-    # Create console logger
-    try:
-        logging.basicConfig(format='%(levelname)s: %(message)s', encoding='utf-8', level=logging_level)
-        logging.info("Initialising log")
+    # Configure the root logger level and add a console handler unconditionally.
+    # logging.basicConfig() is a no-op when handlers already exist (e.g. because an
+    # imported SDK such as google.genai or openai added one during import), so we
+    # set up the StreamHandler explicitly instead.
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging_level)
 
-    except Exception as e:
-        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)
-        logging.info("Unable to write to utf-8 log, falling back to default encoding")
+    try:
+        console_handler = logging.StreamHandler()
+        console_handler.stream = open(sys.stderr.fileno(), mode='w', encoding='utf-8', closefd=False)
+        init_message = "Initialising log"
+    except Exception:
+        console_handler = logging.StreamHandler()
+        init_message = "Unable to write to utf-8 log, falling back to default encoding"
+
+    console_handler.setLevel(logging_level)
+    console_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+    root_logger.addHandler(console_handler)
+
+    logging.info(init_message)
 
     if debug:
         logging.debug("Debug logging enabled")

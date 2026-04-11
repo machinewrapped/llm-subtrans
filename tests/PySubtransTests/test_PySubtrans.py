@@ -3,6 +3,7 @@ import tempfile
 import unittest
 
 from PySubtrans import (
+    SettingsPrecedence,
     SubtitleBuilder,
     SubtitleTranslator,
     TranslationProvider,
@@ -182,6 +183,61 @@ class PySubtransConvenienceTests(LoggedTestCase):
         finally:
             if os.path.exists(subtitle_path):
                 os.remove(subtitle_path)
+
+    def test_init_project_resume_preserves_state(self) -> None:
+        """Resuming an existing project must not re-batch or re-preprocess (issue #410)"""
+        options = self._create_options()
+
+        with tempfile.NamedTemporaryFile('w', suffix='.srt', delete=False, encoding='utf-8') as handle:
+            handle.write(self.srt_content)
+            subtitle_path = handle.name
+
+        project = init_project(options, filepath=subtitle_path, persistent=True)
+        project_file = project.projectfile
+
+        try:
+            initial_scene_count = project.subtitles.scenecount
+            initial_line_count = project.subtitles.linecount
+            self.assertLoggedGreater("initial scene count", initial_scene_count, 0)
+
+            # Simulate a partially-translated batch
+            first_batch = project.subtitles.scenes[0].batches[0]
+            first_batch.translated = list(first_batch.originals)
+            initial_batch_size = len(first_batch.originals)
+            self.assertLoggedTrue("first batch all_translated before save", first_batch.all_translated)
+
+            project.SaveProjectFile()
+
+            # Reload — should resume without re-batching or re-preprocessing
+            project2 = init_project(options, filepath=project_file, persistent=True)
+
+            self.assertLoggedTrue("existing_project on resume", project2.existing_project)
+            self.assertLoggedEqual("scene count preserved", initial_scene_count, project2.subtitles.scenecount)
+            self.assertLoggedEqual("line count preserved", initial_line_count, project2.subtitles.linecount)
+
+            resumed_batch = project2.subtitles.scenes[0].batches[0]
+            self.assertLoggedEqual("batch originals preserved", initial_batch_size, len(resumed_batch.originals))
+            self.assertLoggedTrue("all_translated preserved after resume", resumed_batch.all_translated)
+
+            # Smoke-test SettingsPrecedence.Project doesn't break resumption
+            project3 = init_project(
+                options,
+                filepath=project_file,
+                persistent=True,
+                settings_precedence=SettingsPrecedence.Project,
+            )
+            self.assertLoggedTrue("existing_project with Project precedence", project3.existing_project)
+            self.assertLoggedEqual(
+                "scene count preserved with Project precedence",
+                initial_scene_count,
+                project3.subtitles.scenecount,
+            )
+
+        finally:
+            if os.path.exists(subtitle_path):
+                os.remove(subtitle_path)
+            if project_file and os.path.exists(project_file):
+                os.remove(project_file)
 
 
     def test_json_workflow_with_events(self) -> None:

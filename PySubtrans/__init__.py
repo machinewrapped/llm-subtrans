@@ -27,6 +27,7 @@ subs.SaveSubtitles("movie_translated.srt")
 from __future__ import annotations
 
 from collections.abc import Mapping
+from enum import Enum
 
 from PySubtrans.Helpers import GetInputPath
 from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
@@ -45,6 +46,12 @@ from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.version import __version__
+
+
+class SettingsPrecedence(Enum):
+    """Controls how :func:`init_project` merges project-file settings with caller-supplied settings."""
+    User = 0        # caller's settings win; project-file values only fill missing keys
+    Project = 1     # project-file settings override caller-supplied values (GUI-style)
 
 
 def init_options(**settings: SettingType) -> Options:
@@ -283,6 +290,7 @@ def init_project(
     filepath: str|None = None,
     persistent: bool = False,
     auto_batch: bool = True,
+    settings_precedence: SettingsPrecedence = SettingsPrecedence.User,
 ) -> SubtitleProject:
     """
     Create a :class:`SubtitleProject`, optionally load subtitles from *filepath* and prepare it for translation.
@@ -297,7 +305,10 @@ def init_project(
         If True, enables persistent project state by creating a `.subtrans` project file for the job.
     auto_batch : bool, optional
         If True (default), automatically divide the subtitles into scenes and batches using
-        :class:`SubtitleBatcher`.
+        :class:`SubtitleBatcher`. Has no effect when resuming an existing project.
+    settings_precedence : SettingsPrecedence, optional
+        Controls how saved project settings are merged with caller-supplied *settings* when
+        resuming an existing `.subtrans` project.
 
     Returns
     -------
@@ -307,6 +318,7 @@ def init_project(
     Notes
     -----
     Subtitles are preprocessed and batched using the supplied settings or default values.
+    When resuming an existing project, preprocessing and batching are skipped.
 
     Examples
     --------
@@ -335,7 +347,11 @@ def init_project(
 
         if project.existing_project:
             project_settings = project.GetProjectSettings()
-            options.update(project_settings)
+            if settings_precedence == SettingsPrecedence.Project:
+                options.update(project_settings)
+            else:
+                # User precedence: project settings only fill keys the caller did not supply
+                options.update({k: v for k, v in project_settings.items() if k not in options})
 
         if settings:
             project.UpdateProjectSettings(settings)
@@ -345,17 +361,20 @@ def init_project(
         if not subtitles or not subtitles.originals:
             raise SubtitleError(f"No subtitles were loaded from '{normalised_path}'")
 
-        if options.get_bool('preprocess_subtitles'):
-            preprocess_subtitles(subtitles, options)
+        if not project.existing_project:
+            # Resumed projects already contain synchronised scenes/batches — re-running
+            # these mutators would desync originals from translated and break resumption.
+            if options.get_bool('preprocess_subtitles'):
+                preprocess_subtitles(subtitles, options)
 
-        if auto_batch:
-            batch_subtitles(
-                subtitles,
-                scene_threshold=options.get_float('scene_threshold') or 60.0,
-                min_batch_size=options.get_int('min_batch_size') or 1,
-                max_batch_size=options.get_int('max_batch_size') or 100,
-                prevent_overlap=options.get_bool('prevent_overlapping_times'),
-            )
+            if auto_batch:
+                batch_subtitles(
+                    subtitles,
+                    scene_threshold=options.get_float('scene_threshold') or 60.0,
+                    min_batch_size=options.get_int('min_batch_size') or 1,
+                    max_batch_size=options.get_int('max_batch_size') or 100,
+                    prevent_overlap=options.get_bool('prevent_overlapping_times'),
+                )
 
     return project
 
@@ -436,6 +455,7 @@ def batch_subtitles(
 __all__ = [
     '__version__',
     'Options',
+    'SettingsPrecedence',
     'SettingsType',
     'Subtitles',
     'SubtitleScene',

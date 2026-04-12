@@ -338,7 +338,7 @@ def init_project(
     """
     project = SubtitleProject(persistent=persistent)
 
-    options = Options(settings)
+    settings = SettingsType(settings or {})
 
     normalised_path = GetInputPath(filepath)
 
@@ -348,10 +348,11 @@ def init_project(
         if project.existing_project:
             project_settings = project.GetProjectSettings()
             if settings_precedence == SettingsPrecedence.Project:
-                options.update(project_settings)
+                # Project settings win over caller-supplied values
+                settings.update(project_settings)
             else:
                 # User precedence: project settings only fill keys the caller did not supply
-                options.update({k: v for k, v in project_settings.items() if k not in (settings or {})})
+                settings.update({k: v for k, v in project_settings.items() if k not in settings})
 
         if settings:
             project.UpdateProjectSettings(settings)
@@ -364,6 +365,7 @@ def init_project(
         if not project.existing_project:
             # Resumed projects already contain synchronised scenes/batches — re-running
             # these mutators would desync originals from translated and break resumption.
+            options = Options(settings)
             if options.get_bool('preprocess_subtitles'):
                 preprocess_subtitles(subtitles, options)
 

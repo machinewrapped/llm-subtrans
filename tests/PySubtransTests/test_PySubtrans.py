@@ -14,7 +14,7 @@ from PySubtrans import (
     init_translator,
     init_translation_provider,
 )
-from PySubtrans.Helpers.TestCases import DummyProvider, LoggedTestCase  # type: ignore
+from PySubtrans.Helpers.TestCases import LoggedTestCase
 from ..TestData.chinese_dinner import chinese_dinner_json_data
 from PySubtrans.Helpers.Tests import (
     log_input_expected_error,
@@ -187,15 +187,17 @@ class PySubtransConvenienceTests(LoggedTestCase):
     def TestInitProjectResumePreservesState(self) -> None:
         """Resuming an existing project must not re-batch or re-preprocess (issue #410)"""
         options = self._create_options()
-
-        with tempfile.NamedTemporaryFile('w', suffix='.srt', delete=False, encoding='utf-8') as handle:
-            handle.write(self.srt_content)
-            subtitle_path = handle.name
-
-        project = init_project(options, filepath=subtitle_path, persistent=True)
-        project_file = project.projectfile
+        subtitle_path = None
+        project_file = None
 
         try:
+            with tempfile.NamedTemporaryFile('w', suffix='.srt', delete=False, encoding='utf-8') as handle:
+                handle.write(self.srt_content)
+                subtitle_path = handle.name
+
+            project = init_project(options, filepath=subtitle_path, persistent=True)
+            project_file = project.projectfile
+
             initial_scene_count = project.subtitles.scenecount
             initial_line_count = project.subtitles.linecount
             self.assertLoggedGreater("initial scene count", initial_scene_count, 0)
@@ -234,11 +236,85 @@ class PySubtransConvenienceTests(LoggedTestCase):
             )
 
         finally:
-            if os.path.exists(subtitle_path):
+            if subtitle_path and os.path.exists(subtitle_path):
                 os.remove(subtitle_path)
             if project_file and os.path.exists(project_file):
                 os.remove(project_file)
 
+
+    def TestInitProjectPrecedenceProject(self) -> None:
+        """SettingsPrecedence.Project must preserve saved project settings over conflicting caller values"""
+        options = self._create_options()  # target_language="Spanish"
+        subtitle_path = None
+        project_file = None
+
+        try:
+            with tempfile.NamedTemporaryFile('w', suffix='.srt', delete=False, encoding='utf-8') as handle:
+                handle.write(self.srt_content)
+                subtitle_path = handle.name
+
+            project = init_project(options, filepath=subtitle_path, persistent=True)
+            project_file = project.projectfile
+            project.SaveProjectFile()
+
+            # Resume with a conflicting target_language; project's "Spanish" must win
+            caller_options = init_options(
+                provider="Dummy Provider",
+                model="dummy-model",
+                target_language="French",
+            )
+            resumed = init_project(
+                caller_options,
+                filepath=project_file,
+                persistent=True,
+                settings_precedence=SettingsPrecedence.Project,
+            )
+
+            saved_language = resumed.subtitles.settings.get('target_language')
+            self.assertLoggedEqual("target_language preserved (project wins)", "Spanish", saved_language)
+
+        finally:
+            if subtitle_path and os.path.exists(subtitle_path):
+                os.remove(subtitle_path)
+            if project_file and os.path.exists(project_file):
+                os.remove(project_file)
+
+    def TestInitProjectPrecedenceUser(self) -> None:
+        """SettingsPrecedence.User must let caller settings override saved project settings"""
+        options = self._create_options()  # target_language="Spanish"
+        subtitle_path = None
+        project_file = None
+
+        try:
+            with tempfile.NamedTemporaryFile('w', suffix='.srt', delete=False, encoding='utf-8') as handle:
+                handle.write(self.srt_content)
+                subtitle_path = handle.name
+
+            project = init_project(options, filepath=subtitle_path, persistent=True)
+            project_file = project.projectfile
+            project.SaveProjectFile()
+
+            # Resume with a conflicting target_language; caller's "French" must win
+            caller_options = init_options(
+                provider="Dummy Provider",
+                model="dummy-model",
+                target_language="French",
+            )
+            resumed = init_project(
+                caller_options,
+                filepath=project_file,
+                persistent=True,
+                settings_precedence=SettingsPrecedence.User,
+            )
+
+            saved_language = resumed.subtitles.settings.get('target_language')
+            self.assertLoggedEqual("target_language overridden (user wins)", "French", saved_language)
+
+        finally:
+            if subtitle_path and os.path.exists(subtitle_path):
+                os.remove(subtitle_path)
+            if project_file and os.path.exists(project_file):
+                os.remove(project_file)
 
     def test_json_workflow_with_events(self) -> None:
         """Test the JSON workflow example from README documentation"""

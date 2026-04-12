@@ -28,7 +28,7 @@ class TokenUsage():
     prompt_tokens: int = field(default=0)
     output_tokens: int = field(default=0)
 
-    def add(self, content : dict) -> None:
+    def Add(self, content : dict) -> None:
         """Add token counts from a translation response content dict."""
         self.prompt_tokens += content.get('prompt_tokens') or 0
         self.output_tokens += content.get('output_tokens') or 0
@@ -57,7 +57,7 @@ class TranslationProgressLogger():
         self.token_usage : TokenUsage = TokenUsage()
 
     @contextmanager
-    def track(self, translator : SubtitleTranslator):
+    def Track(self, translator : SubtitleTranslator):
         """Context manager that attaches/detaches progress tracking around a translation."""
         self._attach(translator)
         try:
@@ -91,11 +91,11 @@ class TranslationProgressLogger():
             prompt = content.get('prompt_tokens') or 0
             output = content.get('output_tokens') or 0
             token_info = f" [{prompt} in / {output} out tokens]"
-            self.token_usage.add(content)
+            self.token_usage.Add(content)
         else:
             token_info = ""
             if batch.translation:
-                self.token_usage.add(batch.translation.content)
+                self.token_usage.Add(batch.translation.content)
 
         logging.info("Translated batch %s: %s%s", label, progress, token_info)
 
@@ -357,7 +357,7 @@ def TranslateProject(project : SubtitleProject, options : Options, verbose : boo
     translator : SubtitleTranslator = init_translator(options)
 
     try:
-        with progress_logger.track(translator):
+        with progress_logger.Track(translator):
             project.TranslateSubtitles(translator)
 
         if project.use_project_file:

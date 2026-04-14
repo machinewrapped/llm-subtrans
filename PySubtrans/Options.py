@@ -81,6 +81,7 @@ default_settings = {
     'whitespaces_to_newline' : env_bool('WHITESPACES_TO_NEWLINE', False),
     'full_width_punctuation': env_bool('FULL_WIDTH_PUNCTUATION', False),
     'convert_wide_dashes': env_bool('CONVERT_WIDE_DASHES', True),
+    'use_terminology_map': env_bool('USE_TERMINOLOGY_MAP', False),
     'retry_on_error': env_bool('RETRY_ON_ERROR', True),
     'autosplit_on_error': env_bool('AUTOSPLIT_ON_ERROR', False),
     'max_lines': env_int('MAX_LINES', None),

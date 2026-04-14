@@ -39,6 +39,21 @@ default_instructions = linesep.join([
     "continuing to evolve is the key to survival.",
     ])
 
+default_terminology_instructions = linesep.join([
+    "If a terminology block is provided in the context, use those translations consistently for every listed term.",
+    "",
+    "After the translated subtitles, add a <terminology> block listing any new key terms from this batch that",
+    "require a fixed translation throughout the movie — character names, titles, organisations, locations,",
+    "unique objects, or cultural/technical concepts. Omit common words and terms already in the context.",
+    "",
+    "Format each entry as one 'original|translation' pair per line:",
+    "<terminology>",
+    "OriginalTerm|TranslatedTerm",
+    "</terminology>",
+    "",
+    "If there are no new terms worth adding, omit the <terminology> block entirely.",
+    ])
+
 default_retry_instructions = linesep.join([
 	"There was an issue with the previous translation.",
 	"",
@@ -52,6 +67,7 @@ class Instructions:
         self.prompt : str|None = None
         self.instructions : str|None = None
         self.retry_instructions : str|None = None
+        self.terminology_instructions : str|None = None
         self.instruction_file : str|None = None
         self.target_language : str|None = None
         self.task_type : str|None = DEFAULT_TASK_TYPE
@@ -76,6 +92,7 @@ class Instructions:
         self.prompt = settings.get('prompt') or default_user_prompt
         self.instructions = settings.get('instructions') or default_instructions
         self.retry_instructions = settings.get('retry_instructions') or default_retry_instructions
+        self.terminology_instructions = settings.get('terminology_instructions') or default_terminology_instructions
         self.instruction_file = settings.get('instruction_file')
         self.target_language = None
         self.task_type = settings.get('task_type') or DEFAULT_TASK_TYPE

@@ -343,6 +343,24 @@ def ExtractTagList(tagname, text):
         return text, tag_list
     return text, []
 
+def ExtractTagDict(tagname : str, text : str) -> tuple[str, dict[str,str]]:
+    """
+    Look for an xml-like tag in the input text, and extract the contents as a dict of 'key|value' pairs, one per line.
+    """
+    text, tag = ExtractTag(tagname, text)
+    if not tag:
+        return text, {}
+    result : dict[str,str] = {}
+    for line in tag.splitlines():
+        line = line.strip()
+        if '|' in line:
+            key, _, value = line.partition('|')
+            key = key.strip()
+            value = value.strip()
+            if key and value:
+                result[key] = value
+    return text, result
+
 def SanitiseSummary(summary : str, movie_name : str|None = None, max_summary_length : int|None = None):
     """
     Remove trivial parts of summary text and limit the length if required

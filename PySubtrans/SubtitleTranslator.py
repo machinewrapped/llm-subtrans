@@ -47,6 +47,7 @@ class SubtitleTranslator:
         self.stop_on_error = settings.get_bool('stop_on_error')
         self.retry_on_error = settings.get_bool('retry_on_error')
         self.split_on_error = settings.get_bool('autosplit_on_error')
+        self.use_terminology_map = settings.get_bool('use_terminology_map')
         self.max_summary_length = settings.get_int('max_summary_length')
         self.retranslate = settings.get_bool('retranslate')
         self.reparse = settings.get_bool('reparse')
@@ -58,6 +59,12 @@ class SubtitleTranslator:
         self.instructions : Instructions = settings.GetInstructions()
         self.task_type : str = self.instructions.task_type or DEFAULT_TASK_TYPE
         self.user_prompt : str = settings.BuildUserPrompt()
+
+        if self.use_terminology_map and self.instructions.terminology_instructions:
+            self.instructions.instructions = '\n\n'.join(filter(None, [
+                self.instructions.instructions,
+                self.instructions.terminology_instructions
+            ]))
 
         substitutions_mode = settings.get_str('substitution_mode') or Substitutions.Mode.Auto
         substitutions_list = settings.get('substitutions', {})
@@ -181,6 +188,16 @@ class SubtitleTranslator:
 
                 # Notify observers the batch was translated
                 self.events.batch_translated.send(self, batch=batch)
+
+                # Accumulate terminology from the translation into the shared map (new terms only)
+                if self.use_terminology_map and batch.translation and batch.translation.terminology:
+                    with subtitles.lock:
+                        current_map = subtitles.settings.get('terminology_map')
+                        updated = dict(current_map) if isinstance(current_map, dict) else {}
+                        for term, translation in batch.translation.terminology.items():
+                            if term not in updated:
+                                updated[term] = translation
+                        subtitles.settings['terminology_map'] = updated
 
                 if batch.errors:
                     self._emit_warning(_("Errors encountered translating scene {scene} batch {batch}").format(scene=batch.scene, batch=batch.number))

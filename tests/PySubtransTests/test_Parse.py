@@ -2,7 +2,7 @@ import unittest
 from enum import Enum
 
 from PySubtrans.Helpers import GetValueName, GetValueFromName
-from PySubtrans.Helpers.Parse import ParseDelayFromHeader, ParseNames
+from PySubtrans.Helpers.Parse import FormatTerminologyMap, ParseDelayFromHeader, ParseNames, ParseTerminologyMap
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 
 
@@ -92,6 +92,48 @@ class TestParseValues(LoggedTestCase):
                     result,
                     input_value=(value, names, default),
                 )
+
+class TestParseTerminologyMap(LoggedTestCase):
+    parse_cases = [
+        ("Dragon|Drache\nHero|Held", {"Dragon": "Drache", "Hero": "Held"}),
+        ("Dragon|Drache", {"Dragon": "Drache"}),
+        ("", {}),
+        (None, {}),
+        ("MissingPipe", {}),
+        ("Key|Value|Extra", {"Key": "Value|Extra"}),
+        ({"Dragon": "Drache"}, {"Dragon": "Drache"}),
+        (["Dragon|Drache", "Hero|Held"], {"Dragon": "Drache", "Hero": "Held"}),
+        ("  Dragon  |  Drache  ", {"Dragon": "Drache"}),
+    ]
+
+    def test_ParseTerminologyMap(self):
+        for value, expected in self.parse_cases:
+            with self.subTest(value=value):
+                result = ParseTerminologyMap(value)
+                self.assertLoggedEqual("parsed terminology map", expected, result, input_value=value)
+
+
+class TestFormatTerminologyMap(LoggedTestCase):
+    format_cases = [
+        ({"Dragon": "Drache", "Hero": "Held"}, ["Dragon|Drache", "Hero|Held"]),
+        ({"Single": "Term"}, ["Single|Term"]),
+        ({}, []),
+        (None, []),
+    ]
+
+    def test_FormatTerminologyMap(self):
+        for value, expected_lines in self.format_cases:
+            with self.subTest(value=value):
+                result = FormatTerminologyMap(value)
+                result_lines = result.splitlines() if result else []
+                self.assertLoggedSequenceEqual("formatted terminology lines", expected_lines, result_lines, input_value=value)
+
+    def test_RoundTrip(self):
+        original = {"Dragon": "Drache", "Hero": "Held", "Magic Sword": "Zauberschwert"}
+        formatted = FormatTerminologyMap(original)
+        parsed = ParseTerminologyMap(formatted)
+        self.assertLoggedEqual("round-trip terminology map", original, parsed)
+
 
 if __name__ == '__main__':
     unittest.main()

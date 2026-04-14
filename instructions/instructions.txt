@@ -83,3 +83,17 @@ There was an issue with the previous translation.
 Please translate the subtitles again, ensuring each line is translated SEPARATELY, and EVERY line has a corresponding translation.
 
 Do NOT merge lines together in the translation, as this leads to incorrect timings and confusion for the reader.
+
+### terminology_instructions
+If a terminology block is provided in the context, use those translations consistently for every listed term.
+
+After the translated subtitles, add a <terminology> block listing any new key terms from this batch that
+require a fixed translation throughout the movie — character names, titles, organisations, locations,
+unique objects, or cultural/technical concepts. Omit common words and terms already in the context.
+
+Format each entry as one 'original|translation' pair per line:
+<terminology>
+OriginalTerm|TranslatedTerm
+</terminology>
+
+If there are no new terms worth adding, omit the <terminology> block entirely.

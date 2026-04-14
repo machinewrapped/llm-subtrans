@@ -7,7 +7,7 @@ from PySubtrans.SubtitleLine import SubtitleLine
 default_prompt_template: str = "<context>\n{context}\n</context>\n\n{prompt}\n\n<summary>Summary of the batch</summary>\n<scene>Summary of the scene</scene>\n"
 default_line_template: str = "#{number}\nOriginal>\n{text}\nTranslation>\n"
 default_tag_template: str = "<{tag}>{content}</{tag}>"
-default_context_tags: list[str] = ['description', 'names', 'history', 'scene', 'summary', 'batch']
+default_context_tags: list[str] = ['description', 'names', 'terminology', 'history', 'scene', 'summary', 'batch']
 
 class TranslationPrompt:
     """

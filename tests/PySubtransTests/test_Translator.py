@@ -4,9 +4,12 @@ from unittest.mock import patch
 
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.Parse import ParseNames
+from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, LoggedTestCase
+from PySubtrans.Translation import Translation
 from PySubtrans.Helpers.SubtitleHelpers import FindBestSplitIndex
 from PySubtrans.Helpers.TestCases import DummyProvider, PrepareSubtitles, SubtitleTestCase
 from PySubtrans.Helpers.Tests import log_info, log_test_name
+from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleEditor import SubtitleEditor
@@ -351,5 +354,189 @@ class SplitBatchTranslationTests(SubtitleTestCase):
                     translator.TranslateBatch(self.batch_1, None, self.context)
 
         self.assertLoggedEqual("Retry not triggered when split succeeded", 0, mock_retry.call_count)
+
+
+class TerminologyMapParsingTests(LoggedTestCase):
+    """Tests for Translation.terminology property and <terminology> tag extraction"""
+
+    parse_cases = [
+        (
+            "Line 1\nLine 2\n<terminology>Dragon|Drache\nHero|Held</terminology>",
+            {"Dragon": "Drache", "Hero": "Held"},
+        ),
+        (
+            "<terminology>Knight|Ritter</terminology>\nTranslation text here",
+            {"Knight": "Ritter"},
+        ),
+        (
+            "Just plain translation text with no tag",
+            None,
+        ),
+        (
+            "<terminology>MissingPipe</terminology>\nSome text",
+            None,
+        ),
+        (
+            "<terminology>Key|Value|Extra</terminology>",
+            {"Key": "Value|Extra"},
+        ),
+        (
+            "<terminology></terminology>",
+            None,
+        ),
+    ]
+
+    def test_terminology_property(self):
+        for text, expected in self.parse_cases:
+            with self.subTest(text=text[:50]):
+                translation = Translation({'text': text})
+                self.assertLoggedEqual("terminology dict", expected, translation.terminology, input_value=text)
+
+    def test_terminology_tag_stripped_from_text(self):
+        text = "Line 1\nLine 2\n<terminology>Dragon|Drache</terminology>"
+        translation = Translation({'text': text})
+        self.assertLoggedIsNotNone("translation text present", translation.text)
+        if translation.text:
+            self.assertLoggedNotIn("terminology tag absent from text", "<terminology>", translation.text)
+
+    def test_terminology_is_none_without_tag(self):
+        translation = Translation({'text': "Just some translation text"})
+        self.assertLoggedIsNone("no terminology when tag absent", translation.terminology)
+
+
+class TerminologyMapContextTests(SubtitleTestCase):
+    """Tests for GetBatchContext including/excluding the terminology key"""
+
+    def _make_subtitles(self, terminology_map : dict|None = None) -> Subtitles:
+        subtitles = BuildSubtitlesFromLineCounts([[5]])
+        subtitles.UpdateSettings(SettingsType({
+            'movie_name': 'Test Movie',
+            'description': 'A test movie',
+            'names': ['Alice', 'Bob'],
+        }))
+        if terminology_map is not None:
+            subtitles.settings['terminology_map'] = terminology_map
+        return subtitles
+
+    def test_terminology_included_when_map_set(self):
+        """GetBatchContext includes 'terminology' key when terminology_map is populated"""
+        terminology_map = {"Dragon": "Drache", "Hero": "Held"}
+        subtitles = self._make_subtitles(terminology_map)
+
+        context = GetBatchContext(subtitles, 1, 1)
+
+        self.assertLoggedIn("terminology key present", 'terminology', context)
+        terminology = context.get('terminology', '')
+        self.assertLoggedIn("Dragon entry in terminology", "Dragon|Drache", terminology)
+        self.assertLoggedIn("Hero entry in terminology", "Hero|Held", terminology)
+
+    def test_terminology_absent_when_map_not_set(self):
+        """GetBatchContext omits 'terminology' key when no terminology_map in settings"""
+        subtitles = self._make_subtitles()
+
+        context = GetBatchContext(subtitles, 1, 1)
+
+        self.assertLoggedNotIn("terminology key absent", 'terminology', context)
+
+    def test_terminology_absent_when_map_empty(self):
+        """GetBatchContext omits 'terminology' key when terminology_map is an empty dict"""
+        subtitles = self._make_subtitles(terminology_map={})
+
+        context = GetBatchContext(subtitles, 1, 1)
+
+        self.assertLoggedNotIn("terminology key absent for empty map", 'terminology', context)
+
+
+class TerminologyMapAccumulationTests(SubtitleTestCase):
+    """Tests for SubtitleTranslator accumulating terminology into subtitles.settings"""
+
+    def __init__(self, methodName):
+        super().__init__(methodName, custom_options={
+            'max_batch_size': 100,
+            'use_terminology_map': True,
+        })
+
+    def _make_data_with_terminology(self, batch_key : str, terminology : dict) -> dict:
+        """Return a copy of chinese_dinner_data with a <terminology> block appended to one batch response"""
+        term_block = '\n<terminology>' + '\n'.join(f"{k}|{v}" for k, v in terminology.items()) + '</terminology>'
+        data = SettingsType(chinese_dinner_data)
+        response_map = data.get_dict('response_map')
+        response_map.add(batch_key, (response_map.get_str(batch_key) or '') + term_block)
+        return data
+
+    def _setup(self, data : dict) -> tuple[Subtitles, SubtitleTranslator]:
+        provider = DummyProvider(data=data)
+        originals = PrepareSubtitles(data, 'original')
+        batcher = SubtitleBatcher(self.options)
+        with SubtitleEditor(originals) as editor:
+            editor.AutoBatch(batcher)
+        translator = SubtitleTranslator(self.options, translation_provider=provider)
+        return originals, translator
+
+    def test_terminology_accumulated_after_batch(self):
+        """TranslateScene merges terminology into subtitles.settings['terminology_map']"""
+        expected = {"Dragon": "Drache", "Hero": "Held"}
+        data = self._make_data_with_terminology('Translate scene 1 batch 1', expected)
+        originals, translator = self._setup(data)
+
+        scene = originals.GetScene(1)
+        self.assertLoggedIsNotNone("Scene 1 exists", scene)
+        if not scene:
+            return
+
+        translator.TranslateScene(originals, scene, batch_numbers=[1])
+
+        terminology_map = originals.settings.get('terminology_map')
+        self.assertLoggedIsInstance("terminology_map is a dict", terminology_map, dict)
+        if not isinstance(terminology_map, dict):
+            return
+        for term, translation in expected.items():
+            self.assertLoggedIn(f"term '{term}' present", term, terminology_map)
+            self.assertLoggedEqual(f"translation for '{term}'", translation, terminology_map.get(term))
+
+    def test_terminology_first_seen_wins(self):
+        """Pre-existing terminology entries are not overwritten (first-seen-wins)"""
+        expected = {"Dragon": "Ueberdrache", "Hero": "Held"}
+        data = self._make_data_with_terminology('Translate scene 1 batch 1', expected)
+        originals, translator = self._setup(data)
+        originals.settings['terminology_map'] = {"Dragon": "Drache"}
+
+        scene = originals.GetScene(1)
+        self.assertLoggedIsNotNone("Scene 1 exists", scene)
+        if not scene:
+            return
+
+        translator.TranslateScene(originals, scene, batch_numbers=[1])
+
+        terminology_map = originals.settings.get('terminology_map')
+        self.assertLoggedIsInstance("terminology_map is a dict", terminology_map, dict)
+        if not isinstance(terminology_map, dict):
+            return
+        self.assertLoggedEqual("Dragon keeps first translation", "Drache", terminology_map.get("Dragon"))
+        self.assertLoggedIn("Hero was added", "Hero", terminology_map)
+
+    def test_no_accumulation_when_disabled(self):
+        """Terminology is not accumulated when use_terminology_map is False"""
+        expected = {"Dragon": "Drache"}
+        data = self._make_data_with_terminology('Translate scene 1 batch 1', expected)
+
+        options = deepcopy(self.options)
+        options.add('use_terminology_map', False)
+        provider = DummyProvider(data=data)
+        originals = PrepareSubtitles(data, 'original')
+        batcher = SubtitleBatcher(options)
+        with SubtitleEditor(originals) as editor:
+            editor.AutoBatch(batcher)
+        translator = SubtitleTranslator(options, translation_provider=provider)
+
+        scene = originals.GetScene(1)
+        self.assertLoggedIsNotNone("Scene 1 exists", scene)
+        if not scene:
+            return
+
+        translator.TranslateScene(originals, scene, batch_numbers=[1])
+
+        terminology_map = originals.settings.get('terminology_map')
+        self.assertLoggedTrue("terminology_map not populated", not terminology_map)
 
 

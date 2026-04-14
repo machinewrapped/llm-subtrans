@@ -38,6 +38,10 @@ def GetBatchContext(subtitles: Subtitles, scene_number: int, batch_number: int, 
         if 'names' in subtitles.settings:
             context['names'] = ParseNames(subtitles.settings.get('names', []))
 
+        terminology_map = subtitles.settings.get('terminology_map')
+        if isinstance(terminology_map, dict) and terminology_map:
+            context['terminology'] = '\n'.join(f"{k}|{v}" for k, v in terminology_map.items())
+
         history_lines = GetHistory(subtitles, scene_number, batch_number, max_lines)
 
         if history_lines:

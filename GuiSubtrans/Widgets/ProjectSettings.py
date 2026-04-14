@@ -19,7 +19,7 @@ from GuiSubtrans.ProjectDataModel import ProjectDataModel
 
 from GuiSubtrans.Widgets.Widgets import OptionsGrid, TextBoxEditor
 from PySubtrans.Helpers import GetValueName
-from PySubtrans.Helpers.Parse import ParseNames
+from PySubtrans.Helpers.Parse import FormatTerminologyMap, ParseNames
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.Subtitles import Subtitles
@@ -65,6 +65,7 @@ class ProjectSettings(QGroupBox):
             'names': ParseNames(self._gettextvalue('names')),
             'substitutions': Substitutions.Parse(self._gettextvalue('substitutions')),
             'substitution_mode': self._gettextvalue('substitution_mode'),
+            'terminology_map': self._gettextvalue('terminology_map') if 'terminology_map' in self.widgets else self.settings.get('terminology_map'),
             'model': self._gettextvalue('model') if 'model' in self.widgets else self.settings.get('model'),
             'provider': self._gettextvalue('provider') if 'provider' in self.widgets else self.settings.get('provider'),
         })
@@ -112,6 +113,9 @@ class ProjectSettings(QGroupBox):
             self.settings['model'] = datamodel.selected_model
             self.settings['provider'] = datamodel.provider
             self.settings['project_path'] = os.path.dirname(datamodel.project.projectfile or "project.subtrans")
+            terminology = self.settings.get('terminology_map')
+            if isinstance(terminology, dict):
+                self.settings['terminology_map'] = FormatTerminologyMap(terminology)
             self.BuildForm(self.settings)
 
     def Populate(self):
@@ -132,6 +136,7 @@ class ProjectSettings(QGroupBox):
             self.AddMultiLineOption(_("Names"), settings, 'names')
             self.AddMultiLineOption(_("Substitutions"), settings, 'substitutions')
             self.AddDropdownOption(_("Substitution Mode"), settings, 'substitution_mode', Substitutions.Mode)
+            self.AddMultiLineOption(_("Terminology Map"), settings, 'terminology_map')
             self.AddButton("", _("Edit Instructions"), self._edit_instructions)
             self.AddButton("", _("Copy From Another Project"), self._copy_from_another_project)
             if len(self.provider_list) > 1:

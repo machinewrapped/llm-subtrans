@@ -19,6 +19,41 @@ def ParseNames(name_list : str|list|None|Any) -> list[str]:
 
     return []
 
+def ParseTerminologyMap(value : Any) -> dict[str,str]:
+    """
+    Parse a terminology map from a string of 'original|translation' pairs (one per line),
+    a list of such strings, or an existing dict.
+    """
+    if not value:
+        return {}
+
+    if isinstance(value, dict):
+        return { str(k): str(v) for k, v in value.items() if k and v }
+
+    if isinstance(value, list):
+        lines = value
+    else:
+        lines = str(value).splitlines()
+
+    result : dict[str,str] = {}
+    for line in lines:
+        line = line.strip()
+        if '|' in line:
+            key, _, val = line.partition('|')
+            key = key.strip()
+            val = val.strip()
+            if key and val:
+                result[key] = val
+    return result
+
+def FormatTerminologyMap(terminology_map : Any) -> str:
+    """
+    Format a terminology map as a newline-separated string of 'original|translation' pairs.
+    """
+    if not terminology_map:
+        return ""
+    return '\n'.join(f"{k}|{v}" for k, v in terminology_map.items())
+
 def ParseDelayFromHeader(value : str) -> float:
     """
     Try to figure out how long a suggested retry-after is

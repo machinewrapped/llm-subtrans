@@ -5,7 +5,7 @@ import threading
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import ParseNames
+from PySubtrans.Helpers.Parse import ParseNames, ParseTerminologyMap
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SettingsType import SettingsType
@@ -41,7 +41,8 @@ class SubtitleProject:
         'include_original': None,
         'add_right_to_left_markers': None,
         'instruction_file': None,
-        'format': None
+        'format': None,
+        'terminology_map': None
     })
    
     def __init__(self, persistent : bool = False):
@@ -203,6 +204,10 @@ class SubtitleProject:
                 substitutions_list = filtered_settings.get('substitutions', [])
                 if substitutions_list:
                     filtered_settings['substitutions'] = Substitutions.Parse(substitutions_list)
+
+            if 'terminology_map' in filtered_settings:
+                raw_map = filtered_settings['terminology_map']
+                filtered_settings['terminology_map'] = ParseTerminologyMap(raw_map)  # type: ignore[assignment]
 
             # Check if there are any actual changes
             common_keys = filtered_settings.keys() & self.subtitles.settings.keys()
@@ -382,7 +387,7 @@ class SubtitleProject:
         if not self.subtitles:
             return SettingsType()
 
-        return SettingsType({ key : value for key, value in self.subtitles.settings.items() if value is not None and (value != '' or isinstance(value, list)) })
+        return SettingsType({ key : value for key, value in self.subtitles.settings.items() if value is not None and (value != '' or isinstance(value, (list, dict))) })
 
     def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:
         """

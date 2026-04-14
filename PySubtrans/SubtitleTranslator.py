@@ -170,6 +170,11 @@ class SubtitleTranslator:
             for batch in batches:
                 context = GetBatchContext(subtitles, scene.number, batch.number, self.max_history)
 
+                # Store the terminology that will be injected into this batch's prompt so that
+                # batch_translated observers can read it from batch.context['terminology'].
+                if self.use_terminology_map and context.get('terminology'):
+                    batch.AddContext('terminology', context['terminology'])
+
                 try:
                     self.TranslateBatch(batch, line_numbers, context)
 
@@ -191,13 +196,34 @@ class SubtitleTranslator:
 
                 # Accumulate terminology from the translation into the shared map (new terms only)
                 if self.use_terminology_map and batch.translation and batch.translation.terminology:
+                    returned_terms = batch.translation.terminology
+                    new_terms : dict[str, str] = {}
+                    conflict_terms : dict[str, tuple[str, str]] = {}
+
                     with subtitles.lock:
-                        current_map = subtitles.settings.get('terminology_map')
-                        updated = dict(current_map) if isinstance(current_map, dict) else {}
-                        for term, translation in batch.translation.terminology.items():
-                            if term not in updated:
-                                updated[term] = translation
-                        subtitles.settings['terminology_map'] = updated
+                        # Ensure the key exists so get_dict returns a stored mutable reference.
+                        if 'terminology_map' not in subtitles.settings:
+                            subtitles.settings['terminology_map'] = SettingsType()
+                        existing_map = subtitles.settings.get_dict('terminology_map')
+
+                        for term, proposed in returned_terms.items():
+                            existing = existing_map.get_str(term)
+                            if existing is None:
+                                new_terms[term] = proposed
+                            elif existing != proposed:
+                                conflict_terms[term] = (existing, proposed)
+
+                        # Update in-place — no write-back needed since existing_map IS the settings entry
+                        existing_map.update(new_terms)
+                        snapshot : dict[str, str] = {k: str(v) for k, v in existing_map.items()}
+
+                    self.events.terminology_updated.send(
+                        self,
+                        returned_terms=returned_terms,
+                        new_terms=new_terms,
+                        conflict_terms=conflict_terms,
+                        terminology_map=snapshot,
+                    )
 
                 if batch.errors:
                     self._emit_warning(_("Errors encountered translating scene {scene} batch {batch}").format(scene=batch.scene, batch=batch.number))

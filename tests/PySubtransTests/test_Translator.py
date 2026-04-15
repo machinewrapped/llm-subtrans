@@ -539,4 +539,31 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
         terminology_map = originals.settings.get('terminology_map')
         self.assertLoggedTrue("terminology_map not populated", not terminology_map)
 
+    def test_identity_mappings_are_ignored(self):
+        """Identity terminology pairs (left == right) are ignored and never stored."""
+        terms = {
+            "Qu Erming": "Qu Erming",
+            "Dragon": "Drache",
+            "  Hero  ": "Hero",
+        }
+        data = self._make_data_with_terminology('Translate scene 1 batch 1', terms)
+        originals, translator = self._setup(data)
+
+        scene = originals.GetScene(1)
+        self.assertLoggedIsNotNone("Scene 1 exists", scene)
+        if not scene:
+            return
+
+        translator.TranslateScene(originals, scene, batch_numbers=[1])
+
+        terminology_map = originals.settings.get('terminology_map')
+        self.assertLoggedIsInstance("terminology_map is a dict", terminology_map, dict)
+        if not isinstance(terminology_map, dict):
+            return
+
+        self.assertLoggedNotIn("identity term not stored", "Qu Erming", terminology_map)
+        self.assertLoggedNotIn("trimmed identity term not stored", "  Hero  ", terminology_map)
+        self.assertLoggedIn("non-identity term stored", "Dragon", terminology_map)
+        self.assertLoggedEqual("non-identity translation stored", "Drache", terminology_map.get("Dragon"))
+
 

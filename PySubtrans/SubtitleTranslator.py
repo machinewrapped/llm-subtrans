@@ -207,6 +207,11 @@ class SubtitleTranslator:
                         existing_map = subtitles.settings.get_dict('terminology_map')
 
                         for term, proposed in returned_terms.items():
+                            # Ignore identity mappings (e.g. Name|Name); they add no value
+                            # and pollute the shared terminology map.
+                            if str(term).strip() == str(proposed).strip():
+                                continue
+
                             existing = existing_map.get_str(term)
                             if existing is None:
                                 new_terms[term] = proposed

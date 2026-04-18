@@ -87,9 +87,9 @@ Do NOT merge lines together in the translation, as this leads to incorrect timin
 ### terminology_instructions
 If a terminology reference is provided, use those translations consistently.
 
-After translation, add a <terminology> block listing any newly encountered key terms from the subtitles
-that require a fixed translation — e.g. character names, titles, organisations, locations, unique objects, 
-or cultural and technical concepts. Omit common words and terminology that was provided as context.
+After translation, add a <terminology> block listing any key terms from the source subtitles that
+require a fixed translation — e.g. character names, titles, organisations, locations, unique objects, 
+or cultural and technical concepts. Omit common words and terminology that was already provided as context.
 
 Format each entry as one 'original::translation' pair per line, e.g.
 <terminology>

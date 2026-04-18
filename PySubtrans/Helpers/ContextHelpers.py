@@ -9,6 +9,13 @@ if TYPE_CHECKING:
     from PySubtrans.Subtitles import Subtitles
 
 
+def FormatTerminologyMap(terminology_map: dict[str, Any]) -> str:
+    """
+    Format a terminology map consistently for context consumers.
+    """
+    return '\n'.join(f"{key}|{value}" for key, value in terminology_map.items())
+
+
 def GetBatchContext(subtitles: Subtitles, scene_number: int, batch_number: int, max_lines: int|None = None) -> dict[str, Any]:
     """
     Get context for a batch of subtitles, by extracting summaries from previous scenes and batches
@@ -40,7 +47,7 @@ def GetBatchContext(subtitles: Subtitles, scene_number: int, batch_number: int, 
 
         terminology_map = subtitles.settings.get('terminology_map')
         if isinstance(terminology_map, dict) and terminology_map:
-            context['terminology'] = '\n'.join(f"{k}|{v}" for k, v in terminology_map.items())
+            context['terminology'] = FormatTerminologyMap(terminology_map)
 
         history_lines = GetHistory(subtitles, scene_number, batch_number, max_lines)
 

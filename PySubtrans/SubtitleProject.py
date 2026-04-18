@@ -5,7 +5,7 @@ import threading
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import ParseNames, ParseTerminologyMap
+from PySubtrans.Helpers.Parse import ParseKeyValuePairs, ParseNames
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SettingsType import SettingsType
@@ -207,7 +207,7 @@ class SubtitleProject:
 
             if 'terminology_map' in filtered_settings:
                 raw_map = filtered_settings['terminology_map']
-                filtered_settings['terminology_map'] = ParseTerminologyMap(raw_map)  # type: ignore[assignment]
+                filtered_settings['terminology_map'] = ParseKeyValuePairs(raw_map)  # type: ignore[assignment]
 
             # Check if there are any actual changes
             common_keys = filtered_settings.keys() & self.subtitles.settings.keys()

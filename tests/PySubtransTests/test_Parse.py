@@ -2,7 +2,7 @@ import unittest
 from enum import Enum
 
 from PySubtrans.Helpers import GetValueName, GetValueFromName
-from PySubtrans.Helpers.Parse import FormatTerminologyMap, ParseDelayFromHeader, ParseNames, ParseTerminologyMap
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseDelayFromHeader, ParseKeyValuePairs, ParseNames
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 
 
@@ -93,46 +93,46 @@ class TestParseValues(LoggedTestCase):
                     input_value=(value, names, default),
                 )
 
-class TestParseTerminologyMap(LoggedTestCase):
+class TestParseKeyValuePairs(LoggedTestCase):
     parse_cases = [
-        ("Dragon|Drache\nHero|Held", {"Dragon": "Drache", "Hero": "Held"}),
-        ("Dragon|Drache", {"Dragon": "Drache"}),
+        ("Dragon::Drache\nHero::Held", {"Dragon": "Drache", "Hero": "Held"}),
+        ("Dragon::Drache", {"Dragon": "Drache"}),
         ("", {}),
         (None, {}),
-        ("MissingPipe", {}),
-        ("Key|Value|Extra", {"Key": "Value|Extra"}),
+        ("MissingSeparator", {}),
+        ("Key::Value::Extra", {"Key": "Value::Extra"}),
         ({"Dragon": "Drache"}, {"Dragon": "Drache"}),
-        (["Dragon|Drache", "Hero|Held"], {"Dragon": "Drache", "Hero": "Held"}),
-        ("  Dragon  |  Drache  ", {"Dragon": "Drache"}),
+        (["Dragon::Drache", "Hero::Held"], {"Dragon": "Drache", "Hero": "Held"}),
+        ("  Dragon  ::  Drache  ", {"Dragon": "Drache"}),
     ]
 
-    def test_ParseTerminologyMap(self):
+    def test_ParseKeyValuePairs(self):
         for value, expected in self.parse_cases:
             with self.subTest(value=value):
-                result = ParseTerminologyMap(value)
-                self.assertLoggedEqual("parsed terminology map", expected, result, input_value=value)
+                result = ParseKeyValuePairs(value)
+                self.assertLoggedEqual("parsed key-value pairs", expected, result, input_value=value)
 
 
-class TestFormatTerminologyMap(LoggedTestCase):
+class TestFormatKeyValuePairs(LoggedTestCase):
     format_cases = [
-        ({"Dragon": "Drache", "Hero": "Held"}, ["Dragon|Drache", "Hero|Held"]),
-        ({"Single": "Term"}, ["Single|Term"]),
+        ({"Dragon": "Drache", "Hero": "Held"}, ["Dragon::Drache", "Hero::Held"]),
+        ({"Single": "Term"}, ["Single::Term"]),
         ({}, []),
         (None, []),
     ]
 
-    def test_FormatTerminologyMap(self):
+    def test_FormatKeyValuePairs(self):
         for value, expected_lines in self.format_cases:
             with self.subTest(value=value):
-                result = FormatTerminologyMap(value)
+                result = FormatKeyValuePairs(value)
                 result_lines = result.splitlines() if result else []
-                self.assertLoggedSequenceEqual("formatted terminology lines", expected_lines, result_lines, input_value=value)
+                self.assertLoggedSequenceEqual("formatted key-value lines", expected_lines, result_lines, input_value=value)
 
     def test_RoundTrip(self):
         original = {"Dragon": "Drache", "Hero": "Held", "Magic Sword": "Zauberschwert"}
-        formatted = FormatTerminologyMap(original)
-        parsed = ParseTerminologyMap(formatted)
-        self.assertLoggedEqual("round-trip terminology map", original, parsed)
+        formatted = FormatKeyValuePairs(original)
+        parsed = ParseKeyValuePairs(formatted)
+        self.assertLoggedEqual("round-trip key-value pairs", original, parsed)
 
 
 if __name__ == '__main__':

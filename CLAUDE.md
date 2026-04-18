@@ -8,6 +8,9 @@ Secrets are stored in a .env file - NEVER read the contents of the file.
 
 Run tests\unit_tests.py at the end of a task to validate the change, unless it purely touched UI code (the GUI is not covered by unit tests). Activate the envsubtrans virtual environment first.
 
+## Project structure
+Before conducting exploratory searches of the code base, consult `docs/architecture.md` for information on the project architecture, structure and components to guide the search.
+
 ## Console Output
 Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Windows console errors
 
@@ -55,5 +58,3 @@ Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Window
   - **None Safety**: Use `.get(key, default)` with appropriate default values to avoid Pylance warnings, or assert then test for None values.
   - **Optional Dependencies**: Test modules must not have top-level imports of optional packages. Guard them with `importlib.util.find_spec` and skip the class with `@unittest.skipUnless`, mirroring the pattern used in the corresponding provider.
 
-## Information
-Consult `docs/architecture.md` for detailed information on the project architecture and components.

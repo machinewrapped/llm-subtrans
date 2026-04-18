@@ -19,7 +19,7 @@ from GuiSubtrans.ProjectDataModel import ProjectDataModel
 
 from GuiSubtrans.Widgets.Widgets import OptionsGrid, TextBoxEditor
 from PySubtrans.Helpers import GetValueName
-from PySubtrans.Helpers.Parse import FormatTerminologyMap, ParseNames
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseNames
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.Subtitles import Subtitles
@@ -115,7 +115,7 @@ class ProjectSettings(QGroupBox):
             self.settings['project_path'] = os.path.dirname(datamodel.project.projectfile or "project.subtrans")
             terminology = self.settings.get('terminology_map')
             if isinstance(terminology, dict):
-                self.settings['terminology_map'] = FormatTerminologyMap(terminology)
+                self.settings['terminology_map'] = FormatKeyValuePairs(terminology)
             self.BuildForm(self.settings)
 
     def Populate(self):

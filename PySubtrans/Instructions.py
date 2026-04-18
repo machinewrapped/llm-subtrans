@@ -40,18 +40,16 @@ default_instructions = linesep.join([
     ])
 
 default_terminology_instructions = linesep.join([
-    "If a terminology block is provided in the context, use those translations consistently for every listed term.",
+    "If a terminology reference is provided, use those translations consistently.",
     "",
-    "After the translated subtitles, add a <terminology> block listing any new key terms from this batch that",
-    "require a fixed translation throughout the movie — character names, titles, organisations, locations,",
-    "unique objects, or cultural/technical concepts. Omit common words and terms already in the context.",
+    "After translation, add a <terminology> block listing any key terms from the source subtitles that",
+    "require a fixed translation — e.g. character names, titles, organisations, locations, unique objects,",
+    "or cultural and technical concepts. Omit common words and terminology that was provided as context.",
     "",
-    "Format each entry as one 'original|translation' pair per line:",
+    "Format each entry as one 'original::translation' pair per line, e.g.",
     "<terminology>",
-    "OriginalTerm|TranslatedTerm",
+    "Source Language::目標語言",
     "</terminology>",
-    "",
-    "If there are no new terms worth adding, omit the <terminology> block entirely.",
     ])
 
 default_retry_instructions = linesep.join([

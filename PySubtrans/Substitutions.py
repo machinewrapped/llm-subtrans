@@ -4,6 +4,7 @@ import regex
 from enum import Enum
 
 from PySubtrans.Helpers import GetValueFromName
+from PySubtrans.Helpers.Parse import KEY_VALUE_SEPARATOR, ParseKeyValuePairs
 
 class Substitutions:
     """
@@ -106,7 +107,7 @@ class Substitutions:
         return GetValueFromName(mode, list(self.Mode))
 
     @classmethod
-    def Parse(cls, sub_list : str|list|dict|Any, separator="::") -> dict:
+    def Parse(cls, sub_list : str|list|dict|Any, separator=KEY_VALUE_SEPARATOR) -> dict:
         """
         Parse a list of (before,after) pairs from a string, dictionary or list of strings, or a file containing such pairs.
 
@@ -126,16 +127,14 @@ class Substitutions:
         if isinstance(sub_list, list):
             substitutions = {}
             for sub in sub_list:
-                if "::" in sub:
-                    before, after = sub.split(separator)
-                    substitutions[before] = after
+                if separator in sub:
+                    substitutions.update(ParseKeyValuePairs(sub, separator=separator))
                 elif sub.strip():
                     try:
                         with open(sub, "r", encoding="utf-8", newline='') as f:
                             for line in [line.strip() for line in f if line.strip()]:
-                                if "::" in line:
-                                    before, after = line.split("::")
-                                    substitutions[before] = after
+                                if separator in line:
+                                    substitutions.update(ParseKeyValuePairs(line, separator=separator))
                                 else:
                                     raise ValueError(f"Invalid substitution format in {sub}: {line}")
 

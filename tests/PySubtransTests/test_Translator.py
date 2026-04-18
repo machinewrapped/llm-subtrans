@@ -361,11 +361,11 @@ class TerminologyMapParsingTests(LoggedTestCase):
 
     parse_cases = [
         (
-            "Line 1\nLine 2\n<terminology>Dragon|Drache\nHero|Held</terminology>",
+            "Line 1\nLine 2\n<terminology>Dragon::Drache\nHero::Held</terminology>",
             {"Dragon": "Drache", "Hero": "Held"},
         ),
         (
-            "<terminology>Knight|Ritter</terminology>\nTranslation text here",
+            "<terminology>Knight::Ritter</terminology>\nTranslation text here",
             {"Knight": "Ritter"},
         ),
         (
@@ -373,12 +373,12 @@ class TerminologyMapParsingTests(LoggedTestCase):
             None,
         ),
         (
-            "<terminology>MissingPipe</terminology>\nSome text",
+            "<terminology>MissingSeparator</terminology>\nSome text",
             None,
         ),
         (
-            "<terminology>Key|Value|Extra</terminology>",
-            {"Key": "Value|Extra"},
+            "<terminology>Key::Value::Extra</terminology>",
+            {"Key": "Value::Extra"},
         ),
         (
             "<terminology></terminology>",
@@ -393,7 +393,7 @@ class TerminologyMapParsingTests(LoggedTestCase):
                 self.assertLoggedEqual("terminology dict", expected, translation.terminology, input_value=text)
 
     def test_terminology_tag_stripped_from_text(self):
-        text = "Line 1\nLine 2\n<terminology>Dragon|Drache</terminology>"
+        text = "Line 1\nLine 2\n<terminology>Dragon::Drache</terminology>"
         translation = Translation({'text': text})
         self.assertLoggedIsNotNone("translation text present", translation.text)
         if translation.text:
@@ -427,8 +427,8 @@ class TerminologyMapContextTests(SubtitleTestCase):
 
         self.assertLoggedIn("terminology key present", 'terminology', context)
         terminology = context.get('terminology', '')
-        self.assertLoggedIn("Dragon entry in terminology", "Dragon|Drache", terminology)
-        self.assertLoggedIn("Hero entry in terminology", "Hero|Held", terminology)
+        self.assertLoggedIn("Dragon entry in terminology", "Dragon::Drache", terminology)
+        self.assertLoggedIn("Hero entry in terminology", "Hero::Held", terminology)
 
     def test_terminology_absent_when_map_not_set(self):
         """GetBatchContext omits 'terminology' key when no terminology_map in settings"""
@@ -458,7 +458,7 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
 
     def _make_data_with_terminology(self, batch_key : str, terminology : dict) -> dict:
         """Return a copy of chinese_dinner_data with a <terminology> block appended to one batch response"""
-        term_block = '\n<terminology>' + '\n'.join(f"{k}|{v}" for k, v in terminology.items()) + '</terminology>'
+        term_block = '\n<terminology>' + '\n'.join(f"{k}::{v}" for k, v in terminology.items()) + '</terminology>'
         data = SettingsType(chinese_dinner_data)
         response_map = data.get_dict('response_map')
         response_map.add(batch_key, (response_map.get_str(batch_key) or '') + term_block)

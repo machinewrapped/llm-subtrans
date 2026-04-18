@@ -3,26 +3,13 @@ import regex
 import json
 import logging
 
-def ParseNames(name_list : str|list|None|Any) -> list[str]:
+KEY_VALUE_SEPARATOR = "::"
+
+def ParseKeyValuePairs(value : Any, separator : str = KEY_VALUE_SEPARATOR) -> dict[str,str]:
     """
-    Parse a list of names from a string or list of strings
-    """
-    if name_list is None:
-        return []
-
-    if isinstance(name_list, str):
-        name_list = regex.split(r"[\n,]\s*", name_list)
-
-    if isinstance(name_list, list):
-        # Split each string in the list by comma or newline
-        return [name.strip() for name in name_list for name in regex.split(r"[\n,]\s*", name) if name.strip()]
-
-    return []
-
-def ParseTerminologyMap(value : Any) -> dict[str,str]:
-    """
-    Parse a terminology map from a string of 'original|translation' pairs (one per line),
-    a list of such strings, or an existing dict.
+    Parse a dict of (key, value) pairs from a dict, list, or newline-separated string.
+    Each entry is split on the first occurrence of `separator`. Entries without the
+    separator or with empty key/value are skipped.
     """
     if not value:
         return {}
@@ -38,21 +25,37 @@ def ParseTerminologyMap(value : Any) -> dict[str,str]:
     result : dict[str,str] = {}
     for line in lines:
         line = str(line).strip()
-        if '|' in line:
-            key, _, val = line.partition('|')
+        if separator in line:
+            key, _, val = line.partition(separator)
             key = key.strip()
             val = val.strip()
             if key and val:
                 result[key] = val
     return result
 
-def FormatTerminologyMap(terminology_map : Any) -> str:
+def FormatKeyValuePairs(pairs : Any, separator : str = KEY_VALUE_SEPARATOR) -> str:
     """
-    Format a terminology map as a newline-separated string of 'original|translation' pairs.
+    Format a dict as newline-separated key<separator>value pairs.
     """
-    if not terminology_map:
+    if not pairs:
         return ""
-    return '\n'.join(f"{k}|{v}" for k, v in terminology_map.items())
+    return '\n'.join(f"{k}{separator}{v}" for k, v in pairs.items())
+
+def ParseNames(name_list : str|list|None|Any) -> list[str]:
+    """
+    Parse a list of names from a string or list of strings
+    """
+    if name_list is None:
+        return []
+
+    if isinstance(name_list, str):
+        name_list = regex.split(r"[\n,]\s*", name_list)
+
+    if isinstance(name_list, list):
+        # Split each string in the list by comma or newline
+        return [name.strip() for name in name_list for name in regex.split(r"[\n,]\s*", name) if name.strip()]
+
+    return []
 
 def ParseDelayFromHeader(value : str) -> float:
     """

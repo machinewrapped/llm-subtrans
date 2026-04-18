@@ -12,6 +12,7 @@ class TestSubstitutions(LoggedTestCase):
         ({"before": "after", "hello": "world"}, {"before": "after", "hello": "world"}),
         ("before::after\nhello::world", {"before": "after", "hello": "world"}),
         (["before::after", "hello::world"], {"before": "after", "hello": "world"}),
+        ("key::value::extra", {"key": "value::extra"}),
     ]
 
     def test_ParseSubstitutions(self):

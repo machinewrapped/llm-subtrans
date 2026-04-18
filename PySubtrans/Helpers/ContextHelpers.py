@@ -2,18 +2,12 @@ from __future__ import annotations
 
 from typing import Any, TYPE_CHECKING
 
-from PySubtrans.Helpers.Parse import ParseNames
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseNames
 from PySubtrans.SubtitleError import SubtitleError
 
 if TYPE_CHECKING:
     from PySubtrans.Subtitles import Subtitles
 
-
-def FormatTerminologyMap(terminology_map: dict[str, Any]) -> str:
-    """
-    Format a terminology map consistently for context consumers.
-    """
-    return '\n'.join(f"{key}|{value}" for key, value in terminology_map.items())
 
 
 def GetBatchContext(subtitles: Subtitles, scene_number: int, batch_number: int, max_lines: int|None = None) -> dict[str, Any]:
@@ -47,7 +41,7 @@ def GetBatchContext(subtitles: Subtitles, scene_number: int, batch_number: int, 
 
         terminology_map = subtitles.settings.get('terminology_map')
         if isinstance(terminology_map, dict) and terminology_map:
-            context['terminology'] = FormatTerminologyMap(terminology_map)
+            context['terminology'] = FormatKeyValuePairs(terminology_map)
 
         history_lines = GetHistory(subtitles, scene_number, batch_number, max_lines)
 

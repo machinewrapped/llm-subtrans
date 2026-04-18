@@ -85,15 +85,13 @@ Please translate the subtitles again, ensuring each line is translated SEPARATEL
 Do NOT merge lines together in the translation, as this leads to incorrect timings and confusion for the reader.
 
 ### terminology_instructions
-If a terminology block is provided in the context, use those translations consistently for every listed term.
+If a terminology reference is provided, use those translations consistently.
 
-After the translated subtitles, add a <terminology> block listing any new key terms from the subtitles that
-require a fixed translation throughout the movie — character names, titles, organisations, locations,
-unique objects, or cultural/technical concepts. Omit common words and terms already in the context.
+After translation, add a <terminology> block listing any newly encountered key terms from the subtitles
+that require a fixed translation — e.g. character names, titles, organisations, locations, unique objects, 
+or cultural and technical concepts. Omit common words and terminology that was provided as context.
 
-Format each entry as one 'original|translation' pair per line:
+Format each entry as one 'original::translation' pair per line, e.g.
 <terminology>
-Source Language|目標語言
+Source Language::目標語言
 </terminology>
-
-If there are no new terms worth adding, omit the <terminology> block entirely.

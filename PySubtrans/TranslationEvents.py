@@ -27,8 +27,10 @@ class TranslationEvents:
         scene_translated(sender, scene):
             Emitted when a complete scene has been translated
 
-        terminology_updated(sender, returned_terms, new_terms, conflict_terms, terminology_map):
+        terminology_updated(sender, scene, batch, returned_terms, new_terms, conflict_terms, terminology_map):
             Emitted after a batch when the model returns a <terminology> block.
+            - scene: the scene containing the batch that produced the terminology update
+            - batch: the specific batch that produced the terminology update
             - returned_terms: all terms the model emitted (dict[str, str])
             - new_terms: terms added to the map for the first time (dict[str, str])
             - conflict_terms: terms already in the map that the model tried to retranslate differently (dict[str, tuple[str, str]] — original -> (existing, proposed))

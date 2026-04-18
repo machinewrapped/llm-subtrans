@@ -595,4 +595,59 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
         self.assertLoggedIn("correctly oriented term added", "食事", terminology_map)
         self.assertLoggedEqual("correctly oriented term value", "meal", terminology_map.get("食事"))
 
+    def test_terminology_accumulated_after_split_retranslation(self):
+        """Terminology returned by split half-translations is merged into the shared terminology map."""
+        options = deepcopy(self.options)
+        options.add('autosplit_on_error', True)
+        provider = DummyProvider(data=chinese_dinner_data)
+        originals = PrepareSubtitles(chinese_dinner_data, 'original')
+        batcher = SubtitleBatcher(options)
+        with SubtitleEditor(originals) as editor:
+            editor.AutoBatch(batcher)
+        translator = SubtitleTranslator(options, translation_provider=provider)
+
+        scene = originals.GetScene(1)
+        self.assertLoggedIsNotNone("Scene 1 exists", scene)
+        if not scene:
+            return
+
+        original_process = translator.ProcessBatchTranslation
+        process_call_count = 0
+
+        def inject_initial_error(batch, translation, line_numbers=None):
+            nonlocal process_call_count
+            process_call_count += 1
+            original_process(batch, translation, line_numbers)
+            if process_call_count == 1:
+                batch.errors = [SubtitleError("Injected test error to force split")]
+
+        original_request = translator.client.RequestTranslation
+        request_call_count = 0
+
+        def request_with_split_terminology(prompt, temperature=None, streaming_callback=None):
+            nonlocal request_call_count
+            request_call_count += 1
+            translation = original_request(prompt, temperature, streaming_callback)
+            if not translation:
+                return None
+
+            full_text = translation.full_text or translation.text or ""
+            if request_call_count == 2:
+                full_text += "\n<terminology>星野::Hoshino</terminology>"
+            elif request_call_count == 3:
+                full_text += "\n<terminology>食事::meal</terminology>"
+            return Translation({'text': full_text})
+
+        with patch.object(translator, 'ProcessBatchTranslation', side_effect=inject_initial_error):
+            with patch.object(translator.client, 'RequestTranslation', side_effect=request_with_split_terminology):
+                translator.TranslateScene(originals, scene, batch_numbers=[1])
+
+        terminology_map = originals.settings.get('terminology_map')
+        self.assertLoggedIsInstance("terminology_map is a dict", terminology_map, dict)
+        if not isinstance(terminology_map, dict):
+            return
+
+        self.assertLoggedEqual("split learned 星野 mapping", "Hoshino", terminology_map.get("星野"))
+        self.assertLoggedEqual("split learned 食事 mapping", "meal", terminology_map.get("食事"))
+
 

@@ -470,6 +470,12 @@ class SubtitleTranslator:
 
         merged_text = "\n".join(t.text for t in half_translations if t.text)
         merged_translation = Translation({'text': merged_text})
+        merged_terminology : dict[str, str] = {}
+        for half_translation in half_translations:
+            if half_translation.terminology:
+                merged_terminology.update(half_translation.terminology)
+        if merged_terminology:
+            merged_translation.content['terminology'] = merged_terminology
 
         try:
             self.ProcessBatchTranslation(batch, merged_translation, line_numbers)

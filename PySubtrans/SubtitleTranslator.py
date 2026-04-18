@@ -191,51 +191,19 @@ class SubtitleTranslator:
                 if self.aborted:
                     return
 
-                # Notify observers the batch was translated
-                self.events.batch_translated.send(self, batch=batch)
-
-                # Accumulate terminology from the translation into the shared map (new terms only)
-                if self.use_terminology_map and batch.translation and batch.translation.terminology:
-                    returned_terms = batch.translation.terminology
-                    new_terms : dict[str, str] = {}
-                    conflict_terms : dict[str, tuple[str, str]] = {}
-
-                    with subtitles.lock:
-                        # Ensure the key exists so get_dict returns a stored mutable reference.
-                        if 'terminology_map' not in subtitles.settings:
-                            subtitles.settings['terminology_map'] = SettingsType()
-                        existing_map = subtitles.settings.get_dict('terminology_map')
-
-                        for term, proposed in returned_terms.items():
-                            # Ignore identity mappings (e.g. Name|Name); they add no value
-                            # and pollute the shared terminology map.
-                            if str(term).strip() == str(proposed).strip():
-                                continue
-
-                            existing = existing_map.get_str(term)
-                            if existing is None:
-                                new_terms[term] = proposed
-                            elif existing != proposed:
-                                conflict_terms[term] = (existing, proposed)
-
-                        # Update in-place — no write-back needed since existing_map IS the settings entry
-                        existing_map.update(new_terms)
-                        snapshot : dict[str, str] = {k: str(v) for k, v in existing_map.items()}
-
-                    self.events.terminology_updated.send(
-                        self,
-                        returned_terms=returned_terms,
-                        new_terms=new_terms,
-                        conflict_terms=conflict_terms,
-                        terminology_map=snapshot,
-                    )
+                if self.use_terminology_map:
+                    self._update_terminology_map(subtitles, batch)
 
                 if batch.errors:
                     self._emit_warning(_("Errors encountered translating scene {scene} batch {batch}").format(scene=batch.scene, batch=batch.number))
                     scene.errors.extend(batch.errors)
                     self.errors.extend(batch.errors)
-                    if self.stop_on_error:
-                        return
+
+                # Notify observers the batch was translated — after terminology and errors are settled
+                self.events.batch_translated.send(self, batch=batch)
+
+                if batch.errors and self.stop_on_error:
+                    return
 
                 if self.max_lines and self.lines_processed >= self.max_lines:
                     self._emit_info(_("Reached max_lines limit of ({lines} lines)... finishing").format(lines=self.max_lines))
@@ -591,6 +559,44 @@ class SubtitleTranslator:
 
         except Exception:
             pass
+
+    def _update_terminology_map(self, subtitles : Subtitles, batch : SubtitleBatch):
+        """
+        Merge terminology returned by a batch translation into the shared terminology map.
+        Only new terms are added; existing entries are preserved to avoid data loss.
+        """
+        if not batch.translation or not batch.translation.terminology:
+            return
+
+        returned_terms = batch.translation.terminology
+        new_terms : dict[str, str] = {}
+        conflict_terms : dict[str, tuple[str, str]] = {}
+
+        with subtitles.lock:
+            if 'terminology_map' not in subtitles.settings:
+                subtitles.settings['terminology_map'] = SettingsType()
+            existing_map = subtitles.settings.get_dict('terminology_map')
+
+            for term, proposed in returned_terms.items():
+                if str(term).strip() == str(proposed).strip():
+                    continue
+
+                existing = existing_map.get_str(term)
+                if existing is None:
+                    new_terms[term] = proposed
+                elif existing != proposed:
+                    conflict_terms[term] = (existing, proposed)
+
+            existing_map.update(new_terms)
+            snapshot : dict[str, str] = {k: str(v) for k, v in existing_map.items()}
+
+        self.events.terminology_updated.send(
+            self,
+            returned_terms=returned_terms,
+            new_terms=new_terms,
+            conflict_terms=conflict_terms,
+            terminology_map=snapshot,
+        )
 
     def _emit_error(self, message : str):
         """Emit an error event"""

@@ -61,7 +61,7 @@ def ParseKeyValuePairsOrFiles(entries : list[str], separator : str = KEY_VALUE_S
                         else:
                             raise ValueError(f"Invalid key/value format in {entry!r}: {line!r}")
             except FileNotFoundError:
-                logging.warning(f"Terminology/key-value file not found: {entry}")
+                logging.warning(f"Key-value file not found: {entry}")
     return result
 
 def FormatKeyValuePairs(pairs : Any, separator : str = KEY_VALUE_SEPARATOR) -> str:

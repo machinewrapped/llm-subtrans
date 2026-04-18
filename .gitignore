@@ -24,6 +24,7 @@ __pycache__
 /envsubtrans
 /llm_subtrans.egg-info
 /Projects
+/.worktrees
 /subtrans-env
 /test_projects
 /test_results

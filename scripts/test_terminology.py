@@ -173,6 +173,19 @@ def _load_report_json(path : pathlib.Path) -> dict:
 
 def _analyze_report(report : dict) -> dict:
     """Analyze terminology direction/provenance from a report dict."""
+    def _as_int(value : object) -> int:
+        """Best-effort int coercion for loosely typed JSON-derived values."""
+        if isinstance(value, bool):
+            return int(value)
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError:
+                return 0
+        return 0
+
     initial_map_raw = report.get('initial_map') or {}
     final_map_raw = report.get('final_map') or {}
     batches = report.get('batches') or []
@@ -284,6 +297,49 @@ def _analyze_report(report : dict) -> dict:
                 'exact_pair_line': item.exact_line,
             })
 
+    grouped_not_added : dict[tuple[str, str, str], tuple[int, tuple[int, int], tuple[int, int]]] = {}
+    reason_counts : dict[str, int] = {}
+    for row in returned_e2c_not_added:
+        key = str(row.get('key') or '')
+        value = str(row.get('value') or '')
+        reason = str(row.get('reason_not_added') or 'unknown')
+        scene = _as_int(row.get('scene'))
+        batch = _as_int(row.get('batch'))
+
+        reason_counts[reason] = reason_counts.get(reason, 0) + 1
+
+        group_key = (key, value, reason)
+        current = grouped_not_added.get(group_key)
+        if current is None:
+            grouped_not_added[group_key] = (1, (scene, batch), (scene, batch))
+            continue
+
+        count, first_seen, last_seen = current
+        if (scene, batch) < first_seen:
+            first_seen = (scene, batch)
+        if (scene, batch) > last_seen:
+            last_seen = (scene, batch)
+        grouped_not_added[group_key] = (count + 1, first_seen, last_seen)
+
+    grouped_not_added_rows = sorted(
+        [
+            {
+                'key': key,
+                'value': value,
+                'reason_not_added': reason,
+                'count': count,
+                'first_seen': {'scene': first_seen[0], 'batch': first_seen[1]},
+                'last_seen': {'scene': last_seen[0], 'batch': last_seen[1]},
+            }
+            for (key, value, reason), (count, first_seen, last_seen) in grouped_not_added.items()
+        ],
+        key=lambda x: (
+            -_as_int(x.get('count')),
+            str(x['reason_not_added']),
+            str(x['key']),
+        ),
+    )
+
     return {
         'report_file': report.get('file'),
         'total_batches': len(batches),
@@ -300,10 +356,12 @@ def _analyze_report(report : dict) -> dict:
         'possible_storage_reversal_examples': possible_storage_reversal_examples,
         'final_english_to_cjk_entries': final_e2c_entries,
         'returned_english_to_cjk_not_added': returned_e2c_not_added,
+        'returned_english_to_cjk_not_added_grouped': grouped_not_added_rows,
+        'returned_english_to_cjk_not_added_reason_counts': reason_counts,
     }
 
 
-def _print_analysis_summary(summary : dict) -> None:
+def _print_analysis_summary(summary : dict, detail : str = 'summary') -> None:
     """Print a human-readable summary for analysis mode."""
     counts = summary['counts']
     print("TERMINOLOGY REPORT ANALYSIS")
@@ -328,24 +386,57 @@ def _print_analysis_summary(summary : dict) -> None:
     if not items:
         print("  (none)")
     else:
-        for item in items:
+        entries_to_show = items if detail == 'full' else items[:12]
+        for item in entries_to_show:
             first = item.get('first_returned')
             sb = f"{first.get('scene')}.{first.get('batch')}" if first else "-"
             print(f"  {item.get('key')}|{item.get('value')}  first_returned={sb}")
+        if detail != 'full' and len(items) > len(entries_to_show):
+            print(f"  ... {len(items) - len(entries_to_show)} more (use --analysis-detail full)")
 
-    not_added = summary.get('returned_english_to_cjk_not_added') or []
+    reason_counts = summary.get('returned_english_to_cjk_not_added_reason_counts') or {}
+    if reason_counts:
+        print()
+        print("Not-added reasons (English->CJK):")
+        print("-" * 72)
+        for reason, count in sorted(reason_counts.items(), key=lambda x: (-int(x[1]), str(x[0]))):
+            print(f"  {reason}: {count}")
+
+    grouped = summary.get('returned_english_to_cjk_not_added_grouped') or []
     print()
-    print("Returned English->CJK terms not added:")
+    print("Returned English->CJK terms not added (grouped):")
     print("-" * 72)
-    if not not_added:
+    if not grouped:
         print("  (none)")
     else:
-        for item in not_added:
-            sb = f"{item.get('scene')}.{item.get('batch')}"
+        rows_to_show = grouped if detail == 'full' else grouped[:20]
+        for item in rows_to_show:
+            first = item.get('first_seen') or {}
+            last = item.get('last_seen') or {}
+            first_sb = f"{first.get('scene')}.{first.get('batch')}"
+            last_sb = f"{last.get('scene')}.{last.get('batch')}"
+            count = int(item.get('count') or 0)
             print(
-                f"  {sb}  {item.get('key')}|{item.get('value')}  "
-                f"reason={item.get('reason_not_added')}"
+                f"  x{count:<3} {item.get('key')}|{item.get('value')}  "
+                f"reason={item.get('reason_not_added')}  first={first_sb}  last={last_sb}"
             )
+        if detail != 'full' and len(grouped) > len(rows_to_show):
+            print(f"  ... {len(grouped) - len(rows_to_show)} more groups (use --analysis-detail full)")
+
+    if detail == 'full':
+        not_added = summary.get('returned_english_to_cjk_not_added') or []
+        print()
+        print("Returned English->CJK terms not added (raw rows):")
+        print("-" * 72)
+        if not not_added:
+            print("  (none)")
+        else:
+            for item in not_added:
+                sb = f"{item.get('scene')}.{item.get('batch')}"
+                print(
+                    f"  {sb}  {item.get('key')}|{item.get('value')}  "
+                    f"reason={item.get('reason_not_added')}"
+                )
 
     reversals = summary.get('possible_storage_reversal_examples') or []
     print()
@@ -376,7 +467,7 @@ def run_analysis_mode(args : argparse.Namespace) -> int:
         print(f"Error: invalid report JSON: {exc}", file=sys.stderr)
         return 1
 
-    _print_analysis_summary(summary)
+    _print_analysis_summary(summary, detail=args.analysis_detail)
 
     if args.analysis_json_out:
         out = pathlib.Path(args.analysis_json_out)
@@ -789,6 +880,8 @@ def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
                         help="Write a full JSON report to this path")
     parser.add_argument('--analyze-report', default=None,
                         help="Analyze an existing terminology report JSON instead of translating")
+    parser.add_argument('--analysis-detail', choices=['summary', 'full'], default='summary',
+                        help="Detail level for --analyze-report output (default: summary)")
     parser.add_argument('--analysis-json-out', default=None,
                         help="When --analyze-report is used, save machine-readable analysis JSON to this path")
     parser.add_argument('--verbose', action='store_true',

@@ -5,6 +5,9 @@ All notable changes to PySubtrans will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.8] - 2026-04-19
+Added opt-in terminology map: accumulates `original::translation` pairs across batches and injects them into subsequent prompt contexts for consistent translations throughout a file.
+
 ## [1.5.7] - 2025-11-23
 Added support for 'none' reasoning effort for OpenAI models (gpt-5.1 only) and improved error reporting for incompatible model/reasoning values.
 

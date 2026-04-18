@@ -60,11 +60,11 @@ class SubtitleTranslator:
         self.task_type : str = self.instructions.task_type or DEFAULT_TASK_TYPE
         self.user_prompt : str = settings.BuildUserPrompt()
 
+        base_instructions = self.instructions.instructions or ''
         if self.use_terminology_map and self.instructions.terminology_instructions:
-            self.instructions.instructions = '\n\n'.join(filter(None, [
-                self.instructions.instructions,
-                self.instructions.terminology_instructions
-            ]))
+            self.system_instructions : str = '\n\n'.join(filter(None, [base_instructions, self.instructions.terminology_instructions]))
+        else:
+            self.system_instructions : str = base_instructions
 
         substitutions_mode = settings.get_str('substitution_mode') or Substitutions.Mode.Auto
         substitutions_list = settings.get('substitutions', {})
@@ -75,7 +75,7 @@ class SubtitleTranslator:
         self.substitutions = Substitutions(substitutions_list, substitutions_mode)
 
         self.settings : SettingsType = settings.GetSettings()
-        self.settings['instructions'] = self.instructions.instructions
+        self.settings['instructions'] = self.system_instructions
         self.settings['retry_instructions'] = self.instructions.retry_instructions
 
         logging.debug(f"Translation prompt: {self.user_prompt}")
@@ -243,7 +243,7 @@ class SubtitleTranslator:
         if batch.summary:
             context['summary'] = batch.summary
 
-        instructions = self.instructions.instructions
+        instructions = self.system_instructions
         if not instructions:
             raise TranslationImpossibleError(_("No instructions provided for translation"))
 
@@ -440,7 +440,7 @@ class SubtitleTranslator:
         if split_index is None:
             return False
 
-        instructions = self.instructions.instructions
+        instructions = self.system_instructions
         if not instructions:
             return False
 

@@ -15,7 +15,7 @@ def ParseKeyValuePairs(value : Any, separator : str = KEY_VALUE_SEPARATOR) -> di
         return {}
 
     if isinstance(value, dict):
-        return { str(k): str(v) for k, v in value.items() if k and v }
+        return { str(k).strip(): str(v).strip() for k, v in value.items() if k and v }
 
     if isinstance(value, list):
         lines = value

@@ -191,6 +191,9 @@ class SubtitleTranslator:
                 if self.aborted:
                     return
 
+                # Notify observers the batch was translated
+                self.events.batch_translated.send(self, batch=batch)
+
                 if self.use_terminology_map:
                     self._update_terminology_map(subtitles, batch)
 
@@ -198,9 +201,6 @@ class SubtitleTranslator:
                     self._emit_warning(_("Errors encountered translating scene {scene} batch {batch}").format(scene=batch.scene, batch=batch.number))
                     scene.errors.extend(batch.errors)
                     self.errors.extend(batch.errors)
-
-                # Notify observers the batch was translated — after terminology and errors are settled
-                self.events.batch_translated.send(self, batch=batch)
 
                 if batch.errors and self.stop_on_error:
                     return
@@ -613,6 +613,8 @@ class SubtitleTranslator:
 
         self.events.terminology_updated.send(
             self,
+            scene=batch.scene,
+            batch=batch.number,
             returned_terms=returned_terms,
             new_terms=new_terms,
             conflict_terms=conflict_terms,

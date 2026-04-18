@@ -14,6 +14,10 @@ Usage:
     ./envsubtrans/Scripts/python.exe scripts/test_terminology.py subtitles.srt \\
         --provider OpenRouter --language French --output report.json
 
+    # Analyze an existing report in one pass:
+    ./envsubtrans/Scripts/python.exe scripts/test_terminology.py \\
+        --analyze-report report.json --analysis-json-out analysis.json
+
 The API key and any other provider-specific settings are read from .env when
 not supplied on the command line.
 """
@@ -26,6 +30,8 @@ import pathlib
 import sys
 import time
 from dataclasses import dataclass, field
+
+import regex
 
 from PySubtrans import (
     SubtitleError,
@@ -77,6 +83,18 @@ class RunState:
     terms            : dict[str, TermProvenance] = field(default_factory=dict)
 
 
+@dataclass
+class PairOccurrence:
+    """One returned terminology pair occurrence in a batch report."""
+    scene : int
+    batch : int
+    key : str
+    value : str
+    in_new_terms : bool
+    reason_not_added : str|None = None
+    exact_line : str|None = None
+
+
 # ---------------------------------------------------------------------------
 # Event handlers
 # ---------------------------------------------------------------------------
@@ -100,6 +118,273 @@ def _format_sb(value : tuple[int, int]|None) -> str:
         return "-"
     scene, batch = value
     return f"{scene}.{batch}"
+
+
+def _contains_cjk(text : str) -> bool:
+    """Return True if text contains at least one CJK ideograph."""
+    return bool(regex.search(r"\p{Script=Han}", text or ""))
+
+
+def _contains_latin_letter(text : str) -> bool:
+    """Return True if text contains at least one Latin letter."""
+    return bool(regex.search(r"\p{Script=Latin}", text or ""))
+
+
+def _looks_english_to_cjk(key : str, value : str) -> bool:
+    """Heuristic: key has Latin letters and value has CJK ideographs."""
+    return _contains_latin_letter(key) and _contains_cjk(value)
+
+
+def _extract_terminology_lines(response_text : str|None) -> list[str]:
+    """Extract raw terminology lines from <terminology>...</terminology> blocks."""
+    if not response_text:
+        return []
+
+    blocks = regex.findall(r"<terminology>(.*?)</terminology>", response_text, flags=regex.DOTALL|regex.IGNORECASE)
+    lines : list[str] = []
+    for block in blocks:
+        for raw_line in block.splitlines():
+            line = raw_line.strip()
+            if line and '|' in line:
+                lines.append(line)
+    return lines
+
+
+def _find_exact_pair_line(response_text : str|None, key : str, value : str) -> str|None:
+    """Find the exact terminology line matching key|value from response_text."""
+    target = f"{key}|{value}"
+    for line in _extract_terminology_lines(response_text):
+        if line == target:
+            return line
+    return None
+
+
+def _load_report_json(path : pathlib.Path) -> dict:
+    """Load and validate a terminology report JSON file."""
+    report = json.loads(path.read_text(encoding='utf-8'))
+    if not isinstance(report, dict):
+        raise ValueError("Report root must be a JSON object")
+    if 'batches' not in report or not isinstance(report.get('batches'), list):
+        raise ValueError("Report missing 'batches' list")
+    if 'final_map' not in report or not isinstance(report.get('final_map'), dict):
+        raise ValueError("Report missing 'final_map' object")
+    return report
+
+
+def _analyze_report(report : dict) -> dict:
+    """Analyze terminology direction/provenance from a report dict."""
+    initial_map_raw = report.get('initial_map') or {}
+    final_map_raw = report.get('final_map') or {}
+    batches = report.get('batches') or []
+
+    map_state : dict[str, str] = {str(k): str(v) for k, v in dict(initial_map_raw).items()}
+
+    occurrences : list[PairOccurrence] = []
+    first_returned_batch : dict[tuple[str, str], tuple[int, int]] = {}
+    first_returned_line : dict[tuple[str, str], str|None] = {}
+
+    total_returned_terms = 0
+    total_added_terms = 0
+
+    returned_e2c_total = 0
+    added_e2c_total = 0
+    skipped_e2c_total = 0
+
+    possible_storage_reversal_count = 0
+    possible_storage_reversal_examples : list[dict[str, object]] = []
+
+    for b in batches:
+        scene = int(b.get('scene') or 0)
+        batch = int(b.get('batch') or 0)
+        response_text = b.get('response_text')
+
+        returned_terms = {str(k): str(v) for k, v in dict(b.get('returned_terms') or {}).items()}
+        new_terms = {str(k): str(v) for k, v in dict(b.get('new_terms') or {}).items()}
+
+        total_returned_terms += len(returned_terms)
+        total_added_terms += len(new_terms)
+
+        for k, v in returned_terms.items():
+            key_pair = (k, v)
+            if key_pair not in first_returned_batch:
+                first_returned_batch[key_pair] = (scene, batch)
+                first_returned_line[key_pair] = _find_exact_pair_line(response_text, k, v)
+
+            is_e2c = _looks_english_to_cjk(k, v)
+            if is_e2c:
+                returned_e2c_total += 1
+
+            in_new_terms = k in new_terms and new_terms.get(k) == v
+            if is_e2c and in_new_terms:
+                added_e2c_total += 1
+
+            reason_not_added : str|None = None
+            if not in_new_terms:
+                if k.strip() == v.strip():
+                    reason_not_added = 'identity_pair'
+                elif map_state.get(v.strip()) == k.strip():
+                    reason_not_added = 'reverse_of_existing_pair'
+                elif k in map_state:
+                    reason_not_added = 'already_exists_same_key'
+                else:
+                    reason_not_added = 'filtered_or_unexplained'
+
+                if is_e2c:
+                    skipped_e2c_total += 1
+
+            occurrences.append(PairOccurrence(
+                scene=scene,
+                batch=batch,
+                key=k,
+                value=v,
+                in_new_terms=in_new_terms,
+                reason_not_added=reason_not_added,
+                exact_line=_find_exact_pair_line(response_text, k, v),
+            ))
+
+        for k, v in new_terms.items():
+            returned_value = returned_terms.get(k)
+            if returned_value is not None and returned_value != v:
+                possible_storage_reversal_count += 1
+                possible_storage_reversal_examples.append({
+                    'scene': scene,
+                    'batch': batch,
+                    'key': k,
+                    'returned_value': returned_value,
+                    'stored_new_value': v,
+                })
+
+            map_state[k] = v
+
+    final_map = {str(k): str(v) for k, v in dict(final_map_raw).items()}
+
+    final_e2c_entries : list[dict[str, object]] = []
+    for k, v in final_map.items():
+        if _looks_english_to_cjk(k, v):
+            first_scene_batch = first_returned_batch.get((k, v))
+            final_e2c_entries.append({
+                'key': k,
+                'value': v,
+                'first_returned': {
+                    'scene': first_scene_batch[0],
+                    'batch': first_scene_batch[1],
+                } if first_scene_batch else None,
+                'exact_pair_line': first_returned_line.get((k, v)),
+            })
+
+    returned_e2c_not_added : list[dict[str, object]] = []
+    for item in occurrences:
+        if _looks_english_to_cjk(item.key, item.value) and not item.in_new_terms:
+            returned_e2c_not_added.append({
+                'scene': item.scene,
+                'batch': item.batch,
+                'key': item.key,
+                'value': item.value,
+                'reason_not_added': item.reason_not_added,
+                'exact_pair_line': item.exact_line,
+            })
+
+    return {
+        'report_file': report.get('file'),
+        'total_batches': len(batches),
+        'counts': {
+            'total_returned_terms': total_returned_terms,
+            'total_added_terms': total_added_terms,
+            'final_map_size': len(final_map),
+            'final_english_to_cjk_entries': len(final_e2c_entries),
+            'returned_english_to_cjk_total': returned_e2c_total,
+            'added_english_to_cjk_total': added_e2c_total,
+            'returned_english_to_cjk_not_added': skipped_e2c_total,
+            'possible_storage_reversal_count': possible_storage_reversal_count,
+        },
+        'possible_storage_reversal_examples': possible_storage_reversal_examples,
+        'final_english_to_cjk_entries': final_e2c_entries,
+        'returned_english_to_cjk_not_added': returned_e2c_not_added,
+    }
+
+
+def _print_analysis_summary(summary : dict) -> None:
+    """Print a human-readable summary for analysis mode."""
+    counts = summary['counts']
+    print("TERMINOLOGY REPORT ANALYSIS")
+    print("=" * 72)
+    print(f"Report file: {summary.get('report_file')}")
+    print(f"Batches: {summary.get('total_batches')}")
+    print()
+    print("Counts:")
+    print(f"  total returned terms: {counts.get('total_returned_terms')}")
+    print(f"  total added terms: {counts.get('total_added_terms')}")
+    print(f"  final map size: {counts.get('final_map_size')}")
+    print(f"  final English->CJK entries: {counts.get('final_english_to_cjk_entries')}")
+    print(f"  returned English->CJK total: {counts.get('returned_english_to_cjk_total')}")
+    print(f"  added English->CJK total: {counts.get('added_english_to_cjk_total')}")
+    print(f"  returned English->CJK not added: {counts.get('returned_english_to_cjk_not_added')}")
+    print(f"  possible storage reversal count: {counts.get('possible_storage_reversal_count')}")
+    print()
+
+    print("Final English->CJK entries (with first seen batch):")
+    print("-" * 72)
+    items = summary.get('final_english_to_cjk_entries') or []
+    if not items:
+        print("  (none)")
+    else:
+        for item in items:
+            first = item.get('first_returned')
+            sb = f"{first.get('scene')}.{first.get('batch')}" if first else "-"
+            print(f"  {item.get('key')}|{item.get('value')}  first_returned={sb}")
+
+    not_added = summary.get('returned_english_to_cjk_not_added') or []
+    print()
+    print("Returned English->CJK terms not added:")
+    print("-" * 72)
+    if not not_added:
+        print("  (none)")
+    else:
+        for item in not_added:
+            sb = f"{item.get('scene')}.{item.get('batch')}"
+            print(
+                f"  {sb}  {item.get('key')}|{item.get('value')}  "
+                f"reason={item.get('reason_not_added')}"
+            )
+
+    reversals = summary.get('possible_storage_reversal_examples') or []
+    print()
+    print("Possible storage-reversal mismatches (returned vs stored-new):")
+    print("-" * 72)
+    if not reversals:
+        print("  (none)")
+    else:
+        for item in reversals:
+            sb = f"{item.get('scene')}.{item.get('batch')}"
+            print(
+                f"  {sb}  {item.get('key')}: "
+                f"returned='{item.get('returned_value')}' stored='{item.get('stored_new_value')}'"
+            )
+
+
+def run_analysis_mode(args : argparse.Namespace) -> int:
+    """Run one-pass analysis of an existing terminology report JSON."""
+    report_path = pathlib.Path(args.analyze_report)
+    if not report_path.exists():
+        print(f"Error: file not found: {report_path}", file=sys.stderr)
+        return 1
+
+    try:
+        report = _load_report_json(report_path)
+        summary = _analyze_report(report)
+    except (ValueError, json.JSONDecodeError) as exc:
+        print(f"Error: invalid report JSON: {exc}", file=sys.stderr)
+        return 1
+
+    _print_analysis_summary(summary)
+
+    if args.analysis_json_out:
+        out = pathlib.Path(args.analysis_json_out)
+        out.write_text(json.dumps(summary, ensure_ascii=False, indent=2), encoding='utf-8')
+        print()
+        print(f"Saved JSON analysis: {out}")
+
+    return 0
 
 def _parse_terminology_context(raw : str|None) -> dict[str, str]:
     """Parse the pipe-delimited terminology stored in batch.context into a dict."""
@@ -160,21 +445,21 @@ def _make_batch_handler(records : list[BatchRecord], state : RunState):
 
 
 def _make_terminology_handler(records : list[BatchRecord], state : RunState):
-    """Return a terminology_updated handler that enriches the latest batch record."""
+    """Return a terminology_updated handler that enriches the matching batch record."""
 
     def on_terminology_updated(
         sender,
+        scene : int|None = None,
+        batch : int|None = None,
         returned_terms : dict[str, str]|None = None,
         new_terms : dict[str, str]|None = None,
         conflict_terms : dict[str, tuple[str, str]]|None = None,
         terminology_map : dict[str, str]|None = None,
         **_,
     ):
-        if not records:
+        rec = next((r for r in records if r.scene == scene and r.batch == batch), None)
+        if rec is None:
             return
-
-        # terminology_updated always fires after batch_translated for the same batch
-        rec = records[-1]
         rec.returned_terms = dict(returned_terms or {})
         rec.new_terms      = dict(new_terms or {})
         rec.conflict_terms = dict(conflict_terms or {})
@@ -484,7 +769,7 @@ def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog=__doc__,
     )
-    parser.add_argument('subtitle_file',
+    parser.add_argument('subtitle_file', nargs='?',
                         help="Path to the subtitle file to translate")
     parser.add_argument('--provider', default='OpenRouter',
                         help="Translation provider (default: OpenRouter)")
@@ -502,6 +787,10 @@ def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
                         help="Scene gap threshold in seconds (default: 60)")
     parser.add_argument('--output', default=None,
                         help="Write a full JSON report to this path")
+    parser.add_argument('--analyze-report', default=None,
+                        help="Analyze an existing terminology report JSON instead of translating")
+    parser.add_argument('--analysis-json-out', default=None,
+                        help="When --analyze-report is used, save machine-readable analysis JSON to this path")
     parser.add_argument('--verbose', action='store_true',
                         help="Show DEBUG-level logging from PySubtrans internals")
     return parser.parse_args(argv)
@@ -518,4 +807,12 @@ def configure_logging(verbose : bool = False) -> None:
 if __name__ == '__main__':
     args = parse_args()
     configure_logging(args.verbose)
+
+    if args.analyze_report:
+        raise SystemExit(run_analysis_mode(args))
+
+    if not args.subtitle_file:
+        print("Error: subtitle_file is required unless --analyze-report is used", file=sys.stderr)
+        raise SystemExit(2)
+
     raise SystemExit(run(args))

@@ -19,6 +19,7 @@ from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationEvents import TranslationEvents
+from PySubtrans.TranslationParser import TranslationParser
 
 from ..TestData.chinese_dinner import chinese_dinner_data
 
@@ -145,6 +146,22 @@ class SubtitleTranslatorTests(SubtitleTestCase):
             self.assertLoggedEqual("Differences", expected_differences, differences)
 
             self.assertLoggedEqual("Unchanged", expected_unchanged, unchanged)
+
+    def test_ProcessTranslation_strips_unclosed_terminology_tag(self):
+        """TranslationParser should strip a trailing unclosed terminology tag from the last line."""
+        options = deepcopy(self.options)
+        options.add('max_characters', 3)
+        parser = TranslationParser(self.options.get_str('task_type') or "Translation", options)
+        translation = Translation({
+            'text': "#1\nOriginal>\nfoo\nTranslation>\nbar\n<terminology>foo::bar"
+        })
+
+        translated = parser.ProcessTranslation(translation)
+
+        self.assertIsNotNone(translated)
+        self.assertIsNotNone(parser.translated)
+        self.assertEqual(parser.translated[-1].text, "bar")
+        self.assertEqual(parser.errors, [])
 
 
 class TranslationEventsTests(SubtitleTestCase):

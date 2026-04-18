@@ -475,7 +475,9 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
 
     def test_terminology_accumulated_after_batch(self):
         """TranslateScene merges terminology into subtitles.settings['terminology_map']"""
-        expected = {"Dragon": "Drache", "Hero": "Held"}
+        # Terms must appear in the actual batch content to pass content validation.
+        # 星野 appears in the Japanese originals; Hoshino and meal appear in the translations.
+        expected = {"星野": "Hoshino", "食事": "meal"}
         data = self._make_data_with_terminology('Translate scene 1 batch 1', expected)
         originals, translator = self._setup(data)
 
@@ -496,10 +498,10 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
 
     def test_terminology_first_seen_wins(self):
         """Pre-existing terminology entries are not overwritten (first-seen-wins)"""
-        expected = {"Dragon": "Ueberdrache", "Hero": "Held"}
+        expected = {"星野": "Hoshino", "食事": "meal"}
         data = self._make_data_with_terminology('Translate scene 1 batch 1', expected)
         originals, translator = self._setup(data)
-        originals.settings['terminology_map'] = {"Dragon": "Drache"}
+        originals.settings['terminology_map'] = {"星野": "Hoseki"}
 
         scene = originals.GetScene(1)
         self.assertLoggedIsNotNone("Scene 1 exists", scene)
@@ -512,12 +514,12 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
         self.assertLoggedIsInstance("terminology_map is a dict", terminology_map, dict)
         if not isinstance(terminology_map, dict):
             return
-        self.assertLoggedEqual("Dragon keeps first translation", "Drache", terminology_map.get("Dragon"))
-        self.assertLoggedIn("Hero was added", "Hero", terminology_map)
+        self.assertLoggedEqual("星野 keeps first translation", "Hoseki", terminology_map.get("星野"))
+        self.assertLoggedIn("食事 was added", "食事", terminology_map)
 
     def test_no_accumulation_when_disabled(self):
         """Terminology is not accumulated when use_terminology_map is False"""
-        expected = {"Dragon": "Drache"}
+        expected = {"星野": "Hoshino"}
         data = self._make_data_with_terminology('Translate scene 1 batch 1', expected)
 
         options = deepcopy(self.options)
@@ -538,5 +540,59 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
 
         terminology_map = originals.settings.get('terminology_map')
         self.assertLoggedTrue("terminology_map not populated", not terminology_map)
+
+    def test_identity_mappings_are_ignored(self):
+        """Identity terminology pairs (left == right) are ignored and never stored."""
+        terms = {
+            "食事": "食事",      # identity in source language
+            "Hoshino": "Hoshino", # identity in target language
+            "星野": "Hoshino",   # valid non-identity pair
+        }
+        data = self._make_data_with_terminology('Translate scene 1 batch 1', terms)
+        originals, translator = self._setup(data)
+
+        scene = originals.GetScene(1)
+        self.assertLoggedIsNotNone("Scene 1 exists", scene)
+        if not scene:
+            return
+
+        translator.TranslateScene(originals, scene, batch_numbers=[1])
+
+        terminology_map = originals.settings.get('terminology_map')
+        self.assertLoggedIsInstance("terminology_map is a dict", terminology_map, dict)
+        if not isinstance(terminology_map, dict):
+            return
+
+        self.assertLoggedNotIn("source-language identity not stored", "食事", terminology_map)
+        self.assertLoggedNotIn("target-language identity not stored", "Hoshino", terminology_map)
+        self.assertLoggedIn("non-identity term stored", "星野", terminology_map)
+        self.assertLoggedEqual("non-identity translation stored", "Hoshino", terminology_map.get("星野"))
+
+    def test_reverse_mappings_are_corrected(self):
+        """Reversed pairs are auto-corrected using batch content; if the corrected pair already exists it is deduplicated."""
+        terms = {
+            "Hoshino": "星野",  # reversed — model put translation as key
+            "食事": "meal",     # correctly oriented
+        }
+        data = self._make_data_with_terminology('Translate scene 1 batch 1', terms)
+        originals, translator = self._setup(data)
+        originals.settings['terminology_map'] = {"星野": "Hoshino"}
+
+        scene = originals.GetScene(1)
+        self.assertLoggedIsNotNone("Scene 1 exists", scene)
+        if not scene:
+            return
+
+        translator.TranslateScene(originals, scene, batch_numbers=[1])
+
+        terminology_map = originals.settings.get('terminology_map')
+        self.assertLoggedIsInstance("terminology_map is a dict", terminology_map, dict)
+        if not isinstance(terminology_map, dict):
+            return
+
+        self.assertLoggedEqual("existing mapping preserved", "Hoshino", terminology_map.get("星野"))
+        self.assertLoggedNotIn("reversed key not added as new entry", "Hoshino", terminology_map)
+        self.assertLoggedIn("correctly oriented term added", "食事", terminology_map)
+        self.assertLoggedEqual("correctly oriented term value", "meal", terminology_map.get("食事"))
 
 

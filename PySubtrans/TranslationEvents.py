@@ -18,31 +18,39 @@ class TranslationEvents:
     e.g. to provide progress feedback or UI updates.
 
     Signals:
-        batch_translated(sender, batch): 
+        batch_translated(sender, batch):
             Emitted after each batch is translated
 
-        batch_updated(sender, batch): 
+        batch_updated(sender, batch):
             Emitted after each batch is updated in the subtitle project
 
-        scene_translated(sender, scene): 
+        scene_translated(sender, scene):
             Emitted when a complete scene has been translated
 
-        preprocessed(sender, scenes): 
+        terminology_updated(sender, returned_terms, new_terms, conflict_terms, terminology_map):
+            Emitted after a batch when the model returns a <terminology> block.
+            - returned_terms: all terms the model emitted (dict[str, str])
+            - new_terms: terms added to the map for the first time (dict[str, str])
+            - conflict_terms: terms already in the map that the model tried to retranslate differently (dict[str, tuple[str, str]] — original -> (existing, proposed))
+            - terminology_map: the full accumulated map after this batch (dict[str, str])
+
+        preprocessed(sender, scenes):
             Emitted after subtitles are batched and pre-processed (GuiSubtrans only)
 
-        error(sender, message): 
+        error(sender, message):
             Signals that an error was encountered during translation
 
-        warning(sender, message): 
+        warning(sender, message):
             Signals that a warning was encountered during translation
 
-        info(sender, message): 
+        info(sender, message):
             General informational message during translation
     """
     preprocessed: Signal
     batch_translated: Signal
     batch_updated: Signal
     scene_translated: Signal
+    terminology_updated: Signal
     error: Signal
     warning: Signal
     info: Signal
@@ -52,6 +60,7 @@ class TranslationEvents:
         self.batch_translated = Signal("translation-batch-translated")
         self.batch_updated = Signal("translation-batch-updated")
         self.scene_translated = Signal("translation-scene-translated")
+        self.terminology_updated = Signal("translation-terminology-updated")
 
         # Signals for logging translation events
         self.error = Signal("translation-error")

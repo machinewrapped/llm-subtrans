@@ -170,6 +170,11 @@ class SubtitleTranslator:
             for batch in batches:
                 context = GetBatchContext(subtitles, scene.number, batch.number, self.max_history)
 
+                # Store the terminology that will be injected into this batch's prompt so that
+                # batch_translated observers can read it from batch.context['terminology'].
+                if self.use_terminology_map and context.get('terminology'):
+                    batch.AddContext('terminology', context['terminology'])
+
                 try:
                     self.TranslateBatch(batch, line_numbers, context)
 
@@ -189,22 +194,16 @@ class SubtitleTranslator:
                 # Notify observers the batch was translated
                 self.events.batch_translated.send(self, batch=batch)
 
-                # Accumulate terminology from the translation into the shared map (new terms only)
-                if self.use_terminology_map and batch.translation and batch.translation.terminology:
-                    with subtitles.lock:
-                        current_map = subtitles.settings.get('terminology_map')
-                        updated = dict(current_map) if isinstance(current_map, dict) else {}
-                        for term, translation in batch.translation.terminology.items():
-                            if term not in updated:
-                                updated[term] = translation
-                        subtitles.settings['terminology_map'] = updated
+                if self.use_terminology_map:
+                    self._update_terminology_map(subtitles, batch)
 
                 if batch.errors:
                     self._emit_warning(_("Errors encountered translating scene {scene} batch {batch}").format(scene=batch.scene, batch=batch.number))
                     scene.errors.extend(batch.errors)
                     self.errors.extend(batch.errors)
-                    if self.stop_on_error:
-                        return
+
+                if batch.errors and self.stop_on_error:
+                    return
 
                 if self.max_lines and self.lines_processed >= self.max_lines:
                     self._emit_info(_("Reached max_lines limit of ({lines} lines)... finishing").format(lines=self.max_lines))
@@ -560,6 +559,67 @@ class SubtitleTranslator:
 
         except Exception:
             pass
+
+    def _update_terminology_map(self, subtitles : Subtitles, batch : SubtitleBatch):
+        """
+        Merge terminology returned by a batch translation into the shared terminology map.
+        Only new terms are added; existing entries are preserved to avoid data loss.
+        """
+        if not batch.translation or not batch.translation.terminology:
+            return
+
+        returned_terms = batch.translation.terminology
+        new_terms : dict[str, str] = {}
+        conflict_terms : dict[str, tuple[str, str]] = {}
+
+        original_text = ' '.join(line.text or '' for line in batch.originals)
+        translated_text = ' '.join(line.text or '' for line in batch.translated)
+
+        with subtitles.lock:
+            existing_map = subtitles.settings.get_dict('terminology_map', SettingsType())
+
+            for term, proposed in returned_terms.items():
+                term_norm = str(term).strip()
+                proposed_norm = str(proposed).strip()
+
+                if term_norm == proposed_norm:
+                    continue
+
+                # Orient the pair using batch content as ground truth.
+                # Swap if the key appears in translated but not originals.
+                if term_norm in translated_text and term_norm not in original_text:
+                    term, proposed = proposed, term
+                    term_norm, proposed_norm = proposed_norm, term_norm
+
+                # Reject if the source term doesn't appear in originals — it's hallucinated.
+                if term_norm not in original_text:
+                    continue
+
+                # Reject if the proposed translation doesn't appear in translated —
+                # canonising unused renderings would push future batches toward them.
+                if proposed_norm not in translated_text:
+                    continue
+
+                existing = existing_map.get_str(term)
+                if existing is None:
+                    new_terms[term] = proposed
+                elif existing != proposed:
+                    conflict_terms[term] = (existing, proposed)
+
+            existing_map.update(new_terms)
+            subtitles.settings['terminology_map'] = existing_map
+
+            snapshot : dict[str, str] = {k: str(v) for k, v in existing_map.items()}
+
+        self.events.terminology_updated.send(
+            self,
+            scene=batch.scene,
+            batch=batch.number,
+            returned_terms=returned_terms,
+            new_terms=new_terms,
+            conflict_terms=conflict_terms,
+            terminology_map=snapshot,
+        )
 
     def _emit_error(self, message : str):
         """Emit an error event"""

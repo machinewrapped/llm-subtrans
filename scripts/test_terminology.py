@@ -43,6 +43,8 @@ from PySubtrans import (
 )
 from PySubtrans.SubtitleBatch import SubtitleBatch
 
+KEY_VALUE_SEPARATOR = "::"
+
 # ---------------------------------------------------------------------------
 # Data containers
 # ---------------------------------------------------------------------------
@@ -145,14 +147,14 @@ def _extract_terminology_lines(response_text : str|None) -> list[str]:
     for block in blocks:
         for raw_line in block.splitlines():
             line = raw_line.strip()
-            if line and '|' in line:
+            if line and KEY_VALUE_SEPARATOR in line:
                 lines.append(line)
     return lines
 
 
 def _find_exact_pair_line(response_text : str|None, key : str, value : str) -> str|None:
-    """Find the exact terminology line matching key|value from response_text."""
-    target = f"{key}|{value}"
+    """Find the exact terminology line matching key/value from response_text."""
+    target = f"{key}{KEY_VALUE_SEPARATOR}{value}"
     for line in _extract_terminology_lines(response_text):
         if line == target:
             return line

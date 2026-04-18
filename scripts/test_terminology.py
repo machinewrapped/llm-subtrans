@@ -411,15 +411,36 @@ def _print_analysis_summary(summary : dict, detail : str = 'summary') -> None:
         print("  (none)")
     else:
         rows_to_show = grouped if detail == 'full' else grouped[:20]
+        table_rows : list[dict[str, str]] = []
         for item in rows_to_show:
             first = item.get('first_seen') or {}
             last = item.get('last_seen') or {}
-            first_sb = f"{first.get('scene')}.{first.get('batch')}"
-            last_sb = f"{last.get('scene')}.{last.get('batch')}"
-            count = int(item.get('count') or 0)
+            table_rows.append({
+                'count': f"x{int(item.get('count') or 0)}",
+                'pair': f"{item.get('key')}{KEY_VALUE_SEPARATOR}{item.get('value')}",
+                'reason': str(item.get('reason_not_added') or '-'),
+                'first': f"{first.get('scene')}.{first.get('batch')}",
+                'last': f"{last.get('scene')}.{last.get('batch')}",
+            })
+
+        count_w = max(len('count'), max(len(r['count']) for r in table_rows))
+        pair_w = max(len('term'), max(len(r['pair']) for r in table_rows))
+        reason_w = max(len('reason'), max(len(r['reason']) for r in table_rows))
+        first_w = max(len('first'), max(len(r['first']) for r in table_rows))
+        last_w = max(len('last'), max(len(r['last']) for r in table_rows))
+
+        print(
+            f"  {'count':<{count_w}}  {'term':<{pair_w}}  "
+            f"{'reason':<{reason_w}}  {'first':<{first_w}}  {'last':<{last_w}}"
+        )
+        print(
+            f"  {'-' * count_w}  {'-' * pair_w}  "
+            f"{'-' * reason_w}  {'-' * first_w}  {'-' * last_w}"
+        )
+        for row in table_rows:
             print(
-                f"  x{count:<3} {item.get('key')}{KEY_VALUE_SEPARATOR}{item.get('value')}  "
-                f"reason={item.get('reason_not_added')}  first={first_sb}  last={last_sb}"
+                f"  {row['count']:<{count_w}}  {row['pair']:<{pair_w}}  "
+                f"{row['reason']:<{reason_w}}  {row['first']:<{first_w}}  {row['last']:<{last_w}}"
             )
         if detail != 'full' and len(grouped) > len(rows_to_show):
             print(f"  ... {len(grouped) - len(rows_to_show)} more groups (use --analysis-detail full)")

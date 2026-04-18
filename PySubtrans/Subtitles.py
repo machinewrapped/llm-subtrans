@@ -300,7 +300,7 @@ class Subtitles:
             self.translated = translated
             self.outputpath = outputpath
 
-    def UpdateSettings(self, settings: SettingsType|Options, keys: list[str]|None = None) -> bool:
+    def UpdateSettings(self, settings : SettingsType|Options, keys : list[str]|None = None) -> bool:
         """
         Apply per-key parsing and merge settings into self.settings.
 

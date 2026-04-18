@@ -566,4 +566,31 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
         self.assertLoggedIn("non-identity term stored", "Dragon", terminology_map)
         self.assertLoggedEqual("non-identity translation stored", "Drache", terminology_map.get("Dragon"))
 
+    def test_reverse_mappings_are_ignored(self):
+        """Reverse pairs are ignored when they invert an existing terminology mapping."""
+        terms = {
+            "Qu Erming": "曲爾命",
+            "Dragon": "Drache",
+        }
+        data = self._make_data_with_terminology('Translate scene 1 batch 1', terms)
+        originals, translator = self._setup(data)
+        originals.settings['terminology_map'] = {"曲爾命": "Qu Erming"}
+
+        scene = originals.GetScene(1)
+        self.assertLoggedIsNotNone("Scene 1 exists", scene)
+        if not scene:
+            return
+
+        translator.TranslateScene(originals, scene, batch_numbers=[1])
+
+        terminology_map = originals.settings.get('terminology_map')
+        self.assertLoggedIsInstance("terminology_map is a dict", terminology_map, dict)
+        if not isinstance(terminology_map, dict):
+            return
+
+        self.assertLoggedEqual("existing mapping preserved", "Qu Erming", terminology_map.get("曲爾命"))
+        self.assertLoggedNotIn("reverse mapping not added", "Qu Erming", terminology_map)
+        self.assertLoggedIn("independent term added", "Dragon", terminology_map)
+        self.assertLoggedEqual("independent term value", "Drache", terminology_map.get("Dragon"))
+
 

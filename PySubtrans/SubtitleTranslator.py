@@ -577,13 +577,29 @@ class SubtitleTranslator:
                 subtitles.settings['terminology_map'] = SettingsType()
             existing_map = subtitles.settings.get_dict('terminology_map')
 
+            # Normalized forward map used to detect reverse-pair pollution, e.g.
+            # existing: 曲爾命|Qu Erming and proposed: Qu Erming|曲爾命.
+            normalized_forward : dict[str, str] = {
+                str(k).strip(): str(v).strip()
+                for k, v in existing_map.items()
+                if str(k).strip() and str(v).strip()
+            }
+
             for term, proposed in returned_terms.items():
-                if str(term).strip() == str(proposed).strip():
+                term_norm = str(term).strip()
+                proposed_norm = str(proposed).strip()
+
+                if term_norm == proposed_norm:
+                    continue
+
+                # Ignore reverse pairs that would map a translation back to its source.
+                if normalized_forward.get(proposed_norm) == term_norm:
                     continue
 
                 existing = existing_map.get_str(term)
                 if existing is None:
                     new_terms[term] = proposed
+                    normalized_forward[term_norm] = proposed_norm
                 elif existing != proposed:
                     conflict_terms[term] = (existing, proposed)
 

@@ -37,7 +37,7 @@ def ParseTerminologyMap(value : Any) -> dict[str,str]:
 
     result : dict[str,str] = {}
     for line in lines:
-        line = line.strip()
+        line = str(line).strip()
         if '|' in line:
             key, _, val = line.partition('|')
             key = key.strip()

@@ -117,6 +117,7 @@ class NewProjectSettings(QDialog):
                     self.settings['prompt'] = instructions.prompt
                     self.settings['instructions'] = instructions.instructions
                     self.settings['retry_instructions'] = instructions.retry_instructions
+                    self.settings['terminology_instructions'] = instructions.terminology_instructions
                     self.settings['task_type'] = instructions.task_type
                     if instructions.target_language:
                         self.settings['target_language'] = instructions.target_language

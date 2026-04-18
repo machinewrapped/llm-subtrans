@@ -31,6 +31,7 @@ class SubtitleProject:
         'task_type': None,
         'instructions': None,
         'retry_instructions': None,
+        'terminology_instructions': None,
         'movie_name': None,
         'description': None,
         'names': None,

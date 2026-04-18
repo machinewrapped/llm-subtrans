@@ -77,6 +77,7 @@ class Instructions:
             'prompt': self.prompt,
             'instructions': self.instructions,
             'retry_instructions': self.retry_instructions,
+            'terminology_instructions': self.terminology_instructions,
             'instruction_file': self.instruction_file,
             'task_type' : self.task_type
         }

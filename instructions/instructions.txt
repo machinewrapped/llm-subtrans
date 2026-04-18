@@ -93,7 +93,7 @@ unique objects, or cultural/technical concepts. Omit common words and terms alre
 
 Format each entry as one 'original|translation' pair per line:
 <terminology>
-OriginalTerm|TranslatedTerm
+Source Language|目標語言
 </terminology>
 
 If there are no new terms worth adding, omit the <terminology> block entirely.

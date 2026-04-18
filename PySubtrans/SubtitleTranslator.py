@@ -572,18 +572,11 @@ class SubtitleTranslator:
         new_terms : dict[str, str] = {}
         conflict_terms : dict[str, tuple[str, str]] = {}
 
-        with subtitles.lock:
-            if 'terminology_map' not in subtitles.settings:
-                subtitles.settings['terminology_map'] = SettingsType()
-            existing_map = subtitles.settings.get_dict('terminology_map')
+        original_text = ' '.join(line.text or '' for line in batch.originals)
+        translated_text = ' '.join(line.text or '' for line in batch.translated)
 
-            # Normalized forward map used to detect reverse-pair pollution, e.g.
-            # existing: 曲爾命|Qu Erming and proposed: Qu Erming|曲爾命.
-            normalized_forward : dict[str, str] = {
-                str(k).strip(): str(v).strip()
-                for k, v in existing_map.items()
-                if str(k).strip() and str(v).strip()
-            }
+        with subtitles.lock:
+            existing_map = subtitles.settings.get_dict('terminology_map', SettingsType())
 
             for term, proposed in returned_terms.items():
                 term_norm = str(term).strip()
@@ -592,18 +585,30 @@ class SubtitleTranslator:
                 if term_norm == proposed_norm:
                     continue
 
-                # Ignore reverse pairs that would map a translation back to its source.
-                if normalized_forward.get(proposed_norm) == term_norm:
+                # Orient the pair using batch content as ground truth.
+                # Swap if the key appears in translated but not originals.
+                if term_norm in translated_text and term_norm not in original_text:
+                    term, proposed = proposed, term
+                    term_norm, proposed_norm = proposed_norm, term_norm
+
+                # Reject if the source term doesn't appear in originals — it's hallucinated.
+                if term_norm not in original_text:
+                    continue
+
+                # Reject if the proposed translation doesn't appear in translated —
+                # canonising unused renderings would push future batches toward them.
+                if proposed_norm not in translated_text:
                     continue
 
                 existing = existing_map.get_str(term)
                 if existing is None:
                     new_terms[term] = proposed
-                    normalized_forward[term_norm] = proposed_norm
                 elif existing != proposed:
                     conflict_terms[term] = (existing, proposed)
 
             existing_map.update(new_terms)
+            subtitles.settings['terminology_map'] = existing_map
+
             snapshot : dict[str, str] = {k: str(v) for k, v in existing_map.items()}
 
         self.events.terminology_updated.send(

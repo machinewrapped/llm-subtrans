@@ -42,8 +42,7 @@ from PySubtrans import (
     init_translator,
 )
 from PySubtrans.SubtitleBatch import SubtitleBatch
-
-KEY_VALUE_SEPARATOR = "::"
+from PySubtrans.Helpers.Parse import KEY_VALUE_SEPARATOR
 
 # ---------------------------------------------------------------------------
 # Data containers
@@ -392,7 +391,7 @@ def _print_analysis_summary(summary : dict, detail : str = 'summary') -> None:
         for item in entries_to_show:
             first = item.get('first_returned')
             sb = f"{first.get('scene')}.{first.get('batch')}" if first else "-"
-            print(f"  {item.get('key')}|{item.get('value')}  first_returned={sb}")
+            print(f"  {item.get('key')}{KEY_VALUE_SEPARATOR}{item.get('value')}  first_returned={sb}")
         if detail != 'full' and len(items) > len(entries_to_show):
             print(f"  ... {len(items) - len(entries_to_show)} more (use --analysis-detail full)")
 
@@ -419,7 +418,7 @@ def _print_analysis_summary(summary : dict, detail : str = 'summary') -> None:
             last_sb = f"{last.get('scene')}.{last.get('batch')}"
             count = int(item.get('count') or 0)
             print(
-                f"  x{count:<3} {item.get('key')}|{item.get('value')}  "
+                f"  x{count:<3} {item.get('key')}{KEY_VALUE_SEPARATOR}{item.get('value')}  "
                 f"reason={item.get('reason_not_added')}  first={first_sb}  last={last_sb}"
             )
         if detail != 'full' and len(grouped) > len(rows_to_show):
@@ -436,7 +435,7 @@ def _print_analysis_summary(summary : dict, detail : str = 'summary') -> None:
             for item in not_added:
                 sb = f"{item.get('scene')}.{item.get('batch')}"
                 print(
-                    f"  {sb}  {item.get('key')}|{item.get('value')}  "
+                    f"  {sb}  {item.get('key')}{KEY_VALUE_SEPARATOR}{item.get('value')}  "
                     f"reason={item.get('reason_not_added')}"
                 )
 
@@ -480,13 +479,13 @@ def run_analysis_mode(args : argparse.Namespace) -> int:
     return 0
 
 def _parse_terminology_context(raw : str|None) -> dict[str, str]:
-    """Parse the pipe-delimited terminology stored in batch.context into a dict."""
+    """Parse the terminology stored in batch.context into a dict."""
     if not raw or not isinstance(raw, str):
         return {}
     result : dict[str, str] = {}
     for line in raw.splitlines():
-        if '|' in line:
-            k, _, v = line.partition('|')
+        if KEY_VALUE_SEPARATOR in line:
+            k, _, v = line.partition(KEY_VALUE_SEPARATOR)
             k, v = k.strip(), v.strip()
             if k and v:
                 result[k] = v

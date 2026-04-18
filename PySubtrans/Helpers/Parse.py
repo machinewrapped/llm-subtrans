@@ -33,6 +33,37 @@ def ParseKeyValuePairs(value : Any, separator : str = KEY_VALUE_SEPARATOR) -> di
                 result[key] = val
     return result
 
+
+def ParseKeyValuePairsOrFiles(entries : list[str], separator : str = KEY_VALUE_SEPARATOR) -> dict[str,str]:
+    """
+    Parse key/value pairs from a list of strings.
+
+    Each entry is either:
+    - a ``key::value`` inline pair, or
+    - a file path whose contents are one ``key::value`` pair per line.
+
+    Entries whose separator is absent are treated as file paths.
+    File-not-found is logged as a warning; malformed lines inside a file raise ValueError.
+    """
+    result : dict[str,str] = {}
+    for entry in entries:
+        entry = str(entry).strip()
+        if not entry:
+            continue
+        if separator in entry:
+            result.update(ParseKeyValuePairs(entry, separator=separator))
+        else:
+            try:
+                with open(entry, "r", encoding="utf-8", newline='') as f:
+                    for line in (l.strip() for l in f if l.strip()):
+                        if separator in line:
+                            result.update(ParseKeyValuePairs(line, separator=separator))
+                        else:
+                            raise ValueError(f"Invalid key/value format in {entry!r}: {line!r}")
+            except FileNotFoundError:
+                logging.warning(f"Terminology/key-value file not found: {entry}")
+    return result
+
 def FormatKeyValuePairs(pairs : Any, separator : str = KEY_VALUE_SEPARATOR) -> str:
     """
     Format a dict as newline-separated key<separator>value pairs.

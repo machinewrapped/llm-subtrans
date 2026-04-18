@@ -71,10 +71,12 @@ def init_options(**settings: SettingType) -> Options:
 
         Additional settings can be provided to customise the translation flow, e.g.
 
-        prompt = "Translate these subtitles into [target_language]", 
+        prompt = "Translate these subtitles into [target_language]",
         target_language = "French",
         instruction_file = "instructions.txt",
-        postprocess_translation = True
+        postprocess_translation = True,
+        use_terminology_map = True,
+        terminology_map = ["the Watch::la Garde", "Kingslayer::Régicide"]
 
         See :class:`Options` for available settings. 
         Options that are not specified will be assigned default values.
@@ -126,6 +128,8 @@ def init_subtitles(
 
     options : Options or SettingsType, optional
         Settings for pre-processing and batching subtitles, e.g. `scene_threshold`, `min_batch_size`, `max_batch_size`.
+        Also accepts settings such as `terminology_map`, `names`, and `substitutions` which are
+        stored in the returned :class:`Subtitles` instance, so that they are available during translation.
 
     auto_batch : bool, optional
         If True (default), automatically divide the subtitles into scenes and batches ready for translation.
@@ -162,6 +166,7 @@ def init_subtitles(
         raise SubtitleError("No subtitle lines were loaded from the supplied input")
 
     options = Options(options)
+    subtitles.UpdateSettings(options)
 
     if options.get_bool('preprocess_subtitles'):
         preprocess_subtitles(subtitles, options)
@@ -270,6 +275,11 @@ def init_translator(
     provider = init_translation_provider("OpenAI", {"model": "gpt-5-mini", "api_key": "sk-..."})
     options = init_options(prompt="Translate these subtitles into Spanish")
     translator = init_translator(options, translation_provider=provider)
+
+    # Subscribe to events (see TranslationEvents for full list):
+    #   batch_translated, scene_translated, batch_updated, preprocessed
+    #   terminology_updated  -- fired after each batch when use_terminology_map=True
+    #   error, warning, info
     """
     options = Options(settings)
 

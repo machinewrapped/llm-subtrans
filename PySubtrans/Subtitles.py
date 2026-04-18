@@ -6,7 +6,9 @@ import logging
 import threading
 from typing import Any
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import ParseKeyValuePairs, ParseNames
 from PySubtrans.Options import Options
+from PySubtrans.Substitutions import Substitutions
 
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatch import SubtitleBatch
@@ -298,15 +300,39 @@ class Subtitles:
             self.translated = translated
             self.outputpath = outputpath
 
-    def UpdateSettings(self, settings: SettingsType) -> None:
+    def UpdateSettings(self, settings: SettingsType|Options, keys: list[str]|None = None) -> bool:
         """
-        Update the subtitle settings
+        Apply per-key parsing and merge settings into self.settings.
+
+        If *keys* is provided, only those keys are considered (others are ignored).
+        Returns True if any setting value actually changed.
         """
         if isinstance(settings, Options):
             settings = SettingsType(settings)
 
+        filtered = SettingsType({k: settings[k] for k in settings if keys is None or k in keys})
+
+        if 'names' in filtered:
+            filtered['names'] = ParseNames(filtered.get('names', []))
+
+        if 'substitutions' in filtered:
+            subs = filtered.get('substitutions', [])
+            if subs:
+                filtered['substitutions'] = Substitutions.Parse(subs)
+
+        if 'terminology_map' in filtered:
+            filtered.set('terminology_map', ParseKeyValuePairs(filtered['terminology_map']))
+
         with self.lock:
-            self.settings.update(settings)
+            common_keys = filtered.keys() & self.settings.keys()
+            new_keys = filtered.keys() - self.settings.keys()
+            changed = bool(new_keys) or not all(
+                filtered.get(k) == self.settings.get(k) for k in common_keys
+            )
+            if changed:
+                self.settings.update(filtered)
+
+        return changed
 
     def _renumber_if_needed(self, lines : list[SubtitleLine]|None) -> None:
         """

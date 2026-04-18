@@ -5,9 +5,7 @@ import threading
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import ParseKeyValuePairs, ParseNames
 from PySubtrans.Options import Options, SettingsType
-from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleError import SubtitleError, TranslationAbortedError
@@ -180,7 +178,8 @@ class SubtitleProject:
 
     def UpdateProjectSettings(self, settings: SettingsType) -> None:
         """
-        Update the project settings with validation and filtering
+        Update the project settings with validation and filtering.
+        Delegates filtering, per-key parsing, and change detection to Subtitles.UpdateSettings.
         """
         if isinstance(settings, Options):
             settings = SettingsType(settings)
@@ -192,29 +191,7 @@ class SubtitleProject:
             # Update obsolete settings to maintain compatibility
             self._update_compatibility(settings)
 
-            # Filter settings to only include known project settings
-            filtered_settings = SettingsType({key: settings[key] for key in settings if key in self.DEFAULT_PROJECT_SETTINGS})
-
-            # Process names and substitutions into standard formats
-            if 'names' in filtered_settings:
-                names_list = filtered_settings.get('names', [])
-                filtered_settings['names'] = ParseNames(names_list)
-
-            if 'substitutions' in filtered_settings:
-                substitutions_list = filtered_settings.get('substitutions', [])
-                if substitutions_list:
-                    filtered_settings['substitutions'] = Substitutions.Parse(substitutions_list)
-
-            if 'terminology_map' in filtered_settings:
-                raw_map = filtered_settings['terminology_map']
-                filtered_settings['terminology_map'] = ParseKeyValuePairs(raw_map)  # type: ignore[assignment]
-
-            # Check if there are any actual changes
-            common_keys = filtered_settings.keys() & self.subtitles.settings.keys()
-            new_keys = filtered_settings.keys() - self.subtitles.settings.keys()
-
-            if new_keys or not all(filtered_settings.get(key) == self.subtitles.settings.get(key) for key in common_keys):
-                self.subtitles.UpdateSettings(filtered_settings)
+            if self.subtitles.UpdateSettings(settings, keys=list(self.DEFAULT_PROJECT_SETTINGS.keys())):
                 self.needs_writing = self.use_project_file and bool(self.subtitles.scenes)
 
     def UpdateOutputPath(self, path: str|None = None, extension: str|None = None) -> None:

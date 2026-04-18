@@ -279,6 +279,13 @@ Default values for many settings can be set in the .env file, using a NAME_IN_CA
 - `--substitution`:
   A pair of strings separated by `::`, to substitute in either source or translation, or the name of a file containing a list of such pairs.
 
+- `--build_terminology_map`:
+  Accumulates names, titles and technical terms into a terminology map that is provided to subsequent batches so that consistent translations can be used throughout.
+
+- `--terminology`:
+  Seed the terminology map with a `SOURCE::TRANSLATION` pair, or a path to a text file of such pairs. Repeatable. Implies `--build_terminology_map`.
+  Example: `--terminology "Alice::アリス" --terminology wonderland_names.txt`
+
 - `--scenethreshold`:
   Number of seconds between lines to consider it a new scene.
 

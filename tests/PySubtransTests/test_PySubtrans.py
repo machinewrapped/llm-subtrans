@@ -104,11 +104,6 @@ class PySubtransConvenienceTests(LoggedTestCase):
             0,
         )
 
-        preprocess_setting = subtitles.settings.get('preprocess_subtitles')
-        self.assertLoggedIsNone("preprocess flag stored on subtitles", preprocess_setting)
-
-        scene_threshold = subtitles.settings.get('scene_threshold')
-        self.assertLoggedIsNone("scene threshold stored on subtitles", scene_threshold)
 
     def test_init_translation_provider_reuse(self) -> None:
         options = self._create_options()

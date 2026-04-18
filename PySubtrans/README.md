@@ -224,6 +224,36 @@ options = init_options(
 
 Note that there are a number of options which are only used by the GUI-Subtrans application and have no function in PySubtrans.
 
+### Terminology map
+
+`use_terminology_map`: When enabled, PySubtrans instructs the model to report any names, titles or technical terms with the translation it used, and accumulates them into a terminology map that is injected into each subsequent batch's context, so the same translations are used consistently throughout the file.
+
+The map can also be seeded with translations by passing a `terminology_map` in the options.
+
+- `dict`: `{"Alice": "アリス", "Wonderland": "ワンダーランド"}`
+- `list[str]`: `["Alice::アリス", "Wonderland::ワンダーランド"]`
+- newline-separated string: `"Alice::アリス\nWonderland::ワンダーランド"`
+- file path: any string without `::` is treated as a path to a text file of `key::value` lines
+
+```python
+from PySubtrans import init_options, init_subtitles, init_translator
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs
+
+options = init_options(
+    prompt="Translate these subtitles into Japanese",
+    use_terminology_map=True,
+    terminology_map=["Alice::アリス", "Wonderland::ワンダーランド"],  # seed from episode 1
+)
+
+def on_terminology_updated(sender, new_terms=None, terminology_map=None, **_):
+    print(f"New terminology: {new_terms}")
+
+translator.events.terminology_updated.connect(on_terminology_updated)
+translator.TranslateSubtitles(subtitles)
+```
+
+Note: `use_terminology_map` controls whether the seed is injected into the prompt context **and** whether new terms are added to it - it is not currently possible to use only a pre-seeded terminology map.
+
 ## Advanced workflows
 
 PySubtrans is designed to be modular. The helper functions above are convenient entry points, but you are free to use lower-level components directly when you need more control:

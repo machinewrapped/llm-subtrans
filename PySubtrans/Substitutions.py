@@ -1,10 +1,9 @@
-import logging
 from typing import Any
 import regex
 from enum import Enum
 
 from PySubtrans.Helpers import GetValueFromName
-from PySubtrans.Helpers.Parse import KEY_VALUE_SEPARATOR, ParseKeyValuePairs
+from PySubtrans.Helpers.Parse import KEY_VALUE_SEPARATOR, ParseKeyValuePairsOrFiles
 
 class Substitutions:
     """
@@ -125,24 +124,6 @@ class Substitutions:
             sub_list = regex.split("[\n,]", sub_list)
 
         if isinstance(sub_list, list):
-            substitutions = {}
-            for sub in sub_list:
-                if separator in sub:
-                    substitutions.update(ParseKeyValuePairs(sub, separator=separator))
-                elif sub.strip():
-                    try:
-                        with open(sub, "r", encoding="utf-8", newline='') as f:
-                            for line in [line.strip() for line in f if line.strip()]:
-                                if separator in line:
-                                    substitutions.update(ParseKeyValuePairs(line, separator=separator))
-                                else:
-                                    raise ValueError(f"Invalid substitution format in {sub}: {line}")
-
-                    except FileNotFoundError:
-                        logging.warning(f"Substitution file not found: {sub}")
-                    except ValueError:
-                        raise
-
-            return substitutions
+            return ParseKeyValuePairsOrFiles(sub_list, separator=separator)
 
         return {}

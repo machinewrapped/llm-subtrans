@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import ParseNames
+from PySubtrans.Helpers.Parse import ParseKeyValuePairsOrFiles, ParseNames
 from PySubtrans import batch_subtitles, init_options, init_translator, preprocess_subtitles
 from PySubtrans.Options import Options, config_dir
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
@@ -194,6 +194,8 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--substitution', action='append', type=str, default=None, help="A pair of strings separated by ::, to subsitute in source or translation")
     parser.add_argument('--temperature', type=float, default=0.0, help="A higher temperature increases the random variance of translations.")
     parser.add_argument('--autosplit', action='store_true', default=None, help="Split batches that fail validation in half and retry each half separately")
+    parser.add_argument('--build_terminology_map', action='store_true', default=None, help="Build and use a terminology map during translation")
+    parser.add_argument('--terminology', action='append', type=str, default=None, help="Seed entry for the terminology map as SOURCE::TRANSLATION, or a path to a file of such pairs.")
     parser.add_argument('--writebackup', action='store_true', help="Write a backup of the project file when it is loaded (if it exists)")
     return parser
 
@@ -241,6 +243,8 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'target_language': args.target_language,
         'temperature': args.temperature,
         'autosplit_on_error': args.autosplit,
+        'use_terminology_map': args.build_terminology_map or bool(args.terminology),
+        'terminology_map': ParseKeyValuePairsOrFiles(args.terminology) if args.terminology else None,
         'write_backup': args.writebackup,
     }
 

@@ -40,7 +40,7 @@ class SubtitleEncoder(json.JSONEncoder):
             return None
 
         if isinstance(obj, Subtitles):
-            return {
+            result = {
                 "sourcepath": obj.sourcepath,
                 "outputpath": obj.outputpath,
                 "scenecount": len(obj.scenes),
@@ -49,6 +49,9 @@ class SubtitleEncoder(json.JSONEncoder):
                 "format": obj.file_format,
                 "scenes": obj.scenes,
             }
+            if obj.terminology_map:
+                result["terminology_map"] = obj.terminology_map
+            return result
         elif isinstance(obj, SubtitleScene):
             return {
                 "scene": getattr(obj, 'number'),
@@ -123,6 +126,8 @@ def _object_hook(dct):
             obj.settings = SettingsType(dct.get('settings', dct.get('context', {})))
             obj.metadata = dct.get('metadata', {})
             obj.file_format = dct.get('format', '.srt')
+            terminology = dct.get('terminology_map', {})
+            obj.terminology_map = {str(k): str(v) for k, v in terminology.items()} if isinstance(terminology, dict) else {}
             obj.scenes = dct.get('scenes', [])
             return obj
         elif class_name == classname(SubtitleScene):

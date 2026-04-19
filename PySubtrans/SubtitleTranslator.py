@@ -4,11 +4,11 @@ import threading
 from typing import Any
 
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs
 from PySubtrans.Helpers.SubtitleHelpers import FindBestSplitIndex, MergeTranslations
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Text import Linearise, SanitiseSummary
 from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
-from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
@@ -32,7 +32,7 @@ class SubtitleTranslator:
     """
     Processes subtitles into scenes and batches and sends them for translation
     """
-    def __init__(self, settings: Options, translation_provider: TranslationProvider, resume: bool = False):
+    def __init__(self, settings: Options, translation_provider: TranslationProvider, resume: bool = False, terminology_map: dict[str,str]|None = None):
         """
         Initialise a SubtitleTranslator with translation options
         """
@@ -48,6 +48,7 @@ class SubtitleTranslator:
         self.retry_on_error = settings.get_bool('retry_on_error')
         self.split_on_error = settings.get_bool('autosplit_on_error')
         self.use_terminology_map = settings.get_bool('use_terminology_map')
+        self.terminology_map : dict[str, str] = dict(terminology_map) if terminology_map else {}
         self.max_summary_length = settings.get_int('max_summary_length')
         self.retranslate = settings.get_bool('retranslate')
         self.reparse = settings.get_bool('reparse')
@@ -170,10 +171,12 @@ class SubtitleTranslator:
             for batch in batches:
                 context = GetBatchContext(subtitles, scene.number, batch.number, self.max_history)
 
-                # Store the terminology that will be injected into this batch's prompt so that
-                # batch_translated observers can read it from batch.context['terminology'].
-                if self.use_terminology_map and context.get('terminology'):
-                    batch.AddContext('terminology', context['terminology'])
+                # Inject terminology into the context so it appears in the batch prompt.
+                # Store it on the batch so batch_translated observers can read batch.context['terminology'].
+                if self.use_terminology_map and self.terminology_map:
+                    formatted = FormatKeyValuePairs(self.terminology_map)
+                    context['terminology'] = formatted
+                    batch.AddContext('terminology', formatted)
 
                 try:
                     self.TranslateBatch(batch, line_numbers, context)
@@ -195,7 +198,7 @@ class SubtitleTranslator:
                 self.events.batch_translated.send(self, batch=batch)
 
                 if self.use_terminology_map:
-                    self._update_terminology_map(subtitles, batch)
+                    self._update_terminology_map(batch)
 
                 if batch.errors:
                     self._emit_warning(_("Errors encountered translating scene {scene} batch {batch}").format(scene=batch.scene, batch=batch.number))
@@ -566,9 +569,9 @@ class SubtitleTranslator:
         except Exception:
             pass
 
-    def _update_terminology_map(self, subtitles : Subtitles, batch : SubtitleBatch):
+    def _update_terminology_map(self, batch : SubtitleBatch):
         """
-        Merge terminology returned by a batch translation into the shared terminology map.
+        Merge terminology returned by a batch translation into self.terminology_map.
         Only new terms are added; existing entries are preserved to avoid data loss.
         """
         if not batch.translation or not batch.translation.terminology:
@@ -581,9 +584,7 @@ class SubtitleTranslator:
         original_text = ' '.join(line.text or '' for line in batch.originals)
         translated_text = ' '.join(line.text or '' for line in batch.translated)
 
-        with subtitles.lock:
-            existing_map = subtitles.settings.get_dict('terminology_map', SettingsType())
-
+        with self.lock:
             for term, proposed in returned_terms.items():
                 term_norm = str(term).strip()
                 proposed_norm = str(proposed).strip()
@@ -606,16 +607,14 @@ class SubtitleTranslator:
                 if proposed_norm not in translated_text:
                     continue
 
-                existing = existing_map.get_str(term)
+                existing = self.terminology_map.get(term)
                 if existing is None:
                     new_terms[term] = proposed
                 elif existing != proposed:
                     conflict_terms[term] = (existing, proposed)
 
-            existing_map.update(new_terms)
-            subtitles.settings['terminology_map'] = existing_map
-
-            snapshot : dict[str, str] = {k: str(v) for k, v in existing_map.items()}
+            self.terminology_map.update(new_terms)
+            snapshot : dict[str, str] = dict(self.terminology_map)
 
         self.events.terminology_updated.send(
             self,

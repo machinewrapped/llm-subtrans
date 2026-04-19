@@ -6,7 +6,7 @@ import logging
 import threading
 from typing import Any
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import ParseKeyValuePairs, ParseNames
+from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans.Options import Options
 from PySubtrans.Substitutions import Substitutions
 
@@ -37,6 +37,7 @@ class Subtitles:
 
         self.metadata : dict[str, Any] = {}
         self.file_format : str|None = None
+        self.terminology_map : dict[str, str] = {}
 
         self.settings : SettingsType = SettingsType(deepcopy(settings)) if settings else SettingsType()
 
@@ -319,9 +320,6 @@ class Subtitles:
             subs = filtered.get('substitutions', [])
             if subs:
                 filtered['substitutions'] = Substitutions.Parse(subs)
-
-        if 'terminology_map' in filtered:
-            filtered.set('terminology_map', ParseKeyValuePairs(filtered['terminology_map']))
 
         with self.lock:
             common_keys = filtered.keys() & self.settings.keys()

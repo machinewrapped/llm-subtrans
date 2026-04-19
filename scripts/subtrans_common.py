@@ -244,7 +244,6 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'temperature': args.temperature,
         'autosplit_on_error': args.autosplit,
         'use_terminology_map': args.build_terminology_map or bool(args.terminology),
-        'terminology_map': ParseKeyValuePairsOrFiles(args.terminology) if args.terminology else None,
         'write_backup': args.writebackup,
     }
 
@@ -267,6 +266,10 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
         project.SaveBackupFile()
 
     project.UpdateProjectSettings(options)
+
+    if getattr(args, 'terminology', None):
+        cli_seed = ParseKeyValuePairsOrFiles(args.terminology)
+        project.subtitles.terminology_map = {**project.subtitles.terminology_map, **cli_seed}
 
     subtitles = project.subtitles
 
@@ -358,7 +361,7 @@ def TranslateProject(project : SubtitleProject, options : Options, verbose : boo
     Callers only need to handle errors raised before the project is ready.
     """
     progress_logger : TranslationProgressLogger = TranslationProgressLogger(verbose=verbose)
-    translator : SubtitleTranslator = init_translator(options)
+    translator : SubtitleTranslator = init_translator(options, terminology_map=project.subtitles.terminology_map)
 
     try:
         with progress_logger.Track(translator):

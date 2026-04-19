@@ -5,6 +5,7 @@ import threading
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import ParseKeyValuePairs
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleEditor import SubtitleEditor
@@ -42,7 +43,6 @@ class SubtitleProject:
         'add_right_to_left_markers': None,
         'instruction_file': None,
         'format': None,
-        'terminology_map': None
     })
    
     def __init__(self, persistent : bool = False):
@@ -192,6 +192,11 @@ class SubtitleProject:
 
             # Update obsolete settings to maintain compatibility
             self._update_compatibility(settings)
+
+            # Route terminology_map to the dedicated top-level attribute
+            if 'terminology_map' in settings:
+                parsed = ParseKeyValuePairs(settings.get('terminology_map', {}))
+                self.subtitles.terminology_map = parsed
 
             if self.subtitles.UpdateSettings(settings, keys=list(self.DEFAULT_PROJECT_SETTINGS.keys())):
                 self.needs_writing = self.use_project_file and bool(self.subtitles.scenes)
@@ -519,6 +524,8 @@ class SubtitleProject:
         self.events.scene_translated.send(self, scene=scene)
 
     def _on_terminology_updated(self, sender, scene, batch, returned_terms, new_terms, conflict_terms, terminology_map) -> None:
+        with self.subtitles.lock:
+            self.subtitles.terminology_map = dict(terminology_map)
         self.needs_writing = self.use_project_file
         self.events.terminology_updated.send(
             self,

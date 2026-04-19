@@ -114,7 +114,6 @@ class BatchProcessor:
         if config.use_terminology_map and config.terminology_file:
             self._terminology_map = self._load_terminology_file(config.terminology_file)
             if self._terminology_map:
-                self.options.terminology_map = self._terminology_map
                 self.logger.info("Loaded %d term(s) from %s", len(self._terminology_map), config.terminology_file)
 
     def run(self) -> BatchStatistics:
@@ -161,8 +160,9 @@ class BatchProcessor:
             self.logger.info("[%d/%d] Loading %s", index, len(files), source_file)
 
             try:
-                # init_subtitles loads and batches the file using the Options we prepared earlier.
                 subtitles = init_subtitles(filepath=str(source_file), options=self.options)
+                if self.config.use_terminology_map:
+                    subtitles.terminology_map = dict(self._terminology_map)
 
             except SubtitleError as exc:
                 self.logger.error("Failed to load %s: %s", source_file, exc)
@@ -186,9 +186,11 @@ class BatchProcessor:
                 continue
 
             try:
-                # init_translator builds a ready-to-use SubtitleTranslator
-                # configured with our provider and processing settings.
-                translator : SubtitleTranslator = init_translator(self.options, translation_provider=self.translation_provider)
+                translator : SubtitleTranslator = init_translator(
+                    self.options,
+                    translation_provider=self.translation_provider,
+                    terminology_map=self._terminology_map if self.config.use_terminology_map else None,
+                )
 
                 # Connect the batch script logger to translation events
                 translator.events.connect_logger(self.logger)
@@ -217,11 +219,10 @@ class BatchProcessor:
                     continue
 
             if self.config.use_terminology_map and not translator.preview:
-                updated_map = subtitles.settings.get('terminology_map')
-                if isinstance(updated_map, dict) and updated_map:
+                updated_map = subtitles.terminology_map
+                if updated_map:
                     prev_count = len(self._terminology_map)
-                    self._terminology_map = {k: str(v) for k, v in updated_map.items()}
-                    self.options.terminology_map = self._terminology_map
+                    self._terminology_map = dict(updated_map)
                     new_count = len(self._terminology_map)
                     if new_count != prev_count:
                         self.logger.info("Terminology map now has %d term(s) (+%d)", new_count, new_count - prev_count)

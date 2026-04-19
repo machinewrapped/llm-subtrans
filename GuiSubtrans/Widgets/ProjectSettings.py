@@ -119,9 +119,7 @@ class ProjectSettings(QGroupBox):
             self.settings['model'] = datamodel.selected_model
             self.settings['provider'] = datamodel.provider
             self.settings['project_path'] = os.path.dirname(datamodel.project.projectfile or "project.subtrans")
-            terminology = self.settings.get('terminology_map')
-            if isinstance(terminology, dict):
-                self.settings['terminology_map'] = FormatKeyValuePairs(terminology)
+            self.settings['terminology_map'] = FormatKeyValuePairs(datamodel.project.subtitles.terminology_map)
             datamodel.project.events.terminology_updated.connect(self._blinker_terminology_updated)
             self.BuildForm(self.settings)
 
@@ -393,6 +391,8 @@ class ProjectSettings(QGroupBox):
                 subtitles.settings.pop('instruction_file', None)
 
                 self.settings.update(subtitles.settings)
+                if subtitles.terminology_map:
+                    self.settings['terminology_map'] = FormatKeyValuePairs(subtitles.terminology_map)
                 self.Populate()
 
             except Exception as e:

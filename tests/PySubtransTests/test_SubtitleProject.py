@@ -654,5 +654,30 @@ Modified subtitle line 2
             self.assertLoggedTrue("project file exists after failure", os.path.exists(project_path))
 
 
+    def test_terminology_map_round_trips_as_top_level_attribute(self):
+        """terminology_map is serialised as a top-level key and restored on load"""
+        project = SubtitleProject(persistent=True)
+        project.InitialiseProject(self.test_srt_file)
+
+        batcher = SubtitleBatcher(self.options)
+        with project.GetEditor() as editor:
+            editor.AutoBatch(batcher)
+
+        project.subtitles.terminology_map = {"Dragon": "Drache", "Hero": "Held"}
+        project.SaveProjectFile(self.test_project_file)
+
+        new_project = SubtitleProject()
+        new_project.ReadProjectFile(self.test_project_file)
+
+        loaded_map = new_project.subtitles.terminology_map
+        self.assertLoggedEqual("Dragon round-trips", "Drache", loaded_map.get("Dragon"))
+        self.assertLoggedEqual("Hero round-trips", "Held", loaded_map.get("Hero"))
+        self.assertLoggedNotIn(
+            "terminology_map absent from settings",
+            "terminology_map",
+            new_project.subtitles.settings,
+        )
+
+
 if __name__ == '__main__':
     unittest.main()

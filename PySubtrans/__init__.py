@@ -76,7 +76,6 @@ def init_options(**settings: SettingType) -> Options:
         instruction_file = "instructions.txt",
         postprocess_translation = True,
         use_terminology_map = True,
-        terminology_map = ["the Watch::la Garde", "Kingslayer::Régicide"]
 
         See :class:`Options` for available settings. 
         Options that are not specified will be assigned default values.
@@ -244,6 +243,7 @@ def init_translation_provider(
 def init_translator(
     settings : Options|SettingsType,
     translation_provider : TranslationProvider|None = None,
+    terminology_map : dict[str,str]|None = None,
 ) -> SubtitleTranslator:
     """
     Return a ready-to-use :class:`SubtitleTranslator` using the specified settings.
@@ -254,6 +254,9 @@ def init_translator(
         The translator settings. This should specify the provider and model to use, along with extra configuration options as needed.
     translation_provider : TranslationProvider or None, optional
         An pre-configured :class:`TranslationProvider` instance (if not specified a provider is created automatically based on the settings).
+    terminology_map : dict[str, str] or None, optional
+        Seed terminology map used to guide consistent term translation.  The translator builds on this map as translation proceeds;
+        subscribe to the ``terminology_updated`` event to receive snapshots after each batch.
 
     Exceptions
     ----------
@@ -272,8 +275,8 @@ def init_translator(
     opts = init_options(provider="OpenAI", model="gpt-5-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
     translator = init_translator(opts)
 
-    # Create translator from dictionary
-    translator = init_translator({"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"})
+    # Create translator with a terminology seed
+    translator = init_translator(opts, terminology_map={"Dragon": "Drache", "Hero": "Held"})
 
     # Create translator with a pre-initialised TranslationProvider
     provider = init_translation_provider("OpenAI", {"model": "gpt-5-mini", "api_key": "sk-..."})
@@ -295,7 +298,7 @@ def init_translator(
 
     options.provider = translation_provider.name
 
-    return SubtitleTranslator(options, translation_provider)
+    return SubtitleTranslator(options, translation_provider, terminology_map=terminology_map)
 
 
 def init_project(

@@ -181,6 +181,14 @@ class Options(SettingsType):
         return self.get_str('target_language') or str(default_settings['target_language'])
 
     @property
+    def terminology_map(self) -> SettingsType:
+        return self.get_dict('terminology_map', SettingsType())
+
+    @terminology_map.setter
+    def terminology_map(self, value : dict[str, str]) -> None:
+        self['terminology_map'] = SettingsType(value)
+
+    @property
     def use_project_file(self) -> bool:
         return self.get_bool('project_file', True)
 

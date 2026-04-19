@@ -40,18 +40,16 @@ class SubtitleEncoder(json.JSONEncoder):
             return None
 
         if isinstance(obj, Subtitles):
-            result = {
+            return {
                 "sourcepath": obj.sourcepath,
                 "outputpath": obj.outputpath,
                 "scenecount": len(obj.scenes),
                 "settings": getattr(obj, 'settings', {}),
                 "metadata": getattr(obj, 'metadata', {}),
+                "terminology_map": obj.terminology_map,
                 "format": obj.file_format,
                 "scenes": obj.scenes,
             }
-            if obj.terminology_map:
-                result["terminology_map"] = obj.terminology_map
-            return result
         elif isinstance(obj, SubtitleScene):
             return {
                 "scene": getattr(obj, 'number'),

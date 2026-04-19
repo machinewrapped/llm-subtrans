@@ -275,6 +275,9 @@ def init_translator(
     opts = init_options(provider="OpenAI", model="gpt-5-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
     translator = init_translator(opts)
 
+    # Create translator from a plain dictionary
+    translator = init_translator({"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"})
+
     # Create translator with a terminology seed
     translator = init_translator(opts, terminology_map={"Dragon": "Drache", "Hero": "Held"})
 

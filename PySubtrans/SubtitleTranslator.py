@@ -171,9 +171,7 @@ class SubtitleTranslator:
             for batch in batches:
                 context = GetBatchContext(subtitles, scene.number, batch.number, self.max_history)
 
-                # Inject terminology into the context so it appears in the batch prompt.
-                # Store it on the batch so batch_translated observers can read batch.context['terminology'].
-                if self.use_terminology_map and self.terminology_map:
+                if self.terminology_map:
                     formatted = FormatKeyValuePairs(self.terminology_map)
                     context['terminology'] = formatted
                     batch.AddContext('terminology', formatted)

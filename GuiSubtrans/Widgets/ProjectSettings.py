@@ -63,6 +63,7 @@ class ProjectSettings(QGroupBox):
             'include_original': self._getcheckboxvalue('include_original'),
             'description': self._gettextvalue('description'),
             'names': ParseNames(self._gettextvalue('names')),
+            'use_terminology_map': self._getcheckboxvalue('use_terminology_map'),
             'substitutions': Substitutions.Parse(self._gettextvalue('substitutions')),
             'substitution_mode': self._gettextvalue('substitution_mode'),
             'terminology_map': self._gettextvalue('terminology_map') if 'terminology_map' in self.widgets else self.settings.get('terminology_map'),
@@ -91,11 +92,11 @@ class ProjectSettings(QGroupBox):
             except Exception as e:
                 logging.error(f"Error updating UI language in ProjectSettings: {e}")
 
-    def SetDataModel(self, datamodel : ProjectDataModel):
+    def SetDataModel(self, datamodel : ProjectDataModel|None):
         self.datamodel = datamodel
         if datamodel is None:
             self.ClearForm()
-            self.settings = {}
+            self.settings = SettingsType()
             return
             
         self.current_provider : str|None = datamodel.provider
@@ -131,14 +132,19 @@ class ProjectSettings(QGroupBox):
             self.AddSingleLineOption(_("Movie Name"), settings, 'movie_name')
             self.AddSingleLineOption(_("Target Language"), settings, 'target_language')
             self.AddCheckboxOption(_("Add RTL Markers"), settings, 'add_right_to_left_markers')
-            self.AddCheckboxOption(_("Include Original Text"), settings, 'include_original')
             self.AddMultiLineOption(_("Description"), settings, 'description')
             self.AddMultiLineOption(_("Names"), settings, 'names')
+            self.AddCheckboxOption(_("Use Terminology Map"), settings, 'use_terminology_map')
+            if settings.get('use_terminology_map'):
+                self.AddMultiLineOption(_("Terminology Map"), settings, 'terminology_map')
+
             self.AddMultiLineOption(_("Substitutions"), settings, 'substitutions')
             self.AddDropdownOption(_("Substitution Mode"), settings, 'substitution_mode', Substitutions.Mode)
-            self.AddMultiLineOption(_("Terminology Map"), settings, 'terminology_map')
+            self.AddCheckboxOption(_("Include Original Text"), settings, 'include_original')
+
             self.AddButton("", _("Edit Instructions"), self._edit_instructions)
             self.AddButton("", _("Copy From Another Project"), self._copy_from_another_project)
+
             if len(self.provider_list) > 1:
                 self.AddDropdownOption(_("Provider"), settings, 'provider', self.provider_list)
             if len(self.model_list) > 0:
@@ -180,6 +186,7 @@ class ProjectSettings(QGroupBox):
         input_widget.setChecked(value)
         self._add_row(key, label_widget, input_widget)
         input_widget.stateChanged.connect(self._check_changed)
+        input_widget.checkStateChanged.connect(lambda: self._option_changed(key, input_widget.isChecked()))
 
     def AddDropdownOption(self, label, settings, key, values):
         label_widget = QLabel(label)
@@ -277,6 +284,10 @@ class ProjectSettings(QGroupBox):
                 if value and value != self.settings.get('model'):
                     self.datamodel.UpdateProjectSettings({ "model": value })
                     self.settings['model'] = self.datamodel.selected_model
+
+            elif key == 'use_terminology_map':
+                self.settings['use_terminology_map'] = bool(value)
+                self.BuildForm(self.settings)
 
     def _update_provider_settings(self, provider : str):
         try:

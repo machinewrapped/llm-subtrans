@@ -32,6 +32,7 @@ class SubtitleProject:
         'instructions': None,
         'retry_instructions': None,
         'terminology_instructions': None,
+        'use_terminology_map': None,
         'movie_name': None,
         'description': None,
         'names': None,

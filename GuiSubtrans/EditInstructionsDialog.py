@@ -32,6 +32,7 @@ class EditInstructionsDialog(QDialog):
         self.task_type_edit = self._add_form_option("task_type", self.instructions.task_type, str, _("Type of response expected for each line (must match the example format)"))
         self.instructions_edit = self._add_form_option("instructions", self.instructions.instructions, MULTILINE_OPTION, _("System instructions for the translator"))
         self.retry_instructions_edit = self._add_form_option("retry_instructions", self.instructions.retry_instructions, MULTILINE_OPTION, _("Supplementary instructions when retrying"))
+        self.terminology_instructions_edit = self._add_form_option("terminology_instructions", self.instructions.terminology_instructions, MULTILINE_OPTION, _("Instructions for building a terminology list"))
         self.form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         self.button_layout = QHBoxLayout()
@@ -78,6 +79,7 @@ class EditInstructionsDialog(QDialog):
             self.instructions.task_type = self.task_type_edit.GetValue()
             self.instructions.instructions = self.instructions_edit.GetValue()
             self.instructions.retry_instructions = self.retry_instructions_edit.GetValue()
+            self.instructions.terminology_instructions = self.terminology_instructions_edit.GetValue()
             self.instructions.instruction_file = None
 
         # Check that {task_type} is found in instructions
@@ -103,6 +105,8 @@ class EditInstructionsDialog(QDialog):
             return True
         if self.retry_instructions_edit.GetValue() != self.instructions.retry_instructions:
             return True
+        if self.terminology_instructions_edit.GetValue() != self.instructions.terminology_instructions:
+            return True
 
         return False
 
@@ -125,6 +129,7 @@ class EditInstructionsDialog(QDialog):
             self.task_type_edit.SetValue(self.instructions.task_type)
             self.instructions_edit.SetValue(self.instructions.instructions)
             self.retry_instructions_edit.SetValue(self.instructions.retry_instructions)
+            self.terminology_instructions_edit.SetValue(self.instructions.terminology_instructions)
 
         except Exception as e:
             logging.error(f"Unable to load instructions: {str(e)}")
@@ -141,6 +146,7 @@ class EditInstructionsDialog(QDialog):
                 self.task_type_edit.SetValue(self.instructions.task_type)
                 self.instructions_edit.SetValue(self.instructions.instructions)
                 self.retry_instructions_edit.SetValue(self.instructions.retry_instructions)
+                self.terminology_instructions_edit.SetValue(self.instructions.terminology_instructions)
 
             except Exception as e:
                 logging.error(f"Unable to read instruction file: {str(e)}")
@@ -155,6 +161,7 @@ class EditInstructionsDialog(QDialog):
                 self.instructions.task_type = self.task_type_edit.GetValue()
                 self.instructions.instructions = self.instructions_edit.GetValue()
                 self.instructions.retry_instructions = self.retry_instructions_edit.GetValue()
+                self.instructions.terminology_instructions = self.terminology_instructions_edit.GetValue()
 
                 SaveInstructions(self.instructions, file_name)
 
@@ -168,3 +175,4 @@ class EditInstructionsDialog(QDialog):
         self.task_type_edit.SetValue(instructions.task_type)
         self.instructions_edit.SetValue(instructions.instructions)
         self.retry_instructions_edit.SetValue(instructions.retry_instructions)
+        self.terminology_instructions_edit.SetValue(instructions.terminology_instructions)

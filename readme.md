@@ -283,8 +283,8 @@ Default values for many settings can be set in the .env file, using a NAME_IN_CA
   Accumulates names, titles and technical terms into a terminology map that is provided to subsequent batches so that consistent translations can be used throughout.
 
 - `--terminology`:
-  Seed the terminology map with a `SOURCE::TRANSLATION` pair, or a path to a text file of such pairs. Repeatable. Implies `--build_terminology_map`.
-  Example: `--terminology "Alice::アリス" --terminology wonderland_names.txt`
+  Seed the terminology map with a `SOURCE::TRANSLATION` pair, or a path to a text file of such pairs. Repeatable.
+  Example: `--terminology "Alice::アリス" --terminology wonderland_locations.txt`
 
 - `--scenethreshold`:
   Number of seconds between lines to consider it a new scene.

@@ -427,7 +427,7 @@ class TerminologyMapContextTests(SubtitleTestCase):
     def __init__(self, methodName):
         super().__init__(methodName, custom_options={
             'max_batch_size': 100,
-            'use_terminology_map': True,
+            'build_terminology_map': True,
         })
 
     def _setup(self, terminology_map : dict|None = None) -> tuple[Subtitles, SubtitleTranslator]:
@@ -483,7 +483,7 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
     def __init__(self, methodName):
         super().__init__(methodName, custom_options={
             'max_batch_size': 100,
-            'use_terminology_map': True,
+            'build_terminology_map': True,
         })
 
     def _make_data_with_terminology(self, batch_key : str, terminology : dict) -> dict:
@@ -542,12 +542,12 @@ class TerminologyMapAccumulationTests(SubtitleTestCase):
         self.assertLoggedIn("食事 was added", "食事", terminology_map)
 
     def test_no_accumulation_when_disabled(self):
-        """Terminology is not accumulated when use_terminology_map is False"""
+        """Terminology is not accumulated when build_terminology_map is False"""
         expected = {"星野": "Hoshino"}
         data = self._make_data_with_terminology('Translate scene 1 batch 1', expected)
 
         options = deepcopy(self.options)
-        options.add('use_terminology_map', False)
+        options.add('build_terminology_map', False)
         provider = DummyProvider(data=data)
         originals = PrepareSubtitles(data, 'original')
         batcher = SubtitleBatcher(options)

@@ -243,7 +243,7 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'target_language': args.target_language,
         'temperature': args.temperature,
         'autosplit_on_error': args.autosplit,
-        'use_terminology_map': args.build_terminology_map or bool(args.terminology),
+        'build_terminology_map': args.build_terminology_map or bool(args.terminology),
         'write_backup': args.writebackup,
     }
 

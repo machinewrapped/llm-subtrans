@@ -1,7 +1,7 @@
 """
 Terminology map test script.
 
-Translates a subtitle file with use_terminology_map=True and collects per-batch
+Translates a subtitle file with build_terminology_map=True and collects per-batch
 data about which terms are extracted, which are genuinely new, and whether the
 model ever tries to override an existing translation.  Use this to evaluate and
 iterate on the terminology prompt.
@@ -617,7 +617,7 @@ def run(args : argparse.Namespace) -> int:
         api_key=args.api_key or None,
         target_language=args.language,
         instruction_file=args.instruction_file or 'instructions.txt',
-        use_terminology_map=True,
+        build_terminology_map=True,
         max_batch_size=args.max_batch_size,
         scene_threshold=args.scene_threshold,
         preprocess_subtitles=True,

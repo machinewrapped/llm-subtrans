@@ -65,7 +65,7 @@ class ProjectSettings(QGroupBox):
             'include_original': self._getcheckboxvalue('include_original'),
             'description': self._gettextvalue('description'),
             'names': ParseNames(self._gettextvalue('names')),
-            'use_terminology_map': self._getcheckboxvalue('use_terminology_map'),
+            'build_terminology_map': self._getcheckboxvalue('build_terminology_map'),
             'substitutions': Substitutions.Parse(self._gettextvalue('substitutions')),
             'substitution_mode': self._gettextvalue('substitution_mode'),
             'terminology_map': self._gettextvalue('terminology_map') if 'terminology_map' in self.widgets else self.settings.get('terminology_map'),
@@ -138,8 +138,8 @@ class ProjectSettings(QGroupBox):
             self.AddCheckboxOption(_("Add RTL Markers"), settings, 'add_right_to_left_markers')
             self.AddMultiLineOption(_("Description"), settings, 'description')
             self.AddMultiLineOption(_("Names"), settings, 'names')
-            self.AddCheckboxOption(_("Use Terminology Map"), settings, 'use_terminology_map')
-            if settings.get('use_terminology_map'):
+            self.AddCheckboxOption(_("Build Terminology Map"), settings, 'build_terminology_map')
+            if settings.get('build_terminology_map'):
                 self.AddMultiLineOption(_("Terminology Map"), settings, 'terminology_map')
 
             self.AddMultiLineOption(_("Substitutions"), settings, 'substitutions')
@@ -289,8 +289,8 @@ class ProjectSettings(QGroupBox):
                     self.datamodel.UpdateProjectSettings({ "model": value })
                     self.settings['model'] = self.datamodel.selected_model
 
-            elif key == 'use_terminology_map':
-                self.settings['use_terminology_map'] = bool(value)
+            elif key == 'build_terminology_map':
+                self.settings['build_terminology_map'] = bool(value)
                 self.BuildForm(self.settings)
 
     def _update_provider_settings(self, provider : str):

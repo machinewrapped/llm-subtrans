@@ -75,7 +75,7 @@ def init_options(**settings: SettingType) -> Options:
         target_language = "French",
         instruction_file = "instructions.txt",
         postprocess_translation = True,
-        use_terminology_map = True,
+        build_terminology_map = True,
 
         See :class:`Options` for available settings. 
         Options that are not specified will be assigned default values.
@@ -288,7 +288,7 @@ def init_translator(
 
     # Subscribe to events (see TranslationEvents for full list):
     #   batch_translated, scene_translated, batch_updated, preprocessed
-    #   terminology_updated  -- fired after each batch when use_terminology_map=True
+    #   terminology_updated  -- fired after each batch when build_terminology_map=True
     #   error, warning, info
     """
     options = Options(settings)

@@ -31,7 +31,7 @@ class SettingsDialog(QDialog):
             'ui_language': (str, _("The language of the application interface")),
             'theme': [],
             'target_language': (str, _("The default language to translate the subtitles to")),
-            'use_terminology_map': (bool, _("Build a terminology map during translation and use it to keep terminology consistent")),
+            'build_terminology_map': (bool, _("Build a terminology map during translation to keep terminology consistent")),
             'include_original': (bool, _("Include original text in translated subtitles")),
             'add_right_to_left_markers': (bool, _("Add RTL markers around translated lines that contain primarily right-to-left script on save")),
             'instruction_file': (str, _("Instructions for the translation provider to follow")),

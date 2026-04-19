@@ -226,7 +226,7 @@ Note that there are a number of options which are only used by the GUI-Subtrans 
 
 ### Terminology map
 
-`use_terminology_map`: When enabled, PySubtrans instructs the model to report any names, titles or technical terms with the translation it used, and accumulates them into a terminology map that is injected into each subsequent batch's context, so the same translations are used consistently throughout the file.
+`build_terminology_map`: When enabled, PySubtrans instructs the model to report any names, titles or technical terms with the translation it used, and accumulates them into a terminology map that is injected into each subsequent batch's context, so the same translations are used consistently throughout the file.
 
 The map can also be seeded with translations by passing a `terminology_map` in the options.
 
@@ -241,7 +241,7 @@ from PySubtrans.Helpers.Parse import FormatKeyValuePairs
 
 options = init_options(
     prompt="Translate these subtitles into Japanese",
-    use_terminology_map=True,
+    build_terminology_map=True,
     terminology_map=["Alice::アリス", "Wonderland::ワンダーランド"],  # seed from episode 1
 )
 
@@ -252,7 +252,7 @@ translator.events.terminology_updated.connect(on_terminology_updated)
 translator.TranslateSubtitles(subtitles)
 ```
 
-Note: `use_terminology_map` controls whether the seed is injected into the prompt context **and** whether new terms are added to it - it is not currently possible to use only a pre-seeded terminology map.
+Note: `build_terminology_map` controls whether the model is asked to report new terms after each batch. A seed `terminology_map` passed to `init_translator` is always injected into the prompt context regardless of this setting.
 
 ## Advanced workflows
 

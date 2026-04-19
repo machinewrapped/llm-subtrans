@@ -47,7 +47,7 @@ class SubtitleTranslator:
         self.stop_on_error = settings.get_bool('stop_on_error')
         self.retry_on_error = settings.get_bool('retry_on_error')
         self.split_on_error = settings.get_bool('autosplit_on_error')
-        self.use_terminology_map = settings.get_bool('use_terminology_map')
+        self.build_terminology_map = settings.get_bool('build_terminology_map')
         self.terminology_map : dict[str, str] = dict(terminology_map) if terminology_map else {}
         self.max_summary_length = settings.get_int('max_summary_length')
         self.retranslate = settings.get_bool('retranslate')
@@ -62,7 +62,7 @@ class SubtitleTranslator:
         self.user_prompt : str = settings.BuildUserPrompt()
 
         base_instructions = self.instructions.instructions or ''
-        if self.use_terminology_map and self.instructions.terminology_instructions:
+        if self.build_terminology_map and self.instructions.terminology_instructions:
             self.system_instructions : str = '\n\n'.join(filter(None, [base_instructions, self.instructions.terminology_instructions]))
         else:
             self.system_instructions : str = base_instructions
@@ -195,7 +195,7 @@ class SubtitleTranslator:
                 # Notify observers the batch was translated
                 self.events.batch_translated.send(self, batch=batch)
 
-                if self.use_terminology_map:
+                if self.build_terminology_map:
                     self._update_terminology_map(batch)
 
                 if batch.errors:

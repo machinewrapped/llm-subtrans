@@ -75,7 +75,7 @@ DEFAULT_OPTIONS = SettingsType({
     'postprocess_translation': True,                # Whether to apply postprocessing steps to the translated subtitles
     'log_path': './batch-translate.log',
     'preview': False,                               # Set to True to exercise the workflow without calling the API to execute translations.
-    'use_terminology_map': False,                   # Build a terminology map across files for consistent name/term translation
+    'build_terminology_map': False,                 # Build a terminology map across files for consistent name/term translation
     'terminology_file': None,                       # File to persist the terminology map between runs (key::value per line)
 })
 
@@ -98,7 +98,7 @@ class BatchJobConfig:
         self.provider = self.options.get_str('provider')
         self.model = self.options.get_str('model')
         self.instruction_file = self.options.get_str('instruction_file')
-        self.use_terminology_map = self.options.get_bool('use_terminology_map')
+        self.build_terminology_map = self.options.get_bool('build_terminology_map')
         self.terminology_file = self.options.get_str('terminology_file')
 
 class BatchProcessor:
@@ -111,7 +111,7 @@ class BatchProcessor:
         self.progress_display = ProgressDisplay()
         self.translation_provider = self._initialise_provider()
         self._terminology_map : dict[str, str] = {}
-        if config.use_terminology_map and config.terminology_file:
+        if config.build_terminology_map and config.terminology_file:
             self._terminology_map = self._load_terminology_file(config.terminology_file)
             if self._terminology_map:
                 self.logger.info("Loaded %d term(s) from %s", len(self._terminology_map), config.terminology_file)
@@ -161,7 +161,7 @@ class BatchProcessor:
 
             try:
                 subtitles = init_subtitles(filepath=str(source_file), options=self.options)
-                if self.config.use_terminology_map:
+                if self.config.build_terminology_map:
                     subtitles.terminology_map = dict(self._terminology_map)
 
             except SubtitleError as exc:
@@ -189,7 +189,7 @@ class BatchProcessor:
                 translator : SubtitleTranslator = init_translator(
                     self.options,
                     translation_provider=self.translation_provider,
-                    terminology_map=self._terminology_map if self.config.use_terminology_map else None,
+                    terminology_map=self._terminology_map if self.config.build_terminology_map else None,
                 )
 
                 # Connect the batch script logger to translation events
@@ -198,7 +198,7 @@ class BatchProcessor:
             except SubtitleError as exc:
                 raise SubtitleError(f"Unable to initialise translator: {exc}") from exc
 
-            if self.config.use_terminology_map:
+            if self.config.build_terminology_map:
                 translator.events.terminology_updated.connect(self._on_terminology_updated)
 
             # ProgressDisplay.track hooks into SubtitleTranslator events to provide
@@ -218,7 +218,7 @@ class BatchProcessor:
                     stats.failed_files += 1
                     continue
 
-            if self.config.use_terminology_map and not translator.preview:
+            if self.config.build_terminology_map and not translator.preview:
                 updated_map = subtitles.terminology_map
                 if updated_map:
                     prev_count = len(self._terminology_map)
@@ -355,8 +355,8 @@ def build_config(args : argparse.Namespace) -> BatchJobConfig:
         settings['instruction_file'] = args.instruction_file
     if args.preview is not None:
         settings['preview'] = args.preview
-    if args.use_terminology_map is not None:
-        settings['use_terminology_map'] = args.use_terminology_map
+    if args.build_terminology_map is not None:
+        settings['build_terminology_map'] = args.build_terminology_map
     if args.terminology_file is not None:
         settings['terminology_file'] = args.terminology_file
 
@@ -562,13 +562,13 @@ def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
     parser.add_argument("--log-file", dest="log_file", help="Path to write the detailed log file")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose console logging")
     parser.add_argument("--preview", dest="preview", action="store_true", help="Enable preview mode")
-    parser.add_argument("--use-terminology-map", dest="use_terminology_map", action="store_true",
+    parser.add_argument("--build-terminology-map", dest="build_terminology_map", action="store_true",
                         help="Build a shared terminology map across all files for consistent name/term translation")
     parser.add_argument("--terminology-file", dest="terminology_file",
                         help="File to persist the terminology map between runs (key::value per line)")
     parser.add_argument("--option", action="append", default=[], metavar="KEY=VALUE",
                         help="Override additional Options settings (repeatable)")
-    parser.set_defaults(preview=None, use_terminology_map=None)
+    parser.set_defaults(preview=None, build_terminology_map=None)
     return parser.parse_args(argv)
 
 

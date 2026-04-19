@@ -32,7 +32,7 @@ class SubtitleTranslator:
     """
     Processes subtitles into scenes and batches and sends them for translation
     """
-    def __init__(self, settings: Options, translation_provider: TranslationProvider, resume: bool = False, terminology_map: dict[str,str]|None = None):
+    def __init__(self, settings : Options, translation_provider : TranslationProvider, resume : bool = False, terminology_map : dict[str,str]|None = None):
         """
         Initialise a SubtitleTranslator with translation options
         """

@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QFileDialog
 )
-from PySide6.QtCore import Signal, QSignalBlocker
+from PySide6.QtCore import Qt, Signal, QSignalBlocker
 from GuiSubtrans.EditInstructionsDialog import EditInstructionsDialog
 from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
@@ -32,6 +32,7 @@ class ProjectSettings(QGroupBox):
     Allow the user to edit project-specific settings
     """
     settingsChanged = Signal(dict)
+    _terminologyTermsAddedInternal = Signal(dict)
 
     def __init__(self, action_handler : ProjectActions|None = None, parent=None):
         super().__init__(parent=parent)
@@ -51,6 +52,7 @@ class ProjectSettings(QGroupBox):
         self.grid_layout = OptionsGrid()
 
         self._layout.addLayout(self.grid_layout)
+        self._terminologyTermsAddedInternal.connect(self._on_terminology_terms_added, Qt.ConnectionType.QueuedConnection)
 
     def GetSettings(self) -> SettingsType:
         """
@@ -93,6 +95,9 @@ class ProjectSettings(QGroupBox):
                 logging.error(f"Error updating UI language in ProjectSettings: {e}")
 
     def SetDataModel(self, datamodel : ProjectDataModel|None):
+        if self.datamodel is not None and self.datamodel.project is not None:
+            self.datamodel.project.events.terminology_updated.disconnect(self._blinker_terminology_updated)
+
         self.datamodel = datamodel
         if datamodel is None:
             self.ClearForm()
@@ -117,6 +122,7 @@ class ProjectSettings(QGroupBox):
             terminology = self.settings.get('terminology_map')
             if isinstance(terminology, dict):
                 self.settings['terminology_map'] = FormatKeyValuePairs(terminology)
+            datamodel.project.events.terminology_updated.connect(self._blinker_terminology_updated)
             self.BuildForm(self.settings)
 
     def Populate(self):
@@ -336,6 +342,26 @@ class ProjectSettings(QGroupBox):
             self.settings.update(dialog.instructions.GetSettings())
             self.settingsChanged.emit(dialog.instructions.GetSettings())
             self.BuildForm(self.settings)
+
+    def _blinker_terminology_updated(self, _sender, **kwargs):
+        new_terms = kwargs.get('new_terms')
+        if new_terms:
+            self._terminologyTermsAddedInternal.emit(dict(new_terms))
+
+    def _on_terminology_terms_added(self, new_terms : dict):
+        if not new_terms:
+            return
+
+        appended = "\n".join(f"{k}::{v}" for k, v in new_terms.items())
+
+        raw = self.settings.get('terminology_map') or ""
+        existing : str = FormatKeyValuePairs(raw) if isinstance(raw, dict) else str(raw)
+        self.settings['terminology_map'] = (existing + "\n" + appended) if existing else appended
+
+        widget = self.widgets.get('terminology_map')
+        if isinstance(widget, TextBoxEditor):
+            with QSignalBlocker(widget):
+                widget.append(appended)
 
     def _copy_from_another_project(self):
         '''

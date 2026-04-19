@@ -401,6 +401,7 @@ class SubtitleProject:
         translator.events.preprocessed.connect(self._on_preprocessed)
         translator.events.batch_translated.connect(self._on_batch_translated)
         translator.events.scene_translated.connect(self._on_scene_translated)
+        translator.events.terminology_updated.connect(self._on_terminology_updated)
         translator.events.connect_default_loggers()
 
         try:
@@ -430,6 +431,7 @@ class SubtitleProject:
             translator.events.preprocessed.disconnect(self._on_preprocessed)
             translator.events.batch_translated.disconnect(self._on_batch_translated)
             translator.events.scene_translated.disconnect(self._on_scene_translated)
+            translator.events.terminology_updated.disconnect(self._on_terminology_updated)
             translator.events.disconnect_default_loggers()
 
     def TranslateScene(self, translator : SubtitleTranslator, scene_number : int, batch_numbers : list[int]|None = None, line_numbers : list[int]|None = None) -> SubtitleScene|None:
@@ -444,6 +446,7 @@ class SubtitleProject:
 
         translator.events.preprocessed.connect(self._on_preprocessed)
         translator.events.batch_translated.connect(self._on_batch_translated)
+        translator.events.terminology_updated.connect(self._on_terminology_updated)
         translator.events.connect_default_loggers()
 
         try:
@@ -461,6 +464,7 @@ class SubtitleProject:
         finally:
             translator.events.preprocessed.disconnect(self._on_preprocessed)
             translator.events.batch_translated.disconnect(self._on_batch_translated)
+            translator.events.terminology_updated.disconnect(self._on_terminology_updated)
             translator.events.disconnect_default_loggers()
 
     def _set_project_setting(self, setting_name, value):
@@ -513,5 +517,14 @@ class SubtitleProject:
         logging.debug("Scene translated")
         self.needs_writing = self.use_project_file
         self.events.scene_translated.send(self, scene=scene)
+
+    def _on_terminology_updated(self, sender, scene, batch, returned_terms, new_terms, conflict_terms, terminology_map) -> None:
+        self.needs_writing = self.use_project_file
+        self.events.terminology_updated.send(
+            self,
+            scene=scene, batch=batch,
+            returned_terms=returned_terms, new_terms=new_terms,
+            conflict_terms=conflict_terms, terminology_map=terminology_map,
+        )
 
 

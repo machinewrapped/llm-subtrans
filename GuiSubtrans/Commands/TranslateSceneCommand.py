@@ -59,6 +59,7 @@ class TranslateSceneCommand(Command):
 
         self.translator.events.batch_translated.connect(self._on_batch_translated)
         self.translator.events.batch_updated.connect(self._on_batch_updated)
+        self.translator.events.terminology_updated.connect(project._on_terminology_updated)
         self.translator.events.error.connect(self._on_error)
         self.translator.events.warning.connect(self._on_warning)
         self.translator.events.info.connect(self._on_info)
@@ -102,6 +103,7 @@ class TranslateSceneCommand(Command):
             if self.translator:
                 self.translator.events.batch_translated.disconnect(self._on_batch_translated)
                 self.translator.events.batch_updated.disconnect(self._on_batch_updated)
+                self.translator.events.terminology_updated.disconnect(project._on_terminology_updated)
                 self.translator.events.error.disconnect(self._on_error)
                 self.translator.events.warning.disconnect(self._on_warning)
                 self.translator.events.info.disconnect(self._on_info)

@@ -113,7 +113,7 @@ def init_subtitles(
     *,
     options: Options|SettingsType|None = None,
     auto_batch: bool = True,
-    persistent_keys: list[str] | None = None,
+    persistent_keys : list[str]|None = None,
 ) -> Subtitles:
     """
     Initialise a :class:`Subtitles` instance and optionally load content from a file or string.

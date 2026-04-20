@@ -95,8 +95,8 @@ class ProjectSettings(QGroupBox):
                 logging.error(f"Error updating UI language in ProjectSettings: {e}")
 
     def SetDataModel(self, datamodel : ProjectDataModel|None):
-        if self.datamodel is not None and self.datamodel.project is not None:
-            self.datamodel.project.events.terminology_updated.disconnect(self._blinker_terminology_updated)
+        if self.datamodel is not None:
+            self._disconnect_from_datamodel()
 
         self.datamodel = datamodel
         if datamodel is None:
@@ -327,6 +327,10 @@ class ProjectSettings(QGroupBox):
                 logging.error(f"Error updating model list: {e}")
             finally:
                 self.updating_model_list = False
+
+    def _disconnect_from_datamodel(self):
+        if self.datamodel is not None and self.datamodel.project is not None:
+            self.datamodel.project.events.terminology_updated.disconnect(self._blinker_terminology_updated)
 
     def _edit_instructions(self):
         # Commit the settings

@@ -219,15 +219,13 @@ class BatchProcessor:
                     continue
 
             if self.config.build_terminology_map and not translator.preview:
-                updated_map = subtitles.terminology_map
-                if updated_map:
-                    prev_count = len(self._terminology_map)
-                    self._terminology_map = dict(updated_map)
-                    new_count = len(self._terminology_map)
-                    if new_count != prev_count:
-                        self.logger.info("Terminology map now has %d term(s) (+%d)", new_count, new_count - prev_count)
-                    if self.config.terminology_file:
-                        self._save_terminology_file(self.config.terminology_file, self._terminology_map)
+                prev_count = len(self._terminology_map)
+                self._terminology_map = dict(translator.terminology_map)
+                new_count = len(self._terminology_map)
+                if new_count != prev_count:
+                    self.logger.info("Terminology map now has %d term(s) (+%d)", new_count, new_count - prev_count)
+                if self._terminology_map and self.config.terminology_file:
+                    self._save_terminology_file(self.config.terminology_file, self._terminology_map)
 
             if translator.preview:
                 self.logger.info("Preview mode enabled - skipping save for %s", source_file)
@@ -288,6 +286,7 @@ class BatchProcessor:
         return destination_file
 
     def _on_terminology_updated(self, _sender, scene, batch, new_terms, conflict_terms, terminology_map, **_kwargs) -> None:
+        self._terminology_map = dict(terminology_map)
         if new_terms:
             sample = ', '.join(f"{k}::{v}" for k, v in list(new_terms.items())[:5])
             self.logger.info("Scene %s batch %s: added %d new term(s): %s", scene, batch, len(new_terms), sample)

@@ -522,7 +522,8 @@ def _make_batch_handler(records : list[BatchRecord], state : RunState):
 
         # batch.context['terminology'] was stored before translation; it holds
         # exactly what was injected into the prompt for this batch.
-        injected = _parse_terminology_context(batch.context.get('terminology'))  # type: ignore[arg-type]
+        raw_terminology = batch.context.get('terminology')
+        injected = _parse_terminology_context(raw_terminology if isinstance(raw_terminology, str) else None)
 
         record = BatchRecord(
             scene=batch.scene,
@@ -642,7 +643,7 @@ def run(args : argparse.Namespace) -> int:
     provider   = init_translation_provider(args.provider, options)
     translator : SubtitleTranslator = init_translator(options, translation_provider=provider)
 
-    initial_map : dict[str, str] = {k: str(v) for k, v in subtitles.settings.get_dict('terminology_map').items()}
+    initial_map : dict[str, str] = dict(subtitles.terminology_map)
 
     state = RunState(total_lines=total_lines, total_batches=total_batches)
     for term, value in initial_map.items():
@@ -661,7 +662,7 @@ def run(args : argparse.Namespace) -> int:
         logging.error("Translation failed: %s", exc)
         return 1
 
-    final_map : dict[str, str] = {k: str(v) for k, v in subtitles.settings.get_dict('terminology_map').items()}
+    final_map : dict[str, str] = dict(translator.terminology_map)
 
     _print_report(args, source, total_lines, total_scenes, records, initial_map, final_map, state)
 

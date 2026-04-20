@@ -113,7 +113,6 @@ def init_subtitles(
     *,
     options: Options|SettingsType|None = None,
     auto_batch: bool = True,
-    persistent_keys : list[str]|None = None,
 ) -> Subtitles:
     """
     Initialise a :class:`Subtitles` instance and optionally load content from a file or string.
@@ -128,14 +127,9 @@ def init_subtitles(
 
     options : Options or SettingsType, optional
         Settings for pre-processing and batching subtitles, e.g. `scene_threshold`, `min_batch_size`, `max_batch_size`.
-        Also accepts settings such as `terminology_map`, `names`, and `substitutions` which are
-        stored in the returned :class:`Subtitles` instance, so that they are available during translation.
 
     auto_batch : bool, optional
         If True (default), automatically divide the subtitles into scenes and batches ready for translation.
-
-    persistent_keys : list of str, optional
-        List of settings keys to store in the returned :class:`Subtitles` instance (by default all provided settings are stored). 
 
     Returns
     -------
@@ -169,7 +163,6 @@ def init_subtitles(
         raise SubtitleError("No subtitle lines were loaded from the supplied input")
 
     options = Options(options)
-    subtitles.UpdateSettings(options, keys=persistent_keys)
 
     if options.get_bool('preprocess_subtitles'):
         preprocess_subtitles(subtitles, options)

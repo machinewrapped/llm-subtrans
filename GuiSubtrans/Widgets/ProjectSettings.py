@@ -65,7 +65,7 @@ class ProjectSettings(QGroupBox):
             'include_original': self._getcheckboxvalue('include_original'),
             'description': self._gettextvalue('description'),
             'names': ParseNames(self._gettextvalue('names')),
-            'use_terminology_map': self._getcheckboxvalue('use_terminology_map'),
+            'build_terminology_map': self._getcheckboxvalue('build_terminology_map'),
             'substitutions': Substitutions.Parse(self._gettextvalue('substitutions')),
             'substitution_mode': self._gettextvalue('substitution_mode'),
             'terminology_map': self._gettextvalue('terminology_map') if 'terminology_map' in self.widgets else self.settings.get('terminology_map'),
@@ -95,8 +95,8 @@ class ProjectSettings(QGroupBox):
                 logging.error(f"Error updating UI language in ProjectSettings: {e}")
 
     def SetDataModel(self, datamodel : ProjectDataModel|None):
-        if self.datamodel is not None and self.datamodel.project is not None:
-            self.datamodel.project.events.terminology_updated.disconnect(self._blinker_terminology_updated)
+        if self.datamodel is not None:
+            self._disconnect_from_datamodel()
 
         self.datamodel = datamodel
         if datamodel is None:
@@ -119,9 +119,7 @@ class ProjectSettings(QGroupBox):
             self.settings['model'] = datamodel.selected_model
             self.settings['provider'] = datamodel.provider
             self.settings['project_path'] = os.path.dirname(datamodel.project.projectfile or "project.subtrans")
-            terminology = self.settings.get('terminology_map')
-            if isinstance(terminology, dict):
-                self.settings['terminology_map'] = FormatKeyValuePairs(terminology)
+            self.settings['terminology_map'] = FormatKeyValuePairs(datamodel.project.subtitles.terminology_map)
             datamodel.project.events.terminology_updated.connect(self._blinker_terminology_updated)
             self.BuildForm(self.settings)
 
@@ -140,8 +138,8 @@ class ProjectSettings(QGroupBox):
             self.AddCheckboxOption(_("Add RTL Markers"), settings, 'add_right_to_left_markers')
             self.AddMultiLineOption(_("Description"), settings, 'description')
             self.AddMultiLineOption(_("Names"), settings, 'names')
-            self.AddCheckboxOption(_("Use Terminology Map"), settings, 'use_terminology_map')
-            if settings.get('use_terminology_map'):
+            self.AddCheckboxOption(_("Build Terminology Map"), settings, 'build_terminology_map')
+            if settings.get('build_terminology_map'):
                 self.AddMultiLineOption(_("Terminology Map"), settings, 'terminology_map')
 
             self.AddMultiLineOption(_("Substitutions"), settings, 'substitutions')
@@ -291,8 +289,8 @@ class ProjectSettings(QGroupBox):
                     self.datamodel.UpdateProjectSettings({ "model": value })
                     self.settings['model'] = self.datamodel.selected_model
 
-            elif key == 'use_terminology_map':
-                self.settings['use_terminology_map'] = bool(value)
+            elif key == 'build_terminology_map':
+                self.settings['build_terminology_map'] = bool(value)
                 self.BuildForm(self.settings)
 
     def _update_provider_settings(self, provider : str):
@@ -329,6 +327,10 @@ class ProjectSettings(QGroupBox):
                 logging.error(f"Error updating model list: {e}")
             finally:
                 self.updating_model_list = False
+
+    def _disconnect_from_datamodel(self):
+        if self.datamodel is not None and self.datamodel.project is not None:
+            self.datamodel.project.events.terminology_updated.disconnect(self._blinker_terminology_updated)
 
     def _edit_instructions(self):
         # Commit the settings
@@ -393,6 +395,8 @@ class ProjectSettings(QGroupBox):
                 subtitles.settings.pop('instruction_file', None)
 
                 self.settings.update(subtitles.settings)
+                if subtitles.terminology_map:
+                    self.settings['terminology_map'] = FormatKeyValuePairs(subtitles.terminology_map)
                 self.Populate()
 
             except Exception as e:

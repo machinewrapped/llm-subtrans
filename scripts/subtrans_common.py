@@ -148,10 +148,24 @@ def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
 
     return LoggerOptions(file_handler=file_handler, log_path=log_path)
 
+_RENAMED_ARGS = {
+    '--target_language': '--target-language',
+}
+
+def _warn_renamed_args() -> None:
+    """Warn and correct any legacy underscore-form arg names passed on the command line."""
+    for i, arg in enumerate(sys.argv):
+        name = arg.split('=', 1)[0]
+        if name in _RENAMED_ARGS:
+            new_name = _RENAMED_ARGS[name]
+            print(f"Warning: {name} is deprecated, use {new_name}", file=sys.stderr)
+            sys.argv[i] = arg.replace(name, new_name, 1)
+
 def CreateArgParser(description : str) -> ArgumentParser:
     """
     Create new arg parser and parse shared command line arguments between models
     """
+    _warn_renamed_args()
     pre_parser = ArgumentParser(add_help=False)
     pre_parser.add_argument('--list-formats', action='store_true')
     pre_args, _ = pre_parser.parse_known_args()
@@ -163,7 +177,7 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('input', help=input_help)
     parser.add_argument('-o', '--output', help="Output subtitle file path; format inferred from extension")
     parser.add_argument('--list-formats', action='store_true', help="List supported subtitle formats and exit")
-    parser.add_argument('-l', '--target_language', type=str, default=None, help="The target language for the translation")
+    parser.add_argument('-l', '--target-language', type=str, default=None, help="The target language for the translation")
     parser.add_argument('--batchthreshold', type=float, default=None, help="Number of seconds between lines to consider for batching")
     parser.add_argument('--debug', action='store_true', help="Run with DEBUG log level")
     parser.add_argument('--verbose', action='store_true', help="Log detailed progress and token usage for each batch")
@@ -194,8 +208,9 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--substitution', action='append', type=str, default=None, help="A pair of strings separated by ::, to subsitute in source or translation")
     parser.add_argument('--temperature', type=float, default=0.0, help="A higher temperature increases the random variance of translations.")
     parser.add_argument('--autosplit', action='store_true', default=None, help="Split batches that fail validation in half and retry each half separately")
-    parser.add_argument('--build_terminology_map', action='store_true', default=None, help="Build and use a terminology map during translation")
+    parser.add_argument('--build-terminology-map', action='store_true', default=None, help="Build and use a terminology map during translation")
     parser.add_argument('--terminology', action='append', type=str, default=None, help="Seed entry for the terminology map as SOURCE::TRANSLATION, or a path to a file of such pairs.")
+    parser.add_argument('--terminology-file', dest='terminology_file', type=str, default=None, help="Path to a key::value file to seed from and save the terminology map to after translation")
     parser.add_argument('--writebackup', action='store_true', help="Write a backup of the project file when it is loaded (if it exists)")
     return parser
 
@@ -243,8 +258,8 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'target_language': args.target_language,
         'temperature': args.temperature,
         'autosplit_on_error': args.autosplit,
-        'use_terminology_map': args.build_terminology_map or bool(args.terminology),
-        'terminology_map': ParseKeyValuePairsOrFiles(args.terminology) if args.terminology else None,
+        'build_terminology_map': args.build_terminology_map or bool(getattr(args, 'terminology_file', None)),
+        'terminology_file': getattr(args, 'terminology_file', None),
         'write_backup': args.writebackup,
     }
 
@@ -267,6 +282,17 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
         project.SaveBackupFile()
 
     project.UpdateProjectSettings(options)
+
+    terminology_file = getattr(args, 'terminology_file', None)
+    if terminology_file and os.path.exists(terminology_file):
+        file_seed = ParseKeyValuePairsOrFiles([terminology_file])
+        if file_seed:
+            logging.info(f"Loaded {len(file_seed)} term(s) from {terminology_file}")
+            project.subtitles.terminology_map = {**file_seed, **project.subtitles.terminology_map}
+
+    if getattr(args, 'terminology', None):
+        cli_seed = ParseKeyValuePairsOrFiles(args.terminology)
+        project.subtitles.terminology_map = {**project.subtitles.terminology_map, **cli_seed}
 
     subtitles = project.subtitles
 
@@ -349,6 +375,15 @@ def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_
     if token_usage and token_usage.has_data:
         logging.info(f"Token usage: {token_usage.prompt_tokens} in / {token_usage.output_tokens} out ({token_usage.total_tokens} total)")
 
+def _save_terminology_file(path : str, terminology_map : dict[str, str]) -> None:
+    """Write terminology map to a key::value text file."""
+    try:
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write("\n".join(f"{k}::{v}" for k, v in terminology_map.items()))
+        logging.info(f"Saved {len(terminology_map)} term(s) to {path}")
+    except Exception as e:
+        logging.warning(f"Unable to save terminology file '{path}': {e}")
+
 def TranslateProject(project : SubtitleProject, options : Options, verbose : bool = False, preview : bool = False) -> None:
     """
     Translate a prepared project, logging progress and final status.
@@ -358,7 +393,7 @@ def TranslateProject(project : SubtitleProject, options : Options, verbose : boo
     Callers only need to handle errors raised before the project is ready.
     """
     progress_logger : TranslationProgressLogger = TranslationProgressLogger(verbose=verbose)
-    translator : SubtitleTranslator = init_translator(options)
+    translator : SubtitleTranslator = init_translator(options, terminology_map=project.subtitles.terminology_map)
 
     try:
         with progress_logger.Track(translator):
@@ -366,6 +401,10 @@ def TranslateProject(project : SubtitleProject, options : Options, verbose : boo
 
         if project.use_project_file:
             project.UpdateProjectFile()
+
+        terminology_file = options.get_str('terminology_file')
+        if terminology_file and project.subtitles and project.subtitles.terminology_map:
+            _save_terminology_file(terminology_file, project.subtitles.terminology_map)
 
         LogTranslationStatus(project, preview=preview, token_usage=progress_logger.token_usage)
 

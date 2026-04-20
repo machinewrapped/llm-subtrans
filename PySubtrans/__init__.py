@@ -75,8 +75,7 @@ def init_options(**settings: SettingType) -> Options:
         target_language = "French",
         instruction_file = "instructions.txt",
         postprocess_translation = True,
-        use_terminology_map = True,
-        terminology_map = ["the Watch::la Garde", "Kingslayer::Régicide"]
+        build_terminology_map = True,
 
         See :class:`Options` for available settings. 
         Options that are not specified will be assigned default values.
@@ -114,7 +113,6 @@ def init_subtitles(
     *,
     options: Options|SettingsType|None = None,
     auto_batch: bool = True,
-    persistent_keys: list[str] | None = None,
 ) -> Subtitles:
     """
     Initialise a :class:`Subtitles` instance and optionally load content from a file or string.
@@ -129,14 +127,9 @@ def init_subtitles(
 
     options : Options or SettingsType, optional
         Settings for pre-processing and batching subtitles, e.g. `scene_threshold`, `min_batch_size`, `max_batch_size`.
-        Also accepts settings such as `terminology_map`, `names`, and `substitutions` which are
-        stored in the returned :class:`Subtitles` instance, so that they are available during translation.
 
     auto_batch : bool, optional
         If True (default), automatically divide the subtitles into scenes and batches ready for translation.
-
-    persistent_keys : list of str, optional
-        List of settings keys to store in the returned :class:`Subtitles` instance (by default all provided settings are stored). 
 
     Returns
     -------
@@ -170,7 +163,6 @@ def init_subtitles(
         raise SubtitleError("No subtitle lines were loaded from the supplied input")
 
     options = Options(options)
-    subtitles.UpdateSettings(options, keys=persistent_keys)
 
     if options.get_bool('preprocess_subtitles'):
         preprocess_subtitles(subtitles, options)
@@ -244,6 +236,7 @@ def init_translation_provider(
 def init_translator(
     settings : Options|SettingsType,
     translation_provider : TranslationProvider|None = None,
+    terminology_map : dict[str,str]|None = None,
 ) -> SubtitleTranslator:
     """
     Return a ready-to-use :class:`SubtitleTranslator` using the specified settings.
@@ -254,6 +247,9 @@ def init_translator(
         The translator settings. This should specify the provider and model to use, along with extra configuration options as needed.
     translation_provider : TranslationProvider or None, optional
         An pre-configured :class:`TranslationProvider` instance (if not specified a provider is created automatically based on the settings).
+    terminology_map : dict[str, str] or None, optional
+        Seed terminology map used to guide consistent term translation.  The translator builds on this map as translation proceeds;
+        subscribe to the ``terminology_updated`` event to receive snapshots after each batch.
 
     Exceptions
     ----------
@@ -272,8 +268,11 @@ def init_translator(
     opts = init_options(provider="OpenAI", model="gpt-5-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
     translator = init_translator(opts)
 
-    # Create translator from dictionary
+    # Create translator from a plain dictionary
     translator = init_translator({"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"})
+
+    # Create translator with a terminology seed
+    translator = init_translator(opts, terminology_map={"Dragon": "Drache", "Hero": "Held"})
 
     # Create translator with a pre-initialised TranslationProvider
     provider = init_translation_provider("OpenAI", {"model": "gpt-5-mini", "api_key": "sk-..."})
@@ -282,7 +281,7 @@ def init_translator(
 
     # Subscribe to events (see TranslationEvents for full list):
     #   batch_translated, scene_translated, batch_updated, preprocessed
-    #   terminology_updated  -- fired after each batch when use_terminology_map=True
+    #   terminology_updated  -- fired after each batch when build_terminology_map=True
     #   error, warning, info
     """
     options = Options(settings)
@@ -295,7 +294,7 @@ def init_translator(
 
     options.provider = translation_provider.name
 
-    return SubtitleTranslator(options, translation_provider)
+    return SubtitleTranslator(options, translation_provider, terminology_map=terminology_map)
 
 
 def init_project(

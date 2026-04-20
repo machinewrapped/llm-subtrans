@@ -5,6 +5,8 @@ import threading
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import ParseKeyValuePairs, ParseNames
+from PySubtrans.Substitutions import Substitutions
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleEditor import SubtitleEditor
@@ -32,7 +34,7 @@ class SubtitleProject:
         'instructions': None,
         'retry_instructions': None,
         'terminology_instructions': None,
-        'use_terminology_map': None,
+        'build_terminology_map': None,
         'movie_name': None,
         'description': None,
         'names': None,
@@ -42,7 +44,6 @@ class SubtitleProject:
         'add_right_to_left_markers': None,
         'instruction_file': None,
         'format': None,
-        'terminology_map': None
     })
    
     def __init__(self, persistent : bool = False):
@@ -193,7 +194,26 @@ class SubtitleProject:
             # Update obsolete settings to maintain compatibility
             self._update_compatibility(settings)
 
-            if self.subtitles.UpdateSettings(settings, keys=list(self.DEFAULT_PROJECT_SETTINGS.keys())):
+            # Filter to known project settings only
+            filtered = SettingsType({key: settings[key] for key in settings if key in self.DEFAULT_PROJECT_SETTINGS})
+
+            # Route terminology_map to the dedicated top-level attribute; exclude from settings dict
+            terminology_changed = self._parse_terminology_map(filtered)
+
+            # Parse names and substitutions into standard formats
+            self._standardise_settings_format(filtered)
+
+            # Detect changes and update
+            common_keys = filtered.keys() & self.subtitles.settings.keys()
+            new_keys = filtered.keys() - self.subtitles.settings.keys()
+            settings_changed = bool(new_keys) or not all(
+                filtered.get(k) == self.subtitles.settings.get(k) for k in common_keys
+            )
+
+            if settings_changed:
+                self.subtitles.UpdateSettings(filtered)
+
+            if settings_changed or terminology_changed:
                 self.needs_writing = self.use_project_file and bool(self.subtitles.scenes)
 
     def UpdateOutputPath(self, path: str|None = None, extension: str|None = None) -> None:
@@ -479,6 +499,25 @@ class SubtitleProject:
                 self.subtitles.settings[setting_name] = value
                 self.needs_writing = self.use_project_file
 
+    def _standardise_settings_format(self, filtered):
+        if 'names' in filtered:
+            filtered['names'] = ParseNames(filtered.get('names', []))
+
+        if 'substitutions' in filtered:
+            subs = filtered.get('substitutions', [])
+            if subs:
+                filtered['substitutions'] = Substitutions.Parse(subs)
+
+    def _parse_terminology_map(self, filtered):
+        terminology_changed = False
+        if 'terminology_map' in filtered:
+            parsed = ParseKeyValuePairs(filtered.get('terminology_map', {}))
+            if parsed != self.subtitles.terminology_map:
+                self.subtitles.terminology_map = parsed
+                terminology_changed = True
+            del filtered['terminology_map']
+        return terminology_changed
+
     def _update_compatibility(self, settings: SettingsType) -> None:
         """
         Update settings for compatibility with older versions
@@ -519,6 +558,8 @@ class SubtitleProject:
         self.events.scene_translated.send(self, scene=scene)
 
     def _on_terminology_updated(self, sender, scene, batch, returned_terms, new_terms, conflict_terms, terminology_map) -> None:
+        with self.subtitles.lock:
+            self.subtitles.terminology_map = dict(terminology_map)
         self.needs_writing = self.use_project_file
         self.events.terminology_updated.send(
             self,

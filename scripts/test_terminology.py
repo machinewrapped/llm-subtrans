@@ -1,7 +1,7 @@
 """
 Terminology map test script.
 
-Translates a subtitle file with use_terminology_map=True and collects per-batch
+Translates a subtitle file with build_terminology_map=True and collects per-batch
 data about which terms are extracted, which are genuinely new, and whether the
 model ever tries to override an existing translation.  Use this to evaluate and
 iterate on the terminology prompt.
@@ -522,7 +522,8 @@ def _make_batch_handler(records : list[BatchRecord], state : RunState):
 
         # batch.context['terminology'] was stored before translation; it holds
         # exactly what was injected into the prompt for this batch.
-        injected = _parse_terminology_context(batch.context.get('terminology'))  # type: ignore[arg-type]
+        raw_terminology = batch.context.get('terminology')
+        injected = _parse_terminology_context(raw_terminology if isinstance(raw_terminology, str) else None)
 
         record = BatchRecord(
             scene=batch.scene,
@@ -617,7 +618,7 @@ def run(args : argparse.Namespace) -> int:
         api_key=args.api_key or None,
         target_language=args.language,
         instruction_file=args.instruction_file or 'instructions.txt',
-        use_terminology_map=True,
+        build_terminology_map=True,
         max_batch_size=args.max_batch_size,
         scene_threshold=args.scene_threshold,
         preprocess_subtitles=True,
@@ -642,7 +643,7 @@ def run(args : argparse.Namespace) -> int:
     provider   = init_translation_provider(args.provider, options)
     translator : SubtitleTranslator = init_translator(options, translation_provider=provider)
 
-    initial_map : dict[str, str] = {k: str(v) for k, v in subtitles.settings.get_dict('terminology_map').items()}
+    initial_map : dict[str, str] = dict(subtitles.terminology_map)
 
     state = RunState(total_lines=total_lines, total_batches=total_batches)
     for term, value in initial_map.items():
@@ -661,7 +662,7 @@ def run(args : argparse.Namespace) -> int:
         logging.error("Translation failed: %s", exc)
         return 1
 
-    final_map : dict[str, str] = {k: str(v) for k, v in subtitles.settings.get_dict('terminology_map').items()}
+    final_map : dict[str, str] = dict(translator.terminology_map)
 
     _print_report(args, source, total_lines, total_scenes, records, initial_map, final_map, state)
 

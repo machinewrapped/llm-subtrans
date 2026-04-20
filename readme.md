@@ -201,9 +201,9 @@ llm-subtrans -l <language> -o output.srt input.ass
 llm-subtrans -s <server_address> -e <endpoint> -k <api_key> -l <language> <path_to_subtitle_file>
 
 # Use specific providers
-gpt-subtrans --model gpt-5-mini --target_language <target_language> <path_to_subtitle_file>
-gemini-subtrans --model gemini-2.5-flash-latest --target_language <target_language> <path_to_subtitle_file>
-claude-subtrans --model claude-3-5-haiku-latest --target_language <target_language> <path_to_subtitle_file>
+gpt-subtrans --model gpt-5-mini --target-language <target_language> <path_to_subtitle_file>
+gemini-subtrans --model gemini-2.5-flash-latest --target-language <target_language> <path_to_subtitle_file>
+claude-subtrans --model claude-3-5-haiku-latest --target-language <target_language> <path_to_subtitle_file>
 
 # List supported subtitle formats
 llm-subtrans --list-formats
@@ -255,7 +255,7 @@ llm-subtrans path/to/my/subtitles.srt --moviename "My Awesome Movie" --ratelimit
 
 Default values for many settings can be set in the .env file, using a NAME_IN_CAPS format. See Options.py and the various Provider_XXX files for the full list.
 
-- `-l`, `--target_language`:
+- `-l`, `--target-language`:
   The language to translate the subtitles to.
 
 - `-o`, `--output`:
@@ -279,12 +279,12 @@ Default values for many settings can be set in the .env file, using a NAME_IN_CA
 - `--substitution`:
   A pair of strings separated by `::`, to substitute in either source or translation, or the name of a file containing a list of such pairs.
 
-- `--build_terminology_map`:
+- `--build-terminology-map`:
   Accumulates names, titles and technical terms into a terminology map that is provided to subsequent batches so that consistent translations can be used throughout.
 
 - `--terminology`:
-  Seed the terminology map with a `SOURCE::TRANSLATION` pair, or a path to a text file of such pairs. Repeatable. Implies `--build_terminology_map`.
-  Example: `--terminology "Alice::アリス" --terminology wonderland_names.txt`
+  Seed the terminology map with a `SOURCE::TRANSLATION` pair, or a path to a text file of such pairs. Repeatable.
+  Example: `--terminology "Alice::アリス" --terminology wonderland_locations.txt`
 
 - `--scenethreshold`:
   Number of seconds between lines to consider it a new scene.

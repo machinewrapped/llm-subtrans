@@ -52,7 +52,7 @@ from PySubtrans import TranslationProvider
 from PySubtrans import SubtitleFormatRegistry
 
 from PySubtrans.Helpers import GetOutputPath
-from PySubtrans.Helpers.Parse import ParseKeyValuePairs
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairs
 from PySubtrans.SettingsType import redact_sensitive_values
 
 # Default configuration options for batch processing.
@@ -306,8 +306,11 @@ class BatchProcessor:
 
     def _save_terminology_file(self, path : str, terminology_map : dict[str, str]) -> None:
         try:
-            content = '\n'.join(f"{k}::{v}" for k, v in sorted(terminology_map.items()))
-            pathlib.Path(path).write_text(content, encoding='utf-8')
+            terminology_path = pathlib.Path(path)
+            terminology_path.parent.mkdir(parents=True, exist_ok=True)
+            sorted_terms = dict(sorted(terminology_map.items()))
+            content = FormatKeyValuePairs(sorted_terms)
+            terminology_path.write_text(content, encoding='utf-8')
             self.logger.debug("Saved %d term(s) to %s", len(terminology_map), path)
         except OSError as exc:
             self.logger.warning("Could not save terminology file %s: %s", path, exc)

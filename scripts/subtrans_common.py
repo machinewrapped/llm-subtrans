@@ -378,6 +378,7 @@ def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_
 def _save_terminology_file(path : str, terminology_map : dict[str, str]) -> None:
     """Write terminology map to a key::value text file."""
     try:
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
         with open(path, 'w', encoding='utf-8') as f:
             f.write("\n".join(f"{k}::{v}" for k, v in terminology_map.items()))
         logging.info(f"Saved {len(terminology_map)} term(s) to {path}")

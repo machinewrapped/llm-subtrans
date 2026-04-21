@@ -7,7 +7,7 @@ from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import ParseKeyValuePairs, ParseNames
 from PySubtrans.Substitutions import Substitutions
-from PySubtrans.Options import Options, SettingsType
+from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleError import SubtitleError, TranslationAbortedError

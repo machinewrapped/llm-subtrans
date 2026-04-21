@@ -7,14 +7,17 @@ from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
     QVBoxLayout,
+    QHBoxLayout,
     QSplitter,
 )
 from GuiSubtrans.Command import Command
 from GuiSubtrans.GuiInterface import GuiInterface
 from GuiSubtrans.MainToolbar import MainToolbar
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
+from GuiSubtrans.ProjectToolbar import ProjectToolbar
 from GuiSubtrans.Widgets.LogWindow import LogWindow
 from GuiSubtrans.Widgets.ModelView import ModelView
+from GuiSubtrans.Widgets.ProjectSettings import ProjectSettings
 from PySubtrans.Helpers.Resources import GetResourcePath
 from PySubtrans.Options import Options
 from PySubtrans.version import __version__
@@ -45,12 +48,33 @@ class MainWindow(QMainWindow):
         self.toolbar.UpdateToolbar()
         main_layout.addWidget(self.toolbar)
 
-        # Create a splitter widget to divide the remaining vertical space between the project viewer and log window
-        splitter = QSplitter(Qt.Orientation.Vertical)
-        main_layout.addWidget(splitter)
+        # Container for the full bottom body
+        body_container = QWidget()
+        body_layout = QHBoxLayout(body_container)
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(0)
+        main_layout.addWidget(body_container)
 
         action_handler = self.gui_interface.GetActionHandler()
-        self.model_viewer = ModelView(action_handler, parent=splitter)
+
+        # Setup full-height project toolbar on the far left
+        self.project_toolbar = ProjectToolbar(action_handler=action_handler, parent=body_container)
+        self.project_toolbar.hide()
+        body_layout.addWidget(self.project_toolbar)
+
+        # Create an outer horizontal splitter to hold ProjectSettings on the left
+        main_h_splitter = QSplitter(Qt.Orientation.Horizontal)
+        body_layout.addWidget(main_h_splitter)
+
+        self.project_settings = ProjectSettings(action_handler=action_handler, parent=main_h_splitter)
+        self.project_settings.hide()
+        main_h_splitter.addWidget(self.project_settings)
+
+        # Create a splitter widget to divide the remaining vertical space between the project viewer and log window
+        splitter = QSplitter(Qt.Orientation.Vertical)
+        main_h_splitter.addWidget(splitter)
+        
+        self.model_viewer = ModelView(action_handler, project_settings=self.project_settings, project_toolbar=self.project_toolbar, parent=splitter)
         self.model_viewer.settingsChanged.connect(self.gui_interface.UpdateProjectSettings)
         splitter.addWidget(self.model_viewer)
 
@@ -58,6 +82,9 @@ class MainWindow(QMainWindow):
         log_window_widget = LogWindow(splitter)
         splitter.addWidget(log_window_widget)
         splitter.setSizes([int(self.height() * 0.8), int(self.height() * 0.2)])
+
+        main_h_splitter.setStretchFactor(0, 0)
+        main_h_splitter.setStretchFactor(1, 1)
 
         # Run startup tasks
         self.gui_interface.Startup(filepath)
@@ -109,6 +136,8 @@ class MainWindow(QMainWindow):
             self.model_viewer.show()
         else:
             self.model_viewer.hide()
+            self.project_settings.hide()
+            self.project_toolbar.hide()
 
     def _load_icon(self, name):
         if not name or name == "default":

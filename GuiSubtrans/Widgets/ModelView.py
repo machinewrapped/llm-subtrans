@@ -9,11 +9,12 @@ from GuiSubtrans.ProjectToolbar import ProjectToolbar
 from GuiSubtrans.Widgets.ScenesView import ScenesView
 from GuiSubtrans.Widgets.ContentView import ContentView
 from GuiSubtrans.Widgets.ProjectSettings import ProjectSettings
+from GuiSubtrans.ProjectToolbar import ProjectToolbar
 
 class ModelView(QWidget):
     settingsChanged = Signal(dict)
 
-    def __init__(self, action_handler : ProjectActions, parent=None):
+    def __init__(self, action_handler : ProjectActions, project_settings : ProjectSettings|None = None, project_toolbar : ProjectToolbar|None = None, parent=None):
         super().__init__(parent)
 
         if not isinstance(action_handler, ProjectActions):
@@ -24,9 +25,11 @@ class ModelView(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self._toolbar = ProjectToolbar(parent=self, action_handler=action_handler)
+        self._toolbar = project_toolbar if project_toolbar else ProjectToolbar(parent=self, action_handler=action_handler)
         self._toolbar.setVisible(False)
-        layout.addWidget(self._toolbar)
+        
+        if not project_toolbar:
+            layout.addWidget(self._toolbar)
 
         # Scenes & Batches Panel
         self.scenes_view = ScenesView(parent=self)
@@ -35,18 +38,25 @@ class ModelView(QWidget):
         self.content_view = ContentView(action_handler=action_handler, parent=self)
 
         # Project Settings
-        self.project_settings = ProjectSettings(action_handler=action_handler, parent=self)
-        self.project_settings.hide()
+        self.project_settings = project_settings if project_settings else ProjectSettings(action_handler=action_handler, parent=self)
+        if not project_settings:
+            self.project_settings.hide()
         self.project_settings.settingsChanged.connect(self._on_project_settings_changed, Qt.ConnectionType.QueuedConnection)
 
         # Splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        splitter.addWidget(self.project_settings)
+        if not project_settings:
+            splitter.addWidget(self.project_settings)
         splitter.addWidget(self.scenes_view)
         splitter.addWidget(self.content_view)
-        splitter.setStretchFactor(0, 2)
-        splitter.setStretchFactor(1, 1)
-        splitter.setStretchFactor(2, 3)
+        
+        if not project_settings:
+            splitter.setStretchFactor(0, 2)
+            splitter.setStretchFactor(1, 1)
+            splitter.setStretchFactor(2, 3)
+        else:
+            splitter.setStretchFactor(0, 1)
+            splitter.setStretchFactor(1, 3)
 
         layout.addWidget(splitter)
         self.setLayout(layout)

@@ -24,10 +24,10 @@ class ModelView(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self._toolbar = project_toolbar if project_toolbar else ProjectToolbar(parent=self, action_handler=action_handler)
+        self._toolbar = project_toolbar if project_toolbar is not None else ProjectToolbar(parent=self, action_handler=action_handler)
         self._toolbar.setVisible(False)
         
-        if not project_toolbar:
+        if project_toolbar is None:
             layout.addWidget(self._toolbar)
 
         # Scenes & Batches Panel
@@ -37,19 +37,19 @@ class ModelView(QWidget):
         self.content_view = ContentView(action_handler=action_handler, parent=self)
 
         # Project Settings
-        self.project_settings = project_settings if project_settings else ProjectSettings(action_handler=action_handler, parent=self)
-        if not project_settings:
+        self.project_settings = project_settings if project_settings is not None else ProjectSettings(action_handler=action_handler, parent=self)
+        if project_settings is None:
             self.project_settings.hide()
         self.project_settings.settingsChanged.connect(self._on_project_settings_changed, Qt.ConnectionType.QueuedConnection)
 
         # Splitter
         splitter = QSplitter(Qt.Orientation.Horizontal)
-        if not project_settings:
+        if project_settings is None:
             splitter.addWidget(self.project_settings)
         splitter.addWidget(self.scenes_view)
         splitter.addWidget(self.content_view)
         
-        if not project_settings:
+        if project_settings is None:
             splitter.setStretchFactor(0, 2)
             splitter.setStretchFactor(1, 1)
             splitter.setStretchFactor(2, 3)

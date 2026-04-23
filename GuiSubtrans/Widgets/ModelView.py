@@ -9,7 +9,6 @@ from GuiSubtrans.ProjectToolbar import ProjectToolbar
 from GuiSubtrans.Widgets.ScenesView import ScenesView
 from GuiSubtrans.Widgets.ContentView import ContentView
 from GuiSubtrans.Widgets.ProjectSettings import ProjectSettings
-from GuiSubtrans.ProjectToolbar import ProjectToolbar
 
 class ModelView(QWidget):
     settingsChanged = Signal(dict)

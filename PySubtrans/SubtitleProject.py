@@ -142,7 +142,7 @@ class SubtitleProject:
                 self.UpdateOutputPath()
 
                 outputpath = outputpath or GetOutputPath(self.projectfile, self.target_language, subtitles.file_format)
-                sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath               
+                sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath
                 logging.info(_("Project file loaded"))
 
                 if subtitles.scenes:
@@ -151,6 +151,8 @@ class SubtitleProject:
                     load_subtitles = reload_subtitles
                     if load_subtitles:
                         logging.info(_("Reloading subtitles from the source file"))
+                        if subtitles.terminology_map:
+                            project_settings.set('terminology_map', subtitles.terminology_map)
 
                 else:
                     logging.error(_("Unable to read project file, starting afresh"))

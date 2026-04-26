@@ -557,7 +557,9 @@ class SubtitleProject:
         self.needs_writing = self.use_project_file
         self.events.scene_translated.send(self, scene=scene)
 
-    def _on_terminology_updated(self, sender, scene, batch, returned_terms, new_terms, conflict_terms, terminology_map) -> None:
+    def UpdateTerminologyMap(self, terminology_map : dict, *, scene=None, batch=None,
+                             returned_terms=None, new_terms=None, conflict_terms=None) -> None:
+        """Store a terminology map snapshot and notify listeners."""
         with self.subtitles.lock:
             self.subtitles.terminology_map = dict(terminology_map)
         self.needs_writing = self.use_project_file
@@ -566,6 +568,13 @@ class SubtitleProject:
             scene=scene, batch=batch,
             returned_terms=returned_terms, new_terms=new_terms,
             conflict_terms=conflict_terms, terminology_map=terminology_map,
+        )
+
+    def _on_terminology_updated(self, _sender, scene, batch, returned_terms, new_terms, conflict_terms, terminology_map) -> None:
+        self.UpdateTerminologyMap(
+            terminology_map,
+            scene=scene, batch=batch,
+            returned_terms=returned_terms, new_terms=new_terms, conflict_terms=conflict_terms,
         )
 
 

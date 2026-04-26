@@ -12,7 +12,7 @@ from PySide6.QtWidgets import (
     QDialog,
     QFileDialog
 )
-from PySide6.QtCore import Qt, Signal, QSignalBlocker
+from PySide6.QtCore import Qt, QEvent, QObject, Signal, QSignalBlocker
 from GuiSubtrans.EditInstructionsDialog import EditInstructionsDialog
 from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
@@ -47,6 +47,7 @@ class ProjectSettings(QGroupBox):
         self.current_provider : str|None = None
         self.datamodel : ProjectDataModel|None = None
         self.updating_model_list : bool = False
+        self._pending_terminology_append : str = ""
 
         self._layout = QVBoxLayout(self)
         self.grid_layout = OptionsGrid()
@@ -99,6 +100,7 @@ class ProjectSettings(QGroupBox):
             self._disconnect_from_datamodel()
 
         self.datamodel = datamodel
+        self._pending_terminology_append = ""
         if datamodel is None:
             self.ClearForm()
             self.settings = SettingsType()
@@ -120,7 +122,7 @@ class ProjectSettings(QGroupBox):
             self.settings['provider'] = datamodel.provider
             self.settings['project_path'] = os.path.dirname(datamodel.project.projectfile or "project.subtrans")
             self.settings['terminology_map'] = FormatKeyValuePairs(datamodel.project.subtitles.terminology_map)
-            datamodel.project.events.terminology_updated.connect(self._blinker_terminology_updated)
+            datamodel.project.events.terminology_updated.connect(self._on_terminology_updated)
             self.BuildForm(self.settings)
 
     def Populate(self):
@@ -330,7 +332,7 @@ class ProjectSettings(QGroupBox):
 
     def _disconnect_from_datamodel(self):
         if self.datamodel is not None and self.datamodel.project is not None:
-            self.datamodel.project.events.terminology_updated.disconnect(self._blinker_terminology_updated)
+            self.datamodel.project.events.terminology_updated.disconnect(self._on_terminology_updated)
 
     def _edit_instructions(self):
         # Commit the settings
@@ -345,7 +347,7 @@ class ProjectSettings(QGroupBox):
             self.settingsChanged.emit(dialog.instructions.GetSettings())
             self.BuildForm(self.settings)
 
-    def _blinker_terminology_updated(self, _sender, **kwargs):
+    def _on_terminology_updated(self, _sender, **kwargs):
         new_terms = kwargs.get('new_terms')
         if new_terms:
             self._terminologyTermsAddedInternal.emit(dict(new_terms))
@@ -362,8 +364,25 @@ class ProjectSettings(QGroupBox):
 
         widget = self.widgets.get('terminology_map')
         if isinstance(widget, TextBoxEditor):
-            with QSignalBlocker(widget):
-                widget.append(appended)
+            if widget.hasFocus():
+                separator = "\n" if self._pending_terminology_append else ""
+                self._pending_terminology_append += separator + appended
+                widget.installEventFilter(self)
+            else:
+                with QSignalBlocker(widget):
+                    widget.append(appended)
+
+    def eventFilter(self, watched : QObject, event : QEvent) -> bool:
+        """Flush deferred terminology appends when the terminology textbox loses focus."""
+        if event.type() == QEvent.Type.FocusOut and self._pending_terminology_append:
+            widget = self.widgets.get('terminology_map')
+            if watched is widget and isinstance(widget, TextBoxEditor):
+                pending = self._pending_terminology_append
+                self._pending_terminology_append = ""
+                widget.removeEventFilter(self)
+                with QSignalBlocker(widget):
+                    widget.append(pending)
+        return super().eventFilter(watched, event)
 
     def _copy_from_another_project(self):
         '''

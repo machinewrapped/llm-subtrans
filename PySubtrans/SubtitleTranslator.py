@@ -61,11 +61,9 @@ class SubtitleTranslator:
         self.task_type : str = self.instructions.task_type or DEFAULT_TASK_TYPE
         self.user_prompt : str = settings.BuildUserPrompt()
 
-        base_instructions = self.instructions.instructions or ''
+        self.system_instructions : str = self.instructions.instructions or ''
         if self.build_terminology_map and self.instructions.terminology_instructions:
-            self.system_instructions : str = '\n\n'.join(filter(None, [base_instructions, self.instructions.terminology_instructions]))
-        else:
-            self.system_instructions : str = base_instructions
+            self.system_instructions = f"{self.system_instructions}\n\n{self.instructions.terminology_instructions}".strip()
 
         substitutions_mode = settings.get_str('substitution_mode') or Substitutions.Mode.Auto
         substitutions_list = settings.get('substitutions', {})

@@ -1,5 +1,6 @@
 from os import linesep
 import logging
+import regex
 import threading
 from typing import Any
 
@@ -32,6 +33,8 @@ class SubtitleTranslator:
     """
     Processes subtitles into scenes and batches and sends them for translation
     """
+    _whitespace_re = regex.compile(r'\s+')
+
     def __init__(self, settings : Options, translation_provider : TranslationProvider, resume : bool = False, terminology_map : dict[str,str]|None = None):
         """
         Initialise a SubtitleTranslator with translation options
@@ -577,8 +580,8 @@ class SubtitleTranslator:
         new_terms : dict[str, str] = {}
         conflict_terms : dict[str, tuple[str, str]] = {}
 
-        original_text = ' '.join(line.text or '' for line in batch.originals)
-        translated_text = ' '.join(line.text or '' for line in batch.translated)
+        original_text = self._whitespace_re.sub(' ', ' '.join(line.text or '' for line in batch.originals))
+        translated_text = self._whitespace_re.sub(' ', ' '.join(line.text or '' for line in batch.translated))
 
         with self.lock:
             for term, proposed in returned_terms.items():

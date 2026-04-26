@@ -42,9 +42,8 @@ default_instructions = linesep.join([
 default_terminology_instructions = linesep.join([
     "If a terminology reference is provided, use those translations consistently.",
     "",
-    "After translation, add a <terminology> block listing any special terminology from the source subtitles that require a consistent translation,"
-    "e.g. character names, titles, organisations, locations or unique objects, cultural and technical concepts."
-    "Do not include common terms where the exact translation is unimportant, or repeat terminology that was already provided as context.",
+    "After translation, add a <terminology> block listing any terminology from the source subtitles that require a consistent translation,"
+    "e.g. character names, nicknames, titles, organisations, locations, unique objects, or uncommon cultural and technical concepts."
     "",
     "Format each entry as one 'original::translation' pair per line, e.g.",
     "<terminology>",

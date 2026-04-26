@@ -356,7 +356,7 @@ class ProjectSettings(QGroupBox):
         if not new_terms:
             return
 
-        appended = "\n".join(f"{k}::{v}" for k, v in new_terms.items())
+        appended = FormatKeyValuePairs(new_terms)
 
         raw = self.settings.get('terminology_map') or ""
         existing : str = FormatKeyValuePairs(raw) if isinstance(raw, dict) else str(raw)

@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import ParseKeyValuePairsOrFiles, ParseNames
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames
 from PySubtrans import batch_subtitles, init_options, init_translator, preprocess_subtitles
 from PySubtrans.Options import Options, config_dir
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
@@ -379,8 +379,9 @@ def _save_terminology_file(path : str, terminology_map : dict[str, str]) -> None
     """Write terminology map to a key::value text file."""
     try:
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        sorted_terms = dict(sorted(terminology_map.items()))
         with open(path, 'w', encoding='utf-8') as f:
-            f.write("\n".join(f"{k}::{v}" for k, v in sorted(terminology_map.items())))
+            f.write(FormatKeyValuePairs(sorted_terms))
         logging.info(f"Saved {len(terminology_map)} term(s) to {path}")
     except Exception as e:
         logging.warning(f"Unable to save terminology file '{path}': {e}")

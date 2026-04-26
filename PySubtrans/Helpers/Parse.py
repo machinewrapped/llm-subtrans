@@ -64,13 +64,13 @@ def ParseKeyValuePairsOrFiles(entries : list[str], separator : str = KEY_VALUE_S
                 logging.warning(f"Key-value file not found: {entry}")
     return result
 
-def FormatKeyValuePairs(pairs : Any, separator : str = KEY_VALUE_SEPARATOR) -> str:
+def FormatKeyValuePairs(pairs : dict, separator : str = KEY_VALUE_SEPARATOR) -> str:
     """
     Format a dict as newline-separated key<separator>value pairs.
     """
-    if not pairs:
+    if not pairs or not isinstance(pairs, dict):
         return ""
-    return '\n'.join(f"{k}{separator}{v}" for k, v in pairs.items())
+    return '\n'.join(f"{str(k)}{separator}{str(v)}" for k, v in pairs.items())
 
 def ParseNames(name_list : str|list|None|Any) -> list[str]:
     """

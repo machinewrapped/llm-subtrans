@@ -563,8 +563,11 @@ class SubtitleProject:
                              returned_terms=None, new_terms=None, conflict_terms=None) -> None:
         """Store a terminology map snapshot and notify listeners."""
         with self.subtitles.lock:
-            self.subtitles.terminology_map = dict(terminology_map)
-        self.needs_writing = self.use_project_file
+            map_changed = terminology_map != self.subtitles.terminology_map
+            if map_changed:
+                self.subtitles.terminology_map = dict(terminology_map)
+        if map_changed:
+            self.needs_writing = self.use_project_file
         self.events.terminology_updated.send(
             self,
             scene=scene, batch=batch,

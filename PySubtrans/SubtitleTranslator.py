@@ -1,6 +1,5 @@
 from os import linesep
 import logging
-import regex
 import threading
 from typing import Any
 
@@ -8,7 +7,7 @@ from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.Parse import FormatKeyValuePairs
 from PySubtrans.Helpers.SubtitleHelpers import FindBestSplitIndex, MergeTranslations
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Text import Linearise, SanitiseSummary
+from PySubtrans.Helpers.Text import CompressWhitespace, Linearise, SanitiseSummary
 from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleLine import SubtitleLine
@@ -33,7 +32,6 @@ class SubtitleTranslator:
     """
     Processes subtitles into scenes and batches and sends them for translation
     """
-    _whitespace_re = regex.compile(r'\s+')
 
     def __init__(self, settings : Options, translation_provider : TranslationProvider, resume : bool = False, terminology_map : dict[str,str]|None = None):
         """
@@ -580,8 +578,8 @@ class SubtitleTranslator:
         new_terms : dict[str, str] = {}
         conflict_terms : dict[str, tuple[str, str]] = {}
 
-        original_text = self._whitespace_re.sub(' ', ' '.join(line.text or '' for line in batch.originals))
-        translated_text = self._whitespace_re.sub(' ', ' '.join(line.text or '' for line in batch.translated))
+        original_text = CompressWhitespace(' '.join(line.text or '' for line in batch.originals))
+        translated_text = CompressWhitespace(' '.join(line.text or '' for line in batch.translated))
 
         with self.lock:
             for term, proposed in returned_terms.items():

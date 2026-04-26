@@ -194,11 +194,11 @@ class SubtitleProject:
             # Update obsolete settings to maintain compatibility
             self._update_compatibility(settings)
 
+            # Route terminology_map edits to the dedicated attribute
+            terminology_changed = self._parse_terminology_map(settings)
+
             # Filter to known project settings only
             filtered = SettingsType({key: settings[key] for key in settings if key in self.DEFAULT_PROJECT_SETTINGS})
-
-            # Route terminology_map to the dedicated top-level attribute; exclude from settings dict
-            terminology_changed = self._parse_terminology_map(filtered)
 
             # Parse names and substitutions into standard formats
             self._standardise_settings_format(filtered)

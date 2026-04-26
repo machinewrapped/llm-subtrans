@@ -6,6 +6,7 @@ from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import TranslationAbortedError, TranslationImpossibleError
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.TranslationEvents import TerminologyUpdate
 from PySubtrans.Helpers.Localization import _
 
 import logging
@@ -156,14 +157,10 @@ class TranslateSceneCommand(Command):
         if update.has_update:
             self.datamodel.UpdateViewModel(update)
 
-    def _on_terminology_updated(self, _sender, scene, batch, returned_terms, new_terms, conflict_terms, terminology_map):
+    def _on_terminology_updated(self, _sender, update : TerminologyUpdate):
         """Forward terminology updates to the project so the map and listeners stay in sync."""
         if self.datamodel and self.datamodel.project:
-            self.datamodel.project.UpdateTerminologyMap(
-                terminology_map,
-                scene=scene, batch=batch,
-                returned_terms=returned_terms, new_terms=new_terms, conflict_terms=conflict_terms,
-            )
+            self.datamodel.project.UpdateTerminologyMap(update)
 
     def _on_error(self, _sender, message : str):
         """Handle error events from translator"""

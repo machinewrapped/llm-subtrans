@@ -17,7 +17,7 @@ from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
-from PySubtrans.TranslationEvents import TranslationEvents
+from PySubtrans.TranslationEvents import TerminologyUpdate, TranslationEvents
 
 default_encoding = os.getenv('DEFAULT_ENCODING', 'utf-8')
 
@@ -559,27 +559,17 @@ class SubtitleProject:
         self.needs_writing = self.use_project_file
         self.events.scene_translated.send(self, scene=scene)
 
-    def UpdateTerminologyMap(self, terminology_map : dict, *, scene=None, batch=None,
-                             returned_terms=None, new_terms=None, conflict_terms=None) -> None:
+    def UpdateTerminologyMap(self, update : TerminologyUpdate) -> None:
         """Store a terminology map snapshot and notify listeners."""
         with self.subtitles.lock:
-            map_changed = terminology_map != self.subtitles.terminology_map
+            map_changed = update.terminology_map != self.subtitles.terminology_map
             if map_changed:
-                self.subtitles.terminology_map = dict(terminology_map)
+                self.subtitles.terminology_map = dict(update.terminology_map)
         if map_changed:
             self.needs_writing = self.use_project_file
-        self.events.terminology_updated.send(
-            self,
-            scene=scene, batch=batch,
-            returned_terms=returned_terms, new_terms=new_terms,
-            conflict_terms=conflict_terms, terminology_map=terminology_map,
-        )
+        self.events.terminology_updated.send(self, update=update)
 
-    def _on_terminology_updated(self, _sender, scene, batch, returned_terms, new_terms, conflict_terms, terminology_map) -> None:
-        self.UpdateTerminologyMap(
-            terminology_map,
-            scene=scene, batch=batch,
-            returned_terms=returned_terms, new_terms=new_terms, conflict_terms=conflict_terms,
-        )
+    def _on_terminology_updated(self, _sender, update : TerminologyUpdate) -> None:
+        self.UpdateTerminologyMap(update)
 
 

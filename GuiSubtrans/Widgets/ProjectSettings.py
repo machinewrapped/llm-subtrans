@@ -347,10 +347,9 @@ class ProjectSettings(QGroupBox):
             self.settingsChanged.emit(dialog.instructions.GetSettings())
             self.BuildForm(self.settings)
 
-    def _on_terminology_updated(self, _sender, **kwargs):
-        new_terms = kwargs.get('new_terms')
-        if new_terms:
-            self._terminologyTermsAddedInternal.emit(dict(new_terms))
+    def _on_terminology_updated(self, _sender, update):
+        if update.new_terms:
+            self._terminologyTermsAddedInternal.emit(dict(update.new_terms))
 
     def _on_terminology_terms_added(self, new_terms : dict):
         if not new_terms:

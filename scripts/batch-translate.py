@@ -285,14 +285,14 @@ class BatchProcessor:
         destination_file.parent.mkdir(parents=True, exist_ok=True)
         return destination_file
 
-    def _on_terminology_updated(self, _sender, scene, batch, new_terms, conflict_terms, terminology_map, **_kwargs) -> None:
-        self._terminology_map = dict(terminology_map)
-        if new_terms:
-            sample = ', '.join(f"{k}::{v}" for k, v in list(new_terms.items())[:5])
-            self.logger.info("Scene %s batch %s: added %d new term(s): %s", scene, batch, len(new_terms), sample)
-        if conflict_terms:
-            self.logger.debug("Scene %s batch %s: %d conflicting term(s) skipped", scene, batch, len(conflict_terms))
-        self.progress_display.update_terminology_count(len(terminology_map))
+    def _on_terminology_updated(self, _sender, update) -> None:
+        self._terminology_map = dict(update.terminology_map)
+        if update.new_terms:
+            sample = ', '.join(f"{k}::{v}" for k, v in list(update.new_terms.items())[:5])
+            self.logger.info("Scene %s batch %s: added %d new term(s): %s", update.scene, update.batch, len(update.new_terms), sample)
+        if update.conflict_terms:
+            self.logger.debug("Scene %s batch %s: %d conflicting term(s) skipped", update.scene, update.batch, len(update.conflict_terms))
+        self.progress_display.update_terminology_count(len(update.terminology_map))
 
     def _load_terminology_file(self, path : str) -> dict[str, str]:
         try:

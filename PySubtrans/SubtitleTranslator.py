@@ -23,7 +23,7 @@ from PySubtrans.SubtitleError import NoProviderError, NoTranslationError, Provid
 from PySubtrans.Helpers import FormatErrorMessages
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene, UnbatchScenes
-from PySubtrans.TranslationEvents import TranslationEvents
+from PySubtrans.TranslationEvents import TerminologyUpdate, TranslationEvents
 from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.TranslationRequest import StreamingCallback
@@ -613,15 +613,15 @@ class SubtitleTranslator:
             self.terminology_map.update(new_terms)
             snapshot : dict[str, str] = dict(self.terminology_map)
 
-        self.events.terminology_updated.send(
-            self,
+        update = TerminologyUpdate(
+            terminology_map=snapshot,
             scene=batch.scene,
             batch=batch.number,
             returned_terms=returned_terms,
             new_terms=new_terms,
             conflict_terms=conflict_terms,
-            terminology_map=snapshot,
         )
+        self.events.terminology_updated.send(self, update=update)
 
     def _emit_error(self, message : str):
         """Emit an error event"""

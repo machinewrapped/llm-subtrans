@@ -247,8 +247,8 @@ subtitles = init_subtitles("episode2.srt", options=options)
 
 translator = init_translator(options, terminology_map={"Alice": "アリス", "Wonderland": "ワンダーランド"})
 
-def on_terminology_updated(sender, new_terms=None, terminology_map=None, **_):
-    print(f"New terminology: {new_terms}")
+def on_terminology_updated(sender, update):
+    print(f"New terminology: {update.new_terms}")
 
 translator.events.terminology_updated.connect(on_terminology_updated)
 translator.TranslateSubtitles(subtitles)

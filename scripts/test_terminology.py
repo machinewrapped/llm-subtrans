@@ -561,22 +561,13 @@ def _make_batch_handler(records : list[BatchRecord], state : RunState):
 def _make_terminology_handler(records : list[BatchRecord], state : RunState):
     """Return a terminology_updated handler that enriches the matching batch record."""
 
-    def on_terminology_updated(
-        sender,
-        scene : int|None = None,
-        batch : int|None = None,
-        returned_terms : dict[str, str]|None = None,
-        new_terms : dict[str, str]|None = None,
-        conflict_terms : dict[str, tuple[str, str]]|None = None,
-        terminology_map : dict[str, str]|None = None,
-        **_,
-    ):
-        rec = next((r for r in records if r.scene == scene and r.batch == batch), None)
+    def on_terminology_updated(sender, update):
+        rec = next((r for r in records if r.scene == update.scene and r.batch == update.batch), None)
         if rec is None:
             return
-        rec.returned_terms = dict(returned_terms or {})
-        rec.new_terms      = dict(new_terms or {})
-        rec.conflict_terms = dict(conflict_terms or {})
+        rec.returned_terms = dict(update.returned_terms or {})
+        rec.new_terms      = dict(update.new_terms or {})
+        rec.conflict_terms = dict(update.conflict_terms or {})
 
         for term in rec.returned_terms:
             info = _ensure_term(state, term)

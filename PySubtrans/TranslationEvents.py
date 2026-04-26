@@ -1,5 +1,6 @@
 import logging
 from blinker import Signal
+from dataclasses import dataclass, field
 from typing import Protocol
 
 
@@ -8,6 +9,17 @@ class LoggerProtocol(Protocol):
     def error(self, msg : object, *args, **kwargs) -> None: ...
     def warning(self, msg : object, *args, **kwargs) -> None: ...
     def info(self, msg : object, *args, **kwargs) -> None: ...
+
+
+@dataclass
+class TerminologyUpdate:
+    """Payload for the ``terminology_updated`` event."""
+    terminology_map : dict[str, str]
+    scene : int|None = None
+    batch : int|None = None
+    returned_terms : dict[str, str] = field(default_factory=dict)
+    new_terms : dict[str, str] = field(default_factory=dict)
+    conflict_terms : dict[str, tuple[str, str]] = field(default_factory=dict)
 
 
 class TranslationEvents:
@@ -27,14 +39,9 @@ class TranslationEvents:
         scene_translated(sender, scene):
             Emitted when a complete scene has been translated
 
-        terminology_updated(sender, scene, batch, returned_terms, new_terms, conflict_terms, terminology_map):
+        terminology_updated(sender, update : TerminologyUpdate):
             Emitted after a batch when the model returns a <terminology> block.
-            - scene: the scene containing the batch that produced the terminology update
-            - batch: the specific batch that produced the terminology update
-            - returned_terms: all terms the model emitted (dict[str, str])
-            - new_terms: terms added to the map for the first time (dict[str, str])
-            - conflict_terms: terms already in the map that the model tried to retranslate differently (dict[str, tuple[str, str]] — original -> (existing, proposed))
-            - terminology_map: the full accumulated map after this batch (dict[str, str])
+            See TerminologyUpdate for the payload fields.
 
         preprocessed(sender, scenes):
             Emitted after subtitles are batched and pre-processed (GuiSubtrans only)

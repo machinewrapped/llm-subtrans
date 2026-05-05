@@ -148,7 +148,7 @@ class TranslationProvider:
     def create_provider(cls, name, provider_settings):
         providers = cls.get_providers().items()
         for provider_name, provider in providers:
-            if provider_name.lower() == name.lower():
+            if provider_name.casefold() == name.casefold():
                 return provider(provider_settings)
 
         raise ValueError(f"Unknown translation provider: {name}")

@@ -18,4 +18,5 @@ from . import Provider_Gemini
 from . import Provider_Mistral
 from . import Provider_OpenAI
 from . import Provider_OpenRouter
+from . import Provider_LiteLLM
 

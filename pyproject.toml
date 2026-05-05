@@ -34,6 +34,7 @@ gemini = ["google-genai", "google-api-core"]
 claude = ["anthropic"]
 mistral = ["mistralai"]
 bedrock = ["boto3"]
+litellm = ["litellm>=1.65,<1.85"]
 
 [tool.setuptools.packages.find]
 where = ["."]

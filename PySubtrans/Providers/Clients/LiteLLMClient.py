@@ -1,22 +1,19 @@
 import importlib.util
 import logging
+from typing import Any
 
 from PySubtrans.Helpers.Localization import _
 
 if not importlib.util.find_spec("litellm"):
     logging.debug(_("LiteLLM is not installed. LiteLLM client will not be available"))
 else:
-    import json
-    import time
-    from typing import Any
-
     import litellm
 
+    from PySubtrans.Helpers import FormatMessages
     from PySubtrans.Options import SettingsType
-    from PySubtrans.SubtitleError import TranslationImpossibleError
+    from PySubtrans.SubtitleError import TranslationError, TranslationImpossibleError, TranslationResponseError
     from PySubtrans.Translation import Translation
     from PySubtrans.TranslationClient import TranslationClient
-    from PySubtrans.TranslationPrompt import TranslationPrompt
     from PySubtrans.TranslationRequest import TranslationRequest
 
     class LiteLLMClient(TranslationClient):
@@ -26,68 +23,121 @@ else:
         """
         def __init__(self, settings : SettingsType):
             super().__init__(settings)
-            self.api_key : str|None = settings.get_str('api_key')
-            self.api_base : str|None = settings.get_str('api_base')
 
-        @property
-        def model(self) -> str|None:
-            return self.settings.get_str('model')
+            if not self.model:
+                raise TranslationImpossibleError(_("No model specified for LiteLLM"))
 
             self._emit_info(_("Translating with LiteLLM using model: {model}").format(
                 model=self.model
             ))
 
-        def _build_kwargs(self) -> dict[str, Any]:
+        @property
+        def api_key(self) -> str|None:
+            return self.settings.get_str('api_key')
+
+        @property
+        def api_base(self) -> str|None:
+            return self.settings.get_str('api_base')
+
+        @property
+        def model(self) -> str|None:
+            return self.settings.get_str('model')
+
+        def _request_translation(self, request : TranslationRequest, temperature : float|None = None) -> Translation|None:
+            """
+            Request a translation based on the provided prompt.
+            """
+            logging.debug(f"Messages:\n{FormatMessages(request.prompt.messages)}")
+
+            content = request.prompt.content
+            if not content or not isinstance(content, list):
+                raise TranslationImpossibleError(_("No content provided for translation"))
+
+            content = [message for message in content if message]
+
+            temperature = temperature or self.temperature
+            response = self._send_messages(content, temperature)
+
+            translation = Translation(response) if response else None
+
+            if translation:
+                if translation.quota_reached:
+                    raise TranslationImpossibleError(_("Account quota reached, please upgrade your plan or wait until it renews"))
+
+                if translation.reached_token_limit:
+                    raise TranslationError(_("Too many tokens in translation"), translation=translation)
+
+            return translation
+
+        def _send_messages(self, messages : list, temperature : float|None) -> dict[str, Any]|None:
+            """
+            Make a request to LiteLLM to provide a translation.
+            """
+            response : dict[str, Any] = {}
+
+            if not self.model:
+                raise TranslationImpossibleError(_("No model specified"))
+
+            if not messages:
+                raise TranslationImpossibleError(_("No content provided for translation"))
+
             kwargs : dict[str, Any] = {
                 "model": self.model,
+                "messages": messages,
                 "drop_params": True,
             }
             if self.api_key:
                 kwargs["api_key"] = self.api_key
             if self.api_base:
                 kwargs["api_base"] = self.api_base
-            if self.temperature is not None:
-                kwargs["temperature"] = self.temperature
+            if temperature is not None:
+                kwargs["temperature"] = temperature
             max_tokens = self.settings.get_int('max_tokens', 0)
             if max_tokens > 0:
                 kwargs["max_tokens"] = max_tokens
-            return kwargs
 
-        def SendMessages(self, prompt : TranslationPrompt, temperature : float|None = None) -> TranslationRequest:
-            """
-            Send messages to LiteLLM and return the response.
-            """
-            messages = prompt.GenerateMessages()
-            kwargs = self._build_kwargs()
-            if temperature is not None:
-                kwargs["temperature"] = temperature
+            for retry in range(self.max_retries + 1):
+                if self.aborted:
+                    return None
 
-            kwargs["messages"] = messages
+                try:
+                    result = litellm.completion(**kwargs)
 
-            request = TranslationRequest(prompt)
+                    if self.aborted:
+                        return None
 
-            try:
-                response = litellm.completion(**kwargs)
+                    if not getattr(result, 'choices', None):
+                        raise TranslationResponseError(_("No choices returned in the response"), response=result)
 
-                content = response.choices[0].message.content or ""
-                usage = getattr(response, "usage", None)
-                prompt_tokens = getattr(usage, "prompt_tokens", 0) if usage else 0
-                completion_tokens = getattr(usage, "completion_tokens", 0) if usage else 0
+                    if hasattr(result, "usage") and result.usage:
+                        response['prompt_tokens'] = getattr(result.usage, 'prompt_tokens', 0)
+                        response['output_tokens'] = getattr(result.usage, 'completion_tokens', 0)
+                        response['total_tokens'] = getattr(result.usage, 'total_tokens', 0)
 
-                request.prompt_tokens = prompt_tokens
-                request.completion_tokens = completion_tokens
-                request.response = content
+                    choice = result.choices[0]
+                    reply = choice.message
 
-                self._emit_translation_event(request, prompt)
+                    response['finish_reason'] = getattr(choice, 'finish_reason', None)
+                    response['text'] = getattr(reply, 'content', None)
 
-            except Exception as e:
-                request.error = str(e)
-                logging.warning(_("LiteLLM error: {error}").format(error=str(e)))
+                    return response
 
-            return request
+                except (litellm.exceptions.RateLimitError,
+                        litellm.exceptions.ServiceUnavailableError,
+                        litellm.exceptions.Timeout,
+                        litellm.exceptions.APIConnectionError) as e:
+                    if retry < self.max_retries:
+                        logging.warning(_("LiteLLM transient error (retry {retry}/{max_retries}): {error}").format(
+                            retry=retry + 1, max_retries=self.max_retries, error=str(e)
+                        ))
+                        continue
+                    raise TranslationImpossibleError(_("Failed to communicate with provider after {max_retries} retries").format(
+                        max_retries=self.max_retries
+                    ), error=e)
 
-        def _emit_translation_event(self, request : TranslationRequest, prompt : TranslationPrompt):
-            """
-            Emit translation event for logging/monitoring
-            """
-            pass
+                except Exception as e:
+                    raise TranslationImpossibleError(_("Unexpected error communicating with the provider"), error=e)
+
+            raise TranslationImpossibleError(_("Failed to communicate with provider after {max_retries} retries").format(
+                max_retries=self.max_retries
+            ))

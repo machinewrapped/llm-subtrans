@@ -21,8 +21,8 @@ class TestLiteLLMProvider(LoggedTestCase):
 
     def test_provider_creates_client(self):
         """LiteLLMProvider.GetTranslationClient should return a LiteLLMClient"""
-        from PySubtrans.Providers.Provider_LiteLLM import LiteLLMProvider
         from PySubtrans.Providers.Clients.LiteLLMClient import LiteLLMClient
+        from PySubtrans.Providers.Provider_LiteLLM import LiteLLMProvider
 
         settings = SettingsType({
             'model': 'openai/gpt-4o',

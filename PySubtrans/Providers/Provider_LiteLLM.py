@@ -3,14 +3,12 @@ import logging
 import os
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Options import SettingsType, env_float, env_int
+from PySubtrans.Options import env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
 if not importlib.util.find_spec("litellm"):
     logging.debug(_("LiteLLM is not installed. LiteLLM provider will not be available"))
 else:
-    import litellm
-
     from PySubtrans.Providers.Clients.LiteLLMClient import LiteLLMClient
     from PySubtrans.TranslationClient import TranslationClient
     from PySubtrans.TranslationProvider import TranslationProvider

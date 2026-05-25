@@ -3,6 +3,7 @@ import time
 from typing import Any
 
 import anthropic
+import regex
 
 from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Helpers.Localization import _
@@ -45,6 +46,11 @@ class AnthropicClient(TranslationClient):
     @property
     def thinking(self) -> dict|anthropic.NotGiven:
         if self.allow_thinking:
+            if not self._supports_temperature_parameter():
+                return {
+                    'type' : 'adaptive'
+                }
+
             return {
                 'type' : 'enabled',
                 'budget_tokens' : self.settings.get_int( 'max_thinking_tokens', 1024)
@@ -148,15 +154,10 @@ class AnthropicClient(TranslationClient):
                 if prompt.system_prompt is None:
                     raise TranslationError(_("System prompt is required"))
 
+                request_kwargs = self._get_message_request_kwargs(request, temperature)
+
                 if request.is_streaming and self.enable_streaming:
-                    with self.client.messages.stream(
-                        model=self.model,
-                        thinking=self.thinking,     # type: ignore
-                        messages=prompt.content,          # type: ignore
-                        system=prompt.system_prompt,
-                        temperature=temperature if not self.allow_thinking else 1,
-                        max_tokens=self.max_tokens
-                    ) as stream:
+                    with self.client.messages.stream(**request_kwargs) as stream:
                         for text in stream.text_stream:
                             if self.aborted:
                                 return None
@@ -164,14 +165,7 @@ class AnthropicClient(TranslationClient):
 
                         return stream.get_final_message()
                 else:
-                    return self.client.messages.create(
-                        model=self.model,
-                        thinking=self.thinking,     # type: ignore
-                        messages=prompt.content,          # type: ignore
-                        system=prompt.system_prompt,
-                        temperature=temperature if not self.allow_thinking else 1,
-                        max_tokens=self.max_tokens
-                    )
+                    return self.client.messages.create(**request_kwargs)
 
             except (anthropic.APITimeoutError, anthropic.RateLimitError) as e:
                 if retry < self.max_retries and not self.aborted:
@@ -203,3 +197,34 @@ class AnthropicClient(TranslationClient):
                 return str(e.body['message'])
 
         return str(e)
+
+    def _get_message_request_kwargs(self, request : TranslationRequest, temperature : float) -> dict[str, Any]:
+        """Build request kwargs for Anthropic message APIs."""
+        prompt = request.prompt
+
+        kwargs : dict[str, Any] = {
+            'model': self.model,
+            'thinking': self.thinking,     # type: ignore
+            'messages': prompt.content,    # type: ignore
+            'system': prompt.system_prompt,
+            'max_tokens': self.max_tokens
+        }
+
+        if self._supports_temperature_parameter():
+            kwargs['temperature'] = temperature if not self.allow_thinking else 1
+
+        return kwargs
+
+    def _supports_temperature_parameter(self) -> bool:
+        """Return True when the selected model still accepts the temperature parameter."""
+        if self.model is None:
+            return True
+
+        match = regex.search(r'opus[-\s]+(\d+)(?:[.-](\d+))', self.model, flags=regex.IGNORECASE)
+        if match is None:
+            return True
+
+        major = int(match.group(1))
+        minor = int(match.group(2))
+
+        return major < 4 or (major == 4 and minor < 7)

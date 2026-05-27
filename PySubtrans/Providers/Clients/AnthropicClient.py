@@ -288,15 +288,18 @@ class AnthropicClient(TranslationClient):
         return messages
 
     def _supports_temperature_parameter(self) -> bool:
-        """Return True when the selected model still accepts the temperature parameter."""
+        """Return True when the selected model accepts the temperature parameter."""
         if self.model is None:
             return True
 
-        match = regex.search(r'opus[-\s]+(\d+)(?:[.-](\d+))', self.model, flags=regex.IGNORECASE)
+        match = regex.search(r'claude[-\s]+[a-zA-Z]+[-\s]+(\d+)(?:[.-](\d{1,3})(?!\d))?', self.model, flags=regex.IGNORECASE)
         if match is None:
             return True
 
         major = int(match.group(1))
-        minor = int(match.group(2))
+        minor_str = match.group(2)
 
-        return major < 4 or (major == 4 and minor < 7)
+        if minor_str is None:
+            return True
+
+        return major < 4 or (major == 4 and int(minor_str) < 7)

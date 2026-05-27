@@ -56,6 +56,26 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
 
         self.assertLoggedEqual("temperature", 0.3, kwargs.get('temperature'))
 
+    def test_dated_opus_4_keeps_temperature(self) -> None:
+        """Dated Opus 4 snapshot IDs (e.g. claude-opus-4-20250514) must not drop temperature."""
+        client = AnthropicClient(_create_test_settings('claude-opus-4-20250514'))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedEqual("temperature", 0.3, kwargs.get('temperature'))
+
+    def test_dated_opus_4_7_omits_temperature(self) -> None:
+        """Dated Opus 4.7 snapshot IDs (e.g. claude-opus-4-7-20250514) still omit temperature."""
+        client = AnthropicClient(_create_test_settings('claude-opus-4-7-20250514'))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
+
     def test_opus_4_7_thinking_uses_adaptive_mode(self) -> None:
         """Opus 4.7 thinking mode uses adaptive thinking without a budget."""
         client = AnthropicClient(_create_test_settings('Claude Opus 4.7', thinking=True))

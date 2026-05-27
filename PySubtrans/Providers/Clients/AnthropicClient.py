@@ -154,18 +154,10 @@ class AnthropicClient(TranslationClient):
                 if prompt.system_prompt is None:
                     raise TranslationError(_("System prompt is required"))
 
-                request_kwargs = self._get_message_request_kwargs(request, temperature)
-
                 if request.is_streaming and self.enable_streaming:
-                    with self.client.messages.stream(**request_kwargs) as stream:
-                        for text in stream.text_stream:
-                            if self.aborted:
-                                return None
-                            request.ProcessStreamingDelta(text)
+                    return self._stream_client_response(prompt, request, temperature)
 
-                        return stream.get_final_message()
-                else:
-                    return self.client.messages.create(**request_kwargs)
+                return self._create_client_response(prompt, temperature)
 
             except (anthropic.APITimeoutError, anthropic.RateLimitError) as e:
                 if retry < self.max_retries and not self.aborted:
@@ -198,22 +190,56 @@ class AnthropicClient(TranslationClient):
 
         return str(e)
 
-    def _get_message_request_kwargs(self, request : TranslationRequest, temperature : float) -> dict[str, Any]:
-        """Build request kwargs for Anthropic message APIs."""
-        prompt = request.prompt
-
-        kwargs : dict[str, Any] = {
-            'model': self.model,
-            'thinking': self.thinking,     # type: ignore
-            'messages': prompt.content,    # type: ignore
-            'system': prompt.system_prompt,
-            'max_tokens': self.max_tokens
-        }
-
+    def _stream_client_response(self, prompt : TranslationPrompt, request : TranslationRequest, temperature : float):
+        """Stream an Anthropic response with model-specific parameters."""
         if self._supports_temperature_parameter():
-            kwargs['temperature'] = temperature if not self.allow_thinking else 1
+            with self.client.messages.stream(
+                model=self.model,
+                thinking=self.thinking,     # type: ignore
+                messages=prompt.content,    # type: ignore
+                system=prompt.system_prompt,
+                temperature=temperature if not self.allow_thinking else 1,
+                max_tokens=self.max_tokens
+            ) as stream:
+                return self._consume_stream(stream, request)
 
-        return kwargs
+        with self.client.messages.stream(
+            model=self.model,
+            thinking=self.thinking,     # type: ignore
+            messages=prompt.content,    # type: ignore
+            system=prompt.system_prompt,
+            max_tokens=self.max_tokens
+        ) as stream:
+            return self._consume_stream(stream, request)
+
+    def _create_client_response(self, prompt : TranslationPrompt, temperature : float):
+        """Create an Anthropic response with model-specific parameters."""
+        if self._supports_temperature_parameter():
+            return self.client.messages.create(
+                model=self.model,
+                thinking=self.thinking,     # type: ignore
+                messages=prompt.content,    # type: ignore
+                system=prompt.system_prompt,
+                temperature=temperature if not self.allow_thinking else 1,
+                max_tokens=self.max_tokens
+            )
+
+        return self.client.messages.create(
+            model=self.model,
+            thinking=self.thinking,     # type: ignore
+            messages=prompt.content,    # type: ignore
+            system=prompt.system_prompt,
+            max_tokens=self.max_tokens
+        )
+
+    def _consume_stream(self, stream, request : TranslationRequest):
+        """Consume streamed response content and return the final message."""
+        for text in stream.text_stream:
+            if self.aborted:
+                return None
+            request.ProcessStreamingDelta(text)
+
+        return stream.get_final_message()
 
     def _supports_temperature_parameter(self) -> bool:
         """Return True when the selected model still accepts the temperature parameter."""

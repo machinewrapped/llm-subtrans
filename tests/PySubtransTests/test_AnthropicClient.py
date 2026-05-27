@@ -1,5 +1,6 @@
 import importlib.util
 import unittest
+from unittest.mock import MagicMock
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.SettingsType import SettingsType
@@ -38,24 +39,30 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
     def test_opus_4_7_omits_temperature(self) -> None:
         """Opus 4.7 request payloads omit deprecated temperature."""
         client = AnthropicClient(_create_test_settings('claude-opus-4-7'))
+        client.client = MagicMock()
 
-        kwargs = client._get_message_request_kwargs(_create_test_request(), 0.3)
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
 
         self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
 
     def test_older_opus_models_keep_temperature(self) -> None:
         """Older Opus models still include temperature in request payloads."""
         client = AnthropicClient(_create_test_settings('claude-opus-4-6'))
+        client.client = MagicMock()
 
-        kwargs = client._get_message_request_kwargs(_create_test_request(), 0.3)
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
 
         self.assertLoggedEqual("temperature", 0.3, kwargs.get('temperature'))
 
     def test_opus_4_7_thinking_uses_adaptive_mode(self) -> None:
         """Opus 4.7 thinking mode uses adaptive thinking without a budget."""
         client = AnthropicClient(_create_test_settings('Claude Opus 4.7', thinking=True))
+        client.client = MagicMock()
 
-        kwargs = client._get_message_request_kwargs(_create_test_request(), 0.3)
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
         thinking = kwargs.get('thinking', {})
 
         self.assertLoggedEqual("thinking type", 'adaptive', thinking.get('type'))

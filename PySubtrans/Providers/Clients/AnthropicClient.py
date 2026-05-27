@@ -4,6 +4,11 @@ from typing import Any
 
 import anthropic
 import regex
+from anthropic.types.message_param import MessageParam
+from anthropic.types.model_param import ModelParam
+from anthropic.types.thinking_config_adaptive_param import ThinkingConfigAdaptiveParam
+from anthropic.types.thinking_config_enabled_param import ThinkingConfigEnabledParam
+from anthropic.types.thinking_config_param import ThinkingConfigParam
 
 from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Helpers.Localization import _
@@ -22,6 +27,7 @@ class AnthropicClient(TranslationClient):
     """
     def __init__(self, settings : SettingsType):
         super().__init__(settings)
+        self.client: anthropic.Anthropic|None = None
 
         self._emit_info(_("Translating with Anthropic {model}").format(
             model=self.model or _("default model")
@@ -44,19 +50,17 @@ class AnthropicClient(TranslationClient):
         return self.settings.get_bool( 'thinking', False)
     
     @property
-    def thinking(self) -> dict|anthropic.NotGiven:
+    def thinking(self) -> ThinkingConfigParam|anthropic.Omit:
         if self.allow_thinking:
             if not self._supports_temperature_parameter():
-                return {
-                    'type' : 'adaptive'
-                }
+                return ThinkingConfigAdaptiveParam(type='adaptive')
 
-            return {
-                'type' : 'enabled',
-                'budget_tokens' : self.settings.get_int( 'max_thinking_tokens', 1024)
-            }
+            return ThinkingConfigEnabledParam(
+                type='enabled',
+                budget_tokens=self.settings.get_int('max_thinking_tokens', 1024) or 1024
+            )
         
-        return anthropic.NOT_GIVEN
+        return anthropic.omit
 
     def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
@@ -193,21 +197,21 @@ class AnthropicClient(TranslationClient):
     def _stream_client_response(self, prompt : TranslationPrompt, request : TranslationRequest, temperature : float):
         """Stream an Anthropic response with model-specific parameters."""
         if self._supports_temperature_parameter():
-            with self.client.messages.stream(
-                model=self.model,
-                thinking=self.thinking,     # type: ignore
-                messages=prompt.content,    # type: ignore
-                system=prompt.system_prompt,
+            with self._get_client().messages.stream(
+                model=self._get_model_param(),
+                thinking=self.thinking,
+                messages=self._get_message_params(prompt),
+                system=self._get_system_prompt(prompt),
                 temperature=temperature if not self.allow_thinking else 1,
                 max_tokens=self.max_tokens
             ) as stream:
                 return self._consume_stream(stream, request)
 
-        with self.client.messages.stream(
-            model=self.model,
-            thinking=self.thinking,     # type: ignore
-            messages=prompt.content,    # type: ignore
-            system=prompt.system_prompt,
+        with self._get_client().messages.stream(
+            model=self._get_model_param(),
+            thinking=self.thinking,
+            messages=self._get_message_params(prompt),
+            system=self._get_system_prompt(prompt),
             max_tokens=self.max_tokens
         ) as stream:
             return self._consume_stream(stream, request)
@@ -215,20 +219,20 @@ class AnthropicClient(TranslationClient):
     def _create_client_response(self, prompt : TranslationPrompt, temperature : float):
         """Create an Anthropic response with model-specific parameters."""
         if self._supports_temperature_parameter():
-            return self.client.messages.create(
-                model=self.model,
-                thinking=self.thinking,     # type: ignore
-                messages=prompt.content,    # type: ignore
-                system=prompt.system_prompt,
+            return self._get_client().messages.create(
+                model=self._get_model_param(),
+                thinking=self.thinking,
+                messages=self._get_message_params(prompt),
+                system=self._get_system_prompt(prompt),
                 temperature=temperature if not self.allow_thinking else 1,
                 max_tokens=self.max_tokens
             )
 
-        return self.client.messages.create(
-            model=self.model,
-            thinking=self.thinking,     # type: ignore
-            messages=prompt.content,    # type: ignore
-            system=prompt.system_prompt,
+        return self._get_client().messages.create(
+            model=self._get_model_param(),
+            thinking=self.thinking,
+            messages=self._get_message_params(prompt),
+            system=self._get_system_prompt(prompt),
             max_tokens=self.max_tokens
         )
 
@@ -240,6 +244,48 @@ class AnthropicClient(TranslationClient):
             request.ProcessStreamingDelta(text)
 
         return stream.get_final_message()
+
+    def _get_model_param(self) -> ModelParam:
+        """Return the selected model as an Anthropic model parameter."""
+        if self.model is None:
+            raise TranslationError(_("No model specified"))
+
+        return self.model
+
+    def _get_system_prompt(self, prompt : TranslationPrompt) -> str:
+        """Return the system prompt in the shape expected by Anthropic."""
+        if prompt.system_prompt is None:
+            raise TranslationError(_("System prompt is required"))
+
+        return prompt.system_prompt
+
+    def _get_client(self) -> anthropic.Anthropic:
+        """Return the initialized Anthropic client."""
+        if self.client is None:
+            raise TranslationImpossibleError(_("Client is not initialized"))
+
+        return self.client
+
+    def _get_message_params(self, prompt : TranslationPrompt) -> list[MessageParam]:
+        """Convert prompt content into Anthropic message params."""
+        if not isinstance(prompt.content, list):
+            raise TranslationError(_("Content must be a list of messages"))
+
+        messages : list[MessageParam] = []
+
+        for message in prompt.content:
+            if not isinstance(message, dict):
+                raise TranslationError(_("Content must be a list of messages"))
+
+            role = message.get('role')
+            content = message.get('content')
+
+            if role not in ('user', 'assistant') or content is None:
+                raise TranslationError(_("Content must be a list of messages"))
+
+            messages.append(MessageParam(role=role, content=content))
+
+        return messages
 
     def _supports_temperature_parameter(self) -> bool:
         """Return True when the selected model still accepts the temperature parameter."""

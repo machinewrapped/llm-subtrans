@@ -59,11 +59,8 @@ else:
                 """
                 client_settings = SettingsType(self.settings.copy())
                 client_settings.update(settings)
-                client_settings.update({
-                    'supports_conversation': True,
-                    'supports_system_message': True,
-                    'supports_system_messages': True,
-                })
+                client_settings.set('supports_conversation', True)
+                client_settings.set('supports_system_messages', True)
                 return LiteLLMClient(client_settings)
 
             def GetOptions(self, settings : SettingsType) -> GuiSettingsType:

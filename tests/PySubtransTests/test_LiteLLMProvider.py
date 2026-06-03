@@ -4,6 +4,16 @@ import unittest
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.SettingsType import SettingsType
 
+# Keep top-level imports clean, but safely handle when LiteLLM is not installed
+if importlib.util.find_spec("litellm"):
+    from PySubtrans.Providers.Clients.LiteLLMClient import LiteLLMClient
+    from PySubtrans.Providers.Provider_LiteLLM import LiteLLMProvider
+    from PySubtrans.TranslationProvider import TranslationProvider
+else:
+    LiteLLMClient = None
+    LiteLLMProvider = None
+    TranslationProvider = None
+
 
 @unittest.skipUnless(
     importlib.util.find_spec("litellm"),
@@ -14,16 +24,14 @@ class TestLiteLLMProvider(LoggedTestCase):
 
     def test_provider_registered(self):
         """LiteLLMProvider should be discoverable via TranslationProvider.get_providers()"""
-        from PySubtrans.TranslationProvider import TranslationProvider
-
+        assert TranslationProvider is not None
         providers = TranslationProvider.get_providers()
         self.assertLoggedIn("LiteLLM in providers", "LiteLLM", providers)
 
     def test_provider_creates_client(self):
         """LiteLLMProvider.GetTranslationClient should return a LiteLLMClient"""
-        from PySubtrans.Providers.Clients.LiteLLMClient import LiteLLMClient
-        from PySubtrans.Providers.Provider_LiteLLM import LiteLLMProvider
-
+        assert LiteLLMProvider is not None
+        assert LiteLLMClient is not None
         settings = SettingsType({
             'model': 'openai/gpt-4o',
             'api_key': 'sk-test',
@@ -35,8 +43,7 @@ class TestLiteLLMProvider(LoggedTestCase):
 
     def test_provider_available_models(self):
         """LiteLLMProvider should return a non-empty model list"""
-        from PySubtrans.Providers.Provider_LiteLLM import LiteLLMProvider
-
+        assert LiteLLMProvider is not None
         settings = SettingsType({'model': 'openai/gpt-4o'})
         provider = LiteLLMProvider(settings)
         models = provider.GetAvailableModels()
@@ -44,8 +51,7 @@ class TestLiteLLMProvider(LoggedTestCase):
 
     def test_provider_options(self):
         """LiteLLMProvider.GetOptions should return expected option keys"""
-        from PySubtrans.Providers.Provider_LiteLLM import LiteLLMProvider
-
+        assert LiteLLMProvider is not None
         settings = SettingsType({'model': 'openai/gpt-4o'})
         provider = LiteLLMProvider(settings)
         options = provider.GetOptions(settings)
@@ -54,8 +60,7 @@ class TestLiteLLMProvider(LoggedTestCase):
 
     def test_provider_multithreaded_default(self):
         """LiteLLMProvider should allow multithreaded by default"""
-        from PySubtrans.Providers.Provider_LiteLLM import LiteLLMProvider
-
+        assert LiteLLMProvider is not None
         settings = SettingsType({'model': 'openai/gpt-4o'})
         provider = LiteLLMProvider(settings)
         self.assertLoggedEqual(
@@ -66,8 +71,7 @@ class TestLiteLLMProvider(LoggedTestCase):
 
     def test_provider_multithreaded_with_rate_limit(self):
         """LiteLLMProvider should disallow multithreaded when rate limit is set"""
-        from PySubtrans.Providers.Provider_LiteLLM import LiteLLMProvider
-
+        assert LiteLLMProvider is not None
         settings = SettingsType({'model': 'openai/gpt-4o', 'rate_limit': 10.0})
         provider = LiteLLMProvider(settings)
         self.assertLoggedEqual(

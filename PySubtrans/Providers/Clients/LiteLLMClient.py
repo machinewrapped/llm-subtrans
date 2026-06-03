@@ -1,5 +1,6 @@
 import importlib.util
 import logging
+import time
 from typing import Any
 
 from PySubtrans.Helpers.Localization import _
@@ -92,8 +93,8 @@ else:
                 kwargs["api_base"] = self.api_base
             if temperature is not None:
                 kwargs["temperature"] = temperature
-            max_tokens = self.settings.get_int('max_tokens', 0)
-            if max_tokens > 0:
+            max_tokens = self.settings.get_int('max_tokens')
+            if max_tokens is not None and max_tokens > 0:
                 kwargs["max_tokens"] = max_tokens
 
             for retry in range(self.max_retries + 1):
@@ -106,16 +107,20 @@ else:
                     if self.aborted:
                         return None
 
-                    if not getattr(result, 'choices', None):
+                    choices = getattr(result, 'choices', None)
+                    if not choices:
                         raise TranslationResponseError(_("No choices returned in the response"), response=result)
 
-                    if hasattr(result, "usage") and result.usage:
-                        response['prompt_tokens'] = getattr(result.usage, 'prompt_tokens', 0)
-                        response['output_tokens'] = getattr(result.usage, 'completion_tokens', 0)
-                        response['total_tokens'] = getattr(result.usage, 'total_tokens', 0)
+                    usage = getattr(result, 'usage', None)
+                    if usage:
+                        response['prompt_tokens'] = getattr(usage, 'prompt_tokens', 0)
+                        response['output_tokens'] = getattr(usage, 'completion_tokens', 0)
+                        response['total_tokens'] = getattr(usage, 'total_tokens', 0)
 
-                    choice = result.choices[0]
-                    reply = choice.message
+                    choice = choices[0]
+                    reply = getattr(choice, 'message', None)
+                    if not reply:
+                        raise TranslationResponseError(_("No message returned in the choice"), response=result)
 
                     response['finish_reason'] = getattr(choice, 'finish_reason', None)
                     response['text'] = getattr(reply, 'content', None)
@@ -126,13 +131,20 @@ else:
                         litellm.exceptions.ServiceUnavailableError,
                         litellm.exceptions.Timeout,
                         litellm.exceptions.APIConnectionError) as e:
-                    if retry < self.max_retries:
-                        logging.warning(_("LiteLLM transient error (retry {retry}/{max_retries}): {error}").format(
-                            retry=retry + 1, max_retries=self.max_retries, error=str(e)
+                    if retry < self.max_retries and not self.aborted:
+                        backoff = self.backoff_time * 2.0**retry
+                        self._emit_warning(_("LiteLLM transient error (retry {retry}/{max_retries}): {error}, retrying in {backoff} seconds...").format(
+                            retry=retry + 1, max_retries=self.max_retries, error=str(e), backoff=backoff
                         ))
+                        time.sleep(backoff)
                         continue
                     raise TranslationImpossibleError(_("Failed to communicate with provider after {max_retries} retries").format(
                         max_retries=self.max_retries
+                    ), error=e)
+
+                except litellm.exceptions.APIError as e:
+                    raise TranslationImpossibleError(_("LiteLLM error communicating with the provider: {error}").format(
+                        error=str(e)
                     ), error=e)
 
                 except Exception as e:

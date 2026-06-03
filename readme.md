@@ -20,7 +20,7 @@ Packaged builds are (usually) provided for MacOS with Apple Silicon (**gui-subtr
 Prebuilt Linux packages are not provided so you will need to [install from source](#installing-from-source).
 
 ### LLM-Subtrans Web
-The Gemini-powered [LLM-Subtrans Web](https://tinyurl.com/llm-subtrans-web) is free to use, but since it costs _me_ money it now requires a registered email address, and each user is limited to 2 translations per day.
+The Gemini-powered LLM-Subtrans Web has been retired as it was costing me money. You can create your own version in [Google AI Studio](https://aistudio.google.com/).
 
 ## Translation Providers
 
@@ -38,7 +38,7 @@ https://ai.google.dev/terms
 
 **Please note that regions restrictions may apply: https://ai.google.dev/available_regions**
 
-Gemini 2.5 Flash is perhaps the leading model for translation speed and fluency at time of writing, despite some censorship, and Preview models are often free to use.
+Gemini 3.5 Flash is perhaps the leading model for translation speed and fluency at time of writing, despite some censorship, and Preview models are often free to use.
 
 You will need a Google Gemini API key from https://ai.google.dev/ or from a project created on https://console.cloud.google.com/. You must ensure that Generative AI is enabled for the api key and project.
 

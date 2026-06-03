@@ -143,7 +143,7 @@ if not "!EXTRAS!"=="" (
 )
 
 REM Install dependencies
-pip install --upgrade -e "!INSTALL_TARGET!"
+.\envsubtrans\Scripts\python.exe -m pip install --upgrade -e "!INSTALL_TARGET!"
 if errorlevel 1 (
     echo Failed to install required modules.
     pause

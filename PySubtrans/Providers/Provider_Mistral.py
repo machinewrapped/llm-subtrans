@@ -12,7 +12,7 @@ if not importlib.util.find_spec("mistralai"):
     logging.debug(_("Mistral SDK is not installed. Mistral provider will not be available"))
 else:
     try:
-        import mistralai
+        from mistralai.client import Mistral
 
         from PySubtrans.Helpers.Localization import _
         from PySubtrans.Providers.Clients.MistralClient import MistralClient
@@ -95,7 +95,7 @@ else:
 
                     proxy_url = self.settings.get_str('proxy')
                     http_client = httpx.Client(proxy=proxy_url) if proxy_url else None
-                    client = mistralai.Mistral(
+                    client = Mistral(
                         api_key=self.api_key,
                         server_url=self.server_url or None,
                         client=http_client
@@ -105,7 +105,7 @@ else:
                     if not response or not response.data:
                         return []
 
-                    model_list = [ model.id for model in response.data]
+                    model_list = [mid for model in response.data if (mid := getattr(model, 'id', None)) is not None]
 
                     return sorted(model_list)
 

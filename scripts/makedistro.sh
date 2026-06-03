@@ -13,3 +13,15 @@ pyinstaller --noconfirm --additional-hooks-dir="hooks-subtrans" \
     --add-data "assets/gui-subtrans.ico:." \
     --add-data "locales/*:locales/" \
     scripts/gui-subtrans.py
+
+pip install pip-audit
+python -m pip_audit
+if [ $? -ne 0 ]; then
+    echo "WARNING: Vulnerability scan detected known vulnerabilities. DO NOT publish or run this build!"
+    exit 1
+fi
+
+python scripts/check_package_ages.py
+if [ $? -ne 0 ]; then
+    exit 1
+fi

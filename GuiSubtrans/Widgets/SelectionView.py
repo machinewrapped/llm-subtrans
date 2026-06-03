@@ -73,7 +73,7 @@ class SelectionView(QFrame):
         else:
             while layout.count():
                 item = layout.takeAt(0)
-                w = item.widget()
+                w = item.widget() if item is not None else None
                 if w is not None:
                     w.setParent(None)
                     w.deleteLater()

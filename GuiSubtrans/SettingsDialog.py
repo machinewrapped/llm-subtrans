@@ -194,7 +194,8 @@ class SettingsDialog(QDialog):
                 layout : QFormLayout = layout_qt
 
                 for row in range(layout.rowCount()):
-                    field_qt = layout.itemAt(row, QFormLayout.ItemRole.FieldRole).widget()
+                    item = layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
+                    field_qt = item.widget() if item is not None else None
 
                     if not isinstance(field_qt, OptionWidget):
                         continue
@@ -324,7 +325,8 @@ class SettingsDialog(QDialog):
 
         # Find the index of the row in the layout
         for row in range(layout.rowCount()):
-            if layout.itemAt(row, QFormLayout.ItemRole.FieldRole).widget() == field:
+            item = layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
+            if item is not None and item.widget() == field:
                 layout.setRowVisible(row, visible)
 
 

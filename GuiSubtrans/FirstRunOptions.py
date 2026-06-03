@@ -66,7 +66,8 @@ class FirstRunOptions(QDialog):
     def accept(self):
         """ Update the settings """
         for row in range(self.form_layout.rowCount()):
-            widget = self.form_layout.itemAt(row, QFormLayout.ItemRole.FieldRole).widget()
+            item = self.form_layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
+            widget = item.widget() if item is not None else None
             if isinstance(widget, OptionWidget):
                 field = widget
                 value = field.GetValue()

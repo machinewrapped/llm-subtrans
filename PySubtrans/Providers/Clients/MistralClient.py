@@ -4,8 +4,8 @@ from PySubtrans.Options import SettingsType
 from PySubtrans.SubtitleError import TranslationResponseError
 
 import httpx
-import mistralai
-from mistralai.models import ChatCompletionResponse as ChatCompletion
+from mistralai.client import Mistral
+from mistralai.client.models import ChatCompletionResponse as ChatCompletion
 
 from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Helpers.Localization import _
@@ -33,7 +33,7 @@ class MistralClient(TranslationClient):
         proxy_url = self.settings.get_str('proxy')
         http_client = httpx.Client(proxy=proxy_url) if proxy_url else None
 
-        self.client = mistralai.Mistral(api_key=self.api_key, server_url=self.server_url, client=http_client)
+        self.client = Mistral(api_key=self.api_key, server_url=self.server_url, client=http_client)
 
     @property
     def api_key(self) -> str|None:

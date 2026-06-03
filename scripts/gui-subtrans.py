@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import signal
 import sys
 import cProfile
 from pstats import Stats
@@ -10,8 +11,17 @@ if not hasattr(sys, "_MEIPASS"):
     check_required_imports(['PySubtrans', 'GuiSubtrans', 'PySide6', 'scripts'], 'gui')
 
 from scripts.subtrans_common import InitLogger
+
+# PySide6 6.9+ conflicts with debugpy's console handler on Windows during Qt init
+if sys.platform == 'win32':
+    _prev_sigint = signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
+
+if sys.platform == 'win32':
+    signal.signal(signal.SIGINT, _prev_sigint)
+    del _prev_sigint
 from PySubtrans.Options import Options, settings_path, config_dir
 from PySubtrans.Helpers.Localization import initialize_localization, _
 from GuiSubtrans.MainWindow import MainWindow

@@ -159,7 +159,10 @@ class NewProjectSettings(QDialog):
         layout : QFormLayout = cast(QFormLayout, self.form_layout.layout())
 
         for row in range(layout.rowCount()): # type: ignore
-            field : OptionWidget = cast(OptionWidget, layout.itemAt(row, QFormLayout.ItemRole.FieldRole).widget())
+            item = layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
+            if item is None:
+                continue
+            field : OptionWidget = cast(OptionWidget, item.widget())
             self.settings[field.key] = field.GetValue()
 
     def _update_instruction_file(self):

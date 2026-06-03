@@ -31,7 +31,7 @@ gui = [
 openai = ["openai"]
 azure = ["openai"]
 gemini = ["google-genai", "google-api-core"]
-claude = ["anthropic"]
+claude = ["anthropic>=0.78.0"]
 mistral = ["mistralai"]
 bedrock = ["boto3"]
 litellm = ["litellm>=1.65,<1.85"]

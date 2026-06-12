@@ -57,7 +57,7 @@ else:
             content = [message for message in content if message]
 
             temperature = temperature or self.temperature
-            response = self._send_messages(content, temperature)
+            response = self._send_messages(content, temperature, request=request)
 
             translation = Translation(response) if response else None
 
@@ -70,9 +70,10 @@ else:
 
             return translation
 
-        def _send_messages(self, messages : list, temperature : float|None) -> dict[str, Any]|None:
+        def _send_messages(self, messages : list, temperature : float|None, request : TranslationRequest|None = None) -> dict[str, Any]|None:
             """
             Make a request to LiteLLM to provide a translation.
+            Supports both streaming and non-streaming modes.
             """
             response : dict[str, Any] = {}
 
@@ -97,11 +98,41 @@ else:
             if max_tokens is not None and max_tokens > 0:
                 kwargs["max_tokens"] = max_tokens
 
+            use_streaming = request and request.is_streaming and self.enable_streaming
+
             for retry in range(self.max_retries + 1):
                 if self.aborted:
                     return None
 
                 try:
+                    if use_streaming:
+                        kwargs["stream"] = True
+                        result = litellm.completion(**kwargs)
+
+                        accumulated_text = ""
+                        finish_reason = None
+                        for chunk in result:
+                            if self.aborted:
+                                return None
+                            if not getattr(chunk, 'choices', None):
+                                continue
+                            choice = chunk.choices[0]
+                            delta_content = getattr(choice.delta, 'content', None)
+                            if delta_content:
+                                accumulated_text += delta_content
+                                request.ProcessStreamingDelta(delta_content)
+                            if getattr(choice, 'finish_reason', None):
+                                finish_reason = choice.finish_reason
+                            usage = getattr(chunk, 'usage', None)
+                            if usage:
+                                response['prompt_tokens'] = getattr(usage, 'prompt_tokens', 0)
+                                response['output_tokens'] = getattr(usage, 'completion_tokens', 0)
+                                response['total_tokens'] = getattr(usage, 'total_tokens', 0)
+
+                        response['finish_reason'] = finish_reason
+                        response['text'] = accumulated_text
+                        return response
+
                     result = litellm.completion(**kwargs)
 
                     if self.aborted:

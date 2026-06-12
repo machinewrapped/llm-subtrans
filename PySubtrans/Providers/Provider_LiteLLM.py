@@ -61,6 +61,7 @@ else:
                 client_settings.update(settings)
                 client_settings.set('supports_conversation', True)
                 client_settings.set('supports_system_messages', True)
+                client_settings.set('supports_streaming', True)
                 return LiteLLMClient(client_settings)
 
             def GetOptions(self, settings : SettingsType) -> GuiSettingsType:
@@ -79,18 +80,9 @@ else:
 
             def GetAvailableModels(self) -> list[str]:
                 """
-                Returns a list of suggested models for LiteLLM
+                Returns an empty list since model input is free-text.
                 """
                 return [
-                    "openai/gpt-4o",
-                    "openai/gpt-4o-mini",
-                    "anthropic/claude-sonnet-4-6",
-                    "anthropic/claude-haiku-4-5",
-                    "gemini/gemini-2.5-flash",
-                    "gemini/gemini-2.5-pro",
-                    "deepseek/deepseek-chat",
-                    "groq/llama-3.3-70b-versatile",
-                    "mistral/mistral-large-latest",
                 ]
 
             def GetInformation(self) -> str:

@@ -70,7 +70,7 @@ else:
 
             return translation
 
-        def _send_messages(self, messages : list, temperature : float|None, request : TranslationRequest|None = None) -> dict[str, Any]|None:
+        def _send_messages(self, messages : list, temperature : float|None, request : TranslationRequest) -> dict[str, Any]|None:
             """
             Make a request to LiteLLM to provide a translation.
             Supports both streaming and non-streaming modes.
@@ -114,9 +114,10 @@ else:
                         for chunk in result:
                             if self.aborted:
                                 return None
-                            if not getattr(chunk, 'choices', None):
+                            choices = getattr(chunk, 'choices', None)
+                            if not chunk or not choices:
                                 continue
-                            choice = chunk.choices[0]
+                            choice = choices[0]
                             delta_content = getattr(choice.delta, 'content', None)
                             if delta_content:
                                 accumulated_text += delta_content

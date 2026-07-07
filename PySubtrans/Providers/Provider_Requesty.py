@@ -238,7 +238,7 @@ class RequestyProvider(TranslationProvider):
                 try:
                     data = result.json()
                     # Requesty returns models under 'data' (OpenAI-compatible)
-                    models_data = data.get('data', data if isinstance(data, list) else [])
+                    models_data = data if isinstance(data, list) else data.get('data', [])
                     model_cache : dict[str, dict[str, str]] = {}
                     all_models : list[str] = []
 

@@ -1,10 +1,11 @@
 import json
 import logging
 import os
+
 import httpx
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Options import SettingsType, env_float, env_int
+from PySubtrans.Options import env_float, env_int
 from PySubtrans.Providers.Clients.RequestyClient import RequestyClient
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.TranslationClient import TranslationClient
@@ -138,7 +139,7 @@ class RequestyProvider(TranslationProvider):
                 else:
                     options['model'] = ([_("No models available")], _( "Try a different model family or change filter settings"))
             else:
-                options['model_family'] = (["Unable to retrieve models"], _( "Check API key and try again"))
+                options['model_family'] = ([_("Unable to retrieve models")], _( "Check API key and try again"))
 
         if self.use_default_model or self.available_models:
             options.update({
@@ -291,7 +292,7 @@ class RequestyProvider(TranslationProvider):
         # Ensure cache is populated
         self._populate_model_cache()
 
-        for family, models in self._cached_models.items(): # type: ignore[unused-variable]
+        for models in self._cached_models.values():
             if display_name in models:
                 return models[display_name]
 

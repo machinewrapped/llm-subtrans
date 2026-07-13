@@ -78,6 +78,13 @@ else:
                     'supports_system_messages': False,
                     'supports_system_prompt': True
                     })
+
+                model_id = client_settings.get('model')
+                if isinstance(model_id, str):
+                    thinking_capabilities = self._get_thinking_capabilities(model_id)
+                    if thinking_capabilities is not None:
+                        client_settings.update(thinking_capabilities)
+
                 return AnthropicClient(client_settings)
 
             def GetAvailableModels(self) -> list[str]:
@@ -149,6 +156,29 @@ else:
                         error=str(e)
                     ))
                     return []
+
+            def _get_thinking_capabilities(self, model_id : str) -> SettingsType|None:
+                """
+                Return the model's reported thinking capabilities as client settings, or None
+                when they are unavailable (e.g. the model is not in the fetched model list or
+                the API did not report capabilities). The client falls back to a version
+                heuristic in that case.
+                """
+                for model in self.claude_models:
+                    if model.id != model_id:
+                        continue
+
+                    capabilities = getattr(model, 'capabilities', None)
+                    thinking = getattr(capabilities, 'thinking', None) if capabilities else None
+                    if thinking is None:
+                        return None
+
+                    return SettingsType({
+                        'thinking_supports_adaptive': thinking.types.adaptive.supported,
+                        'thinking_supports_enabled': thinking.types.enabled.supported,
+                    })
+
+                return None
 
             def _get_model_id(self, name : str) -> str:
                 if not self.claude_models:

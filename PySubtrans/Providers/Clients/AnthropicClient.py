@@ -201,20 +201,21 @@ class AnthropicClient(TranslationClient):
 
     def _stream_client_response(self, prompt : TranslationPrompt, request : TranslationRequest, temperature : float):
         """Stream an Anthropic response with model-specific parameters."""
+        thinking = self.thinking
         if self._supports_temperature_parameter():
             with self._get_client().messages.stream(
                 model=self._get_model_param(),
-                thinking=self.thinking,
+                thinking=thinking,
                 messages=self._get_message_params(prompt),
                 system=self._get_system_prompt(prompt),
-                temperature=temperature if not self.allow_thinking else 1,
+                temperature=self._resolve_temperature(temperature, thinking),
                 max_tokens=self.max_tokens
             ) as stream:
                 return self._consume_stream(stream, request)
 
         with self._get_client().messages.stream(
             model=self._get_model_param(),
-            thinking=self.thinking,
+            thinking=thinking,
             messages=self._get_message_params(prompt),
             system=self._get_system_prompt(prompt),
             max_tokens=self.max_tokens
@@ -223,19 +224,20 @@ class AnthropicClient(TranslationClient):
 
     def _create_client_response(self, prompt : TranslationPrompt, temperature : float):
         """Create an Anthropic response with model-specific parameters."""
+        thinking = self.thinking
         if self._supports_temperature_parameter():
             return self._get_client().messages.create(
                 model=self._get_model_param(),
-                thinking=self.thinking,
+                thinking=thinking,
                 messages=self._get_message_params(prompt),
                 system=self._get_system_prompt(prompt),
-                temperature=temperature if not self.allow_thinking else 1,
+                temperature=self._resolve_temperature(temperature, thinking),
                 max_tokens=self.max_tokens
             )
 
         return self._get_client().messages.create(
             model=self._get_model_param(),
-            thinking=self.thinking,
+            thinking=thinking,
             messages=self._get_message_params(prompt),
             system=self._get_system_prompt(prompt),
             max_tokens=self.max_tokens
@@ -343,3 +345,15 @@ class AnthropicClient(TranslationClient):
             return None
 
         return bool(adaptive) and not bool(enabled)
+
+    @staticmethod
+    def _resolve_temperature(temperature : float, thinking : ThinkingConfigParam|anthropic.Omit) -> float:
+        """
+        Enabled (budget) thinking requires temperature to be 1; otherwise use the requested
+        value. Keyed on the thinking config actually being sent, not the raw thinking setting,
+        so a model that omits thinking still honours the configured temperature.
+        """
+        if isinstance(thinking, dict) and thinking.get('type') == 'enabled':
+            return 1
+
+        return temperature

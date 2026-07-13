@@ -185,3 +185,29 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
         thinking = client.client.messages.create.call_args.kwargs.get('thinking')
 
         self.assertLoggedIsInstance("thinking omitted", thinking, anthropic.Omit)
+
+    def test_budget_thinking_forces_temperature_one(self) -> None:
+        """Enabled (budget) thinking overrides temperature to 1 on temperature-capable models."""
+        client = AnthropicClient(_create_test_settings('claude-opus-4-6', thinking=True))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedEqual("thinking type", 'enabled', kwargs.get('thinking', {}).get('type'))
+        self.assertLoggedEqual("temperature", 1, kwargs.get('temperature'))
+
+    def test_no_thinking_capability_preserves_temperature(self) -> None:
+        """A temperature-capable model that omits thinking keeps the configured temperature."""
+        # thinking is left enabled, but the model reports no thinking support, so no thinking
+        # config is sent - the temperature override must not fire.
+        client = AnthropicClient(_create_test_settings(
+            'claude-opus-4-6', thinking=True,
+            thinking_supports_adaptive=False, thinking_supports_enabled=False))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedIsInstance("thinking omitted", kwargs.get('thinking'), anthropic.Omit)
+        self.assertLoggedEqual("temperature", 0.3, kwargs.get('temperature'))

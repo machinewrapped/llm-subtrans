@@ -10,18 +10,22 @@ from PySubtrans.TranslationRequest import TranslationRequest
 HAS_ANTHROPIC = importlib.util.find_spec("anthropic") is not None
 
 if HAS_ANTHROPIC:
+    import anthropic
+
     from PySubtrans.Providers.Clients.AnthropicClient import AnthropicClient
 
 
-def _create_test_settings(model : str, thinking : bool = False) -> SettingsType:
+def _create_test_settings(model : str, thinking : bool = False, **extra) -> SettingsType:
     """Create minimal Anthropic client settings for testing."""
-    return SettingsType({
+    settings : dict = {
         'api_key': 'test-key',
         'instructions': 'Translate the subtitles.',
         'model': model,
         'max_tokens': 512,
         'thinking': thinking
-    })
+    }
+    settings.update(extra)
+    return SettingsType(settings)
 
 
 def _create_test_request() -> TranslationRequest:
@@ -76,6 +80,38 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
 
         self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
 
+    def test_sonnet_5_omits_temperature(self) -> None:
+        """Sonnet 5 request payloads omit deprecated temperature."""
+        client = AnthropicClient(_create_test_settings('claude-sonnet-5'))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
+
+    def test_fable_5_omits_temperature(self) -> None:
+        """Fable 5 request payloads omit deprecated temperature."""
+        client = AnthropicClient(_create_test_settings('claude-fable-5'))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
+
+    def test_sonnet_5_thinking_uses_adaptive_mode(self) -> None:
+        """Sonnet 5 thinking mode uses adaptive thinking without a budget."""
+        client = AnthropicClient(_create_test_settings('claude-sonnet-5', thinking=True))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+        thinking = kwargs.get('thinking', {})
+
+        self.assertLoggedEqual("thinking type", 'adaptive', thinking.get('type'))
+        self.assertLoggedNotIn("budget tokens omitted", 'budget_tokens', thinking)
+
     def test_opus_4_7_thinking_uses_adaptive_mode(self) -> None:
         """Opus 4.7 thinking mode uses adaptive thinking without a budget."""
         client = AnthropicClient(_create_test_settings('Claude Opus 4.7', thinking=True))
@@ -87,3 +123,91 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
 
         self.assertLoggedEqual("thinking type", 'adaptive', thinking.get('type'))
         self.assertLoggedNotIn("budget tokens omitted", 'budget_tokens', thinking)
+
+    def test_unrecognized_model_omits_temperature(self) -> None:
+        """Unidentifiable model names default to omitting temperature (assume it is gone)."""
+        client = AnthropicClient(_create_test_settings('some-future-model'))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
+
+    def test_capabilities_adaptive_only_uses_adaptive_mode(self) -> None:
+        """Reported adaptive-only thinking capability selects adaptive mode."""
+        client = AnthropicClient(_create_test_settings(
+            'claude-sonnet-5', thinking=True,
+            thinking_supports_adaptive=True, thinking_supports_enabled=False))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        thinking = client.client.messages.create.call_args.kwargs.get('thinking', {})
+
+        self.assertLoggedEqual("thinking type", 'adaptive', thinking.get('type'))
+        self.assertLoggedNotIn("budget tokens omitted", 'budget_tokens', thinking)
+
+    def test_capabilities_override_version_heuristic(self) -> None:
+        """Reported capabilities take precedence over the model-name version heuristic."""
+        # An older model name that the heuristic would map to enabled thinking, but the
+        # reported capabilities say adaptive-only - capabilities must win.
+        client = AnthropicClient(_create_test_settings(
+            'claude-opus-4-6', thinking=True,
+            thinking_supports_adaptive=True, thinking_supports_enabled=False))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        thinking = client.client.messages.create.call_args.kwargs.get('thinking', {})
+
+        self.assertLoggedEqual("thinking type", 'adaptive', thinking.get('type'))
+
+    def test_capabilities_enabled_uses_budget_thinking(self) -> None:
+        """A model reporting enabled thinking uses a token budget."""
+        client = AnthropicClient(_create_test_settings(
+            'claude-sonnet-4-6', thinking=True,
+            thinking_supports_adaptive=True, thinking_supports_enabled=True))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        thinking = client.client.messages.create.call_args.kwargs.get('thinking', {})
+
+        self.assertLoggedEqual("thinking type", 'enabled', thinking.get('type'))
+        self.assertLoggedIn("budget tokens present", 'budget_tokens', thinking)
+
+    def test_capabilities_no_thinking_omits_thinking(self) -> None:
+        """A model that reports no thinking support omits the thinking parameter."""
+        client = AnthropicClient(_create_test_settings(
+            'claude-haiku-4-5', thinking=True,
+            thinking_supports_adaptive=False, thinking_supports_enabled=False))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        thinking = client.client.messages.create.call_args.kwargs.get('thinking')
+
+        self.assertLoggedIsInstance("thinking omitted", thinking, anthropic.Omit)
+
+    def test_budget_thinking_forces_temperature_one(self) -> None:
+        """Enabled (budget) thinking overrides temperature to 1 on temperature-capable models."""
+        client = AnthropicClient(_create_test_settings('claude-opus-4-6', thinking=True))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedEqual("thinking type", 'enabled', kwargs.get('thinking', {}).get('type'))
+        self.assertLoggedEqual("temperature", 1, kwargs.get('temperature'))
+
+    def test_no_thinking_capability_preserves_temperature(self) -> None:
+        """A temperature-capable model that omits thinking keeps the configured temperature."""
+        # thinking is left enabled, but the model reports no thinking support, so no thinking
+        # config is sent - the temperature override must not fire.
+        client = AnthropicClient(_create_test_settings(
+            'claude-opus-4-6', thinking=True,
+            thinking_supports_adaptive=False, thinking_supports_enabled=False))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedIsInstance("thinking omitted", kwargs.get('thinking'), anthropic.Omit)
+        self.assertLoggedEqual("temperature", 0.3, kwargs.get('temperature'))

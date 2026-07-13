@@ -51,16 +51,21 @@ class AnthropicClient(TranslationClient):
     
     @property
     def thinking(self) -> ThinkingConfigParam|anthropic.Omit:
-        if self.allow_thinking:
-            if not self._supports_temperature_parameter():
-                return ThinkingConfigAdaptiveParam(type='adaptive')
+        if not self.allow_thinking:
+            return anthropic.omit
 
-            return ThinkingConfigEnabledParam(
-                type='enabled',
-                budget_tokens=self.settings.get_int('max_thinking_tokens', 1024) or 1024
-            )
-        
-        return anthropic.omit
+        use_adaptive = self._use_adaptive_thinking()
+        if use_adaptive is None:
+            # The model does not support thinking at all
+            return anthropic.omit
+
+        if use_adaptive:
+            return ThinkingConfigAdaptiveParam(type='adaptive')
+
+        return ThinkingConfigEnabledParam(
+            type='enabled',
+            budget_tokens=self.settings.get_int('max_thinking_tokens', 1024) or 1024
+        )
 
     def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
@@ -196,20 +201,21 @@ class AnthropicClient(TranslationClient):
 
     def _stream_client_response(self, prompt : TranslationPrompt, request : TranslationRequest, temperature : float):
         """Stream an Anthropic response with model-specific parameters."""
+        thinking = self.thinking
         if self._supports_temperature_parameter():
             with self._get_client().messages.stream(
                 model=self._get_model_param(),
-                thinking=self.thinking,
+                thinking=thinking,
                 messages=self._get_message_params(prompt),
                 system=self._get_system_prompt(prompt),
-                temperature=temperature if not self.allow_thinking else 1,
+                temperature=self._resolve_temperature(temperature, thinking),
                 max_tokens=self.max_tokens
             ) as stream:
                 return self._consume_stream(stream, request)
 
         with self._get_client().messages.stream(
             model=self._get_model_param(),
-            thinking=self.thinking,
+            thinking=thinking,
             messages=self._get_message_params(prompt),
             system=self._get_system_prompt(prompt),
             max_tokens=self.max_tokens
@@ -218,19 +224,20 @@ class AnthropicClient(TranslationClient):
 
     def _create_client_response(self, prompt : TranslationPrompt, temperature : float):
         """Create an Anthropic response with model-specific parameters."""
+        thinking = self.thinking
         if self._supports_temperature_parameter():
             return self._get_client().messages.create(
                 model=self._get_model_param(),
-                thinking=self.thinking,
+                thinking=thinking,
                 messages=self._get_message_params(prompt),
                 system=self._get_system_prompt(prompt),
-                temperature=temperature if not self.allow_thinking else 1,
+                temperature=self._resolve_temperature(temperature, thinking),
                 max_tokens=self.max_tokens
             )
 
         return self._get_client().messages.create(
             model=self._get_model_param(),
-            thinking=self.thinking,
+            thinking=thinking,
             messages=self._get_message_params(prompt),
             system=self._get_system_prompt(prompt),
             max_tokens=self.max_tokens
@@ -287,19 +294,66 @@ class AnthropicClient(TranslationClient):
 
         return messages
 
-    def _supports_temperature_parameter(self) -> bool:
-        """Return True when the selected model accepts the temperature parameter."""
+    def _parse_claude_version(self) -> tuple[int, int]|None:
+        """Parse (major, minor) version numbers from the model name, or None if indeterminable."""
         if self.model is None:
-            return True
+            return None
 
         match = regex.search(r'claude[-\s]+[a-zA-Z]+[-\s]+(\d+)(?:[.-](\d{1,3})(?!\d))?', self.model, flags=regex.IGNORECASE)
         if match is None:
-            return True
+            return None
 
         major = int(match.group(1))
-        minor_str = match.group(2)
+        minor = int(match.group(2)) if match.group(2) is not None else 0
 
-        if minor_str is None:
-            return True
+        return major, minor
 
-        return major < 4 or (major == 4 and int(minor_str) < 7)
+    def _supports_temperature_parameter(self) -> bool:
+        """
+        Return True when the selected model accepts the temperature parameter.
+
+        Claude models from 4.7 onward reject temperature. Models we cannot identify are
+        assumed not to support it, as Anthropic has removed it going forward.
+        """
+        version = self._parse_claude_version()
+        if version is None:
+            return False
+
+        major, minor = version
+        return major < 4 or (major == 4 and minor < 7)
+
+    def _use_adaptive_thinking(self) -> bool|None:
+        """
+        Decide the thinking configuration for the selected model.
+
+        Returns True for adaptive thinking, False for enabled thinking with a token budget,
+        or None if the model does not support thinking at all.
+
+        Prefers the model's reported capabilities (supplied by the provider); falls back to
+        the version heuristic when capabilities are unavailable, e.g. the model was typed
+        manually or is not in the fetched model list.
+        """
+        adaptive = self.settings.get('thinking_supports_adaptive')
+        enabled = self.settings.get('thinking_supports_enabled')
+
+        if adaptive is None and enabled is None:
+            # No capability information - models from 4.7 onward use adaptive thinking
+            version = self._parse_claude_version()
+            return version is None or version >= (4, 7)
+
+        if not adaptive and not enabled:
+            return None
+
+        return bool(adaptive) and not bool(enabled)
+
+    @staticmethod
+    def _resolve_temperature(temperature : float, thinking : ThinkingConfigParam|anthropic.Omit) -> float:
+        """
+        Enabled (budget) thinking requires temperature to be 1; otherwise use the requested
+        value. Keyed on the thinking config actually being sent, not the raw thinking setting,
+        so a model that omits thinking still honours the configured temperature.
+        """
+        if isinstance(thinking, dict) and thinking.get('type') == 'enabled':
+            return 1
+
+        return temperature

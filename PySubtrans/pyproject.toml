@@ -35,7 +35,7 @@ gemini = [
     "google-api-core"
 ]
 claude = [
-    "anthropic"
+    "anthropic>=0.105.0"
 ]
 mistral = [
     "mistralai"

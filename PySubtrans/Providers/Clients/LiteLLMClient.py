@@ -8,7 +8,7 @@ from PySubtrans.Helpers.Localization import _
 if not importlib.util.find_spec("litellm"):
     logging.debug(_("LiteLLM is not installed. LiteLLM client will not be available"))
 else:
-    import litellm
+    import litellm # type: ignore
 
     from PySubtrans.Helpers import FormatMessages
     from PySubtrans.Options import SettingsType

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-04-26 10:32+0000\n"
+"POT-Creation-Date: 2026-07-13 09:03+0000\n"
 "PO-Revision-Date: 2025-08-09 21:00+0000\n"
 "Last-Translator: AI Assistant\n"
 "Language-Team: Czech\n"
@@ -28,10 +28,15 @@ msgstr "Pro použití tohoto poskytovatele je vyžadován Google Gemini API klí
 msgid "A Mistral API key is required to use this provider (https://console.mistral.ai/api-keys/)"
 msgstr "Pro použití tohoto poskytovatele je vyžadován Mistral API klíč (https://console.mistral.ai/api-keys/)"
 
+#: PySubtrans/Providers/Provider_Requesty.py:114
+msgid "A Requesty API key is required to use this provider (https://app.requesty.ai/api-keys)"
+msgstr "Pro použití tohoto poskytovatele je vyžadován API klíč Requesty (https://app.requesty.ai/api-keys)"
+
 #: GuiSubtrans/NewProjectSettings.py:32
 #: PySubtrans/Providers/Provider_DeepSeek.py:70
 #: PySubtrans/Providers/Provider_OpenAI.py:112
 #: PySubtrans/Providers/Provider_OpenRouter.py:141
+#: PySubtrans/Providers/Provider_Requesty.py:136
 msgid "AI model to use as the translator"
 msgstr "AI model pro použití jako překladač"
 
@@ -41,6 +46,7 @@ msgstr "AI model pro použití jako překladač"
 #: PySubtrans/Providers/Provider_Mistral.py:126
 #: PySubtrans/Providers/Provider_OpenAI.py:181
 #: PySubtrans/Providers/Provider_OpenRouter.py:198
+#: PySubtrans/Providers/Provider_Requesty.py:193
 msgid "API Key is required"
 msgstr "Je vyžadován API klíč"
 
@@ -63,6 +69,10 @@ msgstr "API nemohlo zpracovat požadavek: {error}"
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:339
 msgid "API could not process the request: {error}."
 msgstr "API nemohlo zpracovat požadavek: {error}."
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:72
+msgid "API key (optional — LiteLLM reads provider env vars like OPENAI_API_KEY, ANTHROPIC_API_KEY automatically)"
+msgstr "API klíč (volitelné — LiteLLM automaticky čte proměnné prostředí poskytovatele, jako jsou OPENAI_API_KEY, ANTHROPIC_API_KEY)"
 
 #: PySubtrans/Providers/Provider_Custom.py:110
 msgid "API key if needed (this is normally not needed for a local server)"
@@ -110,6 +120,7 @@ msgstr "Přístupový klíč musí být nastaven v .env nebo poskytnut jako argu
 msgid "Account quota reached, please upgrade your plan"
 msgstr "Kvóta účtu byla dosažena, prosím, upgradujte si plán"
 
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:66
 #: PySubtrans/Providers/Clients/OpenAIClient.py:72
 msgid "Account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Kvóta účtu byla dosažena, prosím, upgradujte si plán nebo počkejte na jeho obnovení"
@@ -156,11 +167,16 @@ msgstr "Alternativa k max_tokens pro některé servery"
 msgid "Amazon Boto3 SDK is not installed. Bedrock provider will not be available"
 msgstr "Amazon Boto3 SDK není nainstalováno. Poskytovatel Bedrock nebude k dispozici"
 
+#: PySubtrans/Providers/Provider_LiteLLM.py:76
+msgid "Amount of random variance to add to translations"
+msgstr "Míra náhodné odchylky, která má být přidána k překladům"
+
 #: PySubtrans/Providers/Provider_DeepSeek.py:74
 #: PySubtrans/Providers/Provider_Gemini.py:86
 #: PySubtrans/Providers/Provider_Mistral.py:78
 #: PySubtrans/Providers/Provider_OpenAI.py:124
 #: PySubtrans/Providers/Provider_OpenRouter.py:153
+#: PySubtrans/Providers/Provider_Requesty.py:148
 msgid "Amount of random variance to add to translations. Generally speaking, none is best"
 msgstr "Míra náhodné odchylky přidaná do překladů. Obecně platí, že žádná je nejlepší"
 
@@ -172,7 +188,7 @@ msgstr "Je vyžadován přístupový klíč AWS"
 msgid "An AWS secret access key is required"
 msgstr "Je vyžadován tajný přístupový klíč AWS"
 
-#: PySubtrans/Providers/Provider_Claude.py:102
+#: PySubtrans/Providers/Provider_Claude.py:109
 msgid "An Anthropic Claude API key is required to use this provider (https://console.anthropic.com/settings/keys)"
 msgstr "K použití tohoto poskytovatele je vyžadován API klíč Anthropic Claude (https://console.anthropic.com/settings/keys)"
 
@@ -196,7 +212,7 @@ msgstr "K použití tohoto poskytovatele je vyžadován API klíč OpenAI (https
 msgid "An OpenRouter API key is required to use this provider (https://openrouter.ai/keys)"
 msgstr "Pro použití tohoto poskytovatele je vyžadován API klíč OpenRouter (https://openrouter.ai/keys)"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:179
+#: PySubtrans/Providers/Clients/AnthropicClient.py:174
 msgid "Anthropic API error: {error}, retrying in {sleep_time} seconds..."
 msgstr "Chyba API Anthropic: {error}, opakuji za {sleep_time} sekund..."
 
@@ -204,7 +220,7 @@ msgstr "Chyba API Anthropic: {error}, opakuji za {sleep_time} sekund..."
 msgid "Anthropic SDK is not installed. Claude provider will not be available"
 msgstr "Anthropic SDK není nainstalováno. Poskytovatel Claude nebude k dispozici"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:93
+#: PySubtrans/Providers/Clients/AnthropicClient.py:108
 msgid "Anthropic account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Kvóta účtu Anthropic byla dosažena, prosím, upgradujte si plán nebo počkejte na jeho obnovení"
 
@@ -220,7 +236,7 @@ msgstr "Autentizace se nezdařila: {error}"
 msgid "Auto-Split Batch"
 msgstr "Automaticky rozdělit dávku"
 
-#: GuiSubtrans/SettingsDialog.py:413
+#: GuiSubtrans/SettingsDialog.py:415
 msgid "Auto-selected model {model} for {provider} to ensure valid configuration"
 msgstr "Automaticky vybrán model {model} pro {provider}, aby byla zajištěna platná konfigurace"
 
@@ -307,6 +323,7 @@ msgid "Cannot redo the last command"
 msgstr "Nelze znovu provést poslední příkaz"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:176
+#: PySubtrans/Providers/Provider_Requesty.py:171
 msgid "Cannot retrieve model list, check API key"
 msgstr "Nelze načíst seznam modelů, zkontrolujte API klíč"
 
@@ -333,6 +350,7 @@ msgid "Check API key and base URL and try again"
 msgstr "Zkontrolujte API klíč a základní URL a zkuste to znovu"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:147
+#: PySubtrans/Providers/Provider_Requesty.py:142
 msgid "Check API key and try again"
 msgstr "Zkontrolujte API klíč a zkuste to znovu"
 
@@ -349,7 +367,8 @@ msgstr "KontrolaNastaveníPoskytovatele: {error}"
 msgid "Client error: {status_code} {text}"
 msgstr "Chyba klienta: {status_code} {text}"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:105
+#: PySubtrans/Providers/Clients/AnthropicClient.py:120
+#: PySubtrans/Providers/Clients/AnthropicClient.py:272
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:31
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:81
 msgid "Client is not initialized"
@@ -379,7 +398,10 @@ msgstr "Obsah musí být seznam slovníků zpráv pro Responses API"
 msgid "Content must be a list of message dicts for Responses API. Found item of type {type}."
 msgstr "Obsah musí být seznam slovníků zpráv pro Responses API. Byla nalezena položka typu {type}"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:85
+#: PySubtrans/Providers/Clients/AnthropicClient.py:100
+#: PySubtrans/Providers/Clients/AnthropicClient.py:279
+#: PySubtrans/Providers/Clients/AnthropicClient.py:285
+#: PySubtrans/Providers/Clients/AnthropicClient.py:291
 msgid "Content must be a list of messages"
 msgstr "Obsah musí být seznam zpráv"
 
@@ -410,6 +432,10 @@ msgstr "Nelze detekovat formát titulků pro soubor: {}"
 #: GuiSubtrans/SettingsDialog.py:39
 msgid "Create a project file to allow resuming or revising translation"
 msgstr "Vytvořit soubor projektu pro možnost pokračování nebo revize překladu"
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:73
+msgid "Custom API base URL (optional — only needed for self-hosted LiteLLM proxy)"
+msgstr "Vlastní základní URL adresa API (volitelné — vyžadováno pouze pro self-hosted LiteLLM proxy)"
 
 #: GuiSubtrans/FirstRunOptions.py:20
 msgid "Customise the appearance of gui-subtrans"
@@ -490,7 +516,7 @@ msgstr "Povolit schopnosti uvažování pro složitější překlady (zvýší c
 msgid "Enable streaming responses for real-time translation updates"
 msgstr "Povolit streamování odpovědí pro aktualizace překladů v reálném čase"
 
-#: PySubtrans/Providers/Provider_Claude.py:117
+#: PySubtrans/Providers/Provider_Claude.py:124
 msgid "Enable thinking mode for translations"
 msgstr "Povolit režim přemýšlení pro překlady"
 
@@ -510,7 +536,7 @@ msgstr "Chyba"
 msgid "Error communicating with Bedrock: {error}"
 msgstr "Chyba při komunikaci s Bedrock: {error}"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:189
+#: PySubtrans/Providers/Clients/AnthropicClient.py:184
 msgid "Error communicating with provider"
 msgstr "Chyba při komunikaci s poskytovatelem"
 
@@ -528,6 +554,7 @@ msgstr "Chyba při provádění {type}: {str}"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:102
 #: PySubtrans/Providers/Provider_OpenRouter.py:239
+#: PySubtrans/Providers/Provider_Requesty.py:235
 msgid "Error fetching models: {status} {text}"
 msgstr "Chyba při načítání modelů: {status} {text}"
 
@@ -576,7 +603,7 @@ msgstr "Chyba při překladu scény {scene}: {error}"
 msgid "Error undoing the last command: {error}"
 msgstr "Chyba při vracení posledního příkazu: {error}"
 
-#: GuiSubtrans/NewProjectSettings.py:251
+#: GuiSubtrans/NewProjectSettings.py:254
 msgid "Error: {error}"
 msgstr "Chyba: {error}"
 
@@ -613,9 +640,11 @@ msgstr "Očekáván slovník, obdržen {type}"
 msgid "Expected a patch dictionary"
 msgstr "Očekáván slovník s opravami"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:191
+#: PySubtrans/Providers/Clients/AnthropicClient.py:186
 #: PySubtrans/Providers/Clients/AzureOpenAIClient.py:148
 #: PySubtrans/Providers/Clients/GeminiClient.py:112
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:173
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:185
 #: PySubtrans/Providers/Clients/MistralClient.py:134
 #: PySubtrans/Providers/Clients/OpenAIClient.py:174
 msgid "Failed to communicate with provider after {max_retries} retries"
@@ -642,11 +671,15 @@ msgstr "Selhání detekce formátu titulků: {}"
 msgid "Failed to establish streaming connection: {error}"
 msgstr "Selhání navázání streamovacího připojení: {error}"
 
+#: PySubtrans/Providers/Provider_LiteLLM.py:98
+msgid "Failed to import LiteLLM provider components. LiteLLM provider will not be available"
+msgstr "Nepodařilo se importovat komponenty poskytovatele LiteLLM. Poskytovatel LiteLLM nebude dostupný"
+
 #: PySubtrans/Providers/Provider_OpenAI.py:200
 msgid "Failed to initialise OpenAI SDK. OpenAI provider will not be available"
 msgstr "Nepodařilo se inicializovat OpenAI SDK. Poskytovatel OpenAI nebude k dispozici"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:71
+#: PySubtrans/Providers/Clients/AnthropicClient.py:86
 msgid "Failed to initialize Anthropic client"
 msgstr "Nepodařilo se inicializovat klienta Anthropic"
 
@@ -931,6 +964,22 @@ msgstr "Řádky {first}-{last} ({start} -> {end})"
 msgid "Lines {lines} not found in batch {batch}"
 msgstr "Řádky {lines} nebyly nalezeny v dávce {batch}"
 
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:178
+msgid "LiteLLM error communicating with the provider: {error}"
+msgstr "Chyba LiteLLM při komunikaci s poskytovatelem: {error}"
+
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:9
+msgid "LiteLLM is not installed. LiteLLM client will not be available"
+msgstr "LiteLLM není nainstalován. Klient LiteLLM nebude dostupný"
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:10
+msgid "LiteLLM is not installed. LiteLLM provider will not be available"
+msgstr "LiteLLM není nainstalován. Poskytovatel LiteLLM nebude dostupný"
+
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:168
+msgid "LiteLLM transient error (retry {retry}/{max_retries}): {error}, retrying in {backoff} seconds..."
+msgstr "Dočasná chyba LiteLLM (pokus {retry}/{max_retries}): {error}, opakování za {backoff} sekund..."
+
 #: GuiSubtrans/EditInstructionsDialog.py:41
 #: GuiSubtrans/EditInstructionsDialog.py:140
 msgid "Load Instructions"
@@ -948,7 +997,7 @@ msgstr "Načíst projekt/překlad (načíst titulky znovu)"
 msgid "Loading existing project file {}"
 msgstr "Načítání existujícího souboru projektu {}"
 
-#: scripts/gui-subtrans.py:114
+#: scripts/gui-subtrans.py:124
 msgid "Logging to {path}"
 msgstr "Zaznamenávání do {path}"
 
@@ -972,14 +1021,19 @@ msgstr ""
 msgid "Main Toolbar"
 msgstr "Hlavní panel nástrojů"
 
-#: GuiSubtrans/NewProjectSettings.py:240
+#: GuiSubtrans/NewProjectSettings.py:243
 msgid "Max batch size is less than min batch size"
 msgstr "Maximální velikost dávky je menší než minimální velikost dávky"
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:77
+msgid "Maximum API requests per minute"
+msgstr "Maximální počet požadavků na API za minutu"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:75
 #: PySubtrans/Providers/Provider_Gemini.py:87
 #: PySubtrans/Providers/Provider_Mistral.py:79
 #: PySubtrans/Providers/Provider_OpenRouter.py:154
+#: PySubtrans/Providers/Provider_Requesty.py:149
 msgid "Maximum API requests per minute."
 msgstr "Maximální počet požadavků API za minutu."
 
@@ -999,8 +1053,13 @@ msgstr "Maximální délka jednoho řádku titulků"
 msgid "Maximum length of the context summary to include with each translation batch"
 msgstr "Maximální délka kontextového shrnutí, které se má zahrnout ke každé překladové dávce"
 
+#: PySubtrans/Providers/Provider_LiteLLM.py:75
+msgid "Maximum number of output tokens to return in the response"
+msgstr "Maximální počet výstupních tokenů v odpovědi"
+
 #: PySubtrans/Providers/Provider_DeepSeek.py:73
 #: PySubtrans/Providers/Provider_OpenRouter.py:152
+#: PySubtrans/Providers/Provider_Requesty.py:147
 msgid "Maximum number of output tokens to return in the response."
 msgstr "Maximální počet výstupních tokenů, které se mají vrátit v odpovědi."
 
@@ -1077,6 +1136,7 @@ msgid "Model ID must be provided as an argument"
 msgstr "ID modelu musí být poskytnuto jako argument"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:132
+#: PySubtrans/Providers/Provider_Requesty.py:127
 msgid "Model family/provider to choose from"
 msgstr "Rodina modelů/poskytovatel k výběru"
 
@@ -1104,15 +1164,18 @@ msgstr "Nebyly nalezeny žádné dávky pro sloučení řádků"
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:58
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:74
 #: PySubtrans/Providers/Clients/CustomClient.py:388
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:144
 #: PySubtrans/Providers/Clients/MistralClient.py:109
 #: PySubtrans/Providers/Clients/MistralClient.py:125
 msgid "No choices returned in the response"
 msgstr "V odpovědi nebyly vráceny žádné volby"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:82
+#: PySubtrans/Providers/Clients/AnthropicClient.py:97
 #: PySubtrans/Providers/Clients/BedrockClient.py:76
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:37
 #: PySubtrans/Providers/Clients/GeminiClient.py:85
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:55
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:84
 #: PySubtrans/Providers/Clients/MistralClient.py:58
 #: PySubtrans/Providers/Clients/MistralClient.py:86
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:114
@@ -1156,21 +1219,33 @@ msgstr "Nebyly vybrány žádné řádky ke smazání"
 msgid "No lines were deleted"
 msgstr "Nebyly smazány žádné řádky"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:140
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:155
+msgid "No message returned in the choice"
+msgstr "Ve výběru nebyla vrácena žádná zpráva"
+
+#: PySubtrans/Providers/Clients/AnthropicClient.py:155
+#: PySubtrans/Providers/Clients/AnthropicClient.py:258
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:34
 #: PySubtrans/Providers/Clients/GeminiClient.py:101
 #: PySubtrans/Providers/Clients/GeminiClient.py:128
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:81
 #: PySubtrans/Providers/Clients/MistralClient.py:83
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:84
 msgid "No model specified"
 msgstr "Není specifikován žádný model"
 
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:29
+msgid "No model specified for LiteLLM"
+msgstr "Pro LiteLLM nebyl zadán žádný model"
+
 #: PySubtrans/Providers/Provider_OpenRouter.py:143
 #: PySubtrans/Providers/Provider_OpenRouter.py:145
+#: PySubtrans/Providers/Provider_Requesty.py:138
+#: PySubtrans/Providers/Provider_Requesty.py:140
 msgid "No models available"
 msgstr "Žádné dostupné modely"
 
-#: GuiSubtrans/SettingsDialog.py:406
+#: GuiSubtrans/SettingsDialog.py:408
 msgid "No models available for {provider}"
 msgstr "Žádné modely nejsou k dispozici pro {provider}"
 
@@ -1411,7 +1486,7 @@ msgstr "Chyba OpenAI {error}, opakuji za {sleep_time}..."
 msgid "OpenAI streaming ended without a completed response"
 msgstr "Streamování OpenAI skončilo bez dokončené odpovědi"
 
-#: PySubtrans/Providers/Provider_Claude.py:123
+#: PySubtrans/Providers/Provider_Claude.py:130
 msgid "Optional proxy server to use for requests (e.g. https://api.not-anthropic.com/"
 msgstr "Volitelný proxy server pro požadavky (např. https://api.not-anthropic.com/)"
 
@@ -1525,7 +1600,7 @@ msgstr "Nastavení poskytovatele"
 msgid "Provider error: {error}"
 msgstr "Chyba poskytovatele: {error}"
 
-#: GuiSubtrans/SettingsDialog.py:439
+#: GuiSubtrans/SettingsDialog.py:441
 msgid "Provider is not set"
 msgstr "Poskytovatel není nastaven"
 
@@ -1544,6 +1619,10 @@ msgstr "Nastavení poskytovatele ověřeno"
 #: GuiSubtrans/GUICommands.py:45
 msgid "Provider {provider} needs configuring: {message}"
 msgstr "Poskytovatel {provider} vyžaduje konfiguraci: {message}"
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:74
+msgid "Provider-prefixed model name (e.g. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
+msgstr "Název modelu s prefixem poskytovatele (např. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
 
 #: PySubtrans/Providers/Clients/OpenAIClient.py:119
 msgid "Rate limit hit, retrying in {backoff_time} seconds..."
@@ -1651,6 +1730,7 @@ msgstr "Opakuji za {sleep_time} sekund..."
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:72
 #: PySubtrans/Providers/Provider_OpenRouter.py:155
+#: PySubtrans/Providers/Provider_Requesty.py:150
 msgid "Reuse connection for multiple requests (otherwise a new connection is established for each)"
 msgstr "Znovu použít připojení pro více požadavků (jinak se pro každý naváže nové připojení)"
 
@@ -1809,10 +1889,11 @@ msgstr "Zastavit překlad při výskytu chyby"
 msgid "Stop translation"
 msgstr "Zastavit překlad"
 
-#: PySubtrans/Providers/Provider_Claude.py:113
+#: PySubtrans/Providers/Provider_Claude.py:120
 #: PySubtrans/Providers/Provider_Gemini.py:84
 #: PySubtrans/Providers/Provider_OpenAI.py:122
 #: PySubtrans/Providers/Provider_OpenRouter.py:151
+#: PySubtrans/Providers/Provider_Requesty.py:146
 msgid "Stream translations in realtime as they are generated"
 msgstr "Streamovat překlady v reálném čase jak jsou generovány"
 
@@ -1888,8 +1969,9 @@ msgstr "Prohodit text"
 msgid "System instructions for the translator"
 msgstr "Systémové pokyny pro překladatele"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:79
-#: PySubtrans/Providers/Clients/AnthropicClient.py:149
+#: PySubtrans/Providers/Clients/AnthropicClient.py:94
+#: PySubtrans/Providers/Clients/AnthropicClient.py:164
+#: PySubtrans/Providers/Clients/AnthropicClient.py:265
 #: PySubtrans/Providers/Clients/GeminiClient.py:82
 msgid "System prompt is required"
 msgstr "Je vyžadována systémová výzva"
@@ -1975,11 +2057,11 @@ msgstr "Maximální počet tokenů, které by měla AI vygenerovat v odpovědi (
 msgid "The maximum number of tokens to generate in a single request"
 msgstr "Maximální počet tokenů k vygenerování v jednom požadavku"
 
-#: PySubtrans/Providers/Provider_Claude.py:121
+#: PySubtrans/Providers/Provider_Claude.py:128
 msgid "The maximum number of tokens to use for thinking"
 msgstr "Maximální počet tokenů pro přemýšlení"
 
-#: PySubtrans/Providers/Provider_Claude.py:116
+#: PySubtrans/Providers/Provider_Claude.py:123
 msgid "The maximum number of tokens to use for translations"
 msgstr "Maximální počet tokenů pro překlady"
 
@@ -1987,15 +2069,15 @@ msgstr "Maximální počet tokenů pro překlady"
 msgid "The model ID (for local servers this is usually not required"
 msgstr "ID modelu (u místních serverů obvykle není potřeba)"
 
-#: PySubtrans/Providers/Provider_Claude.py:112
+#: PySubtrans/Providers/Provider_Claude.py:119
 msgid "The model to use for translations"
 msgstr "Model, který se má použít pro překlady"
 
-#: PySubtrans/Providers/Provider_Claude.py:115
+#: PySubtrans/Providers/Provider_Claude.py:122
 msgid "The rate limit to use for translations (default 60.0)"
 msgstr "Omezení rychlosti pro překlady (výchozí 60.0)"
 
-#: PySubtrans/Providers/Provider_Claude.py:114
+#: PySubtrans/Providers/Provider_Claude.py:121
 msgid "The temperature to use for translations (default 0.0)"
 msgstr "Teplota pro překlady (výchozí 0.0)"
 
@@ -2011,7 +2093,8 @@ msgstr "Časový limit pro požadavek v sekundách (výchozí 300)"
 msgid "Token budget for reasoning. Higher values increase cost"
 msgstr "Rozpočet tokenů pro uvažování. Vyšší hodnoty zvyšují cenu"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:96
+#: PySubtrans/Providers/Clients/AnthropicClient.py:111
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:69
 #: PySubtrans/Providers/Clients/MistralClient.py:72
 #: PySubtrans/Providers/Clients/OpenAIClient.py:75
 msgid "Too many tokens in translation"
@@ -2030,7 +2113,7 @@ msgstr "Překlad scény číslo {scene}"
 msgid "Translating scene number {scene} batch {batches}"
 msgstr "Překlad scény číslo {scene} dávky {batches}"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:25
+#: PySubtrans/Providers/Clients/AnthropicClient.py:32
 msgid "Translating with Anthropic {model}"
 msgstr "Překládám s Anthropic {model}"
 
@@ -2045,6 +2128,10 @@ msgstr "Překládám s modelem Bedrock {model_id}, používám region: {aws_regi
 #: PySubtrans/Providers/Clients/GeminiClient.py:39
 msgid "Translating with Gemini {model} model"
 msgstr "Překládám s modelem Gemini {model}"
+
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:31
+msgid "Translating with LiteLLM using model: {model}"
+msgstr "Překlad pomocí LiteLLM s modelem: {model}"
 
 #: PySubtrans/Providers/Clients/MistralClient.py:27
 msgid "Translating with Mistral model {model}, using server: {server_url}"
@@ -2097,6 +2184,8 @@ msgstr "Dávka se zkracuje, aby zůstala v limitu max_lines"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:143
 #: PySubtrans/Providers/Provider_OpenRouter.py:145
+#: PySubtrans/Providers/Provider_Requesty.py:138
+#: PySubtrans/Providers/Provider_Requesty.py:140
 msgid "Try a different model family or change filter settings"
 msgstr "Vyzkoušejte jinou rodinu modelů nebo změňte nastavení filtru"
 
@@ -2134,11 +2223,11 @@ msgstr "Nelze upravit dávku, protože datový model je neplatný"
 msgid "Unable to find batch {batch} in scene {scene}"
 msgstr "Nelze najít batch {batch} ve scéně {scene}"
 
-#: PySubtrans/Providers/Provider_Claude.py:164
+#: PySubtrans/Providers/Provider_Claude.py:198
 msgid "Unable to initialise Anthropic SDK. Claude provider will not be available"
 msgstr "Nepodařilo se inicializovat Anthropic SDK. Poskytovatel Claude nebude k dispozici"
 
-#: GuiSubtrans/NewProjectSettings.py:130 GuiSubtrans/NewProjectSettings.py:175
+#: GuiSubtrans/NewProjectSettings.py:130 GuiSubtrans/NewProjectSettings.py:178
 msgid "Unable to load instructions from {file}: {error}"
 msgstr "Nelze načíst pokyny ze souboru {file}: {error}"
 
@@ -2160,10 +2249,11 @@ msgstr "Nelze sloučit výběr ({selection})"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:111
 #: PySubtrans/Providers/Provider_OpenRouter.py:275
+#: PySubtrans/Providers/Provider_Requesty.py:267
 msgid "Unable to parse server response as JSON: {response_text}"
 msgstr "Nelze zpracovat odpověď serveru jako JSON: {response_text}"
 
-#: GuiSubtrans/NewProjectSettings.py:191
+#: GuiSubtrans/NewProjectSettings.py:194
 msgid "Unable to preview batches: {error}"
 msgstr "Nelze zobrazit náhled dávek: {error}"
 
@@ -2171,7 +2261,7 @@ msgstr "Nelze zobrazit náhled dávek: {error}"
 msgid "Unable to read project file, starting afresh"
 msgstr "Nelze načíst soubor projektu, začíná se znovu"
 
-#: PySubtrans/Providers/Provider_Claude.py:148
+#: PySubtrans/Providers/Provider_Claude.py:155
 msgid "Unable to retrieve Claude model list: {error}"
 msgstr "Nepodařilo se načíst seznam modelů Claude: {error}"
 
@@ -2187,11 +2277,13 @@ msgstr "Nepodařilo se načíst dostupné modely AI: {error}"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:115
 #: PySubtrans/Providers/Provider_OpenRouter.py:279
+#: PySubtrans/Providers/Provider_Requesty.py:271
 msgid "Unable to retrieve available models: {error}"
 msgstr "Nelze načíst dostupné modely: {error}"
 
 #: PySubtrans/Providers/Provider_OpenAI.py:112
 #: PySubtrans/Providers/Provider_OpenAI.py:127
+#: PySubtrans/Providers/Provider_Requesty.py:142
 msgid "Unable to retrieve models"
 msgstr "Nelze načíst modely"
 
@@ -2247,6 +2339,7 @@ msgstr "Nečekaná chyba při komunikaci s OpenAI"
 msgid "Unexpected error communicating with server"
 msgstr "Nečekaná chyba při komunikaci se serverem"
 
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:183
 #: PySubtrans/Providers/Clients/MistralClient.py:132
 #: PySubtrans/Providers/Clients/OpenAIClient.py:171
 msgid "Unexpected error communicating with the provider"
@@ -2282,6 +2375,7 @@ msgid "Use parallel threads for translation requests (may be faster but may not 
 msgstr "Použít paralelní vlákna pro požadavky na překlad (může být rychlejší, ale nemusí fungovat se serverem)"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:117
+#: PySubtrans/Providers/Provider_Requesty.py:115
 msgid "Use the default model and hide advanced model options"
 msgstr "Použít výchozí model a skrýt pokročilé možnosti modelu"
 
@@ -2330,6 +2424,7 @@ msgstr "Přidat značky zprava doleva"
 
 #: PySubtrans/Providers/Provider_Azure.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 msgid "api_base"
 msgstr "Základní API"
@@ -2339,9 +2434,11 @@ msgstr "Základní API"
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_Gemini.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "api_key"
 msgstr "API klíč"
 
@@ -2388,7 +2485,7 @@ msgstr "Převést široké pomlčky"
 msgid "default"
 msgstr "výchozí"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:26
+#: PySubtrans/Providers/Clients/AnthropicClient.py:33
 msgid "default model"
 msgstr "výchozí model"
 
@@ -2489,7 +2586,9 @@ msgstr "Maximální počet vláken"
 #: PySubtrans/Providers/Provider_Claude.py:0
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "max_tokens"
 msgstr "Maximální počet tokenů"
 
@@ -2522,13 +2621,16 @@ msgstr "Minimální počet znaků pro rozdělení"
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_Gemini.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "model"
 msgstr "Model"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "model_family"
 msgstr "Rodina modelů"
 
@@ -2589,6 +2691,7 @@ msgstr "Nastavení poskytovatele"
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "proxy"
 msgstr "Proxy"
 
@@ -2596,9 +2699,11 @@ msgstr "Proxy"
 #: PySubtrans/Providers/Provider_Claude.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_Gemini.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "rate_limit"
 msgstr "Omezení rychlosti"
 
@@ -2632,6 +2737,7 @@ msgstr "Opakovat při chybě"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "reuse_client"
 msgstr "Znovu použít klienta"
 
@@ -2649,6 +2755,7 @@ msgstr "Tajný přístupový klíč"
 
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "server_address"
 msgstr "Adresa serveru"
 
@@ -2669,6 +2776,7 @@ msgstr "Zastavit při chybě"
 #: PySubtrans/Providers/Provider_Gemini.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "stream_responses"
 msgstr "Streamovat odpovědi"
 
@@ -2697,9 +2805,11 @@ msgstr "Cílový jazyk"
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_Gemini.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "temperature"
 msgstr "Teplota"
 
@@ -2728,6 +2838,7 @@ msgid "unknown error"
 msgstr "Neznámá chyba"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "use_default_model"
 msgstr "Použít výchozí model"
 
@@ -2795,7 +2906,7 @@ msgstr "{done} z {total} řádků přeloženo"
 msgid "{lines} lines in {batches} batches"
 msgstr "{lines} řádků v {batches} dávkách"
 
-#: GuiSubtrans/NewProjectSettings.py:247
+#: GuiSubtrans/NewProjectSettings.py:250
 msgid "{lines} lines in {scenes} scenes and {batches} batches"
 msgstr "{lines} řádků v {scenes} scénách a {batches} dávkách"
 

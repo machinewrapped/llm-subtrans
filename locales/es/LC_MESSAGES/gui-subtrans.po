@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-04-26 10:32+0000\n"
+"POT-Creation-Date: 2026-07-13 09:03+0000\n"
 "PO-Revision-Date: 2025-01-01 00:00+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Spanish <EMAIL@ADDRESS>\n"
@@ -28,10 +28,15 @@ msgstr "Se requiere una clave API de Google Gemini para usar este proveedor (htt
 msgid "A Mistral API key is required to use this provider (https://console.mistral.ai/api-keys/)"
 msgstr "Se requiere una clave API de Mistral para usar este proveedor (https://console.mistral.ai/api-keys/)"
 
+#: PySubtrans/Providers/Provider_Requesty.py:114
+msgid "A Requesty API key is required to use this provider (https://app.requesty.ai/api-keys)"
+msgstr "Se requiere una clave API de Requesty para usar este proveedor (https://app.requesty.ai/api-keys)"
+
 #: GuiSubtrans/NewProjectSettings.py:32
 #: PySubtrans/Providers/Provider_DeepSeek.py:70
 #: PySubtrans/Providers/Provider_OpenAI.py:112
 #: PySubtrans/Providers/Provider_OpenRouter.py:141
+#: PySubtrans/Providers/Provider_Requesty.py:136
 msgid "AI model to use as the translator"
 msgstr "Modelo de IA a usar como traductor"
 
@@ -41,6 +46,7 @@ msgstr "Modelo de IA a usar como traductor"
 #: PySubtrans/Providers/Provider_Mistral.py:126
 #: PySubtrans/Providers/Provider_OpenAI.py:181
 #: PySubtrans/Providers/Provider_OpenRouter.py:198
+#: PySubtrans/Providers/Provider_Requesty.py:193
 msgid "API Key is required"
 msgstr "Se requiere clave API"
 
@@ -63,6 +69,10 @@ msgstr "La API no pudo procesar la solicitud: {error}"
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:339
 msgid "API could not process the request: {error}."
 msgstr "La API no pudo procesar la solicitud: {error}."
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:72
+msgid "API key (optional — LiteLLM reads provider env vars like OPENAI_API_KEY, ANTHROPIC_API_KEY automatically)"
+msgstr "Clave API (opcional: LiteLLM lee automáticamente las variables de entorno del proveedor como OPENAI_API_KEY, ANTHROPIC_API_KEY)"
 
 #: PySubtrans/Providers/Provider_Custom.py:110
 msgid "API key if needed (this is normally not needed for a local server)"
@@ -110,6 +120,7 @@ msgstr "La clave de acceso debe configurarse en .env o proporcionarse como argum
 msgid "Account quota reached, please upgrade your plan"
 msgstr "Cuota de la cuenta alcanzada, por favor actualice su plan"
 
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:66
 #: PySubtrans/Providers/Clients/OpenAIClient.py:72
 msgid "Account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Se ha alcanzado la cuota de la cuenta, actualiza tu plan o espera a que se renueve"
@@ -156,11 +167,16 @@ msgstr "Alternativa a max_tokens para algunos servidores"
 msgid "Amazon Boto3 SDK is not installed. Bedrock provider will not be available"
 msgstr "El SDK Boto3 de Amazon no está instalado. El proveedor Bedrock no estará disponible"
 
+#: PySubtrans/Providers/Provider_LiteLLM.py:76
+msgid "Amount of random variance to add to translations"
+msgstr "Cantidad de variación aleatoria para añadir a las traducciones"
+
 #: PySubtrans/Providers/Provider_DeepSeek.py:74
 #: PySubtrans/Providers/Provider_Gemini.py:86
 #: PySubtrans/Providers/Provider_Mistral.py:78
 #: PySubtrans/Providers/Provider_OpenAI.py:124
 #: PySubtrans/Providers/Provider_OpenRouter.py:153
+#: PySubtrans/Providers/Provider_Requesty.py:148
 msgid "Amount of random variance to add to translations. Generally speaking, none is best"
 msgstr "Cantidad de variación aleatoria a añadir a las traducciones. En general, lo mejor es ninguna"
 
@@ -172,7 +188,7 @@ msgstr "Se requiere una clave de acceso de AWS"
 msgid "An AWS secret access key is required"
 msgstr "Se requiere una clave secreta de acceso de AWS"
 
-#: PySubtrans/Providers/Provider_Claude.py:102
+#: PySubtrans/Providers/Provider_Claude.py:109
 msgid "An Anthropic Claude API key is required to use this provider (https://console.anthropic.com/settings/keys)"
 msgstr "Se requiere una clave API de Anthropic Claude para usar este proveedor (https://console.anthropic.com/settings/keys)"
 
@@ -196,7 +212,7 @@ msgstr "Se requiere una clave API de OpenAI para usar este proveedor (https://pl
 msgid "An OpenRouter API key is required to use this provider (https://openrouter.ai/keys)"
 msgstr "Se requiere una clave API de OpenRouter para usar este proveedor (https://openrouter.ai/keys)"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:179
+#: PySubtrans/Providers/Clients/AnthropicClient.py:174
 msgid "Anthropic API error: {error}, retrying in {sleep_time} seconds..."
 msgstr "Error de la API de Anthropic: {error}, reintentando en {sleep_time} segundos..."
 
@@ -204,7 +220,7 @@ msgstr "Error de la API de Anthropic: {error}, reintentando en {sleep_time} segu
 msgid "Anthropic SDK is not installed. Claude provider will not be available"
 msgstr "El SDK de Anthropic no está instalado. El proveedor Claude no estará disponible"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:93
+#: PySubtrans/Providers/Clients/AnthropicClient.py:108
 msgid "Anthropic account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Cuota de la cuenta de Anthropic alcanzada, por favor actualice su plan o espere a que se renueve"
 
@@ -220,7 +236,7 @@ msgstr "Autenticación fallida: {error}"
 msgid "Auto-Split Batch"
 msgstr "Dividir lote automáticamente"
 
-#: GuiSubtrans/SettingsDialog.py:413
+#: GuiSubtrans/SettingsDialog.py:415
 msgid "Auto-selected model {model} for {provider} to ensure valid configuration"
 msgstr "Modelo {model} seleccionado automáticamente para {provider} para garantizar una configuración válida"
 
@@ -307,6 +323,7 @@ msgid "Cannot redo the last command"
 msgstr "No se puede rehacer la última acción"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:176
+#: PySubtrans/Providers/Provider_Requesty.py:171
 msgid "Cannot retrieve model list, check API key"
 msgstr "No se puede obtener la lista de modelos, compruebe la clave API"
 
@@ -333,6 +350,7 @@ msgid "Check API key and base URL and try again"
 msgstr "Comprueba la clave API y la URL base y vuelve a intentarlo"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:147
+#: PySubtrans/Providers/Provider_Requesty.py:142
 msgid "Check API key and try again"
 msgstr "Compruebe la clave API y vuelva a intentarlo"
 
@@ -349,7 +367,8 @@ msgstr "VerificarConfiguraciónProveedor: {error}"
 msgid "Client error: {status_code} {text}"
 msgstr "Error del cliente: {status_code} {text}"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:105
+#: PySubtrans/Providers/Clients/AnthropicClient.py:120
+#: PySubtrans/Providers/Clients/AnthropicClient.py:272
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:31
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:81
 msgid "Client is not initialized"
@@ -379,7 +398,10 @@ msgstr "El contenido debe ser una lista de diccionarios de mensajes para la API 
 msgid "Content must be a list of message dicts for Responses API. Found item of type {type}."
 msgstr "El contenido debe ser una lista de diccionarios de mensajes para la API de Respuestas. Elemento de tipo {type} encontrado."
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:85
+#: PySubtrans/Providers/Clients/AnthropicClient.py:100
+#: PySubtrans/Providers/Clients/AnthropicClient.py:279
+#: PySubtrans/Providers/Clients/AnthropicClient.py:285
+#: PySubtrans/Providers/Clients/AnthropicClient.py:291
 msgid "Content must be a list of messages"
 msgstr "El contenido debe ser una lista de mensajes"
 
@@ -410,6 +432,10 @@ msgstr "No se pudo detectar el formato de subtítulos para el archivo: {}"
 #: GuiSubtrans/SettingsDialog.py:39
 msgid "Create a project file to allow resuming or revising translation"
 msgstr "Crear un archivo de proyecto para permitir reanudar o revisar la traducción"
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:73
+msgid "Custom API base URL (optional — only needed for self-hosted LiteLLM proxy)"
+msgstr "URL base de API personalizada (opcional: solo necesaria para proxies LiteLLM autohospedados)"
 
 #: GuiSubtrans/FirstRunOptions.py:20
 msgid "Customise the appearance of gui-subtrans"
@@ -490,7 +516,7 @@ msgstr "Habilitar capacidades de razonamiento para traducciones más complejas (
 msgid "Enable streaming responses for real-time translation updates"
 msgstr "Habilitar respuestas de streaming para actualizaciones de traducción en tiempo real"
 
-#: PySubtrans/Providers/Provider_Claude.py:117
+#: PySubtrans/Providers/Provider_Claude.py:124
 msgid "Enable thinking mode for translations"
 msgstr "Habilitar modo de pensamiento para traducciones"
 
@@ -510,7 +536,7 @@ msgstr "Error"
 msgid "Error communicating with Bedrock: {error}"
 msgstr "Error al comunicarse con Bedrock: {error}"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:189
+#: PySubtrans/Providers/Clients/AnthropicClient.py:184
 msgid "Error communicating with provider"
 msgstr "Error al comunicarse con el proveedor"
 
@@ -528,6 +554,7 @@ msgstr "Error al ejecutar {type}: {str}"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:102
 #: PySubtrans/Providers/Provider_OpenRouter.py:239
+#: PySubtrans/Providers/Provider_Requesty.py:235
 msgid "Error fetching models: {status} {text}"
 msgstr "Error al obtener los modelos: {status} {text}"
 
@@ -576,7 +603,7 @@ msgstr "Error al traducir la escena {scene}: {error}"
 msgid "Error undoing the last command: {error}"
 msgstr "Error al deshacer la última acción: {error}"
 
-#: GuiSubtrans/NewProjectSettings.py:251
+#: GuiSubtrans/NewProjectSettings.py:254
 msgid "Error: {error}"
 msgstr "Error: {error}"
 
@@ -613,9 +640,11 @@ msgstr "Se esperaba un diccionario, se obtuvo un {type}"
 msgid "Expected a patch dictionary"
 msgstr "Se esperaba un diccionario de parches"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:191
+#: PySubtrans/Providers/Clients/AnthropicClient.py:186
 #: PySubtrans/Providers/Clients/AzureOpenAIClient.py:148
 #: PySubtrans/Providers/Clients/GeminiClient.py:112
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:173
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:185
 #: PySubtrans/Providers/Clients/MistralClient.py:134
 #: PySubtrans/Providers/Clients/OpenAIClient.py:174
 msgid "Failed to communicate with provider after {max_retries} retries"
@@ -642,11 +671,15 @@ msgstr "Error al detectar el formato de subtítulos: {}"
 msgid "Failed to establish streaming connection: {error}"
 msgstr "Error al establecer la conexión de streaming: {error}"
 
+#: PySubtrans/Providers/Provider_LiteLLM.py:98
+msgid "Failed to import LiteLLM provider components. LiteLLM provider will not be available"
+msgstr "Error al importar los componentes del proveedor LiteLLM. El proveedor LiteLLM no estará disponible"
+
 #: PySubtrans/Providers/Provider_OpenAI.py:200
 msgid "Failed to initialise OpenAI SDK. OpenAI provider will not be available"
 msgstr "No se pudo inicializar el SDK de OpenAI. El proveedor OpenAI no estará disponible"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:71
+#: PySubtrans/Providers/Clients/AnthropicClient.py:86
 msgid "Failed to initialize Anthropic client"
 msgstr "No se pudo inicializar el cliente de Anthropic"
 
@@ -928,6 +961,22 @@ msgstr "Líneas {first}-{last} ({start} -> {end})"
 msgid "Lines {lines} not found in batch {batch}"
 msgstr "Líneas {lines} no encontradas en el lote {batch}"
 
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:178
+msgid "LiteLLM error communicating with the provider: {error}"
+msgstr "Error de LiteLLM al comunicarse con el proveedor: {error}"
+
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:9
+msgid "LiteLLM is not installed. LiteLLM client will not be available"
+msgstr "LiteLLM no está instalado. El cliente LiteLLM no estará disponible"
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:10
+msgid "LiteLLM is not installed. LiteLLM provider will not be available"
+msgstr "LiteLLM no está instalado. El proveedor LiteLLM no estará disponible"
+
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:168
+msgid "LiteLLM transient error (retry {retry}/{max_retries}): {error}, retrying in {backoff} seconds..."
+msgstr "Error transitorio de LiteLLM (reintento {retry}/{max_retries}): {error}, reintentando en {backoff} segundos..."
+
 #: GuiSubtrans/EditInstructionsDialog.py:41
 #: GuiSubtrans/EditInstructionsDialog.py:140
 msgid "Load Instructions"
@@ -945,7 +994,7 @@ msgstr "Cargar proyecto/traducción (recargar subtítulos)"
 msgid "Loading existing project file {}"
 msgstr "Cargando archivo de proyecto existente {}"
 
-#: scripts/gui-subtrans.py:114
+#: scripts/gui-subtrans.py:124
 msgid "Logging to {path}"
 msgstr "Registrando en {path}"
 
@@ -969,14 +1018,19 @@ msgstr ""
 msgid "Main Toolbar"
 msgstr "Barra de herramientas principal"
 
-#: GuiSubtrans/NewProjectSettings.py:240
+#: GuiSubtrans/NewProjectSettings.py:243
 msgid "Max batch size is less than min batch size"
 msgstr "El tamaño máximo de lote es menor que el mínimo"
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:77
+msgid "Maximum API requests per minute"
+msgstr "Máximo de solicitudes de API por minuto"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:75
 #: PySubtrans/Providers/Provider_Gemini.py:87
 #: PySubtrans/Providers/Provider_Mistral.py:79
 #: PySubtrans/Providers/Provider_OpenRouter.py:154
+#: PySubtrans/Providers/Provider_Requesty.py:149
 msgid "Maximum API requests per minute."
 msgstr "Número máximo de solicitudes API por minuto."
 
@@ -996,8 +1050,13 @@ msgstr "Longitud máxima de una línea de subtítulos"
 msgid "Maximum length of the context summary to include with each translation batch"
 msgstr "Longitud máxima del resumen de contexto que se incluirá con cada lote de traducción"
 
+#: PySubtrans/Providers/Provider_LiteLLM.py:75
+msgid "Maximum number of output tokens to return in the response"
+msgstr "Número máximo de tokens de salida a devolver en la respuesta"
+
 #: PySubtrans/Providers/Provider_DeepSeek.py:73
 #: PySubtrans/Providers/Provider_OpenRouter.py:152
+#: PySubtrans/Providers/Provider_Requesty.py:147
 msgid "Maximum number of output tokens to return in the response."
 msgstr "Número máximo de tokens de salida que se devolverán en la respuesta."
 
@@ -1074,6 +1133,7 @@ msgid "Model ID must be provided as an argument"
 msgstr "El ID del modelo debe proporcionarse como argumento"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:132
+#: PySubtrans/Providers/Provider_Requesty.py:127
 msgid "Model family/provider to choose from"
 msgstr "Familia de modelos/proveedor a elegir"
 
@@ -1101,15 +1161,18 @@ msgstr "No se encontraron lotes para fusionar líneas"
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:58
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:74
 #: PySubtrans/Providers/Clients/CustomClient.py:388
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:144
 #: PySubtrans/Providers/Clients/MistralClient.py:109
 #: PySubtrans/Providers/Clients/MistralClient.py:125
 msgid "No choices returned in the response"
 msgstr "No se devolvieron opciones en la respuesta"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:82
+#: PySubtrans/Providers/Clients/AnthropicClient.py:97
 #: PySubtrans/Providers/Clients/BedrockClient.py:76
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:37
 #: PySubtrans/Providers/Clients/GeminiClient.py:85
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:55
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:84
 #: PySubtrans/Providers/Clients/MistralClient.py:58
 #: PySubtrans/Providers/Clients/MistralClient.py:86
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:114
@@ -1153,21 +1216,33 @@ msgstr "No se seleccionaron líneas para eliminar"
 msgid "No lines were deleted"
 msgstr "No se eliminaron líneas"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:140
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:155
+msgid "No message returned in the choice"
+msgstr "No se devolvió ningún mensaje en la elección"
+
+#: PySubtrans/Providers/Clients/AnthropicClient.py:155
+#: PySubtrans/Providers/Clients/AnthropicClient.py:258
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:34
 #: PySubtrans/Providers/Clients/GeminiClient.py:101
 #: PySubtrans/Providers/Clients/GeminiClient.py:128
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:81
 #: PySubtrans/Providers/Clients/MistralClient.py:83
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:84
 msgid "No model specified"
 msgstr "No se especificó ningún modelo"
 
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:29
+msgid "No model specified for LiteLLM"
+msgstr "No se especificó ningún modelo para LiteLLM"
+
 #: PySubtrans/Providers/Provider_OpenRouter.py:143
 #: PySubtrans/Providers/Provider_OpenRouter.py:145
+#: PySubtrans/Providers/Provider_Requesty.py:138
+#: PySubtrans/Providers/Provider_Requesty.py:140
 msgid "No models available"
 msgstr "No hay modelos disponibles"
 
-#: GuiSubtrans/SettingsDialog.py:406
+#: GuiSubtrans/SettingsDialog.py:408
 msgid "No models available for {provider}"
 msgstr "No hay modelos disponibles para {provider}"
 
@@ -1408,7 +1483,7 @@ msgstr "Error de OpenAI {error}, reintentando en {sleep_time}..."
 msgid "OpenAI streaming ended without a completed response"
 msgstr "La transmisión de OpenAI terminó sin una respuesta completada"
 
-#: PySubtrans/Providers/Provider_Claude.py:123
+#: PySubtrans/Providers/Provider_Claude.py:130
 msgid "Optional proxy server to use for requests (e.g. https://api.not-anthropic.com/"
 msgstr "Servidor proxy opcional para usar en las solicitudes (por ejemplo, https://api.not-anthropic.com/"
 
@@ -1522,7 +1597,7 @@ msgstr "Configuración del proveedor"
 msgid "Provider error: {error}"
 msgstr "Error del proveedor: {error}"
 
-#: GuiSubtrans/SettingsDialog.py:439
+#: GuiSubtrans/SettingsDialog.py:441
 msgid "Provider is not set"
 msgstr "El proveedor no está configurado"
 
@@ -1541,6 +1616,10 @@ msgstr "Configuración del proveedor validada"
 #: GuiSubtrans/GUICommands.py:45
 msgid "Provider {provider} needs configuring: {message}"
 msgstr "El proveedor {provider} necesita configuración: {message}"
+
+#: PySubtrans/Providers/Provider_LiteLLM.py:74
+msgid "Provider-prefixed model name (e.g. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
+msgstr "Nombre del modelo con prefijo del proveedor (ej. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
 
 #: PySubtrans/Providers/Clients/OpenAIClient.py:119
 msgid "Rate limit hit, retrying in {backoff_time} seconds..."
@@ -1648,6 +1727,7 @@ msgstr "Reintentando en {sleep_time} segundos..."
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:72
 #: PySubtrans/Providers/Provider_OpenRouter.py:155
+#: PySubtrans/Providers/Provider_Requesty.py:150
 msgid "Reuse connection for multiple requests (otherwise a new connection is established for each)"
 msgstr "Reutilizar la conexión para varias solicitudes (de lo contrario, se establece una nueva conexión para cada una)"
 
@@ -1806,10 +1886,11 @@ msgstr "Detener la traducción si ocurre un error"
 msgid "Stop translation"
 msgstr "Detener traducción"
 
-#: PySubtrans/Providers/Provider_Claude.py:113
+#: PySubtrans/Providers/Provider_Claude.py:120
 #: PySubtrans/Providers/Provider_Gemini.py:84
 #: PySubtrans/Providers/Provider_OpenAI.py:122
 #: PySubtrans/Providers/Provider_OpenRouter.py:151
+#: PySubtrans/Providers/Provider_Requesty.py:146
 msgid "Stream translations in realtime as they are generated"
 msgstr "Transmitir traducciones en tiempo real a medida que se generan"
 
@@ -1885,8 +1966,9 @@ msgstr "Intercambiar texto"
 msgid "System instructions for the translator"
 msgstr "Instrucciones del sistema para el traductor"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:79
-#: PySubtrans/Providers/Clients/AnthropicClient.py:149
+#: PySubtrans/Providers/Clients/AnthropicClient.py:94
+#: PySubtrans/Providers/Clients/AnthropicClient.py:164
+#: PySubtrans/Providers/Clients/AnthropicClient.py:265
 #: PySubtrans/Providers/Clients/GeminiClient.py:82
 msgid "System prompt is required"
 msgstr "Se requiere una instrucción del sistema"
@@ -1972,11 +2054,11 @@ msgstr "El número máximo de tokens que la IA debe generar en la respuesta (0 p
 msgid "The maximum number of tokens to generate in a single request"
 msgstr "El número máximo de tokens que se pueden generar en una sola solicitud"
 
-#: PySubtrans/Providers/Provider_Claude.py:121
+#: PySubtrans/Providers/Provider_Claude.py:128
 msgid "The maximum number of tokens to use for thinking"
 msgstr "El número máximo de tokens a usar para pensar"
 
-#: PySubtrans/Providers/Provider_Claude.py:116
+#: PySubtrans/Providers/Provider_Claude.py:123
 msgid "The maximum number of tokens to use for translations"
 msgstr "El número máximo de tokens a usar para traducciones"
 
@@ -1984,15 +2066,15 @@ msgstr "El número máximo de tokens a usar para traducciones"
 msgid "The model ID (for local servers this is usually not required"
 msgstr "El ID del modelo (para servidores locales normalmente no es necesario)"
 
-#: PySubtrans/Providers/Provider_Claude.py:112
+#: PySubtrans/Providers/Provider_Claude.py:119
 msgid "The model to use for translations"
 msgstr "El modelo a usar para traducciones"
 
-#: PySubtrans/Providers/Provider_Claude.py:115
+#: PySubtrans/Providers/Provider_Claude.py:122
 msgid "The rate limit to use for translations (default 60.0)"
 msgstr "El límite de velocidad a usar para traducciones (por defecto 60.0)"
 
-#: PySubtrans/Providers/Provider_Claude.py:114
+#: PySubtrans/Providers/Provider_Claude.py:121
 msgid "The temperature to use for translations (default 0.0)"
 msgstr "La temperatura a usar para traducciones (por defecto 0.0)"
 
@@ -2008,7 +2090,8 @@ msgstr "Tiempo de espera para la solicitud en segundos (por defecto 300)"
 msgid "Token budget for reasoning. Higher values increase cost"
 msgstr "Presupuesto de tokens para razonamiento. Valores más altos aumentan el costo"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:96
+#: PySubtrans/Providers/Clients/AnthropicClient.py:111
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:69
 #: PySubtrans/Providers/Clients/MistralClient.py:72
 #: PySubtrans/Providers/Clients/OpenAIClient.py:75
 msgid "Too many tokens in translation"
@@ -2027,7 +2110,7 @@ msgstr "Traduciendo la escena número {scene}"
 msgid "Translating scene number {scene} batch {batches}"
 msgstr "Traduciendo la escena número {scene} lote {batches}"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:25
+#: PySubtrans/Providers/Clients/AnthropicClient.py:32
 msgid "Translating with Anthropic {model}"
 msgstr "Traduciendo con Anthropic {model}"
 
@@ -2042,6 +2125,10 @@ msgstr "Traduciendo con el modelo Bedrock {model_id}, usando la región: {aws_re
 #: PySubtrans/Providers/Clients/GeminiClient.py:39
 msgid "Translating with Gemini {model} model"
 msgstr "Traduciendo con el modelo Gemini {model}"
+
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:31
+msgid "Translating with LiteLLM using model: {model}"
+msgstr "Traduciendo con LiteLLM usando el modelo: {model}"
 
 #: PySubtrans/Providers/Clients/MistralClient.py:27
 msgid "Translating with Mistral model {model}, using server: {server_url}"
@@ -2094,6 +2181,8 @@ msgstr "Truncando lote para permanecer dentro de max_lines"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:143
 #: PySubtrans/Providers/Provider_OpenRouter.py:145
+#: PySubtrans/Providers/Provider_Requesty.py:138
+#: PySubtrans/Providers/Provider_Requesty.py:140
 msgid "Try a different model family or change filter settings"
 msgstr "Pruebe con otra familia de modelos o cambie la configuración del filtro"
 
@@ -2131,11 +2220,11 @@ msgstr "No se puede editar el lote porque el modelo de datos no es válido"
 msgid "Unable to find batch {batch} in scene {scene}"
 msgstr "No se puede encontrar el lote {batch} en la escena {scene}"
 
-#: PySubtrans/Providers/Provider_Claude.py:164
+#: PySubtrans/Providers/Provider_Claude.py:198
 msgid "Unable to initialise Anthropic SDK. Claude provider will not be available"
 msgstr "No se pudo inicializar el SDK de Anthropic. El proveedor Claude no estará disponible"
 
-#: GuiSubtrans/NewProjectSettings.py:130 GuiSubtrans/NewProjectSettings.py:175
+#: GuiSubtrans/NewProjectSettings.py:130 GuiSubtrans/NewProjectSettings.py:178
 msgid "Unable to load instructions from {file}: {error}"
 msgstr "No se pueden cargar instrucciones desde {file}: {error}"
 
@@ -2157,10 +2246,11 @@ msgstr "No se puede combinar la selección ({selection})"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:111
 #: PySubtrans/Providers/Provider_OpenRouter.py:275
+#: PySubtrans/Providers/Provider_Requesty.py:267
 msgid "Unable to parse server response as JSON: {response_text}"
 msgstr "No se puede analizar la respuesta del servidor como JSON: {response_text}"
 
-#: GuiSubtrans/NewProjectSettings.py:191
+#: GuiSubtrans/NewProjectSettings.py:194
 msgid "Unable to preview batches: {error}"
 msgstr "No se pueden previsualizar los lotes: {error}"
 
@@ -2168,7 +2258,7 @@ msgstr "No se pueden previsualizar los lotes: {error}"
 msgid "Unable to read project file, starting afresh"
 msgstr "No se pudo leer el archivo de proyecto, comenzando de nuevo"
 
-#: PySubtrans/Providers/Provider_Claude.py:148
+#: PySubtrans/Providers/Provider_Claude.py:155
 msgid "Unable to retrieve Claude model list: {error}"
 msgstr "No se pudo obtener la lista de modelos de Claude: {error}"
 
@@ -2184,11 +2274,13 @@ msgstr "No se pudo obtener la lista de modelos de IA disponibles: {error}"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:115
 #: PySubtrans/Providers/Provider_OpenRouter.py:279
+#: PySubtrans/Providers/Provider_Requesty.py:271
 msgid "Unable to retrieve available models: {error}"
 msgstr "No se pueden obtener modelos disponibles: {error}"
 
 #: PySubtrans/Providers/Provider_OpenAI.py:112
 #: PySubtrans/Providers/Provider_OpenAI.py:127
+#: PySubtrans/Providers/Provider_Requesty.py:142
 msgid "Unable to retrieve models"
 msgstr "No se pueden obtener los modelos"
 
@@ -2244,6 +2336,7 @@ msgstr "Error inesperado al comunicarse con OpenAI"
 msgid "Unexpected error communicating with server"
 msgstr "Error inesperado al comunicarse con el servidor"
 
+#: PySubtrans/Providers/Clients/LiteLLMClient.py:183
 #: PySubtrans/Providers/Clients/MistralClient.py:132
 #: PySubtrans/Providers/Clients/OpenAIClient.py:171
 msgid "Unexpected error communicating with the provider"
@@ -2279,6 +2372,7 @@ msgid "Use parallel threads for translation requests (may be faster but may not 
 msgstr "Usar hilos paralelos para solicitudes de traducción (puede ser más rápido pero puede no funcionar con el servidor)"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:117
+#: PySubtrans/Providers/Provider_Requesty.py:115
 msgid "Use the default model and hide advanced model options"
 msgstr "Usar el modelo predeterminado y ocultar las opciones avanzadas del modelo"
 
@@ -2325,6 +2419,7 @@ msgstr "Añadir Marcadores De Derecha A Izquierda"
 
 #: PySubtrans/Providers/Provider_Azure.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 msgid "api_base"
 msgstr "Base Api"
@@ -2334,9 +2429,11 @@ msgstr "Base Api"
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_Gemini.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "api_key"
 msgstr "Clave Api"
 
@@ -2383,7 +2480,7 @@ msgstr "Convertir Guiones Largos"
 msgid "default"
 msgstr "predeterminado"
 
-#: PySubtrans/Providers/Clients/AnthropicClient.py:26
+#: PySubtrans/Providers/Clients/AnthropicClient.py:33
 msgid "default model"
 msgstr "modelo predeterminado"
 
@@ -2484,7 +2581,9 @@ msgstr "Máximo Hilos"
 #: PySubtrans/Providers/Provider_Claude.py:0
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "max_tokens"
 msgstr "Máximo Tokens"
 
@@ -2517,13 +2616,16 @@ msgstr "Mínimo Caracteres División"
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_Gemini.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "model"
 msgstr "Modelo"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "model_family"
 msgstr "Familia de modelos"
 
@@ -2584,6 +2686,7 @@ msgstr "Configuración Proveedor"
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "proxy"
 msgstr "Proxy"
 
@@ -2591,9 +2694,11 @@ msgstr "Proxy"
 #: PySubtrans/Providers/Provider_Claude.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_Gemini.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "rate_limit"
 msgstr "Límite Tasa"
 
@@ -2627,6 +2732,7 @@ msgstr "Reintentar En Error"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "reuse_client"
 msgstr "Reutilizar Cliente"
 
@@ -2644,6 +2750,7 @@ msgstr "Clave Secreta Acceso"
 
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "server_address"
 msgstr "Dirección Servidor"
 
@@ -2664,6 +2771,7 @@ msgstr "Detener En Error"
 #: PySubtrans/Providers/Provider_Gemini.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "stream_responses"
 msgstr "Transmitir respuestas"
 
@@ -2692,9 +2800,11 @@ msgstr "Idioma Destino"
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
 #: PySubtrans/Providers/Provider_Gemini.py:0
+#: PySubtrans/Providers/Provider_LiteLLM.py:0
 #: PySubtrans/Providers/Provider_Mistral.py:0
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "temperature"
 msgstr "Temperatura"
 
@@ -2723,6 +2833,7 @@ msgid "unknown error"
 msgstr "error desconocido"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Providers/Provider_Requesty.py:0
 msgid "use_default_model"
 msgstr "Usar modelo predeterminado"
 
@@ -2790,7 +2901,7 @@ msgstr "{done} de {total} líneas traducidas"
 msgid "{lines} lines in {batches} batches"
 msgstr "{lines} líneas en {batches} lotes"
 
-#: GuiSubtrans/NewProjectSettings.py:247
+#: GuiSubtrans/NewProjectSettings.py:250
 msgid "{lines} lines in {scenes} scenes and {batches} batches"
 msgstr "{lines} líneas en {scenes} escenas y {batches} lotes"
 

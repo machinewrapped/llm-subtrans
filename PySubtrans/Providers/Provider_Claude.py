@@ -170,12 +170,16 @@ else:
 
                     capabilities = getattr(model, 'capabilities', None)
                     thinking = getattr(capabilities, 'thinking', None) if capabilities else None
-                    if thinking is None:
+                    types = getattr(thinking, 'types', None) if thinking else None
+                    adaptive = getattr(types, 'adaptive', None) if types else None
+                    enabled = getattr(types, 'enabled', None) if types else None
+
+                    if adaptive is None or enabled is None:
                         return None
 
                     return SettingsType({
-                        'thinking_supports_adaptive': thinking.types.adaptive.supported,
-                        'thinking_supports_enabled': thinking.types.enabled.supported,
+                        'thinking_supports_adaptive': getattr(adaptive, 'supported', False),
+                        'thinking_supports_enabled': getattr(enabled, 'supported', False),
                     })
 
                 return None

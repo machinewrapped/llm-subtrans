@@ -76,6 +76,38 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
 
         self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
 
+    def test_sonnet_5_omits_temperature(self) -> None:
+        """Sonnet 5 request payloads omit deprecated temperature."""
+        client = AnthropicClient(_create_test_settings('claude-sonnet-5'))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
+
+    def test_fable_5_omits_temperature(self) -> None:
+        """Fable 5 request payloads omit deprecated temperature."""
+        client = AnthropicClient(_create_test_settings('claude-fable-5'))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+
+        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
+
+    def test_sonnet_5_thinking_uses_adaptive_mode(self) -> None:
+        """Sonnet 5 thinking mode uses adaptive thinking without a budget."""
+        client = AnthropicClient(_create_test_settings('claude-sonnet-5', thinking=True))
+        client.client = MagicMock()
+
+        client._create_client_response(_create_test_request().prompt, 0.3)
+        kwargs = client.client.messages.create.call_args.kwargs
+        thinking = kwargs.get('thinking', {})
+
+        self.assertLoggedEqual("thinking type", 'adaptive', thinking.get('type'))
+        self.assertLoggedNotIn("budget tokens omitted", 'budget_tokens', thinking)
+
     def test_opus_4_7_thinking_uses_adaptive_mode(self) -> None:
         """Opus 4.7 thinking mode uses adaptive thinking without a budget."""
         client = AnthropicClient(_create_test_settings('Claude Opus 4.7', thinking=True))

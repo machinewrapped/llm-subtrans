@@ -297,9 +297,6 @@ class AnthropicClient(TranslationClient):
             return True
 
         major = int(match.group(1))
-        minor_str = match.group(2)
+        minor = int(match.group(2)) if match.group(2) is not None else 0
 
-        if minor_str is None:
-            return True
-
-        return major < 4 or (major == 4 and int(minor_str) < 7)
+        return major < 4 or (major == 4 and minor < 7)

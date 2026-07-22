@@ -3,7 +3,7 @@ import os
 
 from PySubtrans.Instructions import Instructions, DEFAULT_TASK_TYPE, default_instructions, default_retry_instructions, default_terminology_instructions
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Resources import GetResourcePath, config_dir
+from PySubtrans.Helpers.Resources import GetConfigDir, GetResourcePath
 
 linesep = '\n'
 
@@ -150,7 +150,7 @@ def GetInstructionsUserPath(instructions_file : str|None = None) -> str:
     """
     Get the path for an instructions file (or the directory that contains them).
     """
-    instructions_dir = os.path.join(config_dir, "instructions")
+    instructions_dir = os.path.join(GetConfigDir(), "instructions")
     return os.path.join(instructions_dir, instructions_file) if instructions_file else instructions_dir
 
 

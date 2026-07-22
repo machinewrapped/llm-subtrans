@@ -235,6 +235,10 @@ llm-subtrans --project --auto -l <language> <path_to_subtrans_file>
 llm-subtrans --project --auto -l <language> <path_to_subtitle_file>  # Project file will be detected automatically if it is in the same folder
 ```
 
+## Configuration directory
+
+The GUI and command-line tools use the platform's standard application-data directory for settings and logs. Use `--portable` to store them in a `.settings` folder in the current directory, or `--configpath <directory>` to set a specific location. An existing `.settings` directory will automatically activate portable mode.
+
 ## Format Conversion
 LLM-Subtrans is primarily a translation application, and format conversion is probably best handled by dedicated tools, but the option exists to read one format and write another.
 

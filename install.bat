@@ -23,6 +23,20 @@ if /i "%~1"=="--portable" (
     exit /b 1
 )
 
+if defined PORTABLE_INSTALL (
+    echo.
+    echo ========================================
+    echo Portable configuration mode enabled
+    echo Settings and logs will be stored in .settings
+    echo ========================================
+) else if defined CONFIG_PATH (
+    echo.
+    echo ========================================
+    echo Custom configuration mode enabled
+    echo Settings and logs will be stored in "!CONFIG_PATH!"
+    echo ========================================
+)
+
 REM Check if we're in the correct directory
 if not exist "scripts" (
     echo Please run this script from the root directory of the project.

@@ -21,6 +21,20 @@ if [ "$#" -gt 0 ]; then
     esac
 fi
 
+if [ "$portable_install" = true ]; then
+    echo
+    echo "========================================"
+    echo "Portable configuration mode enabled"
+    echo "Settings and logs will be stored in .settings"
+    echo "========================================"
+elif [ -n "$config_path" ]; then
+    echo
+    echo "========================================"
+    echo "Custom configuration mode enabled"
+    echo "Settings and logs will be stored in: $config_path"
+    echo "========================================"
+fi
+
 function install_provider() {
     local provider=$1
     local api_key_var_name=$2

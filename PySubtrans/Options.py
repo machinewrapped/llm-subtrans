@@ -10,15 +10,13 @@ import dotenv
 from PySubtrans.Helpers.Version import VersionNumberLessThan
 from PySubtrans.Instructions import Instructions, default_user_prompt
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Resources import config_dir, old_config_dir
+from PySubtrans.Helpers.Resources import GetConfigDir, GetSettingsPath
 from PySubtrans.Helpers.Text import standard_filler_words
 from PySubtrans.ProviderSettingsView import ProviderSettingsView
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.version import __version__
 
 MULTILINE_OPTION = 'multiline'
-
-settings_path = os.path.join(config_dir, 'settings.json')
 
 # Load environment variables from .env file
 dotenv.load_dotenv()
@@ -207,6 +205,7 @@ class Options(SettingsType):
         """
         Load the settings from a JSON file
         """
+        settings_path = GetSettingsPath()
         if not os.path.exists(settings_path):
             return False
 
@@ -238,6 +237,8 @@ class Options(SettingsType):
         """
         Save the settings to a JSON file
         """
+        config_dir = GetConfigDir()
+        settings_path = GetSettingsPath()
         try:
             settings : SettingsType = self.GetSettings()
 
@@ -261,40 +262,6 @@ class Options(SettingsType):
             logging.error(_("Error saving settings to {}").format(settings_path))
             return False
         
-    def MigrateSettings(self) -> bool:
-        """
-        Migrate settings from the old config directory to the new one
-        """
-        if os.path.exists(settings_path):
-            return False
-        
-        old_settings_path = os.path.join(old_config_dir, 'settings.json')
-        if not os.path.exists(old_settings_path):
-            return False
-
-        try:
-            if not os.path.exists(config_dir):
-                # Rename the old config directory to the new one
-                os.rename(old_config_dir, config_dir)
-                logging.info("Settings migrated to new location")
-            else:
-                os.rename(old_settings_path, settings_path)
-                logging.info("Settings file migrated to new location")
-
-                old_custom_instructions_path = os.path.join(old_config_dir, 'instructions')
-                if os.path.exists(old_custom_instructions_path):
-                    new_custom_instructions_path = os.path.join(config_dir, 'instructions')
-                    if not os.path.exists(new_custom_instructions_path):
-                        os.rename(old_custom_instructions_path, new_custom_instructions_path)
-                        logging.info("Custom instructions migrated to new location")                
-                
-            return True
-
-        except Exception as e:
-            logging.debug(f"Error migrating settings from {old_config_dir} to {config_dir}: {e}")
-            logging.error(_("Error migrating settings from {} to {}. You can copy the files manually and restart the application.").format(old_config_dir, config_dir))
-            return False
-
     def BuildUserPrompt(self) -> str:
         """
         Generate the user prompt to use for requesting translations

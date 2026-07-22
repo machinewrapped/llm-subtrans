@@ -1,6 +1,42 @@
 @echo off
 setlocal enabledelayedexpansion
 
+set "PORTABLE_INSTALL="
+set "CONFIG_PATH="
+if /i "%~1"=="--portable" (
+    set "PORTABLE_INSTALL=1"
+) else if /i "%~1"=="--configpath" (
+    if "%~2"=="" (
+        echo Usage: install.bat [--portable ^| --configpath PATH]
+        pause
+        exit /b 1
+    )
+    if not "%~3"=="" (
+        echo Usage: install.bat [--portable ^| --configpath PATH]
+        pause
+        exit /b 1
+    )
+    set "CONFIG_PATH=%~2"
+) else if not "%~1"=="" (
+    echo Usage: install.bat [--portable ^| --configpath PATH]
+    pause
+    exit /b 1
+)
+
+if defined PORTABLE_INSTALL (
+    echo.
+    echo ========================================
+    echo Portable configuration mode enabled
+    echo Settings and logs will be stored in .settings
+    echo ========================================
+) else if defined CONFIG_PATH (
+    echo.
+    echo ========================================
+    echo Custom configuration mode enabled
+    echo Settings and logs will be stored in "!CONFIG_PATH!"
+    echo ========================================
+)
+
 REM Check if we're in the correct directory
 if not exist "scripts" (
     echo Please run this script from the root directory of the project.
@@ -68,6 +104,26 @@ if "%install_choice%"=="2" (
     echo Including GUI modules...
     if "!EXTRAS!"=="" (set "EXTRAS=gui") else (set "EXTRAS=!EXTRAS!,gui")
     set "SCRIPTS=!SCRIPTS! gui-subtrans"
+)
+
+echo.
+if defined CONFIG_PATH (
+    if not exist "!CONFIG_PATH!" mkdir "!CONFIG_PATH!"
+) else if defined PORTABLE_INSTALL (
+    if not exist .settings mkdir .settings
+)
+
+if defined PORTABLE_INSTALL if exist .env (
+    (findstr /v /b /c:"LLM_SUBTRANS_CONFIG_PATH=" .env) > .env.tmp
+    move .env.tmp .env >nul 2>&1
+)
+
+if defined CONFIG_PATH (
+    if exist .env (
+        (findstr /v /b /c:"LLM_SUBTRANS_CONFIG_PATH=" .env) > .env.tmp
+        move .env.tmp .env >nul 2>&1
+    )
+    echo LLM_SUBTRANS_CONFIG_PATH=!CONFIG_PATH!>> .env
 )
 
 REM Optional: configure OpenRouter API key

@@ -4,14 +4,17 @@ import logging
 import requests
 
 from PySubtrans.version import __version__
-from PySubtrans.Helpers.Resources import config_dir
+from PySubtrans.Helpers.Resources import GetConfigDir
 
 repo_name = "llm-subtrans"
 repo_owner = "machinewrapped"
 
-last_check_file = os.path.join(config_dir, 'last_check.txt')
+def _get_last_check_file() -> str:
+    """Return the path to the update check marker for the active config directory."""
+    return os.path.join(GetConfigDir(), 'last_check.txt')
 
 def CheckIfUpdateAvailable():
+    last_check_file = _get_last_check_file()
     try:
         url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/releases/latest"
         response = requests.get(url)
@@ -37,6 +40,7 @@ def CheckIfUpdateAvailable():
     return False
 
 def CheckIfUpdateCheckIsRequired():
+    last_check_file = _get_last_check_file()
     if not os.path.exists(last_check_file):
         return True
 

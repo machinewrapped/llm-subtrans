@@ -115,6 +115,8 @@ The easiest setup method is to run the unified installation script:
 
 These scripts will create a virtual environment and offer **install with GUI** or **install command line only** options, with additional options to add support for specific providers. The script will guide you through the setup and generate command scripts to launch the application.
 
+Pass `--portable` to `install.bat` or `install.sh` to create the local `.settings` directory without prompting. Use `--configpath <directory>` to configure a different settings and log directory; the installer saves that path in `.env`.
+
 During the installing process, you can choose to input an API key for each selected provider when prompted, which will be saved in a .env file so that you don't need to provide it every time you run the program. This is largely redundant if you only plan to use the GUI, as keys can be saved in the app settings.
 
 ### Manual configuration
@@ -234,6 +236,10 @@ llm-subtrans --project --auto -l <language> <path_to_subtitle_file>
 llm-subtrans --project --auto -l <language> <path_to_subtrans_file>
 llm-subtrans --project --auto -l <language> <path_to_subtitle_file>  # Project file will be detected automatically if it is in the same folder
 ```
+
+## Configuration directory
+
+The GUI and command-line tools use the platform's standard application-data directory for settings and logs. Use `--portable` to store them in a `.settings` folder in the current directory, or `--configpath <directory>` to set a specific location. An existing `.settings` directory will automatically activate portable mode.
 
 ## Format Conversion
 LLM-Subtrans is primarily a translation application, and format conversion is probably best handled by dedicated tools, but the option exists to read one format and write another.

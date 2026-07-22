@@ -22,12 +22,14 @@ from PySide6.QtWidgets import QApplication
 if sys.platform == 'win32':
     signal.signal(signal.SIGINT, _prev_sigint)
     del _prev_sigint
-from PySubtrans.Options import Options, settings_path, config_dir
+from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir, GetSettingsPath
+from PySubtrans.Options import Options
 from PySubtrans.Helpers.Localization import initialize_localization, _
 from GuiSubtrans.MainWindow import MainWindow
 
 def parse_arguments():
     # Parse command line arguments
+    ConfigureConfigDirFromArguments()
     parser = argparse.ArgumentParser(description='Translates subtitles using an AI service')
     parser.add_argument('filepath', nargs='?', help="Optional file to load on startup")
     parser.add_argument('-l', '--target-language', type=str, default=None, help="The target language for the translation")
@@ -47,6 +49,8 @@ def parse_arguments():
     parser.add_argument('--ratelimit', type=int, default=None, help="Maximum number of batches per minute to process")
     parser.add_argument('--scenethreshold', type=float, default=None, help="Number of seconds between lines to consider a new scene")
     parser.add_argument('--theme', type=str, default=None, help="Stylesheet to load")
+    parser.add_argument('--portable', action='store_true', help="Store settings and logs in the .settings directory in the current directory")
+    parser.add_argument('--configpath', type=str, default=None, help="Store settings and logs in the specified directory")
 
     try:
         args = parser.parse_args()
@@ -84,7 +88,7 @@ def run_with_profiler(app):
 
     profiler.disable()
 
-    profile_path = os.path.join(config_dir, 'profile_guisubtrans.txt')
+    profile_path = os.path.join(GetConfigDir(), 'profile_guisubtrans.txt')
     with open(profile_path, 'w') as stream:
         stats = Stats(profiler, stream=stream)
         stats.sort_stats('tottime')
@@ -105,9 +109,8 @@ if __name__ == "__main__":
     options = Options()
 
     if not arguments.get('firstrun'):
-        options.MigrateSettings()
         if options.LoadSettings():
-            logging.info(f"Loaded settings from {settings_path}")
+            logging.info(f"Loaded settings from {GetSettingsPath()}")
 
     options.update(arguments)
 

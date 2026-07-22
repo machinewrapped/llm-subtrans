@@ -10,7 +10,8 @@ from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames
 from PySubtrans import batch_subtitles, init_options, init_translator, preprocess_subtitles
-from PySubtrans.Options import Options, config_dir
+from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir
+from PySubtrans.Options import Options
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
@@ -101,6 +102,7 @@ class TranslationProgressLogger():
 
 def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
     """ Initialise the logger with a file handler and return the path to the log file """
+    config_dir = GetConfigDir()
     log_path = os.path.join(config_dir, f"{logfilename}.log")
     file_handler = None
 
@@ -165,6 +167,7 @@ def CreateArgParser(description : str) -> ArgumentParser:
     """
     Create new arg parser and parse shared command line arguments between models
     """
+    ConfigureConfigDirFromArguments()
     _warn_renamed_args()
     pre_parser = ArgumentParser(add_help=False)
     pre_parser.add_argument('--list-formats', action='store_true')
@@ -212,6 +215,8 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--terminology', action='append', type=str, default=None, help="Seed entry for the terminology map as SOURCE::TRANSLATION, or a path to a file of such pairs.")
     parser.add_argument('--terminology-file', dest='terminology_file', type=str, default=None, help="Path to a key::value file to seed from and save the terminology map to after translation")
     parser.add_argument('--writebackup', action='store_true', help="Write a backup of the project file when it is loaded (if it exists)")
+    parser.add_argument('--portable', action='store_true', help="Store settings and logs in the .settings directory in the current directory")
+    parser.add_argument('--configpath', type=str, default=None, help="Store settings and logs in the specified directory")
     return parser
 
 def HandleFormatListing(args: Namespace) -> None:

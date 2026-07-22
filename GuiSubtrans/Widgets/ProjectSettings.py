@@ -12,14 +12,14 @@ from PySide6.QtWidgets import (
     QDialog,
     QFileDialog
 )
-from PySide6.QtCore import Signal, QSignalBlocker
+from PySide6.QtCore import Qt, QEvent, QObject, Signal, QSignalBlocker
 from GuiSubtrans.EditInstructionsDialog import EditInstructionsDialog
 from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 
 from GuiSubtrans.Widgets.Widgets import OptionsGrid, TextBoxEditor
 from PySubtrans.Helpers import GetValueName
-from PySubtrans.Helpers.Parse import ParseNames
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseNames
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.Subtitles import Subtitles
@@ -32,6 +32,7 @@ class ProjectSettings(QGroupBox):
     Allow the user to edit project-specific settings
     """
     settingsChanged = Signal(dict)
+    _terminologyTermsAddedInternal = Signal(dict)
 
     def __init__(self, action_handler : ProjectActions|None = None, parent=None):
         super().__init__(parent=parent)
@@ -46,11 +47,14 @@ class ProjectSettings(QGroupBox):
         self.current_provider : str|None = None
         self.datamodel : ProjectDataModel|None = None
         self.updating_model_list : bool = False
+        self._pending_terminology_append : str = ""
+        self._terminology_filter_installed : bool = False
 
         self._layout = QVBoxLayout(self)
         self.grid_layout = OptionsGrid()
 
         self._layout.addLayout(self.grid_layout)
+        self._terminologyTermsAddedInternal.connect(self._on_terminology_terms_added, Qt.ConnectionType.QueuedConnection)
 
     def GetSettings(self) -> SettingsType:
         """
@@ -63,8 +67,10 @@ class ProjectSettings(QGroupBox):
             'include_original': self._getcheckboxvalue('include_original'),
             'description': self._gettextvalue('description'),
             'names': ParseNames(self._gettextvalue('names')),
+            'build_terminology_map': self._getcheckboxvalue('build_terminology_map'),
             'substitutions': Substitutions.Parse(self._gettextvalue('substitutions')),
             'substitution_mode': self._gettextvalue('substitution_mode'),
+            'terminology_map': self._gettextvalue('terminology_map') if 'terminology_map' in self.widgets else self.settings.get('terminology_map'),
             'model': self._gettextvalue('model') if 'model' in self.widgets else self.settings.get('model'),
             'provider': self._gettextvalue('provider') if 'provider' in self.widgets else self.settings.get('provider'),
         })
@@ -90,11 +96,16 @@ class ProjectSettings(QGroupBox):
             except Exception as e:
                 logging.error(f"Error updating UI language in ProjectSettings: {e}")
 
-    def SetDataModel(self, datamodel : ProjectDataModel):
+    def SetDataModel(self, datamodel : ProjectDataModel|None):
+        if self.datamodel is not None:
+            self._disconnect_from_datamodel()
+
         self.datamodel = datamodel
+        self._pending_terminology_append = ""
+        self._terminology_filter_installed = False
         if datamodel is None:
             self.ClearForm()
-            self.settings = {}
+            self.settings = SettingsType()
             return
             
         self.current_provider : str|None = datamodel.provider
@@ -112,6 +123,8 @@ class ProjectSettings(QGroupBox):
             self.settings['model'] = datamodel.selected_model
             self.settings['provider'] = datamodel.provider
             self.settings['project_path'] = os.path.dirname(datamodel.project.projectfile or "project.subtrans")
+            self.settings['terminology_map'] = FormatKeyValuePairs(datamodel.project.subtitles.terminology_map)
+            datamodel.project.events.terminology_updated.connect(self._on_terminology_updated)
             self.BuildForm(self.settings)
 
     def Populate(self):
@@ -127,13 +140,19 @@ class ProjectSettings(QGroupBox):
             self.AddSingleLineOption(_("Movie Name"), settings, 'movie_name')
             self.AddSingleLineOption(_("Target Language"), settings, 'target_language')
             self.AddCheckboxOption(_("Add RTL Markers"), settings, 'add_right_to_left_markers')
-            self.AddCheckboxOption(_("Include Original Text"), settings, 'include_original')
             self.AddMultiLineOption(_("Description"), settings, 'description')
             self.AddMultiLineOption(_("Names"), settings, 'names')
+            self.AddCheckboxOption(_("Build Terminology Map"), settings, 'build_terminology_map')
+            if settings.get('build_terminology_map'):
+                self.AddMultiLineOption(_("Terminology Map"), settings, 'terminology_map')
+
             self.AddMultiLineOption(_("Substitutions"), settings, 'substitutions')
             self.AddDropdownOption(_("Substitution Mode"), settings, 'substitution_mode', Substitutions.Mode)
+            self.AddCheckboxOption(_("Include Original Text"), settings, 'include_original')
+
             self.AddButton("", _("Edit Instructions"), self._edit_instructions)
             self.AddButton("", _("Copy From Another Project"), self._copy_from_another_project)
+
             if len(self.provider_list) > 1:
                 self.AddDropdownOption(_("Provider"), settings, 'provider', self.provider_list)
             if len(self.model_list) > 0:
@@ -175,6 +194,7 @@ class ProjectSettings(QGroupBox):
         input_widget.setChecked(value)
         self._add_row(key, label_widget, input_widget)
         input_widget.stateChanged.connect(self._check_changed)
+        input_widget.checkStateChanged.connect(lambda: self._option_changed(key, input_widget.isChecked()))
 
     def AddDropdownOption(self, label, settings, key, values):
         label_widget = QLabel(label)
@@ -273,6 +293,10 @@ class ProjectSettings(QGroupBox):
                     self.datamodel.UpdateProjectSettings({ "model": value })
                     self.settings['model'] = self.datamodel.selected_model
 
+            elif key == 'build_terminology_map':
+                self.settings['build_terminology_map'] = bool(value)
+                self.BuildForm(self.settings)
+
     def _update_provider_settings(self, provider : str):
         try:
             if self.datamodel is None:
@@ -308,6 +332,10 @@ class ProjectSettings(QGroupBox):
             finally:
                 self.updating_model_list = False
 
+    def _disconnect_from_datamodel(self):
+        if self.datamodel is not None and self.datamodel.project is not None:
+            self.datamodel.project.events.terminology_updated.disconnect(self._on_terminology_updated)
+
     def _edit_instructions(self):
         # Commit the settings
         self.UpdateSettings()
@@ -320,6 +348,45 @@ class ProjectSettings(QGroupBox):
             self.settings.update(dialog.instructions.GetSettings())
             self.settingsChanged.emit(dialog.instructions.GetSettings())
             self.BuildForm(self.settings)
+
+    def _on_terminology_updated(self, _sender, update):
+        if update.new_terms:
+            self._terminologyTermsAddedInternal.emit(dict(update.new_terms))
+
+    def _on_terminology_terms_added(self, new_terms : dict):
+        if not new_terms:
+            return
+
+        appended = FormatKeyValuePairs(new_terms)
+
+        raw = self.settings.get('terminology_map') or ""
+        existing : str = FormatKeyValuePairs(raw) if isinstance(raw, dict) else str(raw)
+        self.settings['terminology_map'] = (existing + "\n" + appended) if existing else appended
+
+        widget = self.widgets.get('terminology_map')
+        if isinstance(widget, TextBoxEditor):
+            if widget.hasFocus():
+                separator = "\n" if self._pending_terminology_append else ""
+                self._pending_terminology_append += separator + appended
+                if not self._terminology_filter_installed:
+                    widget.installEventFilter(self)
+                    self._terminology_filter_installed = True
+            else:
+                with QSignalBlocker(widget):
+                    widget.append(appended)
+
+    def eventFilter(self, watched : QObject, event : QEvent) -> bool:
+        """Flush deferred terminology appends when the terminology textbox loses focus."""
+        if event.type() == QEvent.Type.FocusOut and self._pending_terminology_append:
+            widget = self.widgets.get('terminology_map')
+            if watched is widget and isinstance(widget, TextBoxEditor):
+                pending = self._pending_terminology_append
+                self._pending_terminology_append = ""
+                self._terminology_filter_installed = False
+                widget.removeEventFilter(self)
+                with QSignalBlocker(widget):
+                    widget.append(pending)
+        return super().eventFilter(watched, event)
 
     def _copy_from_another_project(self):
         '''
@@ -351,6 +418,8 @@ class ProjectSettings(QGroupBox):
                 subtitles.settings.pop('instruction_file', None)
 
                 self.settings.update(subtitles.settings)
+                if subtitles.terminology_map:
+                    self.settings['terminology_map'] = FormatKeyValuePairs(subtitles.terminology_map)
                 self.Populate()
 
             except Exception as e:

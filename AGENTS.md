@@ -4,7 +4,7 @@ Project uses Python 3.10+. NEVER import or use deprecated typing members like Li
 
 GUI framework is PySide6, be sure to use the correct syntax (e.g. scoped enum values).
 
-Secrets are stored in a .env file - NEVER read the contents of the file.
+Secrets are stored in a .env file - the agent must NEVER read the contents of the file.
 
 Always run the unit_tests at the end of a task to validate any changes to the code.
 

@@ -1,5 +1,5 @@
 import logging
-from PySubtrans.Helpers.Text import ExtractTag, ExtractTagList
+from PySubtrans.Helpers.Text import ExtractTag, ExtractTagDict, ExtractTagList
 from PySubtrans.Substitutions import Substitutions
 
 def ExtractTagSafely(tag : str, text : str) -> tuple[str, str|None]:
@@ -22,6 +22,16 @@ def ExtractTagListSafely(tag : str, text : str) -> tuple[str, list[str]]:
     except ValueError as e:
         logging.warning(f"Error extracting {tag} from translation: {e}")
         return text, []
+
+def ExtractTagDictSafely(tag : str, text : str) -> tuple[str, dict[str,str]]:
+    """
+    Extract a tag dict from text content, warn if there is an error
+    """
+    try:
+        return ExtractTagDict(tag, text)
+    except ValueError as e:
+        logging.warning(f"Error extracting {tag} from translation: {e}")
+        return text, {}
 
 class Translation:
     def __init__(self, content : dict):
@@ -53,6 +63,10 @@ class Translation:
     @property
     def names(self) -> str|list[str]|None:
         return self.content.get('names')
+
+    @property
+    def terminology(self) -> dict[str,str]|None:
+        return self.content.get('terminology') or None
 
     @property
     def reasoning(self) -> str|None:
@@ -117,7 +131,7 @@ class Translation:
         else:
             return self.text if include_text and self.text else "No metadata available"
 
-    def ParseTranslation(self, text : str) -> tuple[str, dict[str, str|list[str]|None]]:
+    def ParseTranslation(self, text : str) -> tuple[str, dict[str, str|list[str]|dict[str,str]|None]]:
         """
         Extract tags from text body
         """
@@ -125,12 +139,14 @@ class Translation:
         text, synopsis = ExtractTagSafely("synopsis", text)
         text, scene = ExtractTagSafely("scene", text)
         text, names = ExtractTagListSafely("names", text)
+        text, terminology = ExtractTagDictSafely("terminology", text)
 
         context = {
             'summary': summary,
             'scene': scene,
             'synopsis': synopsis,
-            'names': names
+            'names': names,
+            'terminology': terminology or None
         }
         return text, context
 

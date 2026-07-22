@@ -1,9 +1,9 @@
 import logging
 import os
 
-from PySubtrans.Instructions import Instructions, DEFAULT_TASK_TYPE, default_instructions, default_retry_instructions
+from PySubtrans.Instructions import Instructions, DEFAULT_TASK_TYPE, default_instructions, default_retry_instructions, default_terminology_instructions
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Resources import GetResourcePath, config_dir
+from PySubtrans.Helpers.Resources import GetConfigDir, GetResourcePath
 
 linesep = '\n'
 
@@ -66,6 +66,7 @@ def LoadInstructionsFile(filepath : str) -> Instructions:
     instructions.prompt = linesep.join(sections.get('prompt', [])).strip()
     instructions.instructions = linesep.join(sections.get('instructions', [])).strip()
     instructions.retry_instructions = linesep.join(sections.get('retry_instructions', [])).strip() or default_retry_instructions
+    instructions.terminology_instructions = linesep.join(sections.get('terminology_instructions', [])).strip() or default_terminology_instructions
     instructions.instruction_file = os.path.basename(filepath)
     instructions.target_language = ''.join(sections.get('target_language', [])) if 'target_language' in sections else None
     instructions.task_type = ''.join(sections.get('task_type', [])) if 'task_type' in sections else DEFAULT_TASK_TYPE
@@ -95,6 +96,8 @@ def SaveInstructions(instructions : Instructions, filepath : str) -> None:
             f.write(instructions.instructions or default_instructions)
             f.write("\n\n### retry_instructions\n")
             f.write(instructions.retry_instructions or default_retry_instructions)
+            f.write("\n\n### terminology_instructions\n")
+            f.write(instructions.terminology_instructions or default_terminology_instructions)
             f.write("\n")
 
         instructions.instruction_file = os.path.basename(filepath)
@@ -147,7 +150,7 @@ def GetInstructionsUserPath(instructions_file : str|None = None) -> str:
     """
     Get the path for an instructions file (or the directory that contains them).
     """
-    instructions_dir = os.path.join(config_dir, "instructions")
+    instructions_dir = os.path.join(GetConfigDir(), "instructions")
     return os.path.join(instructions_dir, instructions_file) if instructions_file else instructions_dir
 
 

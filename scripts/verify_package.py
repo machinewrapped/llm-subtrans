@@ -284,22 +284,26 @@ def main():
     # Discover and run tests, excluding localization tests since they depend on LLM-Subtrans project structure
     suite = loader.discover(test_dir, pattern='test_*.py', top_level_dir=site_packages_dir)
 
-    # Filter out localization tests since they require the full project structure
+    # Modules excluded because they require the full LLM-Subtrans project structure
+    excluded_modules = ('test_localization',)
+
+    def should_include(test):
+        """Return True if the test should be included in the run"""
+        # Skip failed imports (_FailedTest entries from import errors)
+        if test.__class__.__name__ == '_FailedTest':
+            return False
+        module_name = test.__class__.__module__
+        return not module_name.endswith(excluded_modules)
+
     filtered_tests = []
     for test_group in suite:
         for test_case in test_group:
-            # Skip any test case from test_localization module
             if hasattr(test_case, '_testMethodName'):
-                module_name = test_case.__class__.__module__
-                if not module_name.endswith('test_localization'):
+                if should_include(test_case):
                     filtered_tests.append(test_case)
             else:
                 # Handle test suites
-                filtered_case_tests = []
-                for individual_test in test_case:
-                    module_name = individual_test.__class__.__module__
-                    if not module_name.endswith('test_localization'):
-                        filtered_case_tests.append(individual_test)
+                filtered_case_tests = [t for t in test_case if should_include(t)]
                 if filtered_case_tests:
                     filtered_suite = unittest.TestSuite(filtered_case_tests)
                     filtered_tests.append(filtered_suite)

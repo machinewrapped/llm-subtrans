@@ -8,7 +8,7 @@ from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Helpers.Parse import ParseErrorMessageFromText
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import SettingsType
-from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
+from PySubtrans.SubtitleError import ClientResponseError, ServerResponseError, TranslationImpossibleError, TranslationResponseError
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import TranslationPrompt
@@ -70,6 +70,16 @@ class CustomClient(TranslationClient):
     def max_completion_tokens(self) -> int|None:
         max_completion_tokens = self.settings.get_int( 'max_completion_tokens', 0)
         return max_completion_tokens if max_completion_tokens != 0 else None
+
+    @property
+    def repetition_penalty(self) -> float|None:
+        value = self.settings.get_float('repetition_penalty', 0.0)
+        return value if value else None
+
+    @property
+    def min_p(self) -> float|None:
+        value = self.settings.get_float('min_p', 0.0)
+        return value if value else None
     
     @property
     def timeout(self) -> int:
@@ -122,6 +132,11 @@ class CustomClient(TranslationClient):
                 else:
                     return self._handle_non_streaming_request(request_body)
 
+            except ServerResponseError as e:
+                # Server errors (5xx) are potentially transient, allow retry
+                if not self.aborted:
+                    self._emit_error(str(e))
+
             except TranslationResponseError:
                 raise
 
@@ -142,6 +157,9 @@ class CustomClient(TranslationClient):
                     self._emit_error(_("Request to server timed out: {error}").format(
                         error=str(e)
                     ))
+
+            except TranslationImpossibleError:
+                raise
 
             except Exception as e:
                 raise TranslationImpossibleError(_("Unexpected error communicating with server"), error=e)
@@ -174,11 +192,11 @@ class CustomClient(TranslationClient):
             parsed_message = ParseErrorMessageFromText(result.text)
             summary_text = parsed_message if parsed_message else result.text
             if result.is_client_error:
-                raise TranslationResponseError(_("Client error: {status_code} {text}").format(
+                raise ClientResponseError(_("Client error: {status_code} {text}").format(
                     status_code=result.status_code, text=summary_text
                 ), response=result)
             else:
-                raise TranslationResponseError(_("Server error: {status_code} {text}").format(
+                raise ServerResponseError(_("Server error: {status_code} {text}").format(
                     status_code=result.status_code, text=summary_text
                 ), response=result)
 
@@ -200,15 +218,16 @@ class CustomClient(TranslationClient):
                 return None
 
             if response.is_error:
+                response.read()
                 error_text = response.text
                 parsed_message = ParseErrorMessageFromText(error_text)
                 summary_text = parsed_message if parsed_message else error_text
                 if response.is_client_error:
-                    raise TranslationResponseError(_("Client error: {status_code} {text}").format(
+                    raise ClientResponseError(_("Client error: {status_code} {text}").format(
                         status_code=response.status_code, text=summary_text
                     ), response=response)
                 else:
-                    raise TranslationResponseError(_("Server error: {status_code} {text}").format(
+                    raise ServerResponseError(_("Server error: {status_code} {text}").format(
                         status_code=response.status_code, text=summary_text
                     ), response=response)
 
@@ -256,6 +275,10 @@ class CustomClient(TranslationClient):
             # Ensure we have accumulated text as fallback
             if not accumulated_response.get('text') and request.accumulated_text:
                 accumulated_response['text'] = request.accumulated_text
+
+            # Fall back to reasoning if content is empty (e.g. Ollama thinking models)
+            if not accumulated_response.get('text') and accumulated_response.get('reasoning'):
+                accumulated_response['text'] = accumulated_response['reasoning']
 
             return accumulated_response
 
@@ -314,8 +337,8 @@ class CustomClient(TranslationClient):
         if content and isinstance(content, str):
             request.ProcessStreamingDelta(content)
 
-        # Handle reasoning content if present (some providers include this)
-        reasoning_content = delta.get('reasoning_content')
+        # Handle reasoning content if present (OpenAI uses reasoning_content, Ollama uses reasoning)
+        reasoning_content = delta.get('reasoning_content') or delta.get('reasoning')
         if reasoning_content and isinstance(reasoning_content, str):
             if 'reasoning' not in accumulated_response:
                 accumulated_response['reasoning'] = ''
@@ -344,7 +367,7 @@ class CustomClient(TranslationClient):
         finish_reason = choice.get('finish_reason')
         if finish_reason:
             accumulated_response['finish_reason'] = finish_reason
-            accumulated_response['text'] = request.accumulated_text
+            accumulated_response['text'] = request.accumulated_text or accumulated_response.get('reasoning') or ''
 
     def _process_api_response(self, content: dict[str, Any], result: httpx.Response) -> dict[str, Any]:
         """Process standard API response content"""
@@ -371,8 +394,10 @@ class CustomClient(TranslationClient):
                 response['finish_reason'] = choice.get('finish_reason')
                 if 'reasoning_content' in message:
                     response['reasoning'] = message['reasoning_content']
+                elif 'reasoning' in message:
+                    response['reasoning'] = message['reasoning']
 
-                response['text'] = message.get('content')
+                response['text'] = message.get('content') or response.get('reasoning')
                 break
 
             if 'text' in choice:
@@ -399,6 +424,12 @@ class CustomClient(TranslationClient):
 
         if self.model:
             request_body['model'] = self.model
+
+        if self.repetition_penalty:
+            request_body['repetition_penalty'] = self.repetition_penalty
+
+        if self.min_p:
+            request_body['min_p'] = self.min_p
 
         prompt : TranslationPrompt = request.prompt
         if self.supports_conversation:

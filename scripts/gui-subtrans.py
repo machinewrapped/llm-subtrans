@@ -1,6 +1,7 @@
 import argparse
 import logging
 import os
+import signal
 import sys
 import cProfile
 from pstats import Stats
@@ -10,17 +11,28 @@ if not hasattr(sys, "_MEIPASS"):
     check_required_imports(['PySubtrans', 'GuiSubtrans', 'PySide6', 'scripts'], 'gui')
 
 from scripts.subtrans_common import InitLogger
+
+# PySide6 6.9+ conflicts with debugpy's console handler on Windows during Qt init
+if sys.platform == 'win32':
+    _prev_sigint = signal.signal(signal.SIGINT, signal.SIG_IGN)
+
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
-from PySubtrans.Options import Options, settings_path, config_dir
+
+if sys.platform == 'win32':
+    signal.signal(signal.SIGINT, _prev_sigint)
+    del _prev_sigint
+from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir, GetSettingsPath
+from PySubtrans.Options import Options
 from PySubtrans.Helpers.Localization import initialize_localization, _
 from GuiSubtrans.MainWindow import MainWindow
 
 def parse_arguments():
     # Parse command line arguments
+    ConfigureConfigDirFromArguments()
     parser = argparse.ArgumentParser(description='Translates subtitles using an AI service')
     parser.add_argument('filepath', nargs='?', help="Optional file to load on startup")
-    parser.add_argument('-l', '--target_language', type=str, default=None, help="The target language for the translation")
+    parser.add_argument('-l', '--target-language', type=str, default=None, help="The target language for the translation")
     parser.add_argument('-p', '--provider', type=str, default=None, help="The translation provider to use")
     parser.add_argument('-m', '--model', type=str, default=None, help="The model to use for translation")
     parser.add_argument('--batchthreshold', type=float, default=None, help="Number of seconds between lines to consider for batching")
@@ -37,6 +49,8 @@ def parse_arguments():
     parser.add_argument('--ratelimit', type=int, default=None, help="Maximum number of batches per minute to process")
     parser.add_argument('--scenethreshold', type=float, default=None, help="Number of seconds between lines to consider a new scene")
     parser.add_argument('--theme', type=str, default=None, help="Stylesheet to load")
+    parser.add_argument('--portable', action='store_true', help="Store settings and logs in the .settings directory in the current directory")
+    parser.add_argument('--configpath', type=str, default=None, help="Store settings and logs in the specified directory")
 
     try:
         args = parser.parse_args()
@@ -74,7 +88,7 @@ def run_with_profiler(app):
 
     profiler.disable()
 
-    profile_path = os.path.join(config_dir, 'profile_guisubtrans.txt')
+    profile_path = os.path.join(GetConfigDir(), 'profile_guisubtrans.txt')
     with open(profile_path, 'w') as stream:
         stats = Stats(profiler, stream=stream)
         stats.sort_stats('tottime')
@@ -95,9 +109,8 @@ if __name__ == "__main__":
     options = Options()
 
     if not arguments.get('firstrun'):
-        options.MigrateSettings()
         if options.LoadSettings():
-            logging.info(f"Loaded settings from {settings_path}")
+            logging.info(f"Loaded settings from {GetSettingsPath()}")
 
     options.update(arguments)
 

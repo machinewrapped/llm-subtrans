@@ -92,6 +92,30 @@ def ResyncTranslatedLines(original_lines : list[SubtitleLine], translated_lines 
     elif num_original > num_translated:
         logging.warning(f"Number of lines in original and translated subtitles don't match. Synced {min_lines} lines.")
 
+def FindBestSplitIndex(lines : list[SubtitleLine], min_size : int = 1) -> int|None:
+    """
+    Find the optimal index at which to split a list of subtitle lines.
+    Scores each candidate split point by the time gap between consecutive lines
+    weighted by proximity to the midpoint, returning the index of the best split.
+    Returns None if the list is too short to split.
+    """
+    midpoint = len(lines) // 2
+    if midpoint < min_size:
+        return None
+
+    best_index : int|None = None
+    best_score = 0
+
+    for i in range(min_size, len(lines) - min_size + 1):
+        gap = lines[i].start - lines[i - 1].end
+        proximity = midpoint - abs(i - midpoint)
+        score = proximity * (gap / timedelta(milliseconds=1))
+        if score > best_score:
+            best_score = score
+            best_index = i
+
+    return best_index
+
 def FindSplitPoint(line: SubtitleLine, split_sequences: list[regex.Pattern[Any]], min_duration: timedelta, min_split_chars: int) -> int|None:
     """
     Find the optimal split point for a subtitle.

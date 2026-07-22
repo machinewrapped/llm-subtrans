@@ -2,6 +2,39 @@
 # Enable error handling
 set -e
 
+portable_install=false
+config_path=""
+if [ "$#" -gt 0 ]; then
+    case "$1" in
+        --portable)
+            [ "$#" -eq 1 ] || { echo "Usage: ./install.sh [--portable | --configpath PATH]"; exit 1; }
+            portable_install=true
+            ;;
+        --configpath)
+            [ "$#" -eq 2 ] || { echo "Usage: ./install.sh [--portable | --configpath PATH]"; exit 1; }
+            config_path=$2
+            ;;
+        *)
+            echo "Usage: ./install.sh [--portable | --configpath PATH]"
+            exit 1
+            ;;
+    esac
+fi
+
+if [ "$portable_install" = true ]; then
+    echo
+    echo "========================================"
+    echo "Portable configuration mode enabled"
+    echo "Settings and logs will be stored in .settings"
+    echo "========================================"
+elif [ -n "$config_path" ]; then
+    echo
+    echo "========================================"
+    echo "Custom configuration mode enabled"
+    echo "Settings and logs will be stored in: $config_path"
+    echo "========================================"
+fi
+
 function install_provider() {
     local provider=$1
     local api_key_var_name=$2
@@ -117,6 +150,25 @@ else
     echo "Including GUI modules..."
     extras+=("gui")
     scripts_to_generate+=("gui-subtrans")
+fi
+
+if [ -n "$config_path" ]; then
+    mkdir -p "$config_path"
+elif [ "$portable_install" = true ]; then
+    mkdir -p .settings
+fi
+
+if [ "$portable_install" = true ] && [ -f ".env" ]; then
+    sed -i.bak '/^LLM_SUBTRANS_CONFIG_PATH=/d' .env
+    rm -f .env.bak
+fi
+
+if [ -n "$config_path" ]; then
+    if [ -f ".env" ]; then
+        sed -i.bak '/^LLM_SUBTRANS_CONFIG_PATH=/d' .env
+        rm -f .env.bak
+    fi
+    printf 'LLM_SUBTRANS_CONFIG_PATH=%s\n' "$config_path" >> .env
 fi
 
 # Optional: configure OpenRouter API key

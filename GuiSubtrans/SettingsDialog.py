@@ -31,6 +31,7 @@ class SettingsDialog(QDialog):
             'ui_language': (str, _("The language of the application interface")),
             'theme': [],
             'target_language': (str, _("The default language to translate the subtitles to")),
+            'build_terminology_map': (bool, _("Build a terminology map during translation to keep terminology consistent")),
             'include_original': (bool, _("Include original text in translated subtitles")),
             'add_right_to_left_markers': (bool, _("Add RTL markers around translated lines that contain primarily right-to-left script on save")),
             'instruction_file': (str, _("Instructions for the translation provider to follow")),
@@ -38,7 +39,7 @@ class SettingsDialog(QDialog):
             'project_file': (bool, _("Create a project file to allow resuming or revising translation")),
             'write_backup': (bool, _("Save a backup copy of the project when opening it")),
             'autosave': (bool, _("Automatically save the project/translation after each scene is translated")),
-            # 'autosplit_incomplete': (bool, "If true, incomplete translations will be split into smaller batches and retried"),
+            'autosplit_on_error': (bool, _("If a batch fails validation, split it in half and retry each half separately")),
             'retry_on_error': (bool, _("If true, translations that fail validation will be retried with a note about the error")),
             'stop_on_error': (bool, _("Stop translating if an error is encountered"))
         },
@@ -193,7 +194,8 @@ class SettingsDialog(QDialog):
                 layout : QFormLayout = layout_qt
 
                 for row in range(layout.rowCount()):
-                    field_qt = layout.itemAt(row, QFormLayout.ItemRole.FieldRole).widget()
+                    item = layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
+                    field_qt = item.widget() if item is not None else None
 
                     if not isinstance(field_qt, OptionWidget):
                         continue
@@ -323,7 +325,8 @@ class SettingsDialog(QDialog):
 
         # Find the index of the row in the layout
         for row in range(layout.rowCount()):
-            if layout.itemAt(row, QFormLayout.ItemRole.FieldRole).widget() == field:
+            item = layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
+            if item is not None and item.widget() == field:
                 layout.setRowVisible(row, visible)
 
 

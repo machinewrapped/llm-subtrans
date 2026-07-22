@@ -41,7 +41,7 @@ class TranslationParser:
         self.translated : list[SubtitleLine] = []
         self.errors : list[Exception] = []
         self.warnings : list[str] = []
-        self.metatags : list[str] = ["summary", "scene"]
+        self.metatags : list[str] = ["summary", "scene", "terminology"]
         self.task_type : str = task_type
         self.regex_patterns : list[regex.Pattern[Any]] = self.GetRegularExpressionPatterns(task_type)
 
@@ -76,6 +76,7 @@ class TranslationParser:
                 break
 
         if not matches:
+            logging.warning(f"No matches found in response (first 200 chars): {self.text[:200]!r}")
             raise TranslationError(f"No matches found in translation text using patterns: {self.regex_patterns}", translation=translation)
 
         logging.debug(f"Matches: {str(matches)}")

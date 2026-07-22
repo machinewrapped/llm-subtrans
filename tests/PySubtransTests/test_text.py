@@ -12,6 +12,7 @@ from PySubtrans.Helpers.Text import (
     CompileFillerWordsPattern,
     ContainsTags,
     ExtractTag,
+    ExtractTagDict,
     ExtractTagList,
     IsTextContentEqual,
     LimitTextLength,
@@ -207,6 +208,22 @@ class TestTextHelpers(LoggedTestCase):
             with self.subTest(text=text):
                 result = ExtractTagList(tagname, text)
                 self.assertLoggedEqual("extract tag list", expected, result, input_value=text)
+
+    extract_tagdict_cases = [
+        ("No tag here", "terminology", ("No tag here", {})),
+        ("<terminology>Dragon::Drache</terminology>", "terminology", ("", {"Dragon": "Drache"})),
+        ("<terminology>Dragon::Drache\nHero::Held</terminology>", "terminology", ("", {"Dragon": "Drache", "Hero": "Held"})),
+        ("Text before.\n<terminology>A::B\nC::D</terminology>\nText after.", "terminology", ("Text before.\nText after.", {"A": "B", "C": "D"})),
+        ("<terminology>MissingSeparator</terminology>", "terminology", ("", {})),
+        ("<terminology>Key::Value::Extra</terminology>", "terminology", ("", {"Key": "Value::Extra"})),
+        ("<terminology>\n</terminology>", "terminology", ("", {})),
+    ]
+
+    def test_ExtractTagDict(self):
+        for text, tagname, expected in self.extract_tagdict_cases:
+            with self.subTest(text=text):
+                result = ExtractTagDict(tagname, text)
+                self.assertLoggedEqual("extract tag dict", expected, result, input_value=text)
 
     sanitise_summary_cases = [
         ("", None, None, None),

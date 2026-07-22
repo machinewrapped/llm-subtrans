@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pysubtrans"
-version = "1.5.7"
+version = "1.6.0"
 description = "Core subtitle translation toolkit used by LLM-Subtrans"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -35,7 +35,7 @@ gemini = [
     "google-api-core"
 ]
 claude = [
-    "anthropic"
+    "anthropic>=0.105.0"
 ]
 mistral = [
     "mistralai"

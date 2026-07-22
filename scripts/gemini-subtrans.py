@@ -1,5 +1,5 @@
-import os
 import logging
+import os
 
 from check_imports import check_required_imports
 check_required_imports(['PySubtrans', 'google.genai', 'google.api_core'], 'gemini')
@@ -9,11 +9,9 @@ from scripts.subtrans_common import (
     CreateArgParser,
     CreateOptions,
     CreateProject,
+    TranslateProject,
 )
 
-from PySubtrans import init_translator
-from PySubtrans.Options import Options
-from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Providers.Provider_Gemini import GeminiProvider
 
 provider = "Gemini"
@@ -27,19 +25,10 @@ args = parser.parse_args()
 logger_options = InitLogger("gemini-subtrans", args.debug)
 
 try:
-    options : Options = CreateOptions(args, provider, model=args.model or default_model)
-
-    # Create a project for the translation
-    project : SubtitleProject = CreateProject(options, args)
-
-    # Translate the subtitles
-    translator = init_translator(options)
-    project.TranslateSubtitles(translator)
-
-    if project.use_project_file:
-        logging.info(f"Writing project data to {str(project.projectfile)}")
-        project.SaveProjectFile()
+    options = CreateOptions(args, provider, model=args.model or default_model)
+    project = CreateProject(options, args)
+    TranslateProject(project, options, verbose=args.verbose, preview=args.preview)
 
 except Exception as e:
-    print("Error:", e)
+    logging.error(f"Error during subtitle translation: {e}")
     raise

@@ -140,6 +140,8 @@ class TranslationProvider:
         if not translation_provider:
             raise ValueError(f"Unable to create translation provider '{options.provider}'")
 
+        options.provider = translation_provider.name  # normalise to canonical casing
+
         translation_provider.UpdateSettings(options)
 
         return translation_provider
@@ -147,8 +149,9 @@ class TranslationProvider:
     @classmethod
     def create_provider(cls, name, provider_settings):
         providers = cls.get_providers().items()
+        name_cf = name.casefold()
         for provider_name, provider in providers:
-            if provider_name == name:
+            if provider_name.casefold() == name_cf:
                 return provider(provider_settings)
 
         raise ValueError(f"Unknown translation provider: {name}")

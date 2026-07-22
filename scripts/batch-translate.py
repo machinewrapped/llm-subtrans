@@ -52,6 +52,7 @@ from PySubtrans import TranslationProvider
 from PySubtrans import SubtitleFormatRegistry
 
 from PySubtrans.Helpers import GetOutputPath
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairs
 from PySubtrans.SettingsType import redact_sensitive_values
 
 # Default configuration options for batch processing.
@@ -74,6 +75,8 @@ DEFAULT_OPTIONS = SettingsType({
     'postprocess_translation': True,                # Whether to apply postprocessing steps to the translated subtitles
     'log_path': './batch-translate.log',
     'preview': False,                               # Set to True to exercise the workflow without calling the API to execute translations.
+    'build_terminology_map': False,                 # Build a terminology map across files for consistent name/term translation
+    'terminology_file': None,                       # File to persist the terminology map between runs (key::value per line)
 })
 
 class BatchJobConfig:
@@ -95,6 +98,8 @@ class BatchJobConfig:
         self.provider = self.options.get_str('provider')
         self.model = self.options.get_str('model')
         self.instruction_file = self.options.get_str('instruction_file')
+        self.build_terminology_map = self.options.get_bool('build_terminology_map')
+        self.terminology_file = self.options.get_str('terminology_file')
 
 class BatchProcessor:
     """Coordinate discovery and translation of subtitle files."""
@@ -105,6 +110,11 @@ class BatchProcessor:
         self.logger = logging.getLogger(__name__)
         self.progress_display = ProgressDisplay()
         self.translation_provider = self._initialise_provider()
+        self._terminology_map : dict[str, str] = {}
+        if config.build_terminology_map and config.terminology_file:
+            self._terminology_map = self._load_terminology_file(config.terminology_file)
+            if self._terminology_map:
+                self.logger.info("Loaded %d term(s) from %s", len(self._terminology_map), config.terminology_file)
 
     def run(self) -> BatchStatistics:
         """Execute the batch translation workflow."""
@@ -150,8 +160,9 @@ class BatchProcessor:
             self.logger.info("[%d/%d] Loading %s", index, len(files), source_file)
 
             try:
-                # init_subtitles loads and batches the file using the Options we prepared earlier.
                 subtitles = init_subtitles(filepath=str(source_file), options=self.options)
+                if self.config.build_terminology_map:
+                    subtitles.terminology_map = dict(self._terminology_map)
 
             except SubtitleError as exc:
                 self.logger.error("Failed to load %s: %s", source_file, exc)
@@ -175,9 +186,11 @@ class BatchProcessor:
                 continue
 
             try:
-                # init_translator builds a ready-to-use SubtitleTranslator
-                # configured with our provider and processing settings.
-                translator : SubtitleTranslator = init_translator(self.options, translation_provider=self.translation_provider)
+                translator : SubtitleTranslator = init_translator(
+                    self.options,
+                    translation_provider=self.translation_provider,
+                    terminology_map=self._terminology_map if self.config.build_terminology_map else None,
+                )
 
                 # Connect the batch script logger to translation events
                 translator.events.connect_logger(self.logger)
@@ -185,11 +198,14 @@ class BatchProcessor:
             except SubtitleError as exc:
                 raise SubtitleError(f"Unable to initialise translator: {exc}") from exc
 
-            # ProgressDisplay.track hooks into SubtitleTranslator events to provide 
+            if self.config.build_terminology_map:
+                translator.events.terminology_updated.connect(self._on_terminology_updated)
+
+            # ProgressDisplay.track hooks into SubtitleTranslator events to provide
             # a concise console progress indicator while the batches are being processed.
             with self.progress_display.track(translator, source_file, translator.preview):
                 try:
-                    # TranslateSubtitles drives the end-to-end translation process, 
+                    # TranslateSubtitles drives the end-to-end translation process,
                     # raising SubtitleError if the provider reports a problem.
                     translator.TranslateSubtitles(subtitles)
 
@@ -201,6 +217,15 @@ class BatchProcessor:
                     self.logger.exception("Unexpected error translating %s", source_file)
                     stats.failed_files += 1
                     continue
+
+            if self.config.build_terminology_map and not translator.preview:
+                prev_count = len(self._terminology_map)
+                self._terminology_map = dict(translator.terminology_map)
+                new_count = len(self._terminology_map)
+                if new_count != prev_count:
+                    self.logger.info("Terminology map now has %d term(s) (+%d)", new_count, new_count - prev_count)
+                if self._terminology_map and self.config.terminology_file:
+                    self._save_terminology_file(self.config.terminology_file, self._terminology_map)
 
             if translator.preview:
                 self.logger.info("Preview mode enabled - skipping save for %s", source_file)
@@ -260,6 +285,36 @@ class BatchProcessor:
         destination_file.parent.mkdir(parents=True, exist_ok=True)
         return destination_file
 
+    def _on_terminology_updated(self, _sender, update) -> None:
+        self._terminology_map = dict(update.terminology_map)
+        if update.new_terms:
+            sample = ', '.join(f"{k}::{v}" for k, v in list(update.new_terms.items())[:5])
+            self.logger.info("Scene %s batch %s: added %d new term(s): %s", update.scene, update.batch, len(update.new_terms), sample)
+        if update.conflict_terms:
+            self.logger.debug("Scene %s batch %s: %d conflicting term(s) skipped", update.scene, update.batch, len(update.conflict_terms))
+        self.progress_display.update_terminology_count(len(update.terminology_map))
+
+    def _load_terminology_file(self, path : str) -> dict[str, str]:
+        try:
+            content = pathlib.Path(path).read_text(encoding='utf-8')
+            return ParseKeyValuePairs(content)
+        except FileNotFoundError:
+            return {}
+        except OSError as exc:
+            self.logger.warning("Could not read terminology file %s: %s", path, exc)
+            return {}
+
+    def _save_terminology_file(self, path : str, terminology_map : dict[str, str]) -> None:
+        try:
+            terminology_path = pathlib.Path(path)
+            terminology_path.parent.mkdir(parents=True, exist_ok=True)
+            sorted_terms = dict(sorted(terminology_map.items()))
+            content = FormatKeyValuePairs(sorted_terms)
+            terminology_path.write_text(content, encoding='utf-8')
+            self.logger.debug("Saved %d term(s) to %s", len(terminology_map), path)
+        except OSError as exc:
+            self.logger.warning("Could not save terminology file %s: %s", path, exc)
+
     def _initialise_provider(self) -> TranslationProvider:
         """
         Create and validate a translation provider instance based on the configured options
@@ -302,6 +357,10 @@ def build_config(args : argparse.Namespace) -> BatchJobConfig:
         settings['instruction_file'] = args.instruction_file
     if args.preview is not None:
         settings['preview'] = args.preview
+    if args.build_terminology_map is not None:
+        settings['build_terminology_map'] = args.build_terminology_map
+    if args.terminology_file is not None:
+        settings['terminology_file'] = args.terminology_file
 
     for override in args.option:
         if '=' not in override:
@@ -360,6 +419,7 @@ class ProgressDisplay:
         self._last_batch_summary : str = ""
         self._last_scene_label : str = ""
         self._last_scene_summary : str = ""
+        self._terminology_count : int = 0
 
     @contextmanager
     def track(self, translator : SubtitleTranslator, file_path : pathlib.Path, preview : bool):
@@ -384,6 +444,7 @@ class ProgressDisplay:
         self._last_batch_summary = ""
         self._last_scene_label = ""
         self._last_scene_summary = ""
+        self._terminology_count = 0
         translator.events.preprocessed.connect(self._on_preprocessed)
         translator.events.batch_translated.connect(self._on_batch_translated)
         translator.events.scene_translated.connect(self._on_scene_translated)
@@ -430,6 +491,8 @@ class ProgressDisplay:
         ]
         if self._total_lines:
             parts.append(f"lines {self._processed_lines}/{self._total_lines}")
+        if self._terminology_count:
+            parts.append(f"terms {self._terminology_count}")
         # if self._last_batch_summary:
         #     parts.append(f"last batch {self._last_batch_label}: {self._shorten(self._last_batch_summary)}")
         #if self._last_scene_summary:
@@ -444,6 +507,11 @@ class ProgressDisplay:
         self.stream.write(message + padding + end)
         self.stream.flush()
         self._last_message_length = len(message)
+
+    def update_terminology_count(self, count : int) -> None:
+        """Update the running term count and re-render the progress line."""
+        self._terminology_count = count
+        self._render()
 
     def _shorten(self, text : str, limit : int = 60) -> str:
         summary = text.strip()
@@ -496,9 +564,13 @@ def parse_args(argv : list[str]|None = None) -> argparse.Namespace:
     parser.add_argument("--log-file", dest="log_file", help="Path to write the detailed log file")
     parser.add_argument("--verbose", action="store_true", help="Enable verbose console logging")
     parser.add_argument("--preview", dest="preview", action="store_true", help="Enable preview mode")
+    parser.add_argument("--build-terminology-map", dest="build_terminology_map", action="store_true",
+                        help="Build a shared terminology map across all files for consistent name/term translation")
+    parser.add_argument("--terminology-file", dest="terminology_file",
+                        help="File to persist the terminology map between runs (key::value per line)")
     parser.add_argument("--option", action="append", default=[], metavar="KEY=VALUE",
                         help="Override additional Options settings (repeatable)")
-    parser.set_defaults(preview=None)
+    parser.set_defaults(preview=None, build_terminology_map=None)
     return parser.parse_args(argv)
 
 

@@ -49,6 +49,16 @@ class TranslationResponseError(TranslationError):
         super().__init__(message)
         self.response = response
 
+class ClientResponseError(TranslationResponseError):
+    """HTTP 4xx client error - not retryable"""
+    def __init__(self, message : str, response : Any):
+        super().__init__(message, response)
+
+class ServerResponseError(TranslationResponseError):
+    """HTTP 5xx server error - potentially retryable"""
+    def __init__(self, message : str, response : Any):
+        super().__init__(message, response)
+
 class NoTranslationError(TranslationError):
     def __init__(self, message : str, translation : str|None = None):
         super().__init__(message=message, translation=translation)

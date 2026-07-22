@@ -35,6 +35,7 @@ class Subtitles:
 
         self.metadata : dict[str, Any] = {}
         self.file_format : str|None = None
+        self.terminology_map : dict[str, str] = {}
 
         self.settings : SettingsType = SettingsType(deepcopy(settings)) if settings else SettingsType()
 
@@ -298,9 +299,9 @@ class Subtitles:
             self.translated = translated
             self.outputpath = outputpath
 
-    def UpdateSettings(self, settings: SettingsType) -> None:
+    def UpdateSettings(self, settings : SettingsType|Options) -> None:
         """
-        Update the subtitle settings
+        Merge settings into self.settings.
         """
         if isinstance(settings, Options):
             settings = SettingsType(settings)

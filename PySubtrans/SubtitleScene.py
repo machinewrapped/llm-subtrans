@@ -1,9 +1,8 @@
-from datetime import timedelta
 import logging
 from typing import Any
 
 from PySubtrans.SubtitleBatch import SubtitleBatch
-from PySubtrans.Helpers.SubtitleHelpers import ResyncTranslatedLines
+from PySubtrans.Helpers.SubtitleHelpers import FindBestSplitIndex, ResyncTranslatedLines
 from PySubtrans.SubtitleLine import SubtitleLine
 
 class SubtitleScene:
@@ -223,27 +222,13 @@ class SubtitleScene:
         if not batch:
             raise ValueError("Invalid batch number")
 
-        midpoint = len(batch.originals) // 2
-        if midpoint < min_size:
+        split_index = FindBestSplitIndex(batch.originals, min_size)
+        if split_index is None:
             raise ValueError("Batch is too small to split")
 
-        best_split_index = None
-        best_split_score = 0
-
-        # Split lines according to the largest gap weighted towards the middle of the batch
-        for i in range(min_size, len(batch.originals) - min_size):
-            gap = batch.originals[i].start - batch.originals[i - 1].end
-            proximity_to_midpoint = midpoint - abs(i - midpoint)
-            split_score = proximity_to_midpoint * (gap / timedelta(milliseconds=1))
-
-            if split_score > best_split_score:
-                best_split_score = split_score
-                best_split_index = i
-
-        if best_split_index:
-            split_line = batch.originals[best_split_index].number
-            logging.info(f"Splitting batch {batch_number} at line {split_line}")
-            self.SplitBatch(batch_number, split_line)
+        split_line = batch.originals[split_index].number
+        logging.info(f"Splitting batch {batch_number} at line {split_line}")
+        self.SplitBatch(batch_number, split_line)
 
     def _renumber_batches(self):
         for number, batch in enumerate(self._batches, start = 1):

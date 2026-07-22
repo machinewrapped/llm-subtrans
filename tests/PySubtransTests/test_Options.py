@@ -472,6 +472,24 @@ class TestOptions(LoggedTestCase):
         self.assertEqual(options.get('instructions'), 'Test instructions')
         self.assertEqual(options.get('retry_instructions'), 'Test retry')
 
+    def test_initialise_instructions_preserves_terminology_instructions(self):
+        """Test InitialiseInstructions preserves custom terminology instructions"""
+        custom_terminology_instructions = "Use these custom terminology rules"
+        mock_instructions = Instructions({
+            'prompt': 'Test prompt',
+            'instructions': 'Test instructions',
+            'retry_instructions': 'Test retry',
+            'terminology_instructions': custom_terminology_instructions,
+            'target_language': None,
+            'task_type': None
+        })
+
+        options = Options()
+        options.InitialiseInstructions(mock_instructions)
+        rebuilt_instructions = options.GetInstructions()
+
+        self.assertEqual(rebuilt_instructions.terminology_instructions, custom_terminology_instructions)
+
     def test_initialise_provider_settings(self):
         """Test InitialiseProviderSettings method"""
         options = Options()
@@ -490,6 +508,21 @@ class TestOptions(LoggedTestCase):
         provider_settings = options.GetProviderSettings('Test Provider')
         self.assertEqual(provider_settings.get_str('model'), 'test-model')
         self.assertEqual(provider_settings.get_str('api_key'), 'test-key')
+
+    def test_instructions_get_settings_includes_terminology_instructions(self):
+        """Test Instructions.GetSettings preserves terminology instructions"""
+        custom_terminology_instructions = "Persist this terminology guidance"
+        instructions = Instructions({
+            'prompt': 'Test prompt',
+            'instructions': 'Test instructions',
+            'retry_instructions': 'Test retry',
+            'terminology_instructions': custom_terminology_instructions,
+            'task_type': None
+        })
+
+        settings = instructions.GetSettings()
+
+        self.assertEqual(settings.get('terminology_instructions'), custom_terminology_instructions)
 
     def test_version_update_migration(self):
         """Test _update_version method"""

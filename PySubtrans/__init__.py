@@ -27,6 +27,7 @@ subs.SaveSubtitles("movie_translated.srt")
 from __future__ import annotations
 
 from collections.abc import Mapping
+from enum import Enum
 
 from PySubtrans.Helpers import GetInputPath
 from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
@@ -47,6 +48,12 @@ from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.version import __version__
 
 
+class SettingsPrecedence(Enum):
+    """Controls how :func:`init_project` merges project-file settings with caller-supplied settings."""
+    User = 0        # caller's settings win; project-file values only fill missing keys
+    Project = 1     # project-file settings override caller-supplied values (GUI-style)
+
+
 def init_options(**settings: SettingType) -> Options:
     """
     Create and return an :class:`Options` instance containing settings for the translation workflow.
@@ -64,10 +71,11 @@ def init_options(**settings: SettingType) -> Options:
 
         Additional settings can be provided to customise the translation flow, e.g.
 
-        prompt = "Translate these subtitles into [target_language]", 
+        prompt = "Translate these subtitles into [target_language]",
         target_language = "French",
         instruction_file = "instructions.txt",
-        postprocess_translation = True
+        postprocess_translation = True,
+        build_terminology_map = True,
 
         See :class:`Options` for available settings. 
         Options that are not specified will be assigned default values.
@@ -228,6 +236,7 @@ def init_translation_provider(
 def init_translator(
     settings : Options|SettingsType,
     translation_provider : TranslationProvider|None = None,
+    terminology_map : dict[str,str]|None = None,
 ) -> SubtitleTranslator:
     """
     Return a ready-to-use :class:`SubtitleTranslator` using the specified settings.
@@ -238,6 +247,9 @@ def init_translator(
         The translator settings. This should specify the provider and model to use, along with extra configuration options as needed.
     translation_provider : TranslationProvider or None, optional
         An pre-configured :class:`TranslationProvider` instance (if not specified a provider is created automatically based on the settings).
+    terminology_map : dict[str, str] or None, optional
+        Seed terminology map used to guide consistent term translation.  The translator builds on this map as translation proceeds;
+        subscribe to the ``terminology_updated`` event to receive snapshots after each batch.
 
     Exceptions
     ----------
@@ -256,13 +268,21 @@ def init_translator(
     opts = init_options(provider="OpenAI", model="gpt-5-mini", api_key="sk-   ", prompt="Translate these subtitles into Spanish")
     translator = init_translator(opts)
 
-    # Create translator from dictionary
+    # Create translator from a plain dictionary
     translator = init_translator({"provider": "gemini", "api_key": "your-key", "model": "gemini-2.5-flash"})
+
+    # Create translator with a terminology seed
+    translator = init_translator(opts, terminology_map={"Dragon": "Drache", "Hero": "Held"})
 
     # Create translator with a pre-initialised TranslationProvider
     provider = init_translation_provider("OpenAI", {"model": "gpt-5-mini", "api_key": "sk-..."})
     options = init_options(prompt="Translate these subtitles into Spanish")
     translator = init_translator(options, translation_provider=provider)
+
+    # Subscribe to events (see TranslationEvents for full list):
+    #   batch_translated, scene_translated, batch_updated, preprocessed
+    #   terminology_updated  -- fired after each batch when build_terminology_map=True
+    #   error, warning, info
     """
     options = Options(settings)
 
@@ -274,7 +294,7 @@ def init_translator(
 
     options.provider = translation_provider.name
 
-    return SubtitleTranslator(options, translation_provider)
+    return SubtitleTranslator(options, translation_provider, terminology_map=terminology_map)
 
 
 def init_project(
@@ -283,6 +303,7 @@ def init_project(
     filepath: str|None = None,
     persistent: bool = False,
     auto_batch: bool = True,
+    settings_precedence : SettingsPrecedence = SettingsPrecedence.User,
 ) -> SubtitleProject:
     """
     Create a :class:`SubtitleProject`, optionally load subtitles from *filepath* and prepare it for translation.
@@ -297,7 +318,10 @@ def init_project(
         If True, enables persistent project state by creating a `.subtrans` project file for the job.
     auto_batch : bool, optional
         If True (default), automatically divide the subtitles into scenes and batches using
-        :class:`SubtitleBatcher`.
+        :class:`SubtitleBatcher`. Has no effect when resuming an existing project.
+    settings_precedence : SettingsPrecedence, optional
+        Controls how saved project settings are merged with caller-supplied *settings* when
+        resuming an existing `.subtrans` project.
 
     Returns
     -------
@@ -307,6 +331,7 @@ def init_project(
     Notes
     -----
     Subtitles are preprocessed and batched using the supplied settings or default values.
+    When resuming an existing project, preprocessing and batching are skipped.
 
     Examples
     --------
@@ -326,7 +351,7 @@ def init_project(
     """
     project = SubtitleProject(persistent=persistent)
 
-    options = Options(settings)
+    settings = SettingsType(settings or {})
 
     normalised_path = GetInputPath(filepath)
 
@@ -335,7 +360,12 @@ def init_project(
 
         if project.existing_project:
             project_settings = project.GetProjectSettings()
-            options.update(project_settings)
+            if settings_precedence == SettingsPrecedence.Project:
+                # Project settings win over caller-supplied values
+                settings.update(project_settings)
+            else:
+                # User precedence: project settings only fill keys the caller did not supply
+                settings.update({k: v for k, v in project_settings.items() if k not in settings})
 
         if settings:
             project.UpdateProjectSettings(settings)
@@ -345,17 +375,21 @@ def init_project(
         if not subtitles or not subtitles.originals:
             raise SubtitleError(f"No subtitles were loaded from '{normalised_path}'")
 
-        if options.get_bool('preprocess_subtitles'):
-            preprocess_subtitles(subtitles, options)
+        if not project.existing_project:
+            # Resumed projects already contain synchronised scenes/batches — re-running
+            # these mutators would desync originals from translated and break resumption.
+            options = Options(settings)
+            if options.get_bool('preprocess_subtitles'):
+                preprocess_subtitles(subtitles, options)
 
-        if auto_batch:
-            batch_subtitles(
-                subtitles,
-                scene_threshold=options.get_float('scene_threshold') or 60.0,
-                min_batch_size=options.get_int('min_batch_size') or 1,
-                max_batch_size=options.get_int('max_batch_size') or 100,
-                prevent_overlap=options.get_bool('prevent_overlapping_times'),
-            )
+            if auto_batch:
+                batch_subtitles(
+                    subtitles,
+                    scene_threshold=options.get_float('scene_threshold') or 60.0,
+                    min_batch_size=options.get_int('min_batch_size') or 1,
+                    max_batch_size=options.get_int('max_batch_size') or 100,
+                    prevent_overlap=options.get_bool('prevent_overlapping_times'),
+                )
 
     return project
 
@@ -436,6 +470,7 @@ def batch_subtitles(
 __all__ = [
     '__version__',
     'Options',
+    'SettingsPrecedence',
     'SettingsType',
     'Subtitles',
     'SubtitleScene',

@@ -46,6 +46,7 @@ class SubtitleEncoder(json.JSONEncoder):
                 "scenecount": len(obj.scenes),
                 "settings": getattr(obj, 'settings', {}),
                 "metadata": getattr(obj, 'metadata', {}),
+                "terminology_map": obj.terminology_map,
                 "format": obj.file_format,
                 "scenes": obj.scenes,
             }
@@ -123,6 +124,8 @@ def _object_hook(dct):
             obj.settings = SettingsType(dct.get('settings', dct.get('context', {})))
             obj.metadata = dct.get('metadata', {})
             obj.file_format = dct.get('format', '.srt')
+            terminology = dct.get('terminology_map', {})
+            obj.terminology_map = {str(k): str(v) for k, v in terminology.items()} if isinstance(terminology, dict) else {}
             obj.scenes = dct.get('scenes', [])
             return obj
         elif class_name == classname(SubtitleScene):

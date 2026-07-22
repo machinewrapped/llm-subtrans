@@ -42,6 +42,8 @@ class CustomServerProvider(TranslationProvider):
             "model": settings.get_str('model', os.getenv('CUSTOM_MODEL')),
             'supports_parallel_threads': settings.get_bool('supports_parallel_threads', env_bool('CUSTOM_SUPPORTS_PARALLEL_THREADS', False)),
             'proxy': settings.get_str('proxy'),
+            'repetition_penalty': settings.get_float('repetition_penalty', env_float('CUSTOM_REPETITION_PENALTY', 0.0)),
+            'min_p': settings.get_float('min_p', env_float('CUSTOM_MIN_P', 0.0)),
             }))
 
         #TODO: Add additional parameters option
@@ -107,7 +109,9 @@ class CustomServerProvider(TranslationProvider):
                 'timeout': (int, _("Timeout for the request in seconds (default 300)")),
                 'api_key': (str, _("API key if needed (this is normally not needed for a local server)")),
                 'model': (str, _("The model ID (for local servers this is usually not required")),
-                'supports_parallel_threads': (bool, _("Use parallel threads for translation requests (may be faster but may not work with the server)"))
+                'supports_parallel_threads': (bool, _("Use parallel threads for translation requests (may be faster but may not work with the server)")),
+                'repetition_penalty': (float, _("Penalise token repetition — values > 1.0 reduce repetitive output (0.0 to disable)")),
+                'min_p': (float, _("Minimum probability threshold for token sampling (0.0 to disable)")),
             })
 
         return options

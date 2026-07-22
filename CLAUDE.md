@@ -8,6 +8,9 @@ Secrets are stored in a .env file - NEVER read the contents of the file.
 
 Run tests\unit_tests.py at the end of a task to validate the change, unless it purely touched UI code (the GUI is not covered by unit tests). Activate the envsubtrans virtual environment first.
 
+## Project structure
+Before conducting exploratory searches of the code base, consult `docs/architecture.md` for information on the project architecture, structure and components to guide the search.
+
 ## Console Output
 Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Windows console errors
 
@@ -32,6 +35,9 @@ Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Window
   - Examples: 
     `def func(self, param : str) -> str|None:` ✅ 
     `def func(self, param: str) -> str | None:` ❌
+- **`# type: ignore` is forbidden** unless suppressing a known third-party library gap (e.g. missing stubs). Never use it to paper over a type mismatch in project code — fix the types instead.
+  - When assigning a `dict[str, str]` to a `SettingsType` field, wrap it: `SettingsType(my_dict)` — or add a typed property/method to `Options` or the relevant class.
+  - `SettingsType` has typed getters (`get_str`, `get_bool`, `get_int`, `get_dict`, etc.) — always prefer these over raw `.get()` when a specific type is expected.
 - **Docstrings**: Triple-quoted concise descriptions for classes and methods
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()
@@ -53,6 +59,5 @@ Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Window
   - **Exception Tests**: Guard with `skip_if_debugger_attached` decorator for debugging compatibility
     - Use `log_input_expected_error(input, ExpectedException, actual_exception)` for exception logging
   - **None Safety**: Use `.get(key, default)` with appropriate default values to avoid Pylance warnings, or assert then test for None values.
+  - **Optional Dependencies**: Test modules must not have top-level imports of optional packages. Guard them with `importlib.util.find_spec` and skip the class with `@unittest.skipUnless`, mirroring the pattern used in the corresponding provider.
 
-## Information
-Consult `docs/architecture.md` for detailed information on the project architecture and components.

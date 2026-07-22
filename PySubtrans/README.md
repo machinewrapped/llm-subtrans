@@ -164,7 +164,9 @@ provider = init_translation_provider("DeepSeek", options)
 options = init_options(
     server_address='http://localhost:8000',
     supports_conversation=True,
-    max_tokens=4096
+    max_tokens=4096,
+    repetition_penalty=1.1,  # Helps suppress degenerate repetition loops in small models
+    min_p=0.05,               # Alternative sampling parameter supported by llama.cpp / vLLM
 )
 
 provider = init_translation_provider("Custom Server", options)
@@ -195,6 +197,8 @@ The Options class provides a wide range of options to configure the translation 
 
 `scene_threshold`: subtitles are divided into scenes before batching, using this time value as a heuristic to indicate that a scene transition has happened. The default of 60 seconds is very coarse, and may end up with only one scene for dialogue heavy movies or dozens of scenes with only a few lines each for minimalist arthouse films. Depending on your use case, consider setting this very high and relying on the batcher instead.
 
+`autosplit_on_error`: When a batch fails validation, split it at the largest time-gap nearest the midpoint and retry each half independently. More effective than a straight retry for small local models that struggle with long contexts. Takes priority over `retry_on_error` when both are set.
+
 `postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines. The post-processor can perform a range of operations, each of which is enabled by another setting, e.g. `break_dialog_on_one_line`, `normalise_dialog_tags`, `whitespaces_to_newline`, `remove_filler_words`.
 
 Example usage:
@@ -219,6 +223,41 @@ options = init_options(
 ```
 
 Note that there are a number of options which are only used by the GUI-Subtrans application and have no function in PySubtrans.
+
+### Terminology map
+
+`build_terminology_map`: When enabled, PySubtrans instructs the model to report any names, titles or technical terms with the translation it used, and accumulates them into a terminology map that is injected into each subsequent batch's context, so the same translations are used consistently throughout the file.
+
+The map can be seeded with known translations by passing a `terminology_map` to `init_translator`. Accepted forms:
+
+- `dict`: `{"Alice": "アリス", "Wonderland": "ワンダーランド"}`
+- `list[str]`: `["Alice::アリス", "Wonderland::ワンダーランド"]`
+- newline-separated string: `"Alice::アリス\nWonderland::ワンダーランド"`
+- file path: any string without `::` is treated as a path to a text file of `key::value` lines
+
+```python
+from PySubtrans import init_options, init_subtitles, init_translator
+
+options = init_options(
+    prompt="Translate these subtitles into Japanese",
+    build_terminology_map=True,
+)
+
+subtitles = init_subtitles("episode2.srt", options=options)
+
+translator = init_translator(options, terminology_map={"Alice": "アリス", "Wonderland": "ワンダーランド"})
+
+def on_terminology_updated(sender, update):
+    print(f"New terminology: {update.new_terms}")
+
+translator.events.terminology_updated.connect(on_terminology_updated)
+translator.TranslateSubtitles(subtitles)
+
+# Accumulated map is available on the translator after translation
+print(translator.terminology_map)
+```
+
+Note: `build_terminology_map` controls whether the model is asked to report new terms after each batch. A seed `terminology_map` passed to `init_translator` is always injected into the prompt context regardless of this setting.
 
 ## Advanced workflows
 

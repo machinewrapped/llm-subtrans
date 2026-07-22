@@ -5,9 +5,9 @@ import threading
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import ParseNames
-from PySubtrans.Options import Options, SettingsType
+from PySubtrans.Helpers.Parse import ParseKeyValuePairs, ParseNames
 from PySubtrans.Substitutions import Substitutions
+from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleError import SubtitleError, TranslationAbortedError
@@ -17,7 +17,7 @@ from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
-from PySubtrans.TranslationEvents import TranslationEvents
+from PySubtrans.TranslationEvents import TerminologyUpdate, TranslationEvents
 
 default_encoding = os.getenv('DEFAULT_ENCODING', 'utf-8')
 
@@ -33,6 +33,8 @@ class SubtitleProject:
         'task_type': None,
         'instructions': None,
         'retry_instructions': None,
+        'terminology_instructions': None,
+        'build_terminology_map': None,
         'movie_name': None,
         'description': None,
         'names': None,
@@ -41,7 +43,7 @@ class SubtitleProject:
         'include_original': None,
         'add_right_to_left_markers': None,
         'instruction_file': None,
-        'format': None
+        'format': None,
     })
    
     def __init__(self, persistent : bool = False):
@@ -140,7 +142,7 @@ class SubtitleProject:
                 self.UpdateOutputPath()
 
                 outputpath = outputpath or GetOutputPath(self.projectfile, self.target_language, subtitles.file_format)
-                sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath               
+                sourcepath = subtitles.sourcepath if subtitles.sourcepath else sourcepath
                 logging.info(_("Project file loaded"))
 
                 if subtitles.scenes:
@@ -149,6 +151,8 @@ class SubtitleProject:
                     load_subtitles = reload_subtitles
                     if load_subtitles:
                         logging.info(_("Reloading subtitles from the source file"))
+                        if subtitles.terminology_map:
+                            project_settings.set('terminology_map', subtitles.terminology_map)
 
                 else:
                     logging.error(_("Unable to read project file, starting afresh"))
@@ -179,7 +183,8 @@ class SubtitleProject:
 
     def UpdateProjectSettings(self, settings: SettingsType) -> None:
         """
-        Update the project settings with validation and filtering
+        Update the project settings with validation and filtering.
+        Delegates filtering, per-key parsing, and change detection to Subtitles.UpdateSettings.
         """
         if isinstance(settings, Options):
             settings = SettingsType(settings)
@@ -191,25 +196,26 @@ class SubtitleProject:
             # Update obsolete settings to maintain compatibility
             self._update_compatibility(settings)
 
-            # Filter settings to only include known project settings
-            filtered_settings = SettingsType({key: settings[key] for key in settings if key in self.DEFAULT_PROJECT_SETTINGS})
+            # Route terminology_map edits to the dedicated attribute
+            terminology_changed = self._parse_terminology_map(settings)
 
-            # Process names and substitutions into standard formats
-            if 'names' in filtered_settings:
-                names_list = filtered_settings.get('names', [])
-                filtered_settings['names'] = ParseNames(names_list)
+            # Filter to known project settings only
+            filtered = SettingsType({key: settings[key] for key in settings if key in self.DEFAULT_PROJECT_SETTINGS})
 
-            if 'substitutions' in filtered_settings:
-                substitutions_list = filtered_settings.get('substitutions', [])
-                if substitutions_list:
-                    filtered_settings['substitutions'] = Substitutions.Parse(substitutions_list)
+            # Parse names and substitutions into standard formats
+            self._standardise_settings_format(filtered)
 
-            # Check if there are any actual changes
-            common_keys = filtered_settings.keys() & self.subtitles.settings.keys()
-            new_keys = filtered_settings.keys() - self.subtitles.settings.keys()
+            # Detect changes and update
+            common_keys = filtered.keys() & self.subtitles.settings.keys()
+            new_keys = filtered.keys() - self.subtitles.settings.keys()
+            settings_changed = bool(new_keys) or not all(
+                filtered.get(k) == self.subtitles.settings.get(k) for k in common_keys
+            )
 
-            if new_keys or not all(filtered_settings.get(key) == self.subtitles.settings.get(key) for key in common_keys):
-                self.subtitles.UpdateSettings(filtered_settings)
+            if settings_changed:
+                self.subtitles.UpdateSettings(filtered)
+
+            if settings_changed or terminology_changed:
                 self.needs_writing = self.use_project_file and bool(self.subtitles.scenes)
 
     def UpdateOutputPath(self, path: str|None = None, extension: str|None = None) -> None:
@@ -382,7 +388,7 @@ class SubtitleProject:
         if not self.subtitles:
             return SettingsType()
 
-        return SettingsType({ key : value for key, value in self.subtitles.settings.items() if value is not None and (value != '' or isinstance(value, list)) })
+        return SettingsType({ key : value for key, value in self.subtitles.settings.items() if value is not None and (value != '' or isinstance(value, (list, dict))) })
 
     def WriteProjectToFile(self, projectfile: str, encoder_class: type|None = None) -> None:
         """
@@ -417,6 +423,7 @@ class SubtitleProject:
         translator.events.preprocessed.connect(self._on_preprocessed)
         translator.events.batch_translated.connect(self._on_batch_translated)
         translator.events.scene_translated.connect(self._on_scene_translated)
+        translator.events.terminology_updated.connect(self._on_terminology_updated)
         translator.events.connect_default_loggers()
 
         try:
@@ -437,9 +444,16 @@ class SubtitleProject:
             raise
 
         finally:
+            if self.use_project_file and self.needs_writing:
+                try:
+                    self.UpdateProjectFile()
+                except Exception as e:
+                    logging.error(_("Failed to save project file after translation: {}").format(str(e)))
+
             translator.events.preprocessed.disconnect(self._on_preprocessed)
             translator.events.batch_translated.disconnect(self._on_batch_translated)
             translator.events.scene_translated.disconnect(self._on_scene_translated)
+            translator.events.terminology_updated.disconnect(self._on_terminology_updated)
             translator.events.disconnect_default_loggers()
 
     def TranslateScene(self, translator : SubtitleTranslator, scene_number : int, batch_numbers : list[int]|None = None, line_numbers : list[int]|None = None) -> SubtitleScene|None:
@@ -454,6 +468,7 @@ class SubtitleProject:
 
         translator.events.preprocessed.connect(self._on_preprocessed)
         translator.events.batch_translated.connect(self._on_batch_translated)
+        translator.events.terminology_updated.connect(self._on_terminology_updated)
         translator.events.connect_default_loggers()
 
         try:
@@ -471,6 +486,7 @@ class SubtitleProject:
         finally:
             translator.events.preprocessed.disconnect(self._on_preprocessed)
             translator.events.batch_translated.disconnect(self._on_batch_translated)
+            translator.events.terminology_updated.disconnect(self._on_terminology_updated)
             translator.events.disconnect_default_loggers()
 
     def _set_project_setting(self, setting_name, value):
@@ -484,6 +500,25 @@ class SubtitleProject:
             if self.subtitles.settings.get_str(setting_name) != value:
                 self.subtitles.settings[setting_name] = value
                 self.needs_writing = self.use_project_file
+
+    def _standardise_settings_format(self, filtered):
+        if 'names' in filtered:
+            filtered['names'] = ParseNames(filtered.get('names', []))
+
+        if 'substitutions' in filtered:
+            subs = filtered.get('substitutions', [])
+            if subs:
+                filtered['substitutions'] = Substitutions.Parse(subs)
+
+    def _parse_terminology_map(self, filtered):
+        terminology_changed = False
+        if 'terminology_map' in filtered:
+            parsed = ParseKeyValuePairs(filtered.get('terminology_map', {}))
+            if parsed != self.subtitles.terminology_map:
+                self.subtitles.terminology_map = parsed
+                terminology_changed = True
+            del filtered['terminology_map']
+        return terminology_changed
 
     def _update_compatibility(self, settings: SettingsType) -> None:
         """
@@ -523,5 +558,18 @@ class SubtitleProject:
         logging.debug("Scene translated")
         self.needs_writing = self.use_project_file
         self.events.scene_translated.send(self, scene=scene)
+
+    def UpdateTerminologyMap(self, update : TerminologyUpdate) -> None:
+        """Store a terminology map snapshot and notify listeners."""
+        with self.subtitles.lock:
+            map_changed = update.terminology_map != self.subtitles.terminology_map
+            if map_changed:
+                self.subtitles.terminology_map = dict(update.terminology_map)
+        if map_changed:
+            self.needs_writing = self.use_project_file
+        self.events.terminology_updated.send(self, update=update)
+
+    def _on_terminology_updated(self, _sender, update : TerminologyUpdate) -> None:
+        self.UpdateTerminologyMap(update)
 
 

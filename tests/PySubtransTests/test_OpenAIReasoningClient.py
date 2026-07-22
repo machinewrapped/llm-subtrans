@@ -1,20 +1,27 @@
 from __future__ import annotations
 
-from openai.types import responses as responses_types
-from openai.types.responses import (
-    ResponseOutputMessage,
-    ResponseOutputText,
-    ResponseReasoningItem
-)
-from openai.types.responses.response_usage import ResponseUsage
+import importlib.util
+import unittest
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
-from PySubtrans.Providers.Clients.OpenAIReasoningClient import OpenAIReasoningClient
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import TranslationResponseError, TranslationImpossibleError
 
+_openai_available = importlib.util.find_spec("openai") is not None
 
+if _openai_available:
+    from openai.types import responses as responses_types
+    from openai.types.responses import (
+        ResponseOutputMessage,
+        ResponseOutputText,
+        ResponseReasoningItem
+    )
+    from openai.types.responses.response_usage import ResponseUsage
+    from PySubtrans.Providers.Clients.OpenAIReasoningClient import OpenAIReasoningClient
+
+
+@unittest.skipUnless(_openai_available, "openai package is not installed")
 class OpenAIReasoningClientTests(LoggedTestCase):
     """Tests validating the Responses API payload conversion for the reasoning client."""
 

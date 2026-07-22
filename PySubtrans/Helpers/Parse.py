@@ -3,6 +3,75 @@ import regex
 import json
 import logging
 
+KEY_VALUE_SEPARATOR = "::"
+
+def ParseKeyValuePairs(value : Any, separator : str = KEY_VALUE_SEPARATOR) -> dict[str,str]:
+    """
+    Parse a dict of (key, value) pairs from a dict, list, or newline-separated string.
+    Each entry is split on the first occurrence of `separator`. Entries without the
+    separator or with empty key/value are skipped.
+    """
+    if not value:
+        return {}
+
+    if isinstance(value, dict):
+        return { str(k).strip(): str(v).strip() for k, v in value.items() if k and v }
+
+    if isinstance(value, list):
+        lines = value
+    else:
+        lines = str(value).splitlines()
+
+    result : dict[str,str] = {}
+    for line in lines:
+        line = str(line).strip()
+        if separator in line:
+            key, _, val = line.partition(separator)
+            key = key.strip()
+            val = val.strip()
+            if key and val:
+                result[key] = val
+    return result
+
+
+def ParseKeyValuePairsOrFiles(entries : list[str], separator : str = KEY_VALUE_SEPARATOR) -> dict[str,str]:
+    """
+    Parse key/value pairs from a list of strings.
+
+    Each entry is either:
+    - a ``key::value`` inline pair, or
+    - a file path whose contents are one ``key::value`` pair per line.
+
+    Entries whose separator is absent are treated as file paths.
+    File-not-found is logged as a warning; malformed lines inside a file raise ValueError.
+    """
+    result : dict[str,str] = {}
+    for entry in entries:
+        entry = str(entry).strip()
+        if not entry:
+            continue
+        if separator in entry:
+            result.update(ParseKeyValuePairs(entry, separator=separator))
+        else:
+            try:
+                with open(entry, "r", encoding="utf-8", newline='') as f:
+                    for line in (l.strip() for l in f if l.strip()):
+                        if separator in line:
+                            result.update(ParseKeyValuePairs(line, separator=separator))
+                        else:
+                            raise ValueError(f"Invalid key/value format in {entry!r}: {line!r}")
+            except FileNotFoundError:
+                logging.warning(f"Key-value file not found: {entry}")
+    return result
+
+def FormatKeyValuePairs(pairs : dict, separator : str = KEY_VALUE_SEPARATOR) -> str:
+    """
+    Format a dict as newline-separated key<separator>value pairs.
+    """
+    if not pairs or not isinstance(pairs, dict):
+        return ""
+    return '\n'.join(f"{str(k)}{separator}{str(v)}" for k, v in pairs.items())
+
 def ParseNames(name_list : str|list|None|Any) -> list[str]:
     """
     Parse a list of names from a string or list of strings

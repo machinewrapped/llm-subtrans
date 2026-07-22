@@ -3,6 +3,12 @@ import time
 from typing import Any
 
 import anthropic
+import regex
+from anthropic.types.message_param import MessageParam
+from anthropic.types.model_param import ModelParam
+from anthropic.types.thinking_config_adaptive_param import ThinkingConfigAdaptiveParam
+from anthropic.types.thinking_config_enabled_param import ThinkingConfigEnabledParam
+from anthropic.types.thinking_config_param import ThinkingConfigParam
 
 from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Helpers.Localization import _
@@ -21,6 +27,7 @@ class AnthropicClient(TranslationClient):
     """
     def __init__(self, settings : SettingsType):
         super().__init__(settings)
+        self.client: anthropic.Anthropic|None = None
 
         self._emit_info(_("Translating with Anthropic {model}").format(
             model=self.model or _("default model")
@@ -43,14 +50,22 @@ class AnthropicClient(TranslationClient):
         return self.settings.get_bool( 'thinking', False)
     
     @property
-    def thinking(self) -> dict|anthropic.NotGiven:
-        if self.allow_thinking:
-            return {
-                'type' : 'enabled',
-                'budget_tokens' : self.settings.get_int( 'max_thinking_tokens', 1024)
-            }
-        
-        return anthropic.NOT_GIVEN
+    def thinking(self) -> ThinkingConfigParam|anthropic.Omit:
+        if not self.allow_thinking:
+            return anthropic.omit
+
+        use_adaptive = self._use_adaptive_thinking()
+        if use_adaptive is None:
+            # The model does not support thinking at all
+            return anthropic.omit
+
+        if use_adaptive:
+            return ThinkingConfigAdaptiveParam(type='adaptive')
+
+        return ThinkingConfigEnabledParam(
+            type='enabled',
+            budget_tokens=self.settings.get_int('max_thinking_tokens', 1024) or 1024
+        )
 
     def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
@@ -149,29 +164,9 @@ class AnthropicClient(TranslationClient):
                     raise TranslationError(_("System prompt is required"))
 
                 if request.is_streaming and self.enable_streaming:
-                    with self.client.messages.stream(
-                        model=self.model,
-                        thinking=self.thinking,     # type: ignore
-                        messages=prompt.content,          # type: ignore
-                        system=prompt.system_prompt,
-                        temperature=temperature if not self.allow_thinking else 1,
-                        max_tokens=self.max_tokens
-                    ) as stream:
-                        for text in stream.text_stream:
-                            if self.aborted:
-                                return None
-                            request.ProcessStreamingDelta(text)
+                    return self._stream_client_response(prompt, request, temperature)
 
-                        return stream.get_final_message()
-                else:
-                    return self.client.messages.create(
-                        model=self.model,
-                        thinking=self.thinking,     # type: ignore
-                        messages=prompt.content,          # type: ignore
-                        system=prompt.system_prompt,
-                        temperature=temperature if not self.allow_thinking else 1,
-                        max_tokens=self.max_tokens
-                    )
+                return self._create_client_response(prompt, temperature)
 
             except (anthropic.APITimeoutError, anthropic.RateLimitError) as e:
                 if retry < self.max_retries and not self.aborted:
@@ -203,3 +198,162 @@ class AnthropicClient(TranslationClient):
                 return str(e.body['message'])
 
         return str(e)
+
+    def _stream_client_response(self, prompt : TranslationPrompt, request : TranslationRequest, temperature : float):
+        """Stream an Anthropic response with model-specific parameters."""
+        thinking = self.thinking
+        if self._supports_temperature_parameter():
+            with self._get_client().messages.stream(
+                model=self._get_model_param(),
+                thinking=thinking,
+                messages=self._get_message_params(prompt),
+                system=self._get_system_prompt(prompt),
+                temperature=self._resolve_temperature(temperature, thinking),
+                max_tokens=self.max_tokens
+            ) as stream:
+                return self._consume_stream(stream, request)
+
+        with self._get_client().messages.stream(
+            model=self._get_model_param(),
+            thinking=thinking,
+            messages=self._get_message_params(prompt),
+            system=self._get_system_prompt(prompt),
+            max_tokens=self.max_tokens
+        ) as stream:
+            return self._consume_stream(stream, request)
+
+    def _create_client_response(self, prompt : TranslationPrompt, temperature : float):
+        """Create an Anthropic response with model-specific parameters."""
+        thinking = self.thinking
+        if self._supports_temperature_parameter():
+            return self._get_client().messages.create(
+                model=self._get_model_param(),
+                thinking=thinking,
+                messages=self._get_message_params(prompt),
+                system=self._get_system_prompt(prompt),
+                temperature=self._resolve_temperature(temperature, thinking),
+                max_tokens=self.max_tokens
+            )
+
+        return self._get_client().messages.create(
+            model=self._get_model_param(),
+            thinking=thinking,
+            messages=self._get_message_params(prompt),
+            system=self._get_system_prompt(prompt),
+            max_tokens=self.max_tokens
+        )
+
+    def _consume_stream(self, stream, request : TranslationRequest):
+        """Consume streamed response content and return the final message."""
+        for text in stream.text_stream:
+            if self.aborted:
+                return None
+            request.ProcessStreamingDelta(text)
+
+        return stream.get_final_message()
+
+    def _get_model_param(self) -> ModelParam:
+        """Return the selected model as an Anthropic model parameter."""
+        if self.model is None:
+            raise TranslationError(_("No model specified"))
+
+        return self.model
+
+    def _get_system_prompt(self, prompt : TranslationPrompt) -> str:
+        """Return the system prompt in the shape expected by Anthropic."""
+        if prompt.system_prompt is None:
+            raise TranslationError(_("System prompt is required"))
+
+        return prompt.system_prompt
+
+    def _get_client(self) -> anthropic.Anthropic:
+        """Return the initialized Anthropic client."""
+        if self.client is None:
+            raise TranslationImpossibleError(_("Client is not initialized"))
+
+        return self.client
+
+    def _get_message_params(self, prompt : TranslationPrompt) -> list[MessageParam]:
+        """Convert prompt content into Anthropic message params."""
+        if not isinstance(prompt.content, list):
+            raise TranslationError(_("Content must be a list of messages"))
+
+        messages : list[MessageParam] = []
+
+        for message in prompt.content:
+            if not isinstance(message, dict):
+                raise TranslationError(_("Content must be a list of messages"))
+
+            role = message.get('role')
+            content = message.get('content')
+
+            if role not in ('user', 'assistant') or content is None:
+                raise TranslationError(_("Content must be a list of messages"))
+
+            messages.append(MessageParam(role=role, content=content))
+
+        return messages
+
+    def _parse_claude_version(self) -> tuple[int, int]|None:
+        """Parse (major, minor) version numbers from the model name, or None if indeterminable."""
+        if self.model is None:
+            return None
+
+        match = regex.search(r'claude[-\s]+[a-zA-Z]+[-\s]+(\d+)(?:[.-](\d{1,3})(?!\d))?', self.model, flags=regex.IGNORECASE)
+        if match is None:
+            return None
+
+        major = int(match.group(1))
+        minor = int(match.group(2)) if match.group(2) is not None else 0
+
+        return major, minor
+
+    def _supports_temperature_parameter(self) -> bool:
+        """
+        Return True when the selected model accepts the temperature parameter.
+
+        Claude models from 4.7 onward reject temperature. Models we cannot identify are
+        assumed not to support it, as Anthropic has removed it going forward.
+        """
+        version = self._parse_claude_version()
+        if version is None:
+            return False
+
+        major, minor = version
+        return major < 4 or (major == 4 and minor < 7)
+
+    def _use_adaptive_thinking(self) -> bool|None:
+        """
+        Decide the thinking configuration for the selected model.
+
+        Returns True for adaptive thinking, False for enabled thinking with a token budget,
+        or None if the model does not support thinking at all.
+
+        Prefers the model's reported capabilities (supplied by the provider); falls back to
+        the version heuristic when capabilities are unavailable, e.g. the model was typed
+        manually or is not in the fetched model list.
+        """
+        adaptive = self.settings.get('thinking_supports_adaptive')
+        enabled = self.settings.get('thinking_supports_enabled')
+
+        if adaptive is None and enabled is None:
+            # No capability information - models from 4.7 onward use adaptive thinking
+            version = self._parse_claude_version()
+            return version is None or version >= (4, 7)
+
+        if not adaptive and not enabled:
+            return None
+
+        return bool(adaptive) and not bool(enabled)
+
+    @staticmethod
+    def _resolve_temperature(temperature : float, thinking : ThinkingConfigParam|anthropic.Omit) -> float:
+        """
+        Enabled (budget) thinking requires temperature to be 1; otherwise use the requested
+        value. Keyed on the thinking config actually being sent, not the raw thinking setting,
+        so a model that omits thinking still honours the configured temperature.
+        """
+        if isinstance(thinking, dict) and thinking.get('type') == 'enabled':
+            return 1
+
+        return temperature

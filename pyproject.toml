@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-subtrans"
-version = "1.5.7"
+version = "1.6.1"
 description = "Subtitle translation tools using large language models"
 readme = "readme.md"
 requires-python = ">=3.10"
@@ -31,9 +31,10 @@ gui = [
 openai = ["openai"]
 azure = ["openai"]
 gemini = ["google-genai", "google-api-core"]
-claude = ["anthropic"]
+claude = ["anthropic>=0.105.0"]
 mistral = ["mistralai"]
 bedrock = ["boto3"]
+litellm = ["litellm>=1.84.0,<1.87.0"]
 
 [tool.setuptools.packages.find]
 where = ["."]

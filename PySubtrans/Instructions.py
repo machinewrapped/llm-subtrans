@@ -39,6 +39,18 @@ default_instructions = linesep.join([
     "continuing to evolve is the key to survival.",
     ])
 
+default_terminology_instructions = linesep.join([
+    "If a terminology reference is provided, use those translations consistently.",
+    "",
+    "After translation, add a <terminology> block listing any terminology from the source subtitles that require a consistent translation,",
+    "e.g. character names, nicknames, titles, organisations, locations, unique objects, or uncommon cultural and technical concepts.",
+    "",
+    "Format each entry as one 'original::translation' pair per line, e.g.",
+    "<terminology>",
+    "Source Language::目標語言",
+    "</terminology>",
+    ])
+
 default_retry_instructions = linesep.join([
 	"There was an issue with the previous translation.",
 	"",
@@ -52,6 +64,7 @@ class Instructions:
         self.prompt : str|None = None
         self.instructions : str|None = None
         self.retry_instructions : str|None = None
+        self.terminology_instructions : str|None = None
         self.instruction_file : str|None = None
         self.target_language : str|None = None
         self.task_type : str|None = DEFAULT_TASK_TYPE
@@ -63,6 +76,7 @@ class Instructions:
             'prompt': self.prompt,
             'instructions': self.instructions,
             'retry_instructions': self.retry_instructions,
+            'terminology_instructions': self.terminology_instructions,
             'instruction_file': self.instruction_file,
             'task_type' : self.task_type
         }
@@ -76,6 +90,7 @@ class Instructions:
         self.prompt = settings.get('prompt') or default_user_prompt
         self.instructions = settings.get('instructions') or default_instructions
         self.retry_instructions = settings.get('retry_instructions') or default_retry_instructions
+        self.terminology_instructions = settings.get('terminology_instructions') or default_terminology_instructions
         self.instruction_file = settings.get('instruction_file')
         self.target_language = None
         self.task_type = settings.get('task_type') or DEFAULT_TASK_TYPE

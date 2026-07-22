@@ -1,6 +1,7 @@
 import os
 import tempfile
 import unittest
+from typing import cast
 
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
@@ -8,7 +9,9 @@ from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleScene import SubtitleScene
+from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.Subtitles import Subtitles
+from PySubtrans.TranslationEvents import TranslationEvents
 from ..TestData.chinese_dinner import chinese_dinner_data
 
 
@@ -603,6 +606,77 @@ Modified subtitle line 2
                 raise ValueError("Test edit failure")
 
         self.assertLoggedFalse("needs_writing after failed edit", project.needs_writing)
+
+    @skip_if_debugger_attached
+    def test_translate_subtitles_saves_project_file_on_error(self):
+        """TranslateSubtitles should persist project progress even when translation fails"""
+        project = SubtitleProject(persistent=True)
+        project.InitialiseProject(self.test_srt_file)
+
+        project.UpdateProjectSettings(SettingsType({
+            'target_language': 'French',
+            'provider': 'Test Provider',
+        }))
+
+        batcher = SubtitleBatcher(self.options)
+        with project.GetEditor() as editor:
+            editor.AutoBatch(batcher)
+
+        class FailingTranslator:
+            def __init__(self):
+                self.preview : bool = False
+                self.aborted : bool = False
+                self.events = TranslationEvents()
+
+            def TranslateSubtitles(self, subtitles):
+                if subtitles and subtitles.scenes and subtitles.scenes[0].batches:
+                    first_batch = subtitles.scenes[0].batches[0]
+                    self.events.batch_translated.send(self, batch=first_batch)
+                raise RuntimeError("forced translation failure")
+
+        translator = FailingTranslator()
+
+        with self.assertLogs(level='ERROR'):
+            with self.assertRaises(RuntimeError) as context:
+                project.TranslateSubtitles(cast(SubtitleTranslator, translator))
+
+        self.assertLoggedIsInstance(
+            "raised translation error type",
+            context.exception,
+            RuntimeError,
+            input_value=str(context.exception),
+        )
+
+        project_path = project.projectfile
+        self.assertLoggedIsNotNone("project file path set", project_path)
+
+        if project_path:
+            self.assertLoggedTrue("project file exists after failure", os.path.exists(project_path))
+
+
+    def test_terminology_map_round_trips_as_top_level_attribute(self):
+        """terminology_map is serialised as a top-level key and restored on load"""
+        project = SubtitleProject(persistent=True)
+        project.InitialiseProject(self.test_srt_file)
+
+        batcher = SubtitleBatcher(self.options)
+        with project.GetEditor() as editor:
+            editor.AutoBatch(batcher)
+
+        project.subtitles.terminology_map = {"Dragon": "Drache", "Hero": "Held"}
+        project.SaveProjectFile(self.test_project_file)
+
+        new_project = SubtitleProject()
+        new_project.ReadProjectFile(self.test_project_file)
+
+        loaded_map = new_project.subtitles.terminology_map
+        self.assertLoggedEqual("Dragon round-trips", "Drache", loaded_map.get("Dragon"))
+        self.assertLoggedEqual("Hero round-trips", "Held", loaded_map.get("Hero"))
+        self.assertLoggedNotIn(
+            "terminology_map absent from settings",
+            "terminology_map",
+            new_project.subtitles.settings,
+        )
 
 
 if __name__ == '__main__':

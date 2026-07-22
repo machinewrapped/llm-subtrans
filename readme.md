@@ -19,6 +19,9 @@ Packaged builds are (usually) provided for MacOS with Apple Silicon (**gui-subtr
 ### Linux
 Prebuilt Linux packages are not provided so you will need to [install from source](#installing-from-source).
 
+### LLM-Subtrans Web
+The Gemini-powered LLM-Subtrans Web has been retired as it was costing me money. You can create your own version in [Google AI Studio](https://aistudio.google.com/).
+
 ## Translation Providers
 
 ### OpenRouter
@@ -35,7 +38,7 @@ https://ai.google.dev/terms
 
 **Please note that regions restrictions may apply: https://ai.google.dev/available_regions**
 
-Gemini 2.5 Flash is perhaps the leading model for translation speed and fluency at time of writing, despite some censorship, and Preview models are often free to use.
+Gemini 3.5 Flash is perhaps the leading model for translation speed and fluency at time of writing, despite some censorship, and Preview models are often free to use.
 
 You will need a Google Gemini API key from https://ai.google.dev/ or from a project created on https://console.cloud.google.com/. You must ensure that Generative AI is enabled for the api key and project.
 
@@ -111,6 +114,8 @@ The easiest setup method is to run the unified installation script:
 - **MacOS/Linux**: Run `install.sh`
 
 These scripts will create a virtual environment and offer **install with GUI** or **install command line only** options, with additional options to add support for specific providers. The script will guide you through the setup and generate command scripts to launch the application.
+
+Pass `--portable` to `install.bat` or `install.sh` to create the local `.settings` directory without prompting. Use `--configpath <directory>` to configure a different settings and log directory; the installer saves that path in `.env`.
 
 During the installing process, you can choose to input an API key for each selected provider when prompted, which will be saved in a .env file so that you don't need to provide it every time you run the program. This is largely redundant if you only plan to use the GUI, as keys can be saved in the app settings.
 
@@ -198,9 +203,9 @@ llm-subtrans -l <language> -o output.srt input.ass
 llm-subtrans -s <server_address> -e <endpoint> -k <api_key> -l <language> <path_to_subtitle_file>
 
 # Use specific providers
-gpt-subtrans --model gpt-5-mini --target_language <target_language> <path_to_subtitle_file>
-gemini-subtrans --model gemini-2.5-flash-latest --target_language <target_language> <path_to_subtitle_file>
-claude-subtrans --model claude-3-5-haiku-latest --target_language <target_language> <path_to_subtitle_file>
+gpt-subtrans --model gpt-5-mini --target-language <target_language> <path_to_subtitle_file>
+gemini-subtrans --model gemini-2.5-flash-latest --target-language <target_language> <path_to_subtitle_file>
+claude-subtrans --model claude-3-5-haiku-latest --target-language <target_language> <path_to_subtitle_file>
 
 # List supported subtitle formats
 llm-subtrans --list-formats
@@ -232,6 +237,10 @@ llm-subtrans --project --auto -l <language> <path_to_subtrans_file>
 llm-subtrans --project --auto -l <language> <path_to_subtitle_file>  # Project file will be detected automatically if it is in the same folder
 ```
 
+## Configuration directory
+
+The GUI and command-line tools use the platform's standard application-data directory for settings and logs. Use `--portable` to store them in a `.settings` folder in the current directory, or `--configpath <directory>` to set a specific location. An existing `.settings` directory will automatically activate portable mode.
+
 ## Format Conversion
 LLM-Subtrans is primarily a translation application, and format conversion is probably best handled by dedicated tools, but the option exists to read one format and write another.
 
@@ -252,7 +261,7 @@ llm-subtrans path/to/my/subtitles.srt --moviename "My Awesome Movie" --ratelimit
 
 Default values for many settings can be set in the .env file, using a NAME_IN_CAPS format. See Options.py and the various Provider_XXX files for the full list.
 
-- `-l`, `--target_language`:
+- `-l`, `--target-language`:
   The language to translate the subtitles to.
 
 - `-o`, `--output`:
@@ -275,6 +284,13 @@ Default values for many settings can be set in the .env file, using a NAME_IN_CA
 
 - `--substitution`:
   A pair of strings separated by `::`, to substitute in either source or translation, or the name of a file containing a list of such pairs.
+
+- `--build-terminology-map`:
+  Accumulates names, titles and technical terms into a terminology map that is provided to subsequent batches so that consistent translations can be used throughout.
+
+- `--terminology`:
+  Seed the terminology map with a `SOURCE::TRANSLATION` pair, or a path to a text file of such pairs. Repeatable.
+  Example: `--terminology "Alice::アリス" --terminology wonderland_locations.txt`
 
 - `--scenethreshold`:
   Number of seconds between lines to consider it a new scene.

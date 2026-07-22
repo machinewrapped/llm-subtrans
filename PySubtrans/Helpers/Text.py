@@ -1,8 +1,9 @@
 from typing import Any
 import unicodedata
 import regex
-import unicodedata
 from collections import Counter
+
+from PySubtrans.Helpers.Parse import ParseKeyValuePairs
 
 common_punctuation = r"[.,!?;:…¡¿]"
 sentence_end_punctuation = r"[.!?…？！。﹑]"
@@ -13,6 +14,8 @@ emdash = "—"
 standard_filler_words = "um,umm,uh,uhh,er,err,ah,ahh,oh,eh,hm,hmm,hmmm,huh,ha,mmm,ow,oww"
 
 whitespace_and_punctuation_pattern = regex.compile(r'[\p{P}\p{Z}\p{C}]')
+
+whitespace_pattern = regex.compile(r'\s+')
 
 priority_break_sequences = [
     regex.escape(dialog_marker),  # Dialog marker
@@ -68,6 +71,12 @@ def RemoveWhitespaceAndPunctuation(string) -> str:
     normalized = unicodedata.normalize('NFC', stripped)
 
     return normalized
+
+def CompressWhitespace(text : str) -> str:
+    """
+    Collapse runs of whitespace into a single space.
+    """
+    return whitespace_pattern.sub(' ', text)
 
 def IsTextContentEqual(string1 : str|None, string2 : str|None) -> bool:
     """
@@ -342,6 +351,13 @@ def ExtractTagList(tagname, text):
         tag_list = [ item.strip() for item in regex.split("[\n,]", tag) ] if tag else []
         return text, tag_list
     return text, []
+
+def ExtractTagDict(tagname : str, text : str) -> tuple[str, dict[str,str]]:
+    """
+    Look for an xml-like tag in the input text, and extract the contents as a dict of 'key::value' pairs, one per line.
+    """
+    text, tag = ExtractTag(tagname, text)
+    return text, ParseKeyValuePairs(tag)
 
 def SanitiseSummary(summary : str, movie_name : str|None = None, max_summary_length : int|None = None):
     """

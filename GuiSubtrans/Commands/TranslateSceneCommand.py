@@ -6,6 +6,7 @@ from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import TranslationAbortedError, TranslationImpossibleError
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.TranslationEvents import TerminologyUpdate
 from PySubtrans.Helpers.Localization import _
 
 import logging
@@ -55,10 +56,11 @@ class TranslateSceneCommand(Command):
         if not translation_provider.ValidateSettings():
             raise CommandError(_("Translation provider settings are invalid"), command=self)
 
-        self.translator = SubtitleTranslator(options, translation_provider, resume=self.resume)
+        self.translator = SubtitleTranslator(options, translation_provider, resume=self.resume, terminology_map=project.subtitles.terminology_map)
 
         self.translator.events.batch_translated.connect(self._on_batch_translated)
         self.translator.events.batch_updated.connect(self._on_batch_updated)
+        self.translator.events.terminology_updated.connect(self._on_terminology_updated)
         self.translator.events.error.connect(self._on_error)
         self.translator.events.warning.connect(self._on_warning)
         self.translator.events.info.connect(self._on_info)
@@ -102,6 +104,7 @@ class TranslateSceneCommand(Command):
             if self.translator:
                 self.translator.events.batch_translated.disconnect(self._on_batch_translated)
                 self.translator.events.batch_updated.disconnect(self._on_batch_updated)
+                self.translator.events.terminology_updated.disconnect(self._on_terminology_updated)
                 self.translator.events.error.disconnect(self._on_error)
                 self.translator.events.warning.disconnect(self._on_warning)
                 self.translator.events.info.disconnect(self._on_info)
@@ -153,6 +156,11 @@ class TranslateSceneCommand(Command):
 
         if update.has_update:
             self.datamodel.UpdateViewModel(update)
+
+    def _on_terminology_updated(self, _sender, update : TerminologyUpdate):
+        """Forward terminology updates to the project so the map and listeners stay in sync."""
+        if self.datamodel and self.datamodel.project:
+            self.datamodel.project.UpdateTerminologyMap(update)
 
     def _on_error(self, _sender, message : str):
         """Handle error events from translator"""

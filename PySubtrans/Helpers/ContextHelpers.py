@@ -9,6 +9,7 @@ if TYPE_CHECKING:
     from PySubtrans.Subtitles import Subtitles
 
 
+
 def GetBatchContext(subtitles: Subtitles, scene_number: int, batch_number: int, max_lines: int|None = None) -> dict[str, Any]:
     """
     Get context for a batch of subtitles, by extracting summaries from previous scenes and batches

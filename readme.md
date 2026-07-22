@@ -115,7 +115,7 @@ The easiest setup method is to run the unified installation script:
 
 These scripts will create a virtual environment and offer **install with GUI** or **install command line only** options, with additional options to add support for specific providers. The script will guide you through the setup and generate command scripts to launch the application.
 
-Pass `--portable` to `install.bat` or `install.sh` to create the local `.settings` directory without prompting. Use `--configdir <directory>` to configure a different settings and log directory; the installer saves that path in `.env`.
+Pass `--portable` to `install.bat` or `install.sh` to create the local `.settings` directory without prompting. Use `--configpath <directory>` to configure a different settings and log directory; the installer saves that path in `.env`.
 
 During the installing process, you can choose to input an API key for each selected provider when prompted, which will be saved in a .env file so that you don't need to provide it every time you run the program. This is largely redundant if you only plan to use the GUI, as keys can be saved in the app settings.
 

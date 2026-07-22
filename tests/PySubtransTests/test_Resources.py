@@ -60,7 +60,7 @@ class TestResources(LoggedTestCase):
 
         self.assertLoggedEqual('equals-form configuration directory', config_path, result)
 
-    @patch.dict('os.environ', {'LLM_SUBTRANS_CONFIG_DIR': os.path.abspath(os.path.join('environment', 'settings'))})
+    @patch.dict('os.environ', {'LLM_SUBTRANS_CONFIG_PATH': os.path.abspath(os.path.join('environment', 'settings'))})
     @patch('PySubtrans.Helpers.Resources.os.path.isdir', return_value=False)
     def test_environment_config_dir_is_used_when_no_argument_is_set(self, mock_isdir):
         """Use the installer-provided environment path when no CLI override is present."""

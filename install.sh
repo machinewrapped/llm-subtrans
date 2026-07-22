@@ -3,19 +3,19 @@
 set -e
 
 portable_install=false
-config_dir=""
+config_path=""
 if [ "$#" -gt 0 ]; then
     case "$1" in
         --portable)
-            [ "$#" -eq 1 ] || { echo "Usage: ./install.sh [--portable | --configdir PATH]"; exit 1; }
+            [ "$#" -eq 1 ] || { echo "Usage: ./install.sh [--portable | --configpath PATH]"; exit 1; }
             portable_install=true
             ;;
-        --configdir)
-            [ "$#" -eq 2 ] || { echo "Usage: ./install.sh [--portable | --configdir PATH]"; exit 1; }
-            config_dir=$2
+        --configpath)
+            [ "$#" -eq 2 ] || { echo "Usage: ./install.sh [--portable | --configpath PATH]"; exit 1; }
+            config_path=$2
             ;;
         *)
-            echo "Usage: ./install.sh [--portable | --configdir PATH]"
+            echo "Usage: ./install.sh [--portable | --configpath PATH]"
             exit 1
             ;;
     esac
@@ -138,23 +138,23 @@ else
     scripts_to_generate+=("gui-subtrans")
 fi
 
-if [ -n "$config_dir" ]; then
-    mkdir -p "$config_dir"
+if [ -n "$config_path" ]; then
+    mkdir -p "$config_path"
 elif [ "$portable_install" = true ]; then
     mkdir -p .settings
 fi
 
 if [ "$portable_install" = true ] && [ -f ".env" ]; then
-    sed -i.bak '/^LLM_SUBTRANS_CONFIG_DIR=/d' .env
+    sed -i.bak '/^LLM_SUBTRANS_CONFIG_PATH=/d' .env
     rm -f .env.bak
 fi
 
-if [ -n "$config_dir" ]; then
+if [ -n "$config_path" ]; then
     if [ -f ".env" ]; then
-        sed -i.bak '/^LLM_SUBTRANS_CONFIG_DIR=/d' .env
+        sed -i.bak '/^LLM_SUBTRANS_CONFIG_PATH=/d' .env
         rm -f .env.bak
     fi
-    printf 'LLM_SUBTRANS_CONFIG_DIR=%s\n' "$config_dir" >> .env
+    printf 'LLM_SUBTRANS_CONFIG_PATH=%s\n' "$config_path" >> .env
 fi
 
 # Optional: configure OpenRouter API key

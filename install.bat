@@ -2,23 +2,23 @@
 setlocal enabledelayedexpansion
 
 set "PORTABLE_INSTALL="
-set "CONFIG_DIR="
+set "CONFIG_PATH="
 if /i "%~1"=="--portable" (
     set "PORTABLE_INSTALL=1"
-) else if /i "%~1"=="--configdir" (
+) else if /i "%~1"=="--configpath" (
     if "%~2"=="" (
-        echo Usage: install.bat [--portable ^| --configdir PATH]
+        echo Usage: install.bat [--portable ^| --configpath PATH]
         pause
         exit /b 1
     )
     if not "%~3"=="" (
-        echo Usage: install.bat [--portable ^| --configdir PATH]
+        echo Usage: install.bat [--portable ^| --configpath PATH]
         pause
         exit /b 1
     )
-    set "CONFIG_DIR=%~2"
+    set "CONFIG_PATH=%~2"
 ) else if not "%~1"=="" (
-    echo Usage: install.bat [--portable ^| --configdir PATH]
+    echo Usage: install.bat [--portable ^| --configpath PATH]
     pause
     exit /b 1
 )
@@ -93,23 +93,23 @@ if "%install_choice%"=="2" (
 )
 
 echo.
-if defined CONFIG_DIR (
-    if not exist "!CONFIG_DIR!" mkdir "!CONFIG_DIR!"
+if defined CONFIG_PATH (
+    if not exist "!CONFIG_PATH!" mkdir "!CONFIG_PATH!"
 ) else if defined PORTABLE_INSTALL (
     if not exist .settings mkdir .settings
 )
 
 if defined PORTABLE_INSTALL if exist .env (
-    (findstr /v /b /c:"LLM_SUBTRANS_CONFIG_DIR=" .env) > .env.tmp
+    (findstr /v /b /c:"LLM_SUBTRANS_CONFIG_PATH=" .env) > .env.tmp
     move .env.tmp .env >nul 2>&1
 )
 
-if defined CONFIG_DIR (
+if defined CONFIG_PATH (
     if exist .env (
-        (findstr /v /b /c:"LLM_SUBTRANS_CONFIG_DIR=" .env) > .env.tmp
+        (findstr /v /b /c:"LLM_SUBTRANS_CONFIG_PATH=" .env) > .env.tmp
         move .env.tmp .env >nul 2>&1
     )
-    echo LLM_SUBTRANS_CONFIG_DIR=!CONFIG_DIR!>> .env
+    echo LLM_SUBTRANS_CONFIG_PATH=!CONFIG_PATH!>> .env
 )
 
 REM Optional: configure OpenRouter API key

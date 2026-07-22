@@ -2,6 +2,25 @@
 # Enable error handling
 set -e
 
+portable_install=false
+config_dir=""
+if [ "$#" -gt 0 ]; then
+    case "$1" in
+        --portable)
+            [ "$#" -eq 1 ] || { echo "Usage: ./install.sh [--portable | --configdir PATH]"; exit 1; }
+            portable_install=true
+            ;;
+        --configdir)
+            [ "$#" -eq 2 ] || { echo "Usage: ./install.sh [--portable | --configdir PATH]"; exit 1; }
+            config_dir=$2
+            ;;
+        *)
+            echo "Usage: ./install.sh [--portable | --configdir PATH]"
+            exit 1
+            ;;
+    esac
+fi
+
 function install_provider() {
     local provider=$1
     local api_key_var_name=$2
@@ -117,6 +136,25 @@ else
     echo "Including GUI modules..."
     extras+=("gui")
     scripts_to_generate+=("gui-subtrans")
+fi
+
+if [ -n "$config_dir" ]; then
+    mkdir -p "$config_dir"
+elif [ "$portable_install" = true ]; then
+    mkdir -p .settings
+fi
+
+if [ "$portable_install" = true ] && [ -f ".env" ]; then
+    sed -i.bak '/^LLM_SUBTRANS_CONFIG_DIR=/d' .env
+    rm -f .env.bak
+fi
+
+if [ -n "$config_dir" ]; then
+    if [ -f ".env" ]; then
+        sed -i.bak '/^LLM_SUBTRANS_CONFIG_DIR=/d' .env
+        rm -f .env.bak
+    fi
+    printf 'LLM_SUBTRANS_CONFIG_DIR=%s\n' "$config_dir" >> .env
 fi
 
 # Optional: configure OpenRouter API key

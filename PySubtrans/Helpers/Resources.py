@@ -51,6 +51,9 @@ def ConfigureConfigDirFromArguments(arguments : Sequence[str]|None = None) -> st
         elif argument.startswith("--configpath="):
             config_path = argument.split("=", 1)[1]
 
+    if config_path is None and not portable:
+        config_path = os.getenv("LLM_SUBTRANS_CONFIG_DIR") or None
+
     return ConfigureConfigDir(config_path=config_path, portable=portable)
 
 def GetResourcePath(relative_path : str, *parts : str) -> str:

@@ -40,5 +40,8 @@ jobs:
           additional_permissions: |
             actions: read
 
+          # Commit via the GitHub API so commits are signed and show as Verified
+          use_commit_signing: true
+
           # See https://github.com/anthropics/claude-code-action/blob/main/docs/usage.md
           claude_args: '--model claude-opus-4-8'

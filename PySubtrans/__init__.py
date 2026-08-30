@@ -174,6 +174,7 @@ def init_subtitles(
             min_batch_size=options.get_int('min_batch_size') or 1,
             max_batch_size=options.get_int('max_batch_size') or 100,
             prevent_overlap=options.get_bool('prevent_overlapping_times'),
+            min_gap=options.get_float('min_gap', 0.05) or 0.0,
         )
 
     return subtitles
@@ -389,6 +390,7 @@ def init_project(
                     min_batch_size=options.get_int('min_batch_size') or 1,
                     max_batch_size=options.get_int('max_batch_size') or 100,
                     prevent_overlap=options.get_bool('prevent_overlapping_times'),
+                    min_gap=options.get_float('min_gap', 0.05) or 0.0,
                 )
 
     return project
@@ -426,6 +428,7 @@ def batch_subtitles(
     max_batch_size: int,
     *,
     prevent_overlap: bool = False,
+    min_gap : float = 0.05,
 ) -> list[SubtitleScene]:
     """
     Divide subtitles into scenes and batches using :class:`SubtitleBatcher`.
@@ -442,6 +445,8 @@ def batch_subtitles(
         Maximum number of lines per batch.
     prevent_overlap : bool, optional
         If True, adjust overlapping subtitle times while batching.
+    min_gap : float, optional
+        Minimum gap in seconds to preserve when preventing overlaps.
 
     Returns
     -------
@@ -459,6 +464,7 @@ def batch_subtitles(
         'min_batch_size': min_batch_size,
         'max_batch_size': max_batch_size,
         'prevent_overlapping_times': prevent_overlap,
+        'min_gap': min_gap,
     }))
 
     with SubtitleEditor(subtitles) as editor:

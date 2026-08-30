@@ -8,6 +8,9 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_info
 from PySubtrans.Helpers.SubtitleHelpers import MergeSubtitles, MergeTranslations, FindSplitPoint, GetProportionalDuration
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
+from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans.SettingsType import SettingsType
+from PySubtrans.Subtitles import Subtitles
 
 
 class TestSubtitles(LoggedTestCase):
@@ -256,6 +259,71 @@ class SubtitleProcessorTests(LoggedTestCase):
 
     def _format_lines(self, expected_result):
         return [f"\"{line}\"".replace('\n', '\\n') for line in expected_result]
+
+
+class SubtitleTimingTests(LoggedTestCase):
+
+    def test_ExtendShortSubtitles(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:01,200\nabc"),
+            SubtitleLine("2\n00:00:03,000 --> 00:00:03,200\nabcdefghijkl"),
+            SubtitleLine("3\n00:00:03,900 --> 00:00:04,100\nabcdefghijkl"),
+        ]
+        subtitles = Subtitles(settings=SettingsType({
+            'min_line_duration': 0.8,
+            'seconds_per_character': 0.1,
+            'min_gap': 0.05,
+        }))
+
+        result = subtitles._extend_short_subtitles(source)
+
+        self.assertLoggedEqual("fixed minimum duration", timedelta(seconds=1.8), result[0].end)
+        self.assertLoggedEqual("capped by next subtitle", timedelta(seconds=3.85), result[1].end)
+        self.assertLoggedEqual("dynamic final duration", timedelta(seconds=5.1), result[2].end)
+        self.assertLoggedEqual("source remains unchanged", timedelta(seconds=1.2), source[0].end)
+
+    def test_ExtendShortSubtitles_ignores_formatting_and_whitespace(self):
+        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\nA <i>好</i>\n👨‍👩‍👧‍👦")
+        subtitles = Subtitles(settings=SettingsType({
+            'min_line_duration': 0.0,
+            'seconds_per_character': 0.1,
+        }))
+
+        result = subtitles._extend_short_subtitles([line])
+
+        self.assertLoggedEqual("three visible graphemes", timedelta(seconds=1.3), result[0].end)
+
+    def test_ExtendShortSubtitles_preserves_existing_overlap(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:03,000\nA long translated subtitle"),
+            SubtitleLine("2\n00:00:02,500 --> 00:00:04,000\nNext subtitle"),
+        ]
+        subtitles = Subtitles(settings=SettingsType({
+            'min_line_duration': 0.8,
+            'seconds_per_character': 0.1,
+            'min_gap': 0.05,
+        }))
+
+        result = subtitles._extend_short_subtitles(source)
+
+        self.assertLoggedEqual("existing overlap remains unchanged", timedelta(seconds=3), result[0].end)
+
+    def test_BatchSubtitles_prevents_overlap_by_trimming_previous_end(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:03,000\nFirst subtitle"),
+            SubtitleLine("2\n00:00:02,500 --> 00:00:02,800\nSecond subtitle"),
+            SubtitleLine("3\n00:00:02,820 --> 00:00:03,200\nThird subtitle"),
+        ]
+        batcher = SubtitleBatcher(SettingsType({
+            'prevent_overlapping_times': True,
+            'min_gap': 0.05,
+        }))
+
+        batcher.BatchSubtitles(source)
+
+        self.assertLoggedEqual("previous end trimmed", timedelta(seconds=2.45), source[0].end)
+        self.assertLoggedEqual("next start unchanged", timedelta(seconds=2.5), source[1].start)
+        self.assertLoggedEqual("non-overlapping end unchanged", timedelta(seconds=2.8), source[1].end)
 
 if __name__ == '__main__':
     unittest.main()

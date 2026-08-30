@@ -2317,6 +2317,10 @@ msgstr ""
 msgid "endpoint"
 msgstr ""
 
+#: PySubtrans/Options.py:66
+msgid "extend_short_subtitles"
+msgstr ""
+
 #: PySubtrans/Options.py:79
 msgid "filler_words"
 msgstr ""
@@ -2407,6 +2411,10 @@ msgstr ""
 
 #: PySubtrans/Options.py:60
 msgid "min_batch_size"
+msgstr ""
+
+#: PySubtrans/Options.py:75
+msgid "min_gap"
 msgstr ""
 
 #: PySubtrans/Options.py:74
@@ -2527,6 +2535,10 @@ msgstr ""
 
 #: PySubtrans/Options.py:59
 msgid "scene_threshold"
+msgstr ""
+
+#: PySubtrans/Options.py:74
+msgid "seconds_per_character"
 msgstr ""
 
 #: PySubtrans/Providers/Provider_Bedrock.py:0

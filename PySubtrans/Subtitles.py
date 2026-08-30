@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 from copy import deepcopy
+from datetime import timedelta
 import os
 import logging
 import threading
 from typing import Any
+
+import regex
+
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
 
@@ -276,11 +280,15 @@ class Subtitles:
             if self.settings.get('include_original'):
                 translated = self._merge_original_and_translated(originals, translated)
 
+            output_lines = translated
+            if self.settings.get_bool('extend_short_subtitles', False):
+                output_lines = self._extend_short_subtitles(translated)
+
             logging.info(_("Saving translation to {}").format(str(outputpath)))
 
             # Use file handler for format-agnostic saving with metadata preservation
             data = SubtitleData(
-                lines=translated, 
+                lines=output_lines,
                 metadata=self.metadata, 
                 start_line_number=self.start_line_number
             )
@@ -318,6 +326,36 @@ class Subtitles:
             for line_number, line in enumerate(lines, start=1):
                 line.number = line_number
 
+    def _extend_short_subtitles(self, lines : list[SubtitleLine]) -> list[SubtitleLine]:
+        """Extend output subtitle durations without changing the stored lines."""
+        adjusted : list[SubtitleLine] = [line.copy() for line in lines]
+        min_line_duration = self.settings.get_timedelta('min_line_duration', timedelta(seconds=0))
+        min_gap = self.settings.get_timedelta('min_gap', timedelta(seconds=0.05))
+        seconds_per_character = max(self.settings.get_float('seconds_per_character', 0.1) or 0.0, 0.0)
+
+        for index, line in enumerate(adjusted):
+            if not line.text:
+                continue
+
+            visible_text = regex.sub(r'<[^>]*>|\{\\[^}]*\}', '', line.text)
+            character_count = sum(1 for character in regex.findall(r'\X', visible_text) if not character.isspace())
+            reading_duration = timedelta(seconds=character_count * seconds_per_character)
+            target_end = line.start + max(min_line_duration, reading_duration)
+
+            if target_end <= line.end:
+                continue
+
+            if index + 1 < len(adjusted):
+                latest_end = adjusted[index + 1].start - min_gap
+                # Do not shorten existing lines or modify existing overlaps.
+                if latest_end <= line.end:
+                    continue
+                target_end = min(target_end, latest_end)
+
+            line.end = target_end
+
+        return adjusted
+
 
     def _merge_original_and_translated(self, originals: list[SubtitleLine], translated: list[SubtitleLine]) -> list[SubtitleLine]:
         lines = {item.key: SubtitleLine(item) for item in originals if item.key}
@@ -328,4 +366,3 @@ class Subtitles:
                 line.text = f"{line.text}\n{item.text}"
 
         return sorted(lines.values(), key=lambda item: item.key)
-

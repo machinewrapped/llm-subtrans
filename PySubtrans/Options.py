@@ -63,6 +63,7 @@ default_settings = {
     'max_single_line_length': env_int('MAX_SINGLE_LINE_LENGTH', 44),
     'min_single_line_length': env_int('MIN_SINGLE_LINE_LENGTH', 8),
     'prevent_overlapping_times': env_bool('PREVENT_OVERLAPPING_TIMES', False),
+    'extend_short_subtitles': env_bool('EXTEND_SHORT_SUBTITLES', False),
     'postprocess_translation': env_bool('POSTPROCESS_TRANSLATION', False),
     'preprocess_subtitles': env_bool('PREPROCESS_SUBTITLES', False),
     'save_preprocessed_subtitles': env_bool('SAVE_PREPROCESSED_SUBTITLES', False),
@@ -70,6 +71,8 @@ default_settings = {
     'break_dialog_on_one_line': env_bool('break_dialog_on_one_line', True),
     'max_line_duration': env_float('MAX_LINE_DURATION', 4.0),
     'min_line_duration': env_float('MIN_LINE_DURATION', 0.8),
+    'seconds_per_character': env_float('SECONDS_PER_CHARACTER', 0.1),
+    'min_gap': env_float('MIN_GAP', 0.05),
     'merge_line_duration': env_float('MERGE_LINE_DURATION', 0.0),
     'min_split_chars': env_int('MIN_SPLIT_CHARS', 3),
     'normalise_dialog_tags': env_bool('NORMALISE_DIALOG_TAGS', True),
@@ -335,5 +338,4 @@ class Options(SettingsType):
         latest_version  : str = str(default_settings['version'])
 
         self['version'] = latest_version
-
 

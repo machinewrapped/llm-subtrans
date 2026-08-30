@@ -201,6 +201,8 @@ The Options class provides a wide range of options to configure the translation 
 
 `postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines. The post-processor can perform a range of operations, each of which is enabled by another setting, e.g. `break_dialog_on_one_line`, `normalise_dialog_tags`, `whitespaces_to_newline`, `remove_filler_words`.
 
+`extend_short_subtitles`: Extends short subtitles when the translated file is saved, without changing the timestamps stored in the project. The target display time is the greater of `min_line_duration` and the visible character count multiplied by `seconds_per_character`. Extensions are capped at the next subtitle's start time minus `min_gap`.
+
 Example usage:
 
 ```python
@@ -351,7 +353,8 @@ The parameters are:
 `scene_threshold`: A new scene will be introduced after a gap of N seconds.
 `max_batch_size`: If a scene contains too more lines than this it will be subdivided into batches until each batch is no larger than this.
 `min_batch_size`: More of a suggestion than a rule, batches are primarily divided to maximise temporal cohesion of each batch.
-`prevent_overlap`: If the end time of a subtitle overlaps the start time of the next subtitle it will be reduced to ensure that there is no overlap.
+`prevent_overlap`: If the end time of a subtitle overlaps the start time of the next subtitle it will be reduced to preserve `min_gap` where possible.
+`min_gap`: Minimum gap in seconds to preserve when preventing overlaps.
 
 ```python
 from PySubtrans import batch_subtitles, init_subtitles

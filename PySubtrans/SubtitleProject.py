@@ -12,7 +12,7 @@ from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleError import SubtitleError, TranslationAbortedError
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
-from PySubtrans.Subtitles import Subtitles
+from PySubtrans.Subtitles import SaveSettings, Subtitles
 
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
@@ -60,6 +60,8 @@ class SubtitleProject:
         self.projectfile : str|None = None
         self.existing_project : bool = False
         self.needs_writing : bool = False
+        # Runtime-only settings applied when translated subtitles are written.
+        self.save_settings : SaveSettings|None = None
         self.lock = threading.RLock()
 
         # By default the project is not persistent, i.e. it will not be saved to a file and automatically reloaded next time
@@ -253,7 +255,7 @@ class SubtitleProject:
         """
         try:
             with self.lock:
-                self.subtitles.SaveTranslation(outputpath)
+                self.subtitles.SaveTranslation(outputpath, save_settings=self.save_settings)
 
         except Exception as e:
             logging.error(_("Unable to save translation: {}").format(e))

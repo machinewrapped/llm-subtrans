@@ -22,6 +22,29 @@ from PySubtrans.SubtitleScene import SubtitleScene, UnbatchScenes
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleData import SubtitleData
 
+FORMATTING_TAG_PATTERN = regex.compile(r'<[^>]*>|\{\\[^}]*\}')
+GRAPHEME_PATTERN = regex.compile(r'\X')
+DURATION_EPSILON = timedelta(milliseconds=50)
+
+class SaveSettings:
+    """Settings applied only while writing translated subtitles."""
+
+    def __init__(self, settings : SettingsType|Options|None = None) -> None:
+        settings = settings or SettingsType()
+        self.extend_short_subtitles : bool = settings.get_bool('extend_short_subtitles', False)
+        self.min_line_duration : timedelta = max(
+            settings.get_timedelta('min_line_duration', timedelta(seconds=0.8)),
+            timedelta(),
+        )
+        self.seconds_per_character : float = max(
+            settings.get_float('seconds_per_character', 0.1) or 0.0,
+            0.0,
+        )
+        self.min_gap : timedelta = max(
+            settings.get_timedelta('min_gap', timedelta(seconds=0.05)),
+            timedelta(),
+        )
+
 class Subtitles:
     """
     High level class for manipulating subtitles
@@ -250,9 +273,12 @@ class Subtitles:
             else:
                 logging.warning(_("No original subtitles to save to {}").format(str(path)))
 
-    def SaveTranslation(self, outputpath: str|None = None) -> None:
+    def SaveTranslation(self, outputpath : str|None = None, save_settings : SaveSettings|None = None) -> None:
         """
-        Write translated subtitles to a file
+        Write translated subtitles to a file.
+
+        :param outputpath: destination path, or the configured output path when omitted
+        :param save_settings: optional settings applied only to the written output
         """
         outputpath = outputpath or self.outputpath
         if not outputpath and self.sourcepath and os.path.exists(self.sourcepath):
@@ -281,8 +307,8 @@ class Subtitles:
                 translated = self._merge_original_and_translated(originals, translated)
 
             output_lines = translated
-            if self.settings.get_bool('extend_short_subtitles', False):
-                output_lines = self._extend_short_subtitles(translated)
+            if save_settings and save_settings.extend_short_subtitles:
+                output_lines = self._extend_short_subtitles(translated, save_settings)
 
             logging.info(_("Saving translation to {}").format(str(outputpath)))
 
@@ -326,33 +352,28 @@ class Subtitles:
             for line_number, line in enumerate(lines, start=1):
                 line.number = line_number
 
-    def _extend_short_subtitles(self, lines : list[SubtitleLine]) -> list[SubtitleLine]:
+    def _extend_short_subtitles(self, lines : list[SubtitleLine], save_settings : SaveSettings) -> list[SubtitleLine]:
         """Extend output subtitle durations without changing the stored lines."""
         adjusted : list[SubtitleLine] = [line.copy() for line in lines]
-        min_line_duration = self.settings.get_timedelta('min_line_duration', timedelta(seconds=0))
-        min_gap = self.settings.get_timedelta('min_gap', timedelta(seconds=0.05))
-        seconds_per_character = max(self.settings.get_float('seconds_per_character', 0.1) or 0.0, 0.0)
 
         for index, line in enumerate(adjusted):
             if not line.text:
                 continue
 
-            visible_text = regex.sub(r'<[^>]*>|\{\\[^}]*\}', '', line.text)
-            character_count = sum(1 for character in regex.findall(r'\X', visible_text) if not character.isspace())
-            reading_duration = timedelta(seconds=character_count * seconds_per_character)
-            target_end = line.start + max(min_line_duration, reading_duration)
-
-            if target_end <= line.end:
-                continue
+            visible_text = FORMATTING_TAG_PATTERN.sub('', line.text)
+            character_count = sum(1 for character in GRAPHEME_PATTERN.findall(visible_text) if not character.isspace())
+            reading_duration = timedelta(seconds=character_count * save_settings.seconds_per_character)
+            target_end = line.start + max(save_settings.min_line_duration, reading_duration)
 
             if index + 1 < len(adjusted):
-                latest_end = adjusted[index + 1].start - min_gap
+                latest_end = adjusted[index + 1].start - save_settings.min_gap
                 # Do not shorten existing lines or modify existing overlaps.
                 if latest_end <= line.end:
                     continue
                 target_end = min(target_end, latest_end)
 
-            line.end = target_end
+            if target_end > line.end + DURATION_EPSILON:
+                line.end = target_end
 
         return adjusted
 

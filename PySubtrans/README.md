@@ -26,7 +26,7 @@ pip install pysubtrans[openai,gemini,claude,mistral,bedrock]
 The quickest way to get started is to use the helper functions exposed at the package root. They wrap the classes used by LLM-Subtrans so that you can execute a full translation pipeline with a few lines of code.
 
 ```python
-from PySubtrans import init_options, init_subtitles, init_translator
+from PySubtrans import SaveSettings, init_options, init_subtitles, init_translator
 
 options = init_options(
     provider="Gemini",
@@ -40,7 +40,7 @@ subtitles = init_subtitles("movie.srt", options=options)
 translator = init_translator(options)
 translator.TranslateSubtitles(subtitles)
 
-subtitles.SaveTranslation("movie-translated.srt")
+subtitles.SaveTranslation("movie-translated.srt", save_settings=SaveSettings(options))
 ```
 
 Subtitle format is auto-detected based on file extension or content.
@@ -201,7 +201,7 @@ The Options class provides a wide range of options to configure the translation 
 
 `postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines. The post-processor can perform a range of operations, each of which is enabled by another setting, e.g. `break_dialog_on_one_line`, `normalise_dialog_tags`, `whitespaces_to_newline`, `remove_filler_words`.
 
-`extend_short_subtitles`: Extends short subtitles when the translated file is saved, without changing the timestamps stored in the project. The target display time is the greater of `min_line_duration` and the visible character count multiplied by `seconds_per_character`. Extensions are capped at the next subtitle's start time minus `min_gap`.
+`extend_short_subtitles`: Extends short subtitles when the translated file is saved, without changing the timestamps stored in the project. The target display time is the greater of `min_line_duration` and the visible character count multiplied by `seconds_per_character`. Extensions are capped at the next subtitle's start time minus `min_gap`. Pass `SaveSettings(options)` when saving translations directly with a `Subtitles` instance.
 
 Example usage:
 

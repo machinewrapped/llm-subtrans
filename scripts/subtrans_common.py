@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames
-from PySubtrans import batch_subtitles, init_options, init_translator, preprocess_subtitles
+from PySubtrans import SaveSettings, batch_subtitles, init_options, init_translator, preprocess_subtitles
 from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
@@ -279,6 +279,7 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     Initialise a subtitle project with the provided arguments
     """
     project = SubtitleProject(persistent=options.use_project_file)
+    project.save_settings = SaveSettings(options)
 
     project.InitialiseProject(args.input, args.output)
 
@@ -328,6 +329,8 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
             scene_threshold=scene_threshold,
             min_batch_size=min_batch_size,
             max_batch_size=max_batch_size,
+            prevent_overlap=options.get_bool('prevent_overlapping_times'),
+            min_gap=options.get_float('min_gap', 0.05) or 0.0,
         )
 
     scene_count = subtitles.scenecount

@@ -18,7 +18,7 @@ from PySubtrans.SubtitleFileHandler import SubtitleFileHandler
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleSerialisation import SubtitleEncoder, SubtitleDecoder
-from PySubtrans.Subtitles import Subtitles
+from PySubtrans.Subtitles import SaveSettings, Subtitles
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Helpers.Tests import (
     skip_if_debugger_attached,
@@ -143,12 +143,12 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
                 (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghij"),
             ])
             .Build())
-        subtitles.settings = SettingsType({
+        save_settings = SaveSettings(SettingsType({
             'extend_short_subtitles': True,
             'min_line_duration': 0.8,
             'seconds_per_character': 0.1,
             'min_gap': 0.05,
-        })
+        }))
 
         with SubtitleEditor(subtitles) as editor:
             editor.DuplicateOriginalsAsTranslations()
@@ -157,7 +157,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
             output_path = output_file.name
         self.addCleanup(os.remove, output_path)
 
-        subtitles.SaveTranslation(output_path)
+        subtitles.SaveTranslation(output_path, save_settings=save_settings)
         output_data = SrtFileHandler().load_file(output_path)
 
         self.assertLoggedEqual("dynamic output duration", timedelta(seconds=2), output_data.lines[0].end)
@@ -168,7 +168,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         )
 
         subtitles.scenes[0].batches[0].translated[0].text = "a"
-        subtitles.SaveTranslation(output_path)
+        subtitles.SaveTranslation(output_path, save_settings=save_settings)
         corrected_output = SrtFileHandler().load_file(output_path)
 
         self.assertLoggedEqual(

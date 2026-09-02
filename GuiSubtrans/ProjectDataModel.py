@@ -10,6 +10,7 @@ from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Subtitles import SaveSettings
 from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.Helpers.Localization import _
 
@@ -24,6 +25,7 @@ class ProjectDataModel:
         if project:
             project_settings = project.GetProjectSettings()
             self.project_options.update(project_settings)
+            self._update_save_settings()
 
         self.provider_cache = {}
         self.translation_provider : TranslationProvider|None = None
@@ -99,6 +101,7 @@ class ProjectDataModel:
             # Restore project-specific settings
             project_settings = self.project.GetProjectSettings()
             self.project_options.update(project_settings)
+            self._update_save_settings()
 
         self._update_translation_provider()
 
@@ -109,6 +112,7 @@ class ProjectDataModel:
         if self.project:
             settings = SettingsType(settings)
             self.project_options.update(settings)
+            self._update_save_settings()
             self._update_translation_provider()
 
             self.project.UpdateProjectSettings(settings)
@@ -185,4 +189,7 @@ class ProjectDataModel:
 
         self.CreateTranslationProvider()
 
-
+    def _update_save_settings(self) -> None:
+        """Update settings applied only while writing translated subtitles."""
+        if self.project:
+            self.project.save_settings = SaveSettings(self.project_options)

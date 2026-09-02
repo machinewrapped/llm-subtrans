@@ -22,7 +22,7 @@ translator = init_translator(opts)
 translator.TranslateSubtitles(subs)
 
 # Save translated subtitles
-subs.SaveSubtitles("movie_translated.srt")
+subs.SaveTranslation("movie_translated.srt", save_settings=SaveSettings(opts))
 """
 from __future__ import annotations
 
@@ -39,7 +39,7 @@ from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleLine import SubtitleLine
-from PySubtrans.Subtitles import Subtitles
+from PySubtrans.Subtitles import SaveSettings, Subtitles
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleScene import SubtitleScene
@@ -393,6 +393,8 @@ def init_project(
                     min_gap=options.get_float('min_gap', 0.05) or 0.0,
                 )
 
+    project.save_settings = SaveSettings(Options(settings))
+
     return project
 
 
@@ -476,6 +478,7 @@ def batch_subtitles(
 __all__ = [
     '__version__',
     'Options',
+    'SaveSettings',
     'SettingsPrecedence',
     'SettingsType',
     'Subtitles',

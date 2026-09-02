@@ -10,7 +10,7 @@ from PySubtrans.Helpers.SubtitleHelpers import MergeSubtitles, MergeTranslations
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.Subtitles import Subtitles
+from PySubtrans.Subtitles import SaveSettings, Subtitles
 
 
 class TestSubtitles(LoggedTestCase):
@@ -269,13 +269,14 @@ class SubtitleTimingTests(LoggedTestCase):
             SubtitleLine("2\n00:00:03,000 --> 00:00:03,200\nabcdefghijkl"),
             SubtitleLine("3\n00:00:03,900 --> 00:00:04,100\nabcdefghijkl"),
         ]
-        subtitles = Subtitles(settings=SettingsType({
+        subtitles = Subtitles()
+        save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.8,
             'seconds_per_character': 0.1,
             'min_gap': 0.05,
         }))
 
-        result = subtitles._extend_short_subtitles(source)
+        result = subtitles._extend_short_subtitles(source, save_settings)
 
         self.assertLoggedEqual("fixed minimum duration", timedelta(seconds=1.8), result[0].end)
         self.assertLoggedEqual("capped by next subtitle", timedelta(seconds=3.85), result[1].end)
@@ -284,12 +285,13 @@ class SubtitleTimingTests(LoggedTestCase):
 
     def test_ExtendShortSubtitles_ignores_formatting_and_whitespace(self):
         line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\nA <i>好</i>\n👨‍👩‍👧‍👦")
-        subtitles = Subtitles(settings=SettingsType({
+        subtitles = Subtitles()
+        save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.0,
             'seconds_per_character': 0.1,
         }))
 
-        result = subtitles._extend_short_subtitles([line])
+        result = subtitles._extend_short_subtitles([line], save_settings)
 
         self.assertLoggedEqual("three visible graphemes", timedelta(seconds=1.3), result[0].end)
 
@@ -298,15 +300,31 @@ class SubtitleTimingTests(LoggedTestCase):
             SubtitleLine("1\n00:00:01,000 --> 00:00:03,000\nA long translated subtitle"),
             SubtitleLine("2\n00:00:02,500 --> 00:00:04,000\nNext subtitle"),
         ]
-        subtitles = Subtitles(settings=SettingsType({
+        subtitles = Subtitles()
+        save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.8,
             'seconds_per_character': 0.1,
             'min_gap': 0.05,
         }))
 
-        result = subtitles._extend_short_subtitles(source)
+        result = subtitles._extend_short_subtitles(source, save_settings)
 
         self.assertLoggedEqual("existing overlap remains unchanged", timedelta(seconds=3), result[0].end)
+
+    def test_ExtendShortSubtitles_ignores_frame_sized_adjustments(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:01,900\nabcdefghij"),
+            SubtitleLine("2\n00:00:02,000 --> 00:00:03,000\nNext subtitle"),
+        ]
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 1.0,
+            'seconds_per_character': 0.1,
+            'min_gap': 0.05,
+        }))
+
+        result = Subtitles()._extend_short_subtitles(source, save_settings)
+
+        self.assertLoggedEqual("50ms capped extension ignored", timedelta(seconds=1.9), result[0].end)
 
     def test_BatchSubtitles_prevents_overlap_by_trimming_previous_end(self):
         source = [

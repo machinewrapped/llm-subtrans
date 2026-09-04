@@ -50,9 +50,13 @@ class SettingsDialog(QDialog):
         'Processing': {
             'preprocess_subtitles': (bool, _("Preprocess subtitles when they are loaded")),
             'postprocess_translation': (bool, _("Postprocess subtitles after translation")),
+            'extend_short_subtitles': (bool, _("Extend short subtitles to a minimum reading duration when saving")),
+            'prevent_overlapping_times': (bool, _("Prevent overlapping subtitle display times")),
             'save_preprocessed_subtitles': (bool, _("Save preprocessed subtitles to a separate file")),
             'max_line_duration': (float, _("Maximum duration of a single line of subtitles")),
             'min_line_duration': (float, _("Minimum duration of a single line of subtitles")),
+            'seconds_per_character': (float, _("Minimum reading time per visible character in seconds")),
+            'min_gap': (float, _("Minimum gap between consecutive subtitles, in seconds, used when preprocess_subtitles, extend_short_subtitles, or prevent_overlapping_times is enabled")),
             'merge_line_duration': (float, _("Merge lines with a duration less than this with the previous line")),
             'min_split_chars': (int, _("Minimum number of characters to split a line at")),
             'break_dialog_on_one_line': (bool, _("Add line breaks to text with dialog markers")),
@@ -90,6 +94,8 @@ class SettingsDialog(QDialog):
 
     _preprocessor_setting = { 'preprocess_subtitles': True }
     _postprocessor_setting = { 'postprocess_translation': True }
+    _duration_setting = { 'extend_short_subtitles': True }
+    _overlap_setting = { 'prevent_overlapping_times': True }
     _prepostprocessor_setting = [ _preprocessor_setting, _postprocessor_setting ]
 
     VISIBILITY_DEPENDENCIES = {
@@ -100,7 +106,9 @@ class SettingsDialog(QDialog):
         # ],
         'save_preprocessed_subtitles': _preprocessor_setting,
         'max_line_duration': _preprocessor_setting,
-        'min_line_duration': _preprocessor_setting,
+        'min_line_duration': [ _preprocessor_setting, _duration_setting ],
+        'seconds_per_character': _duration_setting,
+        'min_gap': [ _preprocessor_setting, _duration_setting, _overlap_setting ],
         'min_split_chars': _preprocessor_setting,
         'whitespaces_to_newline': _preprocessor_setting,
         'break_dialog_on_one_line': _prepostprocessor_setting,
@@ -466,5 +474,4 @@ class SettingsDialog(QDialog):
 
             except Exception as e:
                 logging.error(f"Unable to load instructions from {instruction_file}: {e}")
-
 

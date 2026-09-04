@@ -2492,6 +2492,10 @@ msgstr "Enable Thinking"
 msgid "endpoint"
 msgstr "Endpoint"
 
+#: PySubtrans/Options.py:66
+msgid "extend_short_subtitles"
+msgstr "Extend Short Subtitles"
+
 #: PySubtrans/Options.py:79
 msgid "filler_words"
 msgstr "Filler Words"
@@ -2589,6 +2593,10 @@ msgstr "Merge Line Duration"
 #: PySubtrans/Options.py:60
 msgid "min_batch_size"
 msgstr "Min Batch Size"
+
+#: PySubtrans/Options.py:75
+msgid "min_gap"
+msgstr "Min Gap"
 
 #: PySubtrans/Options.py:74
 msgid "min_line_duration"
@@ -2738,6 +2746,10 @@ msgstr "Save Preprocessed Subtitles"
 #: PySubtrans/Options.py:59
 msgid "scene_threshold"
 msgstr "Scene Threshold"
+
+#: PySubtrans/Options.py:74
+msgid "seconds_per_character"
+msgstr "Seconds Per Character"
 
 #: PySubtrans/Providers/Provider_Bedrock.py:0
 msgid "secret_access_key"

@@ -129,9 +129,6 @@ class SubtitleProcessor:
             if processed_line:
                 processed.append(processed_line)
 
-        # TODO: fix minimum durations
-        # TODO: fix overlapping start/end times (or merge the lines?)
-
         return processed
 
     def _preprocess_line(self, line : SubtitleLine):
@@ -302,5 +299,3 @@ class SubtitleProcessor:
 
     def _compile_break_sequences(self):
         self._compiled_break_sequences = [regex.compile(seq) for seq in self.break_sequences]
-
-

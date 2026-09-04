@@ -2,6 +2,7 @@ import json
 import os
 import tempfile
 import unittest
+from datetime import timedelta
 from typing import TextIO
 
 from PySubtrans.Formats.SSAFileHandler import SSAFileHandler
@@ -10,12 +11,15 @@ from PySubtrans.Helpers.Color import Color
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleData import SubtitleData
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleFileHandler import SubtitleFileHandler
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleSerialisation import SubtitleEncoder, SubtitleDecoder
-from PySubtrans.Subtitles import Subtitles
+from PySubtrans.Subtitles import SaveSettings, Subtitles
+from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Helpers.Tests import (
     skip_if_debugger_attached,
 )
@@ -132,6 +136,46 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         self.assertLoggedEqual("line.text", "Hello <b>World</b>!", line.text)
         self.assertLoggedEqual("line.start", 1.0, line.start.total_seconds())
         self.assertLoggedEqual("line.end", 3.0, line.end.total_seconds())
+
+    def test_SaveTranslation_extends_output_duration_without_changing_project(self):
+        subtitles = (SubtitleBuilder(max_batch_size=1)
+            .AddLines([
+                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghij"),
+            ])
+            .Build())
+        save_settings = SaveSettings(SettingsType({
+            'extend_short_subtitles': True,
+            'min_line_duration': 0.8,
+            'seconds_per_character': 0.1,
+            'min_gap': 0.05,
+        }))
+
+        with SubtitleEditor(subtitles) as editor:
+            editor.DuplicateOriginalsAsTranslations()
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".srt") as output_file:
+            output_path = output_file.name
+        self.addCleanup(os.remove, output_path)
+
+        subtitles.SaveTranslation(output_path, save_settings=save_settings)
+        output_data = SrtFileHandler().load_file(output_path)
+
+        self.assertLoggedEqual("dynamic output duration", timedelta(seconds=2), output_data.lines[0].end)
+        self.assertLoggedEqual(
+            "stored translation unchanged",
+            timedelta(seconds=1.1),
+            subtitles.scenes[0].batches[0].translated[0].end,
+        )
+
+        subtitles.scenes[0].batches[0].translated[0].text = "a"
+        subtitles.SaveTranslation(output_path, save_settings=save_settings)
+        corrected_output = SrtFileHandler().load_file(output_path)
+
+        self.assertLoggedEqual(
+            "duration recalculated after correction",
+            timedelta(seconds=1.8),
+            corrected_output.lines[0].end,
+        )
 
     def test_AssHandlerBasicFunctionality(self):
         

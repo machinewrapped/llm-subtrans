@@ -10,6 +10,7 @@ class SubtitleBatcher:
         self.min_batch_size : int = settings.get_int('min_batch_size') or 1
         self.max_batch_size : int = settings.get_int('max_batch_size') or 100
         self.fix_overlaps : bool = settings.get_bool('prevent_overlapping_times', False)
+        self.min_gap : timedelta = settings.get_timedelta('min_gap', timedelta(seconds=0.05))
 
         scene_threshold_seconds : float = settings.get_float('scene_threshold') or 30.0
         self.scene_threshold : timedelta = timedelta(seconds=scene_threshold_seconds)
@@ -20,17 +21,19 @@ class SubtitleBatcher:
 
         scenes : list[SubtitleScene] = []
         current_lines : list[SubtitleLine] = []
-        last_endtime : timedelta|None = None
+        previous_line : SubtitleLine|None = None
 
         for line in lines:
             if line.start is None or line.end is None:
                 raise ValueError(f"Line {line.number} has missing start or end time.")
 
-            # Fix overlapping display times (otherwise gaps can be negative)
-            if self.fix_overlaps and last_endtime and line.start < last_endtime:
-                line.start = last_endtime + timedelta(milliseconds=10)
+            if self.fix_overlaps and previous_line and previous_line.end > line.start:
+                # Preserve the next start time by trimming the previous end, without creating a non-positive duration.
+                latest_end = line.start - self.min_gap
+                if previous_line.end > latest_end and latest_end > previous_line.start:
+                    previous_line.end = latest_end
 
-            gap = line.start - last_endtime if last_endtime is not None else None
+            gap = line.start - previous_line.end if previous_line else None
 
             if gap is not None and gap > self.scene_threshold:
                 if current_lines:
@@ -38,7 +41,7 @@ class SubtitleBatcher:
                     current_lines = []
 
             current_lines.append(line)
-            last_endtime = line.end
+            previous_line = line
 
         # Handle any remaining lines
         if current_lines:
@@ -95,4 +98,3 @@ class SubtitleBatcher:
 
         # Recursively split the batches and concatenate the lists
         return self._split_lines(left) + self._split_lines(right)
-

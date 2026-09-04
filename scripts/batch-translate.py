@@ -46,7 +46,7 @@ import pathlib
 import sys
 
 from PySubtrans import init_options, init_subtitles, init_translator, init_translation_provider
-from PySubtrans import Options, SettingsType, SubtitleError
+from PySubtrans import Options, SaveSettings, SettingsType, SubtitleError
 from PySubtrans import SubtitleTranslator
 from PySubtrans import TranslationProvider
 from PySubtrans import SubtitleFormatRegistry
@@ -234,7 +234,7 @@ class BatchProcessor:
 
             try:
                 # Save the translated subtitles. Format is deduced from the filename.
-                subtitles.SaveTranslation(str(destination_file))
+                subtitles.SaveTranslation(str(destination_file), save_settings=SaveSettings(self.options))
 
             except (SubtitleError, OSError) as exc:
                 # A failure to write the result should abort the batch

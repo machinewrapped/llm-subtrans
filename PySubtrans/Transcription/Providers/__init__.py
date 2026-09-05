@@ -1,0 +1,10 @@
+"""
+PySubtrans.Transcription.Providers - Transcription service implementations.
+
+Explicit imports ensure all providers register regardless of install method.
+Each module self-guards on its optional dependencies (see Provider_QwenLocal).
+"""
+
+# pyright: reportUnusedImport=false
+
+from . import Provider_QwenLocal

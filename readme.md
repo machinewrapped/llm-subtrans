@@ -171,6 +171,28 @@ During the installing process, you can choose to input an API key for each selec
     pip install -e ".[gui,openai,gemini,claude,mistral,bedrock]"   # Full install with optional providers (delete to taste)
     ```
 
+    For local transcription support, first install a CUDA-enabled torch from
+    https://pytorch.org/get-started/locally/ (PyPI's default torch is CPU-only
+    and will be unusably slow for transcription), then add the extra:
+
+    ```sh
+    pip install -e ".[transcription]"
+    ```
+
+## Transcription
+LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...) to subtitles, which can then be translated with the normal workflow. This requires `ffmpeg`/`ffprobe` on PATH.
+
+Two local providers are available (no cloud account needed):
+- **Qwen Local**: runs the official `qwen-asr` package (Qwen3-ASR with word timestamps) in-process on your GPU. Needs the `transcription` extra plus a CUDA torch install (see above). No API key needed.
+
+Transcription returns flat text per audio scene, so subtitle line timings come from silence-delimited scene boundaries, refined to word timings when the engine or a word aligner provides them (Qwen Local does; other engines fall back to truthful scene-level lines).
+
+From the GUI, click **Transcribe** in the toolbar (Ctrl+R) and open the result as a project. From the command line:
+
+```sh
+python scripts/transcribe.py movie.mkv --language Chinese --project
+```
+
 ## Usage
 The program works by dividing the subtitles up into batches and sending each one to the translation service in turn. 
 

@@ -21,6 +21,7 @@ Always run the unit_tests at the end of a task to validate any changes to the co
 **🚨 CRITICAL RULE: NEVER add imports in the middle of functions or methods - ALL imports MUST be at the top of the file.**
 
 - **Naming**: PascalCase for classes and methods, snake_case for variables
+  - NEVER use `_` as a throwaway variable (e.g. `filepath, _ = ...`) - `_()` is the localization function and the assignment shadows it, causing UnboundLocalError. Use `_selected_filter`, `dummy`, etc. instead
 - **Imports**: Standard lib → third-party → local, alphabetical within groups
 - **Class structure**: Docstring → constants → init → properties → public methods → private methods
 - **Type Hints**: Use type hints for parameters, return values, and class variables

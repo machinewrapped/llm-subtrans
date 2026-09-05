@@ -51,3 +51,4 @@ untranslated_msgids_*.txt
 /subtitles
 /translated
 batch-translate.sh
+/test_videos

@@ -80,6 +80,7 @@ class GuiInterface(QObject):
         self.action_handler.saveSettings.connect(self.SaveSettings)
         self.action_handler.loadProject.connect(self.LoadProject)
         self.action_handler.saveProject.connect(self.SaveProject)
+        self.action_handler.transcribeMedia.connect(self.ShowTranscriptionDialog)
         self.action_handler.showAboutDialog.connect(self.ShowAboutDialog)
         self.action_handler.exitProgram.connect(self._exit_program)
 
@@ -301,6 +302,31 @@ class GuiInterface(QObject):
 
         except Exception as e:
             logging.error(f"Error initialising project settings: {str(e)}")
+
+    def ShowTranscriptionDialog(self) -> None:
+        """
+        Open the app-modal transcription dialog. On accept, load the
+        transcribed project exactly like a freshly loaded subtitle file.
+        """
+        from GuiSubtrans.Widgets.TranscriptionDialog import TranscriptionDialog
+
+        dialog = TranscriptionDialog(self.global_options, parent=self.GetMainWindow())
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+
+        if dialog.project is None or dialog.project.subtitles is None:
+            logging.error(_("Transcription produced no project"))
+            return
+
+        datamodel = ProjectDataModel(dialog.project, self.global_options)
+        if datamodel.is_project_initialised:
+            datamodel.CreateViewModel()
+
+        self.SetDataModel(datamodel)
+        if dialog.media_path:
+            self._update_last_used_path(dialog.media_path)
+        if datamodel.is_project_valid and not datamodel.is_project_initialised:
+            self.ShowNewProjectSettings(datamodel)
 
     def ShowAboutDialog(self) -> None:
         """

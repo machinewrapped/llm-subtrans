@@ -33,6 +33,10 @@ azure = ["openai"]
 gemini = ["google-genai", "google-api-core"]
 claude = ["anthropic>=0.105.0"]
 mistral = ["mistralai"]
+# `pip install -e ".[transcription]"` for local Qwen transcription. Install a
+# CUDA-enabled torch from https://pytorch.org/get-started/locally/ FIRST --
+# PyPI's default torch is CPU-only and will be unusably slow here.
+transcription = ["qwen-asr"]
 bedrock = ["boto3"]
 litellm = ["litellm>=1.84.0,<1.87.0"]
 

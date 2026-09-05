@@ -1,5 +1,6 @@
 from typing import Any
 
+from openai import omit
 from openai.types.chat import ChatCompletion    # type: ignore
 
 from PySubtrans.Helpers.Localization import _
@@ -44,6 +45,7 @@ class ChatGPTClient(OpenAIClient):
             model=self.model,
             messages=messages,      # type: ignore[arg-type]
             temperature=temperature,
+            prompt_cache_key=self.settings.get_str('prompt_cache_key') or omit
         )
 
         if self.aborted:
@@ -63,6 +65,10 @@ class ChatGPTClient(OpenAIClient):
             response['prompt_tokens'] = getattr(result.usage, 'prompt_tokens')
             response['output_tokens'] = getattr(result.usage, 'completion_tokens')
             response['total_tokens'] = getattr(result.usage, 'total_tokens')
+
+            prompt_tokens_details = getattr(result.usage, 'prompt_tokens_details', None)
+            if prompt_tokens_details:
+                response['cached_tokens'] = getattr(prompt_tokens_details, 'cached_tokens', 0)
 
         if result.choices:
             choice = result.choices[0]

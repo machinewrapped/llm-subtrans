@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 from PySide6.QtWidgets import (
@@ -49,7 +50,7 @@ class _TranscriptionWorker(QObject):
 
     @Slot()
     def run(self) -> None:
-        """Transcribe the media file, emitting progress as scenes complete."""
+        """Transcribe the media file, emitting progress as chunks complete."""
         try:
             project = self.coordinator.CreateTranscriptionProject(
                 self.media_path, None,
@@ -58,6 +59,14 @@ class _TranscriptionWorker(QObject):
             self.finished.emit(project)
         except Exception as e:
             self.failed.emit(str(e))
+
+
+def _format_duration(seconds : float) -> str:
+    """
+    Format an elapsed-time estimate as m:ss.
+    """
+    total = max(0, int(seconds))
+    return f"{total // 60}:{total % 60:02d}"
 
 
 class TranscriptionDialog(QDialog):
@@ -72,7 +81,6 @@ class TranscriptionDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(_("Transcribe Media"))
         self.setModal(True)
-        self.setMinimumWidth(920)
         self.setMinimumHeight(560)
 
         self.global_options : Options = options
@@ -82,10 +90,15 @@ class TranscriptionDialog(QDialog):
         self.media_path : str|None = None
         self.provider : TranscriptionProvider|None = None
         self.provider_fields : dict[str, OptionWidget] = {}
+        self._phase : str = "setup"
+        self._run_started : float = 0.0
+        self._chunks_done : int = 0
+        self._chunks_total : int = 0
+        self._last_span : str = ""
 
         self._build_form()
         self._refresh_providers()
-        self._update_state(False)
+        self._show_setup()
 
     @property
     def provider_name(self) -> str:
@@ -95,11 +108,11 @@ class TranscriptionDialog(QDialog):
     def _build_form(self) -> None:
         layout = QVBoxLayout(self)
 
-        splitter = QSplitter(self)
-        layout.addWidget(splitter)
+        self.splitter = QSplitter(self)
+        layout.addWidget(self.splitter, 1)
 
-        left_pane = QWidget(splitter)
-        left_layout = QVBoxLayout(left_pane)
+        self.left_pane = QWidget(self.splitter)
+        left_layout = QVBoxLayout(self.left_pane)
         left_layout.setContentsMargins(0, 0, 0, 0)
 
         form = QFormLayout()
@@ -127,31 +140,31 @@ class TranscriptionDialog(QDialog):
 
         self.min_chunk_spin = QDoubleSpinBox(self)
         self.min_chunk_spin.setRange(1.0, 60.0)
-        self.min_chunk_spin.setValue(4.0)
+        self.min_chunk_spin.setValue(8.0)
         self.min_chunk_spin.setSuffix(_(" s"))
-        form.addRow(_("Min scene length"), self.min_chunk_spin)
+        form.addRow(_("Min chunk length"), self.min_chunk_spin)
 
         self.max_chunk_spin = QDoubleSpinBox(self)
         self.max_chunk_spin.setRange(10.0, 1800.0)
         self.max_chunk_spin.setValue(60.0)
         self.max_chunk_spin.setSuffix(_(" s"))
-        form.addRow(_("Max scene length"), self.max_chunk_spin)
+        form.addRow(_("Max chunk length"), self.max_chunk_spin)
 
         self.align_check = QCheckBox(_("Request word timestamps for line timings"), self)
-        self.align_check.setToolTip(_("Engines without timestamp support fall back to scene-level lines"))
+        self.align_check.setToolTip(_("Engines without timestamp support fall back to chunk-level lines"))
         self.align_check.setChecked(True)
         form.addRow(self.align_check)
         left_layout.addStretch(1)
 
-        self.results_view = QTextEdit(splitter)
+        self.results_view = QTextEdit(self.splitter)
         self.results_view.setReadOnly(True)
-        self.results_view.setPlaceholderText(_("Transcribed scenes will appear here..."))
+        self.results_view.setPlaceholderText(_("Transcribed lines will appear here..."))
 
-        splitter.addWidget(left_pane)
-        splitter.addWidget(self.results_view)
-        splitter.setStretchFactor(0, 0)
-        splitter.setStretchFactor(1, 1)
-        splitter.setSizes([380, 520])
+        self.splitter.addWidget(self.left_pane)
+        self.splitter.addWidget(self.results_view)
+        self.splitter.setStretchFactor(0, 0)
+        self.splitter.setStretchFactor(1, 1)
+        self.splitter.setSizes([380, 520])
 
         self.status_label = QLabel(_("Select a media file to begin."), self)
         layout.addWidget(self.status_label)
@@ -164,10 +177,13 @@ class TranscriptionDialog(QDialog):
         button_row = QHBoxLayout()
         self.transcribe_button = QPushButton(_("Transcribe"), self)
         self.transcribe_button.clicked.connect(self._start_transcription)
-        self.cancel_button = QPushButton(_("Cancel"), self)
-        self.cancel_button.clicked.connect(self._cancel_transcription)
+        self.abort_button = QPushButton(_("Abort"), self)
+        self.abort_button.clicked.connect(self._abort_transcription)
+        self.back_button = QPushButton(_("Back to Settings"), self)
+        self.back_button.clicked.connect(self._show_setup)
         button_row.addWidget(self.transcribe_button)
-        button_row.addWidget(self.cancel_button)
+        button_row.addWidget(self.abort_button)
+        button_row.addWidget(self.back_button)
         layout.addLayout(button_row)
 
         self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Open | QDialogButtonBox.StandardButton.Close, self)
@@ -191,15 +207,9 @@ class TranscriptionDialog(QDialog):
         name = self.provider_name
         if not name:
             return None
-        # Note: check membership first. ProviderSettingsView.__getitem__
-        # raises KeyError for unknown providers and we never use exceptions
-        # for expected control flow (missing transcription settings is normal).
-        if name in self.global_options.provider_settings:
-            saved = self.global_options.provider_settings[name]
-        else:
-            saved = SettingsType()
         try:
-            return TranscriptionProvider.create_provider(name, SettingsType(saved))
+            saved = TranscriptionCoordinator.ResolveProviderSettings(name, SettingsType(), self.global_options)
+            return TranscriptionProvider.create_provider(name, saved)
         except Exception as e:
             logging.error(_("Unable to create transcription provider: {error}").format(error=str(e)))
             return None
@@ -237,7 +247,8 @@ class TranscriptionDialog(QDialog):
         self.project = None
         if self.media_path and os.path.isfile(self.media_path):
             self._load_tracks()
-        self._update_state(False)
+        if self._phase == "setup":
+            self.transcribe_button.setEnabled(bool(self.media_path))
         self.progress_bar.setValue(0)
         self.results_view.clear()
 
@@ -269,6 +280,13 @@ class TranscriptionDialog(QDialog):
         if not provider.ValidateSettings():
             self.status_label.setText(provider.validation_message or _("Invalid provider settings"))
             return None
+        client = provider.GetTranscriptionClient(SettingsType())
+        if not client.supports_timestamps:
+            self.status_label.setText(_(
+                "'{}' cannot provide subtitle timings, so transcription "
+                "would produce no usable subtitles."
+            ).format(provider.name))
+            return None
         settings = SettingsType({
             'audio_track': self.track_combo.currentData() or 0,
             'language': provider.settings.get_str('language'),
@@ -288,6 +306,10 @@ class TranscriptionDialog(QDialog):
         self.coordinator = coordinator
         self.project = None
         self.results_view.clear()
+        self._run_started = time.monotonic()
+        self._chunks_done = 0
+        self._chunks_total = 0
+        self._last_span = ""
         self.worker = _TranscriptionWorker(coordinator, self.media_path)
         self.thread = QThread(self)
         self.worker.moveToThread(self.thread)
@@ -298,60 +320,111 @@ class TranscriptionDialog(QDialog):
         self.worker.failed.connect(self._on_failed)
         self.worker.finished.connect(self.thread.quit)
         self.worker.failed.connect(self.thread.quit)
-        self._update_state(True)
+        self._show_results(True)
         self.status_label.setText(_("Transcribing..."))
         self.thread.start()
 
-    def _cancel_transcription(self) -> None:
+    def _abort_transcription(self) -> None:
         if self.coordinator is not None:
             self.coordinator.Abort()
-            self.status_label.setText(_("Cancelling..."))
+            self.status_label.setText(_("Aborting..."))
 
     @Slot(int, int)
     def _on_progress(self, done : int, total : int) -> None:
+        self._chunks_done = done
+        self._chunks_total = total
         self.progress_bar.setRange(0, total)
         self.progress_bar.setValue(done)
-        self.status_label.setText(_("Transcribed scene {done}/{total}").format(done=done, total=total))
+        self._update_run_status()
 
     @Slot(object)
     def _on_segment(self, segment : TranscriptionSegment) -> None:
-        """Append each transcribed scene to the results pane as it completes."""
+        """Append each transcribed line to the results pane as it completes."""
         start = TimedeltaToText(segment.start) or ""
         end = TimedeltaToText(segment.end) or ""
+        self._last_span = f"{start} --> {end}"
         speaker = f"[{segment.speaker}] " if segment.speaker else ""
-        self.results_view.append(f"[{start} --> {end}] {speaker}{segment.text}")
+        self.results_view.append(f"[{self._last_span}] {speaker}{segment.text}")
         scrollbar = self.results_view.verticalScrollBar()
         if scrollbar is not None:
             scrollbar.setValue(scrollbar.maximum())
+        self._update_run_status()
+
+    def _update_run_status(self) -> None:
+        """
+        Meaningful run status: position, current span, elapsed time and
+        effective transcription speed.
+        """
+        elapsed = max(0.0, time.monotonic() - self._run_started) if self._run_started else 0.0
+        status = _("Transcribed chunk {done}/{total}").format(done=self._chunks_done, total=self._chunks_total)
+        if self._last_span:
+            status += f" [{self._last_span}]"
+        status += _(" (elapsed {})").format(_format_duration(elapsed))
+        if elapsed > 5.0 and self._chunks_done > 0 and self._chunks_total > 0:
+            fraction = self._chunks_done / self._chunks_total
+            if fraction > 0.02:
+                remaining = elapsed / fraction - elapsed
+                status += _(" (about {} left)").format(_format_duration(remaining))
+        self.status_label.setText(status)
 
     @Slot(object)
     def _on_finished(self, project : SubtitleProject) -> None:
         self.project = project
         self._save_provider_settings()
         count = project.subtitles.linecount if project.subtitles else 0
-        self.status_label.setText(_("Transcribed {} lines.").format(count))
+        if self.coordinator is not None and self.coordinator.aborted:
+            self.status_label.setText(_("Aborted - partial results ({} lines).").format(count))
+        else:
+            self.status_label.setText(_("Transcribed {} lines.").format(count))
         self.progress_bar.setValue(self.progress_bar.maximum())
-        self._update_state(False)
+        self._show_results(False)
 
     @Slot(str)
     def _on_failed(self, message : str) -> None:
         logging.error(_("Transcription failed: {error}").format(error=message))
         self.status_label.setText(_("Transcription failed: {error}").format(error=message))
-        self._update_state(False)
+        self._show_results(False)
 
     def _save_provider_settings(self) -> None:
         name = self.provider_name
         if not name or self.coordinator is None:
             return
         try:
-            self.global_options.InitialiseProviderSettings(name, self.coordinator.provider.settings)
+            self.global_options.InitialiseProviderSettings(
+                TranscriptionCoordinator.SettingsKey(name), self.coordinator.provider.settings)
             self.global_options.SaveSettings()
         except Exception as e:
             logging.warning(_("Unable to save transcription settings: {error}").format(error=str(e)))
 
-    def _update_state(self, running : bool) -> None:
-        self.transcribe_button.setEnabled(not running and bool(self.media_path))
-        self.cancel_button.setEnabled(running)
+    def _show_setup(self) -> None:
+        """
+        Setup phase: full-width settings, no results or progress widgets.
+        """
+        self._phase = "setup"
+        self.setMinimumWidth(560)
+        self.left_pane.setVisible(True)
+        self.results_view.setVisible(False)
+        self.progress_bar.setVisible(False)
+        self.transcribe_button.setVisible(True)
+        self.transcribe_button.setEnabled(bool(self.media_path))
+        self.abort_button.setVisible(False)
+        self.back_button.setVisible(False)
+        open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
+        if open_button is not None:
+            open_button.setEnabled(self.project is not None)
+
+    def _show_results(self, running : bool) -> None:
+        """
+        Run/finish phase: full-width results, settings put away.
+        """
+        self._phase = "running" if running else "done"
+        self.setMinimumWidth(920)
+        self.left_pane.setVisible(False)
+        self.results_view.setVisible(True)
+        self.progress_bar.setVisible(True)
+        self.transcribe_button.setVisible(False)
+        self.abort_button.setVisible(running)
+        self.back_button.setVisible(not running)
         open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
         if open_button is not None:
             open_button.setEnabled(not running and self.project is not None)

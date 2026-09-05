@@ -85,7 +85,7 @@ else:
 
             Requests word timestamps when the language is aligner-supported;
             otherwise returns flat text and the coordinator falls back to
-            scene-level lines. Heavy imports stay inside methods so merely
+            chunk-level lines. Heavy imports stay inside methods so merely
             constructing the client never touches torch.
             """
             def __init__(self, settings : SettingsType):
@@ -130,7 +130,7 @@ else:
 
             @property
             def max_new_tokens(self) -> int:
-                """Generation budget per chunk (long scenes need headroom)."""
+                """Generation budget per chunk (long chunks need headroom)."""
                 return self.settings.get_int('max_new_tokens') or 1024
 
             def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
@@ -157,7 +157,8 @@ else:
                         pass
 
                 if not results:
-                    raise SubtitleError(_("Qwen transcription returned no results"))
+                    # Empty results (silence, music) are expected, not errors
+                    return TranscriptionResult(text="", language=language)
 
                 text, detected, words = parse_qwen_result(results[0])
                 return TranscriptionResult(text=text, language=detected or language, words=words)
@@ -239,7 +240,7 @@ else:
                     'language': (str, _("Spoken language hint, e.g. Chinese or English (optional, auto-detected when empty)")),
                     'device': (['auto', 'cuda', 'cpu'], _("Compute device for local inference")),
                     'aligner_model': (str, _("Forced-aligner checkpoint for word timestamps")),
-                    'max_new_tokens': (int, _("Generation budget per scene (long scenes need headroom)")),
+                    'max_new_tokens': (int, _("Generation budget per chunk (long chunks need headroom)")),
                 }
 
     except ImportError as e:

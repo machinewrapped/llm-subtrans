@@ -1,10 +1,14 @@
 from __future__ import annotations
 
+import array
+import io
 import logging
+import math
 import os
 import shutil
 import subprocess
 import tempfile
+import wave
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -37,7 +41,7 @@ class AudioTrack:
 
 
 @dataclass
-class SceneChunk:
+class AudioChunk:
     """
     A coherent span of audio to transcribe as one unit.
 
@@ -160,6 +164,37 @@ class AudioExtractor:
             except OSError:
                 pass
 
+    def IsSilent(self, audio_bytes : bytes, threshold_db : float|None = None) -> bool:
+        """
+        True when chunk audio sits below an energy threshold.
+
+        Catches near-silent chunks that slip through silence detection
+        (fades, room tone) before they cost a transcription request.
+        Music and noise still pass: only the engine can judge those.
+        """
+        threshold_db = threshold_db if threshold_db is not None else -40.0
+        try:
+            with wave.open(io.BytesIO(audio_bytes), 'rb') as wav:
+                frames = wav.readframes(wav.getnframes())
+                width = wav.getsampwidth()
+        except (wave.Error, EOFError, ValueError):
+            return False
+
+        if not frames or width != 2:
+            return False
+
+        samples = array.array('h')
+        samples.frombytes(frames)
+        if not samples:
+            return True
+
+        peak = max(abs(sample) for sample in samples)
+        if peak == 0:
+            return True
+
+        level_db = 20.0 * math.log10(peak / 32768.0)
+        return level_db < threshold_db
+
     def DetectSilences(self, media_path : str, track_index : int = 0,
                        min_duration : float|None = None, noise_db : int|None = None) -> list[tuple[timedelta, timedelta]]:
         """
@@ -204,9 +239,9 @@ class AudioExtractor:
         return path
 
 
-class SceneChunker:
+class AudioChunker:
     """
-    Splits media into coherent audio-only scenes for transcription.
+    Splits media into coherent audio-only chunks for transcription.
 
     Cuts land inside detected silence where possible so chunks hold
     complete utterances (better for both accuracy and speaker continuity).
@@ -220,7 +255,7 @@ class SceneChunker:
 
     @property
     def min_chunk_seconds(self) -> float:
-        """Minimum scene length; shorter spans merge into neighbours."""
+        """Minimum chunk length; shorter spans merge into neighbours."""
         return self.settings.get_float('min_chunk_seconds') or 4.0
 
     @property
@@ -242,10 +277,10 @@ class SceneChunker:
         """
         return self.settings.get_float('lookahead_seconds') or 30.0
 
-    def PlanScenes(self, media_path : str, track_index : int = 0,
-                   progress_cb : Callable[[str], None]|None = None) -> list[SceneChunk]:
+    def PlanChunks(self, media_path : str, track_index : int = 0,
+                   progress_cb : Callable[[str], None]|None = None) -> list[AudioChunk]:
         """
-        Return the ordered scene plan for a media file (no audio extracted yet).
+        Return the ordered chunk plan for a media file (no audio extracted yet).
         """
         duration = self.extractor.GetDuration(media_path)
         total = duration.total_seconds()
@@ -257,7 +292,7 @@ class SceneChunker:
 
         silences = self.extractor.DetectSilences(media_path, track_index)
 
-        chunks : list[SceneChunk] = []
+        chunks : list[AudioChunk] = []
         cursor = timedelta(seconds=0)
         silence_index = 0
 
@@ -270,12 +305,12 @@ class SceneChunker:
             if cut is not None:
                 silence_index = cut[1]
                 end = duration if cut[0] >= duration else cut[0]
-                chunks.append(SceneChunk(start=cursor, end=end))
+                chunks.append(AudioChunk(start=cursor, end=end))
                 cursor = duration if end >= duration else self._silence_end_after(silences, silence_index - 1, cut[0])
                 continue
 
             if target >= duration:
-                chunks.append(SceneChunk(start=cursor, end=duration))
+                chunks.append(AudioChunk(start=cursor, end=duration))
                 cursor = duration
                 break
 
@@ -286,20 +321,20 @@ class SceneChunker:
                 target + timedelta(seconds=self.lookahead_seconds), after=target)
             if extended is not None:
                 silence_index = extended[1]
-                chunks.append(SceneChunk(start=cursor, end=extended[0]))
+                chunks.append(AudioChunk(start=cursor, end=extended[0]))
                 cursor = self._silence_end_after(silences, silence_index - 1, extended[0])
                 continue
 
-            chunks.append(SceneChunk(start=cursor, end=target))
+            chunks.append(AudioChunk(start=cursor, end=target))
             cursor = target
 
         if chunks and (duration - cursor).total_seconds() > 0:
             # Absorb a tiny tail into the last chunk rather than dropping speech
             chunks[-1].end = duration
         elif not chunks:
-            chunks.append(SceneChunk(start=timedelta(seconds=0), end=duration))
+            chunks.append(AudioChunk(start=timedelta(seconds=0), end=duration))
 
-        logging.info(_("Planned {} transcription scenes for {}").format(len(chunks), os.path.basename(media_path)))
+        logging.info(_("Planned {} transcription chunks for {}").format(len(chunks), os.path.basename(media_path)))
         return chunks
 
     def _next_silence_cut(self, silences : list[tuple[timedelta, timedelta]], index : int,
@@ -308,7 +343,7 @@ class SceneChunker:
         """
         Find the next silence start within (after, limit], returning the cut
         point and the index to resume from. Spans below the minimum length
-        are skipped so tiny fragments do not become scenes.
+        are skipped so tiny fragments do not become chunks.
         """
         lower = after or cursor
         while index < len(silences):
@@ -326,7 +361,7 @@ class SceneChunker:
 
     def _silence_end_after(self, silences : list[tuple[timedelta, timedelta]], index : int, cut : timedelta) -> timedelta:
         """
-        Resume the next scene after the silence that was cut on, so pauses
+        Resume the next chunk after the silence that was cut on, so pauses
         are not transcribed as leading dead air.
         """
         if 0 <= index < len(silences):

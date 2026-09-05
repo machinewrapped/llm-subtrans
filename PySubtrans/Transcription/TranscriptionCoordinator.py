@@ -16,7 +16,7 @@ from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Transcription.AudioExtractor import AudioExtractor, SceneChunk, SceneChunker, CheckFfmpegAvailable
+from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioChunk, AudioChunker, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
@@ -43,7 +43,7 @@ _MIN_LINE_SECONDS = 0.4
 # Signature for transcription progress callbacks: (chunks_done, chunk_total)
 TranscriptionProgressCallback = Callable[[int, int], None]
 
-# Signature for per-scene callbacks: invoked with each transcribed segment
+# Signature for per-chunk callbacks: invoked with each transcribed segment
 TranscriptionSegmentCallback = Callable[[TranscriptionSegment], None]
 
 
@@ -51,8 +51,8 @@ class TranscriptionCoordinator:
     """
     End-to-end media to subtitles transcription.
 
-    Extracts coherent audio scenes from a media file, transcribes each
-    scene with the provider client, and assembles timestamped subtitles.
+    Extracts coherent audio chunks from a media file, transcribes each
+    chunk with the provider client, and assembles timestamped subtitles.
     Has no GUI dependencies so CLI and library callers can use it directly.
     """
     def __init__(self, provider : TranscriptionProvider, settings : SettingsType|Options|None = None):
@@ -61,13 +61,14 @@ class TranscriptionCoordinator:
         self.aborted : bool = False
 
         chunk_settings = SettingsType({
-            'min_chunk_seconds': self.settings.get_float('min_chunk_seconds', 4.0),
+            'min_chunk_seconds': self.settings.get_float('min_chunk_seconds', 8.0),
             'max_chunk_seconds': self.settings.get_float('max_chunk_seconds', 60.0),
-            'silence_min_duration': self.settings.get_float('silence_min_duration', 0.8),
+            'silence_min_duration': self.settings.get_float('silence_min_duration', 1.0),
         })
-        self.chunker : SceneChunker = SceneChunker(chunk_settings)
+        self.chunker : AudioChunker = AudioChunker(chunk_settings)
         self.extractor : AudioExtractor = self.chunker.extractor
         self._active_client : TranscriptionClient|None = None
+        self.total_cost : float = 0.0
 
     @property
     def track_index(self) -> int:
@@ -94,26 +95,45 @@ class TranscriptionCoordinator:
         """Inter-word pause that forces a new subtitle line, in seconds."""
         return self.settings.get_float('transcription_gap_split') or 0.5
 
+    @property
+    def silence_skip_db(self) -> float:
+        """Peak level below which chunks skip transcription entirely."""
+        return self.settings.get_float('silence_skip_db') or -40.0
+
     @classmethod
     def ResolveProviderSettings(cls, provider_name : str, settings : SettingsType|Options, options : Options|None = None) -> SettingsType:
         """
-        Merge settings with shared API keys from Options.provider_settings.
+        Merge settings with shared credentials from Options.provider_settings.
 
-        A transcription provider reuses the stored key of its translation
-        counterpart (e.g. OpenRouter) when it has none of its own, so users
-        configure one key per vendor instead of one per capability.
+        Only credentials travel across capabilities (api_key, proxy): endpoint
+        conventions differ per capability (translation and transcription use
+        different base paths), so server addresses and models are never
+        shared. Transcription settings live under "<name> Transcription".
         """
         resolved = SettingsType(settings or {})
         if options is not None and isinstance(options, Options):
-            # Membership check first: provider_settings raises KeyError for
+            # Membership checks first: provider_settings raises KeyError for
             # unknown providers and missing keys are the expected case here.
+            own_key = f"{provider_name} Transcription"
+            if own_key in options.provider_settings:
+                for k, v in options.provider_settings[own_key].items():
+                    if k not in resolved:
+                        resolved[k] = v
             if provider_name in options.provider_settings:
                 shared = options.provider_settings[provider_name]
-                for key in ('api_key', 'server_address', 'proxy'):
+                for key in ('api_key', 'proxy'):
                     if not resolved.get(key) and shared.get(key):
                         resolved[key] = shared.get(key)
 
         return resolved
+
+    @staticmethod
+    def SettingsKey(provider_name : str) -> str:
+        """
+        Settings namespace for a transcription provider, kept separate
+        from its translation counterpart (see ResolveProviderSettings).
+        """
+        return f"{provider_name} Transcription"
 
     def CheckRequirements(self, media_path : str) -> list[AudioTrackInfo]:
         """
@@ -123,11 +143,11 @@ class TranscriptionCoordinator:
         tracks = self.extractor.ListAudioTracks(media_path)
         return [AudioTrackInfo(index=t.index, codec=t.codec, language=t.language) for t in tracks]
 
-    def PlanScenes(self, media_path : str) -> list[SceneChunk]:
+    def PlanChunks(self, media_path : str) -> list[AudioChunk]:
         """
-        Return the transcription scene plan without extracting audio.
+        Return the transcription chunk plan without extracting audio.
         """
-        return self.chunker.PlanScenes(media_path, self.track_index)
+        return self.chunker.PlanChunks(media_path, self.track_index)
 
     def TranscribeMedia(self, media_path : str, progress_cb : TranscriptionProgressCallback|None = None,
                         segment_cb : TranscriptionSegmentCallback|None = None) -> Subtitles:
@@ -139,23 +159,34 @@ class TranscriptionCoordinator:
 
         client : TranscriptionClient = self.provider.GetTranscriptionClient(self.settings)
         self._active_client = client
-        chunks = self.chunker.PlanScenes(media_path, self.track_index)
+        if not client.supports_timestamps:
+            raise SubtitleError(_(
+                "'{}' cannot provide subtitle timings (no word or segment "
+                "timestamps). Transcription without timings has no value "
+                "here, so nothing was requested and no credits were spent."
+            ).format(self.provider.name))
+        chunks = self.chunker.PlanChunks(media_path, self.track_index)
         total = len(chunks)
-        logging.info(_("Transcribing {} in {} scenes with {}").format(
+        logging.info(_("Transcribing {} in {} chunks with {}").format(
             os.path.basename(media_path), total, self.provider.name))
 
         builder = SubtitleBuilder()
         builder.AddScene(summary=_("Transcription of {}").format(os.path.basename(media_path)))
 
         transcribed = 0
-        scenes_done = 0
+        chunks_done = 0
+        self.total_cost = 0.0
         try:
             for done, chunk in enumerate(chunks):
                 if self.aborted or client.aborted:
-                    raise SubtitleError(_("Transcription aborted"))
+                    # Keep everything transcribed so far: abandoning billed
+                    # work would be worse than partial results.
+                    logging.warning(_("Transcription cancelled after {done}/{total} chunks").format(
+                        done=done, total=total))
+                    break
 
-                segment = self._transcribe_scene(client, media_path, chunk)
-                scenes_done += 1
+                segment = self._transcribe_chunk(client, media_path, chunk)
+                chunks_done += 1
                 if segment is not None:
                     for line in self._lines_for_segment(segment):
                         builder.BuildLine(line.start, line.end, line.text,
@@ -170,9 +201,11 @@ class TranscriptionCoordinator:
             self._active_client = None
 
         if transcribed == 0:
-            raise SubtitleError(_("No speech was transcribed from {}").format(media_path))
+            raise SubtitleError(_("No timed subtitles could be produced from {}").format(media_path))
 
-        logging.info(_("Transcribed {} lines from {} scenes").format(transcribed, scenes_done))
+        logging.info(_("Transcribed {} lines from {} chunks").format(transcribed, chunks_done))
+        if self.total_cost > 0:
+            logging.info(_("Transcription cost: ${:.4f}").format(self.total_cost))
         subtitles = builder.Build()
         subtitles.sourcepath = os.path.normpath(media_path)
         subtitles.file_format = '.srt'
@@ -212,48 +245,78 @@ class TranscriptionCoordinator:
         if self._active_client is not None:
             self._active_client.AbortTranscription()
 
-    def _transcribe_scene(self, client : TranscriptionClient, media_path : str, chunk : SceneChunk) -> TranscriptionSegment|None:
+    def _transcribe_chunk(self, client : TranscriptionClient, media_path : str, chunk : AudioChunk) -> TranscriptionSegment|None:
         try:
             audio_bytes = self.extractor.ReadChunkBytes(media_path, chunk.start, chunk.end, self.track_index)
         except SubtitleError as e:
-            logging.warning(_("Skipping scene {}: {}").format(self._span_label(chunk), e))
+            logging.warning(_("Skipping chunk {}: {}").format(self._span_label(chunk), e))
+            return None
+
+        if self.extractor.IsSilent(audio_bytes, self.silence_skip_db):
+            logging.debug(_("Skipping silent chunk {} before requesting").format(self._span_label(chunk)))
             return None
 
         try:
             result = client.TranscribeChunk(audio_bytes, 'wav', self.language)
         except SubtitleError as e:
-            logging.warning(_("Skipping scene {}: {}").format(self._span_label(chunk), e))
+            logging.warning(_("Skipping chunk {}: {}").format(self._span_label(chunk), e))
             return None
 
         text = (result.text or '').strip()
         if not text:
-            logging.debug(_("Empty transcription for scene {}").format(self._span_label(chunk)))
+            logging.debug(_("Empty transcription for chunk {}").format(self._span_label(chunk)))
             return None
+
+        if result.cost:
+            self.total_cost += result.cost
 
         return TranscriptionSegment(start=chunk.start, end=chunk.end, text=text,
                                     language=result.language or self.language,
-                                    words=result.words)
+                                    words=result.words, parts=result.parts)
 
     def _lines_for_segment(self, segment : TranscriptionSegment) -> list[TranscriptionSegment]:
         """
-        Turn a transcribed scene into timed subtitle lines.
+        Turn a transcribed chunk into timed subtitle lines.
 
-        Word timings travel with the segment when the engine provides them
-        (local ASR with timestamps) and are grouped into lines. Otherwise
-        the scene stays one truthful line: timings are never estimated.
+        Word timings group into lines; provider sub-segments without word
+        timings become rebased lines. A chunk with neither stays one line
+        over its true chunk span: coarse but honest, and the text was
+        already paid for, so it is kept rather than thrown away.
         """
         if segment.words:
             lines = self._group_words(segment.words, segment)
             return lines or [segment]
 
+        if segment.parts:
+            rebased = [self._rebase_part(part, segment) for part in segment.parts if part.text.strip()]
+            return rebased or [segment]
+
         return [segment]
+
+    def _rebase_part(self, part : TranscriptionSegment, segment : TranscriptionSegment) -> TranscriptionSegment:
+        """
+        Rebase a chunk-relative sub-segment onto absolute media time.
+        """
+        start = segment.start + part.start
+        end = segment.start + part.end
+        if end <= start:
+            end = start + timedelta(seconds=_MIN_LINE_SECONDS)
+        if end > segment.end:
+            end = segment.end
+        if part.confidence is not None and part.confidence < 0.4:
+            logging.info(_("Chunk {}: low-confidence segment ({:.0%} no-speech probability): '{}'").format(
+                self._span_label(segment), 1.0 - part.confidence, part.text[:120]))
+        return TranscriptionSegment(start=start, end=end, text=part.text.strip(),
+                                    speaker=part.speaker or segment.speaker,
+                                    language=part.language or segment.language,
+                                    confidence=part.confidence)
 
     def _group_words(self, words : list[WordTiming], segment : TranscriptionSegment) -> list[TranscriptionSegment]:
         """
         Group chunk-relative word timings into subtitle lines. Every
         boundary and timing derives from aligned words: max characters,
         max duration, sentence punctuation and real inter-word pauses.
-        Offsets are rebased onto the scene start for absolute timings.
+        Offsets are rebased onto the chunk start for absolute timings.
         """
         lines : list[TranscriptionSegment] = []
         current : list[WordTiming] = []
@@ -268,8 +331,15 @@ class TranscriptionCoordinator:
                 end = start + timedelta(seconds=_MIN_LINE_SECONDS)
             if end > segment.end:
                 end = segment.end
+            speaker = current[0].speaker or segment.speaker
             lines.append(TranscriptionSegment(start=start, end=end, text=text,
-                                              speaker=segment.speaker, language=segment.language))
+                                              speaker=speaker, language=segment.language))
+
+        def speaker_changed(word : WordTiming) -> bool:
+            if not current or word.speaker is None:
+                return False
+            first = current[0].speaker
+            return first is not None and word.speaker != first
 
         for word in words:
             if current:
@@ -280,6 +350,7 @@ class TranscriptionCoordinator:
                 if (len(candidate) > self.max_line_chars
                         or line_seconds > self.max_line_seconds
                         or gap >= self.word_gap_split
+                        or speaker_changed(word)
                         or (previous.text and previous.text[-1] in _SENTENCE_END_CHARS)):
                     flush()
                     current = []
@@ -344,9 +415,9 @@ class TranscriptionCoordinator:
 
         return merged
 
-    def _span_label(self, chunk : SceneChunk) -> str:
-        start = chunk.start.total_seconds()
-        end = chunk.end.total_seconds()
+    def _span_label(self, span : AudioChunk|TranscriptionSegment) -> str:
+        start = span.start.total_seconds()
+        end = span.end.total_seconds()
         return f"{start:.1f}s-{end:.1f}s"
 
 

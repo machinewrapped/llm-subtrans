@@ -31,13 +31,13 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('-m', '--model', type=str, default=None, help="Transcription model (e.g. qwen3-asr-1.7b)")
     parser.add_argument('--language', type=str, default=None, help="Spoken language hint (e.g. Chinese, English)")
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
-    parser.add_argument('--min-chunk', type=float, default=4.0, help="Minimum scene length in seconds")
-    parser.add_argument('--max-chunk', type=float, default=60.0, help="Maximum scene length in seconds")
+    parser.add_argument('--min-chunk', type=float, default=8.0, help="Minimum chunk length in seconds")
+    parser.add_argument('--max-chunk', type=float, default=60.0, help="Maximum chunk length in seconds")
     parser.add_argument('--align', action='store_true', default=True, help="Request word timestamps for timed lines (default on)")
-    parser.add_argument('--no-align', dest='align', action='store_false', help="Disable word timestamps (scene-level lines)")
+    parser.add_argument('--no-align', dest='align', action='store_false', help="Disable word timestamps (chunk-level lines)")
     parser.add_argument('-l', '--target-language', type=str, default=None, help="Target language recorded on the project")
     parser.add_argument('--debug', action='store_true', help="Run with DEBUG log level")
-    parser.add_argument('--verbose', action='store_true', help="Log each transcribed scene")
+    parser.add_argument('--verbose', action='store_true', help="Log each transcribed chunk")
     return parser
 
 
@@ -89,9 +89,9 @@ def main() -> int:
         return 0
 
     def progress(done : int, total : int) -> None:
-        logging.info(f"Transcribed scene {done}/{total}")
+        logging.info(f"Transcribed chunk {done}/{total}")
         if args.verbose:
-            print(f"Transcribed scene {done}/{total}", flush=True)
+            print(f"Transcribed chunk {done}/{total}", flush=True)
 
     try:
         options = Options() if args.project else None

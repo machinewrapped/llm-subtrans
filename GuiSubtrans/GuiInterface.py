@@ -325,7 +325,10 @@ class GuiInterface(QObject):
         self.SetDataModel(datamodel)
         if dialog.media_path:
             self._update_last_used_path(dialog.media_path)
-        if datamodel.is_project_valid and not datamodel.is_project_initialised:
+        # Always offer project settings, like opening a fresh subtitle file:
+        # transcription arrives pre-batched, but scene/batch thresholds and
+        # project options still need user confirmation before translating.
+        if datamodel.is_project_valid:
             self.ShowNewProjectSettings(datamodel)
 
     def ShowAboutDialog(self) -> None:

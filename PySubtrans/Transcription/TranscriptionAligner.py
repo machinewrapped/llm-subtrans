@@ -14,6 +14,7 @@ class WordTiming:
     text : str = ""
     start : timedelta = field(default_factory=lambda: timedelta(seconds=0))
     end : timedelta = field(default_factory=lambda: timedelta(seconds=0))
+    speaker : str|None = None
 
 
 class TranscriptionAligner:
@@ -66,7 +67,7 @@ _ALIGNER_LANGUAGE_ALIASES : dict[str, str] = {
 def NormaliseAlignerLanguage(language : str|None, supported : list[str]) -> str|None:
     """
     Map a free-text language hint onto an aligner language, or None when
-    the aligner cannot handle it (caller falls back to scene-level lines).
+    the aligner cannot handle it (caller falls back to chunk-level lines).
     """
     if not language:
         return None

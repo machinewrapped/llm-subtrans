@@ -183,11 +183,6 @@ class TranscriptionDialog(QDialog):
         self.max_chunk_spin.setToolTip(_("Provider-recommended default; reselecting the provider restores it"))
         form.addRow(_("Max chunk length"), self.max_chunk_spin)
 
-        self.align_check = QCheckBox(_("Request word timestamps for line timings"), self)
-        self.align_check.setToolTip(_("Engines without timestamp support fall back to chunk-level lines"))
-        self.align_check.setChecked(True)
-        form.addRow(self.align_check)
-
         save_row = QHBoxLayout()
         self.save_check = QCheckBox(_("Save transcribed subtitles"), self)
         self.save_check.setToolTip(_("Write the transcription to a subtitle file alongside the media before translating"))
@@ -323,8 +318,8 @@ class TranscriptionDialog(QDialog):
 
     def _rebuild_provider_form(self) -> None:
         """
-        Render the selected provider's own settings schema so the dialog
-        never shows options a provider does not have.
+        Render the selected provider's per-run settings. Stable choices
+        (models, keys, quotas) live in Settings; only basic options show here.
         """
         while self.provider_form.rowCount():
             self.provider_form.removeRow(0)
@@ -340,6 +335,8 @@ class TranscriptionDialog(QDialog):
             return
 
         for key, (key_type, tooltip) in schema.items():
+            if key in self.provider.advanced_settings:
+                continue
             field = CreateOptionWidget(key, self.provider.settings.get(key), key_type, tooltip=tooltip)
             field.contentChanged.connect(lambda dummy=None: self._update_settings_link())
             self.provider_fields[key] = field
@@ -397,7 +394,7 @@ class TranscriptionDialog(QDialog):
             'language': provider.settings.get_str('language'),
             'min_chunk_seconds': self.min_chunk_spin.value(),
             'max_chunk_seconds': self.max_chunk_spin.value(),
-            'transcription_align': self.align_check.isChecked(),
+            'transcription_align': True,
         })
         return TranscriptionCoordinator(provider, settings)
 

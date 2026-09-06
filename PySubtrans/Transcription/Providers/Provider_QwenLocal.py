@@ -75,6 +75,9 @@ else:
             <p>Requires the <tt>transcription</tt> extra and a CUDA torch install. No API key needed.</p>
             """
 
+            # Device and budgets rarely change per job; model and language do
+            advanced_settings = ['device', 'aligner_model', 'max_new_tokens', 'rate_limit']
+
             @property
             def recommended_min_chunk_seconds(self) -> float:
                 """Short chunks fit the default generation budget and GPU memory."""

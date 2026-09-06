@@ -85,6 +85,9 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
     <p>Useful for spending expiring pay-up-front credits.</p>
     """
 
+    # Endpoint and quotas live in Settings; model and language vary per job
+    advanced_settings = ['api_key', 'request_timeout', 'rate_limit']
+
     @property
     def recommended_min_chunk_seconds(self) -> float:
         """Short chunks bound request bodies and the blast radius of retries."""

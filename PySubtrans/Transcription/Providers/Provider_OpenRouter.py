@@ -82,6 +82,9 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
     <p>Word timestamps and diarization depend on the selected model.</p>
     """
 
+    # Endpoint and quotas live in Settings; model, diarization and language vary per job
+    advanced_settings = ['api_key', 'request_timeout', 'rate_limit']
+
     @property
     def recommended_min_chunk_seconds(self) -> float:
         """Short chunks bound base64 request bodies and the blast radius of retries."""

@@ -36,6 +36,18 @@ class TestOpenRouterRegistered(LoggedTestCase):
 
         self.assertLoggedEqual("no limit", None, client.rate_limit)
 
+    def test_advanced_settings_match_schema(self):
+        """Advanced keys must exist in the options schema, or filtering silently misses."""
+        provider = OpenRouterTranscriptionProvider(SettingsType({'api_key': 'k'}))
+
+        with patch('httpx.Client') as mock_client:
+            mock_client.return_value.__enter__.return_value.get.return_value = Mock(
+                is_error=False, status_code=200, text="")
+            options = provider.GetOptions(provider.settings)
+
+        unknown = [key for key in provider.advanced_settings if key not in options]
+        self.assertLoggedEqual("no stale advanced keys", [], unknown)
+
 class TestOpenRouterParsing(LoggedTestCase):
     def test_verbose_words_with_speakers(self):
         """Word timings and speaker labels parse from verbose responses."""

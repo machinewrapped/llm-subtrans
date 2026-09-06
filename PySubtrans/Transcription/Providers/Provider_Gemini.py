@@ -197,6 +197,9 @@ else:
             <p>Requires a <a href="https://aistudio.google.com/app/apikey">Google AI Studio API key</a>.</p>
             """
 
+            # Keys and quotas live in Settings; model, diarization and language vary per job
+            advanced_settings = ['api_key', 'max_retries', 'rate_limit']
+
             @property
             def recommended_min_chunk_seconds(self) -> float:
                 """Long chunks amortise per-request overhead, keep speaker identities stable and stay under daily request quotas."""

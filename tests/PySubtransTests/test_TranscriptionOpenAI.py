@@ -32,6 +32,14 @@ class TestOpenAIRegistered(LoggedTestCase):
 
         self.assertLoggedEqual("no limit", None, client.rate_limit)
 
+    def test_advanced_settings_match_schema(self):
+        """Advanced keys must exist in the options schema, or filtering silently misses."""
+        provider = OpenAITranscriptionProvider(SettingsType({'api_key': 'k'}))
+        options = provider.GetOptions(provider.settings)
+
+        unknown = [key for key in provider.advanced_settings if key not in options]
+        self.assertLoggedEqual("no stale advanced keys", [], unknown)
+
 class TestOpenAITranscription(LoggedTestCase):
     def _provider(self, model : str = "whisper-1"):
         return OpenAITranscriptionProvider(SettingsType({'api_key': 'test-key', 'model': model}))

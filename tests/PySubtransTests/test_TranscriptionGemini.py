@@ -51,6 +51,15 @@ class TestGeminiProvider(LoggedTestCase):
 
             self.assertLoggedEqual("invalid without key", False, provider.ValidateSettings())
 
+    def test_advanced_settings_match_schema(self):
+        """Advanced keys must exist in the options schema, or filtering silently misses."""
+        assert GeminiTranscriptionProvider is not None  # Type narrowing for PyLance
+        provider = GeminiTranscriptionProvider(SettingsType({'api_key': 'k'}))
+        options = provider.GetOptions(provider.settings)
+
+        unknown = [key for key in provider.advanced_settings if key not in options]
+        self.assertLoggedEqual("no stale advanced keys", [], unknown)
+
     def test_rate_limit_reaches_client(self):
         """Provider rate limits flow into the transcription client."""
         assert GeminiTranscriptionProvider is not None  # Type narrowing for PyLance

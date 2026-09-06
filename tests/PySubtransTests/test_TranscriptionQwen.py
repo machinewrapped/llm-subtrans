@@ -31,6 +31,15 @@ class TestQwenLocalProvider(LoggedTestCase):
             self.assertLoggedIn(f"{key} option", key, options)
         self.assertLoggedIn("checkpoint", "Qwen/Qwen3-ASR-1.7B", provider.GetAvailableModels())
 
+    def test_advanced_settings_match_schema(self):
+        """Advanced keys must exist in the options schema, or filtering silently misses."""
+        assert QwenLocalProvider is not None  # Type narrowing for PyLance
+        provider = QwenLocalProvider(SettingsType())
+        options = provider.GetOptions(provider.settings)
+
+        unknown = [key for key in provider.advanced_settings if key not in options]
+        self.assertLoggedEqual("no stale advanced keys", [], unknown)
+
     def test_validate_needs_no_key(self):
         """Local inference validates without credentials."""
         assert QwenLocalProvider is not None  # Type narrowing for PyLance

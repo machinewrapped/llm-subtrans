@@ -18,6 +18,10 @@ class TranscriptionProvider:
     from translation ones. API keys are shared at the Options level instead
     (see TranscriptionCoordinator.ResolveProviderSettings).
     """
+    # Settings hidden from the Transcribe dialog (stable choices that belong
+    # in Settings): the dialog shows the rest for per-run tweaks.
+    advanced_settings : list[str] = []
+
     def __init__(self, name : str, settings : SettingsType):
         self.name : str = name
         self.settings : SettingsType = settings

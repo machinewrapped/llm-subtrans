@@ -1,4 +1,5 @@
-from GuiSubtrans.Command import Command
+from GuiSubtrans.Command import Command, CommandError
+from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
 
 class SaveTranslationFile(Command):
@@ -10,5 +11,11 @@ class SaveTranslationFile(Command):
         self.mark_project_dirty = False
 
     def execute(self) -> bool:
+        # Validate before SaveTranslation acquires the project lock.
+        try:
+            SubtitleFormatRegistry.create_handler(filename=self.filepath)
+        except ValueError as error:
+            raise CommandError(str(error), command=self) from error
+
         self.project.SaveTranslation(self.filepath)
         return True

@@ -6,8 +6,10 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
-from PySubtrans.Transcription.Providers.Provider_OpenRouter import (
+from PySubtrans.Transcription.Providers.Clients.OpenRouterTranscriptionClient import (
     OpenRouterTranscriptionClient,
+)
+from PySubtrans.Transcription.Providers.Provider_OpenRouter import (
     OpenRouterTranscriptionProvider,
     parse_transcription_payload,
 )
@@ -88,7 +90,6 @@ class TestOpenRouterParsing(LoggedTestCase):
 
 class TestOpenRouterCatalog(LoggedTestCase):
     def _provider(self):
-        from PySubtrans.Transcription.Providers.Provider_OpenRouter import OpenRouterTranscriptionProvider
         return OpenRouterTranscriptionProvider(SettingsType({
             'server_address': 'http://127.0.0.1:9/v1', 'api_key': 'test-key',
         }))

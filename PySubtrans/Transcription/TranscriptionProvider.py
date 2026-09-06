@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import logging
 from typing import cast
 
+from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
@@ -112,6 +114,7 @@ class TranscriptionProvider:
         Return a dictionary of all available transcription providers
         """
         if not cls.__subclasses__():
+            logging.info(_("Loading transcription providers"))
             from . import Providers  # type: ignore[ignore-unused]
 
         providers = {cast(TranscriptionProvider, provider).name: provider for provider in cls.__subclasses__()}

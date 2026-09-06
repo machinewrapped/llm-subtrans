@@ -16,6 +16,7 @@ from PySubtrans.Transcription.Providers.Provider_Gemini import (
     parse_word_annotations,
 )
 import PySubtrans.Transcription.Providers.Provider_Gemini as _gemini_module
+import PySubtrans.Transcription.Providers.Clients.GeminiTranscriptionClient as _gemini_client_module
 
 GeminiTranscriptionProvider = getattr(_gemini_module, 'GeminiTranscriptionProvider', None)
 
@@ -123,7 +124,7 @@ class TestGeminiChunkRetry(LoggedTestCase):
 
     def _backend(self, create_effects : list|Callable):
         """Mock the SDK backend; returns the mock client for assertions."""
-        patcher = patch.object(_gemini_module, 'genai')
+        patcher = patch.object(_gemini_client_module, 'genai')
         mock_genai = patcher.start()
         self.addCleanup(patcher.stop)
         mock_client = mock_genai.Client.return_value

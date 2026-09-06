@@ -62,6 +62,26 @@ class _TranscriptionWorker(QObject):
             self.failed.emit(str(e))
 
 
+class _ProviderLoaderWorker(QObject):
+    """
+    Imports transcription provider modules off the GUI thread.
+
+    The first import pulls heavy optional SDKs (qwen_asr takes ~10s),
+    which used to freeze the UI between toolbar click and dialog.
+    """
+    loaded = Signal(list)
+    failed = Signal(str)
+
+    @Slot()
+    def run(self) -> None:
+        """Resolve provider names, emitting them back to the dialog."""
+        try:
+            names = sorted(TranscriptionProvider.get_providers())
+            self.loaded.emit(names)
+        except Exception as e:
+            self.failed.emit(str(e))
+
+
 def _format_duration(seconds : float) -> str:
     """
     Format an elapsed-time estimate as m:ss.
@@ -87,6 +107,7 @@ class TranscriptionDialog(QDialog):
         self.global_options : Options = options
         self.coordinator : TranscriptionCoordinator|None = None
         self.thread : QThread|None = None
+        self.loader_thread : QThread|None = None
         self.project : SubtitleProject|None = None
         self.media_path : str|None = None
         self.provider : TranscriptionProvider|None = None
@@ -98,6 +119,7 @@ class TranscriptionDialog(QDialog):
         self._last_span : str = ""
 
         self._build_form()
+        self.status_label.setText(_("Loading transcription providers..."))
         self._refresh_providers()
         self._show_setup()
 
@@ -208,15 +230,39 @@ class TranscriptionDialog(QDialog):
         layout.addWidget(self.button_box)
 
     def _refresh_providers(self) -> None:
+        """
+        Load provider modules in a worker thread so the dialog appears
+        immediately; the combo fills in when imports complete.
+        """
+        if self.loader_thread is not None:
+            return
         self.provider_combo.clear()
-        try:
-            names = sorted(TranscriptionProvider.get_providers())
-        except Exception as e:
-            logging.error(_("Unable to load transcription providers: {error}").format(error=str(e)))
-            names = []
+        self.loader = _ProviderLoaderWorker()
+        self.loader_thread = QThread(self)
+        self.loader.moveToThread(self.loader_thread)
+        self.loader_thread.started.connect(self.loader.run)
+        self.loader.loaded.connect(self._on_providers_loaded)
+        self.loader.failed.connect(self._on_providers_failed)
+        self.loader.loaded.connect(self.loader_thread.quit)
+        self.loader.failed.connect(self.loader_thread.quit)
+        self.loader_thread.start()
+
+    @Slot(list)
+    def _on_providers_loaded(self, names : list) -> None:
+        """Populate the provider combo once module imports complete."""
+        self.loader_thread = None
         self.provider_combo.addItems(names)
         if names:
             self._on_provider_changed(names[0])
+        if not self.media_path:
+            self.status_label.setText(_("Select a media file to begin."))
+
+    @Slot(str)
+    def _on_providers_failed(self, message : str) -> None:
+        """Report provider loading failures instead of stalling silently."""
+        self.loader_thread = None
+        logging.error(_("Unable to load transcription providers: {error}").format(error=message))
+        self.status_label.setText(_("Unable to load transcription providers."))
 
     def _current_provider(self) -> TranscriptionProvider|None:
         name = self.provider_name
@@ -293,6 +339,7 @@ class TranscriptionDialog(QDialog):
     def _build_coordinator(self) -> TranscriptionCoordinator|None:
         provider = self.provider
         if provider is None:
+            self.status_label.setText(_("Transcription providers are still loading..."))
             return None
         for key, field in self.provider_fields.items():
             provider.settings[key] = field.GetValue()
@@ -475,4 +522,7 @@ class TranscriptionDialog(QDialog):
             self.coordinator.Abort()
             self.thread.quit()
             self.thread.wait(5000)
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self.loader_thread.quit()
+            self.loader_thread.wait(5000)
         super().closeEvent(event)

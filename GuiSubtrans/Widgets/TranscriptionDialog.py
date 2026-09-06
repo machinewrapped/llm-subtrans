@@ -189,12 +189,17 @@ class TranscriptionDialog(QDialog):
         self.save_check.setToolTip(_("Write the transcription to a subtitle file alongside the media before translating"))
         self.save_check.setChecked(True)
         self.format_combo = QComboBox(self)
-        self.format_combo.addItems(["SRT", "ASS", "VTT"])
-        self.format_combo.setToolTip(_("ASS and VTT preserve speaker labels; SRT has no speaker field"))
+        self.format_combo.addItems(["VTT", "ASS", "SRT"])
+        self.format_combo.setToolTip(_("VTT and ASS preserve speaker labels; SRT has no speaker field"))
         save_row.addWidget(self.save_check)
         save_row.addWidget(self.format_combo)
         save_row.addStretch(1)
         form.addRow(save_row)
+
+        self.clean_check = QCheckBox(_("Clean transcription with subtitle normalizations"), self)
+        self.clean_check.setToolTip(_("Apply the same text cleanup used for loaded subtitles (dashes, filler words, line breaks); timings are never changed"))
+        self.clean_check.setChecked(self.global_options.get_bool('postprocess_transcription', True))
+        form.addRow(self.clean_check)
         left_layout.addStretch(1)
 
         self.results_view = QTextEdit(self.splitter)
@@ -399,6 +404,15 @@ class TranscriptionDialog(QDialog):
         })
         return TranscriptionCoordinator(provider, settings)
 
+    def _transcription_options(self) -> Options:
+        """
+        Per-run project options: global defaults with this run's cleanup
+        choice layered on top. The dialog never writes back to globals.
+        """
+        options = Options(self.global_options)
+        options['postprocess_transcription'] = self.clean_check.isChecked()
+        return options
+
     def _start_transcription(self) -> None:
         if not self.media_path or not os.path.isfile(self.media_path):
             self.status_label.setText(_("Select a valid media file first."))
@@ -413,7 +427,7 @@ class TranscriptionDialog(QDialog):
         self._chunks_done = 0
         self._chunks_total = 0
         self._last_span = ""
-        self.worker = _TranscriptionWorker(coordinator, self.media_path, self.global_options)
+        self.worker = _TranscriptionWorker(coordinator, self.media_path, self._transcription_options())
         self.thread = QThread(self)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)

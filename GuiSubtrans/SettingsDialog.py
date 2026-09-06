@@ -73,6 +73,7 @@ class SettingsDialog(QDialog):
         TRANSCRIPTION_SECTION: {
             'transcription_provider': ([], _("The transcription service to use")),
             'transcription_provider_settings': TranscriptionProvider,
+            'postprocess_transcription': (bool, _("Clean transcribed lines with the same normalizations used for loaded subtitles (dashes, filler words, line breaks)")),
         },
         'Processing': {
             'preprocess_subtitles': (bool, _("Preprocess subtitles when they are loaded")),

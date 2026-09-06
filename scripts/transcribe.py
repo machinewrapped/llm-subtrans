@@ -33,10 +33,12 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
     parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
     parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
-    parser.add_argument('--format', choices=('srt', 'ass', 'vtt'), default='srt', help="Subtitle format for the transcribed output (default srt; ass and vtt preserve speaker labels)")
+    parser.add_argument('--format', choices=('srt', 'ass', 'vtt'), default='vtt', help="Subtitle format for the transcribed output (default vtt; ass and vtt preserve speaker labels)")
     parser.add_argument('--rate-limit', type=float, default=None, help="Maximum backend requests per minute (0 for unlimited)")
     parser.add_argument('--align', action='store_true', default=True, help="Request word timestamps for timed lines (default on)")
     parser.add_argument('--no-align', dest='align', action='store_false', help="Disable word timestamps (chunk-level lines)")
+    parser.add_argument('--postprocess', action='store_true', default=True, help="Clean transcribed lines with subtitle normalizations (default on)")
+    parser.add_argument('--no-postprocess', dest='postprocess', action='store_false', help="Keep raw transcription text")
     parser.add_argument('-l', '--target-language', type=str, default=None, help="Target language recorded on the project")
     parser.add_argument('--debug', action='store_true', help="Run with DEBUG log level")
     parser.add_argument('--verbose', action='store_true', help="Log each transcribed chunk")
@@ -106,6 +108,7 @@ def main() -> int:
             if args.target_language:
                 options['target_language'] = args.target_language
             options['project_file'] = True
+            options['postprocess_transcription'] = args.postprocess
 
         project : SubtitleProject = coordinator.CreateTranscriptionProject(args.input, options, progress)
 

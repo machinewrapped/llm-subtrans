@@ -69,6 +69,7 @@ class SubtitleEncoder(json.JSONEncoder):
                 "size": obj.size,
                 "all_translated": obj.all_translated,
                 "errors": obj.errors if obj.errors else None,
+                "validate_originals": getattr(obj, 'validate_originals', False) or None,
                 "summary": getattr(obj, 'summary'),
                 "originals": obj._originals,
                 "translated": obj._translated,

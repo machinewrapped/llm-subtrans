@@ -66,6 +66,7 @@ default_settings = {
     'prevent_overlapping_times': env_bool('PREVENT_OVERLAPPING_TIMES', False),
     'extend_short_subtitles': env_bool('EXTEND_SHORT_SUBTITLES', False),
     'postprocess_translation': env_bool('POSTPROCESS_TRANSLATION', False),
+    'postprocess_transcription': env_bool('POSTPROCESS_TRANSCRIPTION', True),
     'preprocess_subtitles': env_bool('PREPROCESS_SUBTITLES', False),
     'save_preprocessed_subtitles': env_bool('SAVE_PREPROCESSED_SUBTITLES', False),
     'break_long_lines': env_bool('BREAK_LONG_LINES', True),

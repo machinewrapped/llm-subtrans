@@ -14,8 +14,11 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleError import SubtitleError
+from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.SubtitleScene import UnbatchScenes
 from PySubtrans.Subtitles import Subtitles
+from PySubtrans.SubtitleValidator import SubtitleValidator
 from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioChunk, AudioChunker, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
@@ -257,6 +260,10 @@ class TranscriptionCoordinator:
             if outputpath:
                 subtitles.outputpath = outputpath
 
+            if options.get_bool('postprocess_transcription', True):
+                self._postprocess_transcription(subtitles, options)
+            self._validate_transcription(subtitles, options)
+
         return project
 
     def Abort(self) -> None:
@@ -264,6 +271,32 @@ class TranscriptionCoordinator:
         self.aborted = True
         if self._active_client is not None:
             self._active_client.AbortTranscription()
+
+    def _postprocess_transcription(self, subtitles : Subtitles, options : Options) -> None:
+        """
+        Clean transcribed lines with the user's normalizations (dashes,
+        filler words, line breaks) so translation starts from the same
+        baseline as file-loaded subtitles. Text-only: timings untouched.
+        """
+        processor = SubtitleProcessor(SettingsType(options))
+        for scene in subtitles.scenes:
+            for batch in scene.batches:
+                batch.originals[:] = processor.PostprocessSubtitles(batch.originals)
+        # Re-derive the flat line list: batches hold the edited copies now
+        subtitles.originals, subtitles.translated, dummy = UnbatchScenes(subtitles.scenes)  # type: ignore[unused-ignore]
+
+    def _validate_transcription(self, subtitles : Subtitles, options : Options) -> None:
+        """
+        Attach source validation notes to fresh batches and tag them for
+        revalidation, so hand-edits recompute (and clear) notes via the
+        standard ValidateBatch path instead of going stale.
+        """
+        validator = SubtitleValidator(options)
+        for scene in subtitles.scenes:
+            for batch in scene.batches:
+                batch.validate_originals = True
+                notes = validator.ValidateOriginals(batch.originals, self.max_line_seconds)
+                batch.errors = list(batch.errors or []) + notes  # type: ignore[assignment]
 
     def _transcribe_chunk(self, client : TranscriptionClient, media_path : str, chunk : AudioChunk) -> TranscriptionSegment|None:
         # Backend and read errors propagate: the TranscribeMedia loop counts
@@ -303,9 +336,26 @@ class TranscriptionCoordinator:
 
         if segment.parts:
             rebased = [self._rebase_part(part, segment) for part in segment.parts if part.text.strip()]
+            for line in rebased:
+                self._warn_if_overlong(line)
             return rebased or [segment]
 
+        self._warn_if_overlong(segment)
         return [segment]
+
+    def _warn_if_overlong(self, line : TranscriptionSegment) -> bool:
+        """
+        Flag engine-coarse spans no splitter can break up. Word-timed lines
+        are already capped by grouping; over-long lines can only come from
+        untimed engine segments, whose boundaries deserve a human glance.
+        Returns True when a warning was logged.
+        """
+        duration = (line.end - line.start).total_seconds()
+        if duration > self.max_line_seconds:
+            logging.warning(_("Long transcription line ({:.1f}s, no word timings to split it): '{}'").format(
+                duration, line.text[:120]))
+            return True
+        return False
 
     def _rebase_part(self, part : TranscriptionSegment, segment : TranscriptionSegment) -> TranscriptionSegment:
         """

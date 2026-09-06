@@ -16,6 +16,7 @@ class SubtitleBatch:
         self.summary : str|None = dct.get('summary')
         self.context : dict[str,str|list|dict] = dct.get('context', {})
         self.errors : list[str|SubtitleError] = dct.get('errors', [])
+        self.validate_originals : bool = dct.get('validate_originals', False)
         self._originals : list[SubtitleLine] = dct.get('originals', []) or dct.get('subtitles', [])
         self._translated : list[SubtitleLine] = dct.get('translated', [])
         self.translation : Translation|None = dct.get('translation')

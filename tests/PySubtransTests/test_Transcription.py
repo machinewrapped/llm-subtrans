@@ -16,7 +16,7 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
-from PySubtrans.SubtitleError import SubtitleError
+from PySubtrans.SubtitleError import ExcessiveDurationError, SubtitleError
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
@@ -286,6 +286,64 @@ class TestWordGrouping(LoggedTestCase):
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("merged start", timedelta(seconds=100), lines[0].start)
         self.assertLoggedEqual("merged end", timedelta(seconds=101.4), lines[0].end)
+
+class TestOverlongSpans(LoggedTestCase):
+    def _coordinator(self):
+        provider = FakeTranscriptionProvider()
+        return TranscriptionCoordinator(provider, SettingsType({'language': 'Chinese'}))
+
+    def _part_segment(self, part_seconds : float) -> TranscriptionSegment:
+        chunk = AudioChunk(start=timedelta(seconds=100), end=timedelta(seconds=160))
+        part = TranscriptionSegment(start=timedelta(seconds=0), end=timedelta(seconds=part_seconds),
+                                    text="monologue", speaker="0")
+        return TranscriptionSegment(start=chunk.start, end=chunk.end, text="monologue",
+                                    language="Chinese", parts=[part])
+
+    def test_long_part_flags_warning(self):
+        """Untimed engine spans beyond the line cap are flagged, not split."""
+        coordinator = self._coordinator()
+        lines = coordinator._lines_for_segment(self._part_segment(20.0))
+
+        self.assertLoggedEqual("line count", 1, len(lines))
+        self.assertLoggedEqual("span kept", timedelta(seconds=120), lines[0].end)
+        self.assertLoggedEqual("flagged", True, coordinator._warn_if_overlong(lines[0]))
+
+    def test_short_part_no_warning(self):
+        """Ordinary parts pass without warnings."""
+        coordinator = self._coordinator()
+        lines = coordinator._lines_for_segment(self._part_segment(3.0))
+
+        self.assertLoggedEqual("line count", 1, len(lines))
+        self.assertLoggedEqual("flagged", False, coordinator._warn_if_overlong(lines[0]))
+
+    def test_whole_chunk_fallback_flags_warning(self):
+        """A flat-text chunk span is flagged when it runs long."""
+        coordinator = self._coordinator()
+        segment = TranscriptionSegment(start=timedelta(seconds=100), end=timedelta(seconds=160),
+                                       text="monologue", language="Chinese")
+        lines = coordinator._lines_for_segment(segment)
+
+        self.assertLoggedEqual("line count", 1, len(lines))
+        self.assertLoggedEqual("flagged", True, coordinator._warn_if_overlong(lines[0]))
+
+    def test_timed_line_no_warning(self):
+        """Word-timed lines are already capped, so they never flag."""
+        coordinator = self._coordinator()
+        chunk = AudioChunk(start=timedelta(seconds=100), end=timedelta(seconds=160))
+        segment = TranscriptionSegment(start=chunk.start, end=chunk.end, text="hi",
+                                       language="Chinese", words=[_word("hi", 0.0, 1.0)])
+        lines = coordinator._lines_for_segment(segment)
+
+        self.assertLoggedEqual("line count", 1, len(lines))
+        self.assertLoggedEqual("flagged", False, coordinator._warn_if_overlong(lines[0]))
+
+    def test_boundary_not_flagged(self):
+        """A line exactly at the cap is fine; only overruns flag."""
+        coordinator = self._coordinator()
+        line = TranscriptionSegment(start=timedelta(seconds=100), end=timedelta(seconds=108),
+                                    text="exactly eight seconds")
+
+        self.assertLoggedEqual("flagged", False, coordinator._warn_if_overlong(line))
 
 class TestSettingsNamespaces(LoggedTestCase):
     def _options(self):
@@ -581,6 +639,46 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedEqual("persistent with options", True, persistent.use_project_file)
         self.assertLoggedIn("project file alongside media", ".subtrans", persistent.projectfile or "")
         self.assertLoggedEqual("transient without options", False, transient.use_project_file)
+
+    def _project_batches(self, project):
+        assert project.subtitles is not None  # Type narrowing for PyLance
+        return [batch for scene in project.subtitles.scenes for batch in scene.batches]
+
+    def test_project_postprocesses_transcription_text(self):
+        """User normalizations apply to transcribed lines, timings untouched."""
+        coordinator, _ = self._coordinator(["a — b"])
+        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+            AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
+        ]
+        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            project = coordinator.CreateTranscriptionProject(
+                media.name, Options({'project_file': True, 'convert_wide_dashes': True}))
+
+        assert project.subtitles is not None  # Type narrowing for PyLance
+        assert project.subtitles.originals is not None  # Type narrowing for PyLance
+        self.assertLoggedEqual("dash normalised", "a - b", project.subtitles.originals[0].text)
+        self.assertLoggedEqual("start kept", timedelta(seconds=0), project.subtitles.originals[0].start)
+        self.assertLoggedEqual("end kept", timedelta(seconds=4), project.subtitles.originals[0].end)
+
+    def test_project_flags_batches_for_revalidation(self):
+        """Fresh transcription batches carry notes and the revalidation tag."""
+        coordinator, _ = self._coordinator(["monologue"])
+        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+            AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=60)),
+        ]
+        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            project = coordinator.CreateTranscriptionProject(media.name, Options({'project_file': True}))
+
+        batches = self._project_batches(project)
+        self.assertLoggedGreater("batches built", len(batches), 0)
+        for batch in batches:
+            self.assertLoggedEqual("revalidation tagged", True, batch.validate_originals)
+        error_types = {type(e) for batch in batches for e in batch.errors}
+        self.assertLoggedIn("duration note attached", ExcessiveDurationError, error_types)
 
 
 class TestTranscriptionRateLimit(LoggedTestCase):

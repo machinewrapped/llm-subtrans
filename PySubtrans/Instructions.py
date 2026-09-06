@@ -60,13 +60,15 @@ default_retry_instructions = linesep.join([
     ])
 
 default_speaker_instructions = linesep.join([
-    "Some subtitles carry a Speaker> line identifying who is speaking, e.g.",
+    "Some subtitles carry a Speaker> line with a rough indication of who is speaking, e.g.",
     "#200",
-    "Speaker> Aiko",
+    "Speaker> 1",
     "Original>",
     "...",
     "",
-    "Use the speaker to keep pronouns, formality and register consistent for that voice across lines.",
+    "These labels are only locally coherent: the same label usually means the same voice",
+    "within a section of dialogue, but labels may restart between sections, so treat",
+    "them as indicative, not authoritative. Use them as a weak hint for pronouns and register.",
     "Do not repeat the Speaker> line in your response and do not translate the speaker name.",
     ])
 

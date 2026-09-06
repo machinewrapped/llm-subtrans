@@ -14,11 +14,17 @@ class TestTranscribeCliOptions(LoggedTestCase):
     def _parse(self, *argv : str):
         return transcribe.CreateTranscribeParser().parse_args(list(argv))
 
-    def test_format_defaults_to_srt(self):
-        """Transcribed output defaults to SRT."""
+    def test_format_defaults_to_vtt(self):
+        """Transcribed output defaults to VTT to preserve speakers."""
         args = self._parse("movie.mkv")
 
-        self.assertLoggedEqual("default format", "srt", args.format)
+        self.assertLoggedEqual("default format", "vtt", args.format)
+
+    def test_format_srt_selected(self):
+        """SRT output is selectable (drops speaker labels)."""
+        args = self._parse("movie.mkv", "--format", "srt")
+
+        self.assertLoggedEqual("srt format", "srt", args.format)
 
     def test_format_ass_selected(self):
         """ASS output is selectable."""
@@ -38,6 +44,18 @@ class TestTranscribeCliOptions(LoggedTestCase):
 
         self.assertLoggedEqual("min unset", None, args.min_chunk)
         self.assertLoggedEqual("max unset", None, args.max_chunk)
+
+    def test_postprocess_defaults_on(self):
+        """Transcribed lines are cleaned by default."""
+        args = self._parse("movie.mkv")
+
+        self.assertLoggedEqual("postprocess on", True, args.postprocess)
+
+    def test_no_postprocess_disables_cleaning(self):
+        """Raw transcription text is available on request."""
+        args = self._parse("movie.mkv", "--no-postprocess")
+
+        self.assertLoggedEqual("postprocess off", False, args.postprocess)
 
 
 if __name__ == '__main__':

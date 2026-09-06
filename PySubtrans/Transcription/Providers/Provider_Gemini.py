@@ -13,12 +13,18 @@ from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 
-# Quota responses carry a "Please retry in Ns" hint (see rate-limits docs)
-_RETRY_HINT_PATTERN = regex.compile(r'retry in\s+(\d+(?:\.\d+)?)\s*s', regex.IGNORECASE)
+# Quota responses carry a "Please retry in Ns" hint, sometimes compound
+# ("11h55m6s" for daily quotas). See rate-limits docs.
+_RETRY_HINT_PATTERN = regex.compile(
+    r'retry in\s+(?:(\d+)\s*h\s*)?(?:(\d+)\s*m\s*)?(\d+(?:\.\d+)?)\s*s',
+    regex.IGNORECASE)
 
 # Fallback backoff when the quota response carries no retry hint
 _RETRY_BASE_SECONDS = 5.0
 _RETRY_MAX_SECONDS = 120.0
+
+# Hints beyond this are "come back later", not "wait it out"
+_RETRY_GIVE_UP_SECONDS = 600.0
 
 
 def _is_rate_limit_error(error : Exception) -> bool:
@@ -44,19 +50,45 @@ def _is_rate_limit_error(error : Exception) -> bool:
             or ('429' in message and ('rate' in message or 'quota' in message or 'retry' in message)))
 
 
+def _retry_hint_seconds(error : Exception) -> float|None:
+    """
+    Raw "retry in ..." hint from a quota response, handling compound
+    durations ("11h55m6s") as well as plain seconds. None when absent.
+    """
+    match = _RETRY_HINT_PATTERN.search(str(error))
+    if not match:
+        return None
+    try:
+        hours = float(match.group(1) or 0.0)
+        minutes = float(match.group(2) or 0.0)
+        seconds = float(match.group(3))
+        return max(0.0, hours * 3600.0 + minutes * 60.0 + seconds)
+    except ValueError:
+        return None
+
+
 def _rate_limit_delay_seconds(error : Exception, attempt : int) -> float:
     """
     Backoff before retrying a quota response: honour the server's retry
     hint when present, otherwise exponential fallback (5s doubling to 120s).
     """
-    match = _RETRY_HINT_PATTERN.search(str(error))
-    if match:
-        try:
-            return min(max(0.0, float(match.group(1))), _RETRY_MAX_SECONDS)
-        except ValueError:
-            pass
+    hint = _retry_hint_seconds(error)
+    if hint is not None:
+        return min(hint, _RETRY_MAX_SECONDS)
 
     return min(_RETRY_BASE_SECONDS * (2 ** attempt), _RETRY_MAX_SECONDS)
+
+
+def _format_retry_delay(seconds : float) -> str:
+    """Human-readable backoff for quota messages ("about 12 hours")."""
+    total = int(round(max(0.0, seconds)))
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"about {hours} hour{'s' if hours != 1 else ''}"
+    if minutes:
+        return f"about {minutes} minute{'s' if minutes != 1 else ''}"
+    return f"about {secs} second{'s' if secs != 1 else ''}"
 
 # Free-text hints to BCP-47 codes (empty/unknown hints use auto-detection)
 _GEMINI_LANGUAGE_MAP : dict[str, str] = {
@@ -167,13 +199,13 @@ else:
 
             @property
             def recommended_min_chunk_seconds(self) -> float:
-                """Long chunks amortise per-request overhead and keep speaker identities stable."""
-                return 30.0
+                """Long chunks amortise per-request overhead, keep speaker identities stable and stay under daily request quotas."""
+                return 180.0
 
             @property
             def recommended_max_chunk_seconds(self) -> float:
                 """The Files API handles multi-minute chunks comfortably."""
-                return 300.0
+                return 600.0
 
             def __init__(self, settings : SettingsType):
                 super().__init__(self.name, SettingsType({

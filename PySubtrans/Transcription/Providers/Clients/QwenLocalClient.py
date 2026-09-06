@@ -27,7 +27,7 @@ if not importlib.util.find_spec("qwen_asr"):
 else:
     try:
         import torch
-        from qwen_asr import Qwen3ASRModel
+        from qwen_asr import Qwen3ASRModel      #type: ignore[import]
 
 
         class QwenLocalClient(TranscriptionClient):

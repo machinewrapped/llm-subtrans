@@ -10,8 +10,11 @@ from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
 from PySubtrans.Transcription.Providers.Provider_Gemini import (
+    _RETRY_GIVE_UP_SECONDS,
+    _format_retry_delay,
     _is_rate_limit_error,
     _rate_limit_delay_seconds,
+    _retry_hint_seconds,
     collect_word_annotations,
     map_language_code,
     parse_word_annotations,
@@ -131,6 +134,11 @@ else:
                                     "Gemini rate limit still exceeded after {} attempts: {}"
                                 ).format(attempt + 1, str(e)[:200]), error=e)
                             raise
+                        hint = _retry_hint_seconds(e)
+                        if hint is not None and hint > _RETRY_GIVE_UP_SECONDS:
+                            raise SubtitleError(_(
+                                "Gemini quota exceeded, retry in {}"
+                            ).format(_format_retry_delay(hint)), error=e)
                         delay = _rate_limit_delay_seconds(e, attempt)
                         logging.warning(_("Gemini rate limit hit (attempt {}/{}), retrying in {:.0f}s").format(
                             attempt + 1, self.max_retries + 1, delay))

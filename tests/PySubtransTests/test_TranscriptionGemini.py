@@ -11,6 +11,8 @@ from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.Providers.Provider_Gemini import (
     _is_rate_limit_error,
     _rate_limit_delay_seconds,
+    _retry_hint_seconds,
+    _format_retry_delay,
     map_language_code,
     parse_offset,
     parse_word_annotations,
@@ -100,6 +102,22 @@ class TestGeminiRateLimitHelpers(LoggedTestCase):
 
         self.assertLoggedEqual("hint delay", 14.026600831, delay)
 
+    def test_compound_hint_parsed(self):
+        """Daily-quota hints in hours and minutes parse to seconds."""
+        self.assertLoggedEqual("daily quota", 11 * 3600.0 + 55 * 60.0 + 6.404103757,
+                               _retry_hint_seconds(Exception("Please retry in 11h55m6.404103757s.")))
+        self.assertLoggedEqual("minutes", 125.0,
+                               _retry_hint_seconds(Exception("Please retry in 2m5s.")))
+        self.assertLoggedEqual("no hint", None,
+                               _retry_hint_seconds(Exception("quota exceeded")))
+
+    def test_format_retry_delay(self):
+        """Quota messages use human-readable waits."""
+        self.assertLoggedEqual("hours", "about 11 hours", _format_retry_delay(42906.4))
+        self.assertLoggedEqual("one hour", "about 1 hour", _format_retry_delay(3600.0))
+        self.assertLoggedEqual("minutes", "about 14 minutes", _format_retry_delay(846.0))
+        self.assertLoggedEqual("seconds", "about 14 seconds", _format_retry_delay(14.0))
+
     def test_fallback_backoff(self):
         """Hintless quota responses back off exponentially to a cap."""
         error = _QuotaError("quota exceeded")
@@ -148,6 +166,21 @@ class TestGeminiChunkRetry(LoggedTestCase):
         self.assertLoggedEqual("single upload", 1, mock_client.files.upload.call_count)
         self.assertLoggedEqual("two attempts", 2, mock_client.interactions.create.call_count)
         mock_client.files.delete.assert_called_once_with(name='file-name')
+
+    def test_daily_quota_fails_fast(self):
+        """Hour-long quota hints fail immediately instead of sleeping it out."""
+        client = self._client(max_retries=5)
+        mock_client = self._backend([_QuotaError("Please retry in 11h55m6.404103757s.")])
+
+        with patch("time.sleep") as mock_sleep:
+            with self.assertRaises(SubtitleError) as raised:
+                client._transcribe_chunk(b"fake-audio", "wav", "en")
+
+        # Note: str() prefers the wrapped error, the message carries ours
+        self.assertLoggedIn("quota message", "quota exceeded, retry in about 11 hours",
+                             raised.exception.message)
+        self.assertLoggedEqual("no retries", 1, mock_client.interactions.create.call_count)
+        self.assertLoggedEqual("no sleeping", 0, mock_sleep.call_count)
 
     def test_exhaustion_raises(self):
         """Persistent quota responses fail loudly after max_retries."""

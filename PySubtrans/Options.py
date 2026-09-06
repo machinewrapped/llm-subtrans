@@ -296,6 +296,8 @@ class Options(SettingsType):
             self['retry_instructions'] = instructions.retry_instructions
         if instructions.terminology_instructions:
             self['terminology_instructions'] = instructions.terminology_instructions
+        if instructions.speaker_instructions:
+            self['speaker_instructions'] = instructions.speaker_instructions
         if instructions.target_language:
             self['target_language'] = instructions.target_language
         if instructions.task_type:

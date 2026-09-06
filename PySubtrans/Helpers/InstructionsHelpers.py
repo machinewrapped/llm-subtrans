@@ -1,7 +1,7 @@
 import logging
 import os
 
-from PySubtrans.Instructions import Instructions, DEFAULT_TASK_TYPE, default_instructions, default_retry_instructions, default_terminology_instructions
+from PySubtrans.Instructions import Instructions, DEFAULT_TASK_TYPE, default_instructions, default_retry_instructions, default_speaker_instructions, default_terminology_instructions
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Resources import GetConfigDir, GetResourcePath
 
@@ -67,6 +67,7 @@ def LoadInstructionsFile(filepath : str) -> Instructions:
     instructions.instructions = linesep.join(sections.get('instructions', [])).strip()
     instructions.retry_instructions = linesep.join(sections.get('retry_instructions', [])).strip() or default_retry_instructions
     instructions.terminology_instructions = linesep.join(sections.get('terminology_instructions', [])).strip() or default_terminology_instructions
+    instructions.speaker_instructions = linesep.join(sections.get('speaker_instructions', [])).strip() or default_speaker_instructions
     instructions.instruction_file = os.path.basename(filepath)
     instructions.target_language = ''.join(sections.get('target_language', [])) if 'target_language' in sections else None
     instructions.task_type = ''.join(sections.get('task_type', [])) if 'task_type' in sections else DEFAULT_TASK_TYPE
@@ -98,6 +99,8 @@ def SaveInstructions(instructions : Instructions, filepath : str) -> None:
             f.write(instructions.retry_instructions or default_retry_instructions)
             f.write("\n\n### terminology_instructions\n")
             f.write(instructions.terminology_instructions or default_terminology_instructions)
+            f.write("\n\n### speaker_instructions\n")
+            f.write(instructions.speaker_instructions or default_speaker_instructions)
             f.write("\n")
 
         instructions.instruction_file = os.path.basename(filepath)

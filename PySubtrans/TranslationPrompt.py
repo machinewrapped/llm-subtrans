@@ -5,7 +5,7 @@ from PySubtrans.SubtitleError import SubtitleError, TranslationError
 from PySubtrans.SubtitleLine import SubtitleLine
 
 default_prompt_template: str = "<context>\n{context}\n</context>\n\n{prompt}\n\n<summary>Summary of the batch</summary>\n<scene>Summary of the scene</scene>\n"
-default_line_template: str = "#{number}\nOriginal>\n{text}\nTranslation>\n"
+default_line_template: str = "#{number}\n{speaker_prefix}Original>\n{text}\nTranslation>\n"
 default_tag_template: str = "<{tag}>{content}</{tag}>"
 default_context_tags: list[str] = ['description', 'names', 'terminology', 'history', 'scene', 'summary', 'batch']
 
@@ -159,7 +159,10 @@ class TranslationPrompt:
 
 def _get_line_prompt(line : SubtitleLine, line_template : str|None = None) -> str|None:
     """
-    Generate a prompt for a single subtitle line
+    Generate a prompt for a single subtitle line.
+
+    Lines with speaker metadata gain a Speaker> field for context; custom
+    templates without a {speaker_prefix} placeholder simply omit it.
     """
     if not line.text or not line._index:
         return None
@@ -167,7 +170,10 @@ def _get_line_prompt(line : SubtitleLine, line_template : str|None = None) -> st
     if line_template is None:
         raise TranslationError(_("No line template provided"))
 
-    return line_template.format(number=line.number, text=line.text_normalized)
+    speaker = (line.metadata or {}).get('speaker')
+    speaker_prefix = f"Speaker> {speaker}\n" if speaker and str(speaker).strip() else ""
+
+    return line_template.format(number=line.number, text=line.text_normalized, speaker_prefix=speaker_prefix)
 
 def _generate_tag(tag : str, content : str|list[str], tag_template : str) -> str:
     """

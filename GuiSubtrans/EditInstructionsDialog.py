@@ -33,6 +33,7 @@ class EditInstructionsDialog(QDialog):
         self.instructions_edit = self._add_form_option("instructions", self.instructions.instructions, MULTILINE_OPTION, _("System instructions for the translator"))
         self.retry_instructions_edit = self._add_form_option("retry_instructions", self.instructions.retry_instructions, MULTILINE_OPTION, _("Supplementary instructions when retrying"))
         self.terminology_instructions_edit = self._add_form_option("terminology_instructions", self.instructions.terminology_instructions, MULTILINE_OPTION, _("Instructions for building a terminology list"))
+        self.speaker_instructions_edit = self._add_form_option("speaker_instructions", self.instructions.speaker_instructions, MULTILINE_OPTION, _("Instructions for translating speaker-labelled lines"))
         self.form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         self.button_layout = QHBoxLayout()
@@ -80,6 +81,7 @@ class EditInstructionsDialog(QDialog):
             self.instructions.instructions = self.instructions_edit.GetValue()
             self.instructions.retry_instructions = self.retry_instructions_edit.GetValue()
             self.instructions.terminology_instructions = self.terminology_instructions_edit.GetValue()
+            self.instructions.speaker_instructions = self.speaker_instructions_edit.GetValue()
             self.instructions.instruction_file = None
 
         # Check that {task_type} is found in instructions
@@ -107,6 +109,8 @@ class EditInstructionsDialog(QDialog):
             return True
         if self.terminology_instructions_edit.GetValue() != self.instructions.terminology_instructions:
             return True
+        if self.speaker_instructions_edit.GetValue() != self.instructions.speaker_instructions:
+            return True
 
         return False
 
@@ -130,6 +134,7 @@ class EditInstructionsDialog(QDialog):
             self.instructions_edit.SetValue(self.instructions.instructions)
             self.retry_instructions_edit.SetValue(self.instructions.retry_instructions)
             self.terminology_instructions_edit.SetValue(self.instructions.terminology_instructions)
+            self.speaker_instructions_edit.SetValue(self.instructions.speaker_instructions)
 
         except Exception as e:
             logging.error(f"Unable to load instructions: {str(e)}")
@@ -147,6 +152,7 @@ class EditInstructionsDialog(QDialog):
                 self.instructions_edit.SetValue(self.instructions.instructions)
                 self.retry_instructions_edit.SetValue(self.instructions.retry_instructions)
                 self.terminology_instructions_edit.SetValue(self.instructions.terminology_instructions)
+                self.speaker_instructions_edit.SetValue(self.instructions.speaker_instructions)
 
             except Exception as e:
                 logging.error(f"Unable to read instruction file: {str(e)}")
@@ -162,6 +168,7 @@ class EditInstructionsDialog(QDialog):
                 self.instructions.instructions = self.instructions_edit.GetValue()
                 self.instructions.retry_instructions = self.retry_instructions_edit.GetValue()
                 self.instructions.terminology_instructions = self.terminology_instructions_edit.GetValue()
+                self.instructions.speaker_instructions = self.speaker_instructions_edit.GetValue()
 
                 SaveInstructions(self.instructions, file_name)
 
@@ -176,3 +183,4 @@ class EditInstructionsDialog(QDialog):
         self.instructions_edit.SetValue(instructions.instructions)
         self.retry_instructions_edit.SetValue(instructions.retry_instructions)
         self.terminology_instructions_edit.SetValue(instructions.terminology_instructions)
+        self.speaker_instructions_edit.SetValue(instructions.speaker_instructions)

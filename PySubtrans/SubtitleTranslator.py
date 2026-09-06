@@ -28,6 +28,14 @@ from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.TranslationRequest import StreamingCallback
 
+
+def LinesHaveSpeakers(lines : list[SubtitleLine]) -> bool:
+    """
+    Whether any line carries speaker metadata worth telling the translator about.
+    """
+    return any((line.metadata or {}).get('speaker') for line in lines)
+
+
 class SubtitleTranslator:
     """
     Processes subtitles into scenes and batches and sends them for translation
@@ -249,6 +257,9 @@ class SubtitleTranslator:
         instructions = self.system_instructions
         if not instructions:
             raise TranslationImpossibleError(_("No instructions provided for translation"))
+
+        if self.instructions.speaker_instructions and LinesHaveSpeakers(originals):
+            instructions = f"{instructions}\n\n{self.instructions.speaker_instructions}".strip()
 
         batch.prompt = self.client.BuildTranslationPrompt(self.user_prompt, instructions, originals, context)
 

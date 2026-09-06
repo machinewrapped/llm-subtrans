@@ -100,6 +100,18 @@ class TestOpenRouterParsing(LoggedTestCase):
         self.assertLoggedEqual("part count", 0, len(parts))
         self.assertLoggedEqual("word count", 0, len(words))
 
+    def test_missing_optional_fields_skipped_silently(self):
+        """Absent no_speech_prob and timings parse without raising anything."""
+        payload = {
+            'text': 'hi',
+            'segments': [{'text': 'hi', 'start': 0.0, 'end': 1.0}],
+        }
+        text, _language, parts, _words = parse_transcription_payload(payload)
+
+        self.assertLoggedEqual("text", "hi", text)
+        self.assertLoggedEqual("part count", 1, len(parts))
+        self.assertLoggedEqual("no confidence", None, parts[0].confidence)
+
 class TestOpenRouterCatalog(LoggedTestCase):
     def _provider(self):
         return OpenRouterTranscriptionProvider(SettingsType({

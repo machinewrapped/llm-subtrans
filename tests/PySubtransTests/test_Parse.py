@@ -2,8 +2,39 @@ import unittest
 from enum import Enum
 
 from PySubtrans.Helpers import GetValueName, GetValueFromName
-from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseDelayFromHeader, ParseKeyValuePairs, ParseNames
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseDelayFromHeader, ParseKeyValuePairs, ParseNames, TryParseFloat, TryParseInt
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+
+
+class TestTryParseFloat(LoggedTestCase):
+    def test_valid_numbers(self):
+        """Numbers, numeric strings and exponents parse without raising."""
+        cases = [
+            (5, 5.0),
+            (2.5, 2.5),
+            ("3.25", 3.25),
+            ("  7  ", 7.0),
+            ("-1.5", -1.5),
+            ("1e3", 1000.0),
+            (True, None),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"float from {value!r}", expected, TryParseFloat(value),
+                                       input_value=value)
+
+    def test_invalid_numbers(self):
+        """Missing and sloppy values return None instead of raising."""
+        for value in (None, "", "   ", "soon", "12x", "nan-ish", object()):
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"float from {value!r}", None, TryParseFloat(value),
+                                       input_value=value)
+
+    def test_try_parse_int(self):
+        """Integers truncate; invalid values stay None."""
+        self.assertLoggedEqual("int", 3, TryParseInt("3.9"))
+        self.assertLoggedEqual("none", None, TryParseInt(None))
+        self.assertLoggedEqual("garbage", None, TryParseInt("soon"))
 
 
 class TestParseDelayFromHeader(LoggedTestCase):

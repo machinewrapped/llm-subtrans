@@ -6,6 +6,7 @@ from datetime import timedelta
 import httpx
 
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import TryParseFloat
 from PySubtrans.Options import SettingsType, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
@@ -15,10 +16,9 @@ from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 
 
 def _to_seconds(value : object) -> float|None:
-    try:
-        return max(0.0, float(value))  # type: ignore[arg-type]
-    except (TypeError, ValueError):
-        return None
+    """Non-negative seconds from a payload number, None when absent."""
+    parsed = TryParseFloat(value)
+    return max(0.0, parsed) if parsed is not None else None
 
 
 def parse_transcription_payload(payload : dict) -> tuple[str, str|None, list[TranscriptionSegment], list[WordTiming]]:

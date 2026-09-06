@@ -4,6 +4,7 @@ import os
 from datetime import timedelta
 
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import TryParseFloat
 from PySubtrans.Options import SettingsType, env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleError import SubtitleError
@@ -41,16 +42,13 @@ def parse_qwen_result(result : object) -> tuple[str, str|None, list[WordTiming]]
         unit_text = str(getattr(unit, 'text', '') or '').strip()
         if not unit_text:
             continue
-        try:
-            start = max(0.0, float(getattr(unit, 'start_time', 0.0) or 0.0))
-            end = max(0.0, float(getattr(unit, 'end_time', 0.0) or 0.0))
-        except (TypeError, ValueError):
-            continue
-        if end <= start:
+        start = TryParseFloat(getattr(unit, 'start_time', None))
+        end = TryParseFloat(getattr(unit, 'end_time', None))
+        if start is None or end is None or end <= start:
             continue
         words.append(WordTiming(text=unit_text,
-                                start=timedelta(seconds=start),
-                                end=timedelta(seconds=end)))
+                                start=timedelta(seconds=max(0.0, start)),
+                                end=timedelta(seconds=max(0.0, end))))
 
     words.sort(key=lambda w: w.start)
     return text, language, words

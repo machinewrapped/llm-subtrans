@@ -6,6 +6,7 @@ from datetime import timedelta
 import regex
 
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import TryParseFloat
 from PySubtrans.Options import SettingsType, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleError import SubtitleError
@@ -58,13 +59,12 @@ def _retry_hint_seconds(error : Exception) -> float|None:
     match = _RETRY_HINT_PATTERN.search(str(error))
     if not match:
         return None
-    try:
-        hours = float(match.group(1) or 0.0)
-        minutes = float(match.group(2) or 0.0)
-        seconds = float(match.group(3))
-        return max(0.0, hours * 3600.0 + minutes * 60.0 + seconds)
-    except ValueError:
+    hours = TryParseFloat(match.group(1) or 0.0)
+    minutes = TryParseFloat(match.group(2) or 0.0)
+    seconds = TryParseFloat(match.group(3))
+    if seconds is None:
         return None
+    return max(0.0, (hours or 0.0) * 3600.0 + (minutes or 0.0) * 60.0 + seconds)
 
 
 def _rate_limit_delay_seconds(error : Exception, attempt : int) -> float:
@@ -133,11 +133,9 @@ def parse_offset(value : object) -> float|None:
     """
     if value is None:
         return None
-    try:
-        text = str(value).strip().removesuffix('s')
-        return max(0.0, float(text))
-    except (TypeError, ValueError):
-        return None
+    text = str(value).strip().removesuffix('s')
+    parsed = TryParseFloat(text)
+    return max(0.0, parsed) if parsed is not None else None
 
 
 def parse_word_annotations(annotations : list) -> list[WordTiming]:

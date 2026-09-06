@@ -64,8 +64,34 @@ class SaveTranslationCommandTests(LoggedTestCase):
 
     def test_SaveTranslationFile_accepts_uppercase_extension(self) -> None:
         """Recognized extensions remain case insensitive."""
+        subtitles = (SubtitleBuilder(max_batch_size=1)
+            .AddLines([
+                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghij"),
+            ])
+            .Build())
+        with SubtitleEditor(subtitles) as editor:
+            editor.DuplicateOriginalsAsTranslations()
+
         project = SubtitleProject()
+        project.subtitles = subtitles
         command = SaveTranslationFile(project, "translation.SRT")
         with patch.object(project, 'SaveTranslation') as save:
             self.assertLoggedEqual("save succeeded", True, command.execute())
             save.assert_called_once_with("translation.SRT")
+
+    def test_SaveTranslationFile_skips_untranslated_project(self) -> None:
+        """Saving before translation is a quiet no-op, not a repeated error."""
+        subtitles = (SubtitleBuilder(max_batch_size=1)
+            .AddLines([
+                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghij"),
+            ])
+            .Build())
+
+        project = SubtitleProject()
+        project.subtitles = subtitles
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "translation.srt")
+            command = SaveTranslationFile(project, output_path)
+            self.assertLoggedEqual("save skipped", True, command.execute())
+            self.assertLoggedEqual("no file created", False, os.path.exists(output_path))

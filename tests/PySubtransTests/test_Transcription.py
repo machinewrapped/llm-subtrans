@@ -462,6 +462,23 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedEqual("label", "Track 1 - ac3 - chi", str(info))
 
 
+    def test_project_persistence_follows_options(self):
+        """GUI projects are persistent like opened files, so autosave uses the project path."""
+        coordinator, _ = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
+        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+            AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
+        ]
+        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            persistent = coordinator.CreateTranscriptionProject(media.name, Options({'project_file': True}))
+            transient = coordinator.CreateTranscriptionProject(media.name, None)
+
+        self.assertLoggedEqual("persistent with options", True, persistent.use_project_file)
+        self.assertLoggedIn("project file alongside media", ".subtrans", persistent.projectfile or "")
+        self.assertLoggedEqual("transient without options", False, transient.use_project_file)
+
+
 class TestTranscriptionRateLimit(LoggedTestCase):
     def test_unlimited_by_default(self):
         """No rate limit means no pacing sleep."""

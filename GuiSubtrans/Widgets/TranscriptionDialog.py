@@ -44,17 +44,18 @@ class _TranscriptionWorker(QObject):
     finished = Signal(object)
     failed = Signal(str)
 
-    def __init__(self, coordinator : TranscriptionCoordinator, media_path : str):
+    def __init__(self, coordinator : TranscriptionCoordinator, media_path : str, options : Options|None = None):
         super().__init__()
         self.coordinator : TranscriptionCoordinator = coordinator
         self.media_path : str = media_path
+        self.options : Options|None = options
 
     @Slot()
     def run(self) -> None:
         """Transcribe the media file, emitting progress as chunks complete."""
         try:
             project = self.coordinator.CreateTranscriptionProject(
-                self.media_path, None,
+                self.media_path, self.options,
                 lambda done, total: self.progressed.emit(done, total),
                 lambda segment: self.segmented.emit(segment))
             self.finished.emit(project)
@@ -414,7 +415,7 @@ class TranscriptionDialog(QDialog):
         self._chunks_done = 0
         self._chunks_total = 0
         self._last_span = ""
-        self.worker = _TranscriptionWorker(coordinator, self.media_path)
+        self.worker = _TranscriptionWorker(coordinator, self.media_path, self.global_options)
         self.thread = QThread(self)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)

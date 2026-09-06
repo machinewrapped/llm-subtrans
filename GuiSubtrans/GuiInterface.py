@@ -401,7 +401,9 @@ class GuiInterface(QObject):
         """
         if self.datamodel:
             with QMutexLocker(self.datamodel.mutex):
-                if self.datamodel.autosave_enabled and self.datamodel.project and self.datamodel.project.needs_writing:
+                project = self.datamodel.project
+                if (self.datamodel.autosave_enabled and project and project.needs_writing
+                        and (project.use_project_file or project.any_translated)):
                     self.SaveProject()
 
     def _on_project_loaded(self, command : LoadSubtitleFile):

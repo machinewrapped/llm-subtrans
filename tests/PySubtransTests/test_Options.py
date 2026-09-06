@@ -64,7 +64,7 @@ class TestOptions(LoggedTestCase):
                 self.assertLoggedEqual(f"options.get('{key}')", expected, result)
         
         # Test None values
-        none_test_cases = [ 'last_used_path' ]
+        none_test_cases = [ 'last_used_path', 'transcription_provider' ]
         
         for key in none_test_cases:
             with self.subTest(key=key):

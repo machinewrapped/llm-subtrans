@@ -48,6 +48,7 @@ def env_str(key : str, default : str|None = None) -> str|None:
 default_settings = {
     'version': __version__,
     'provider': env_str('PROVIDER', None),
+    'transcription_provider': env_str('TRANSCRIPTION_PROVIDER', None),
     'provider_settings': SettingsType({}),
     'prompt': env_str('PROMPT', default_user_prompt),
     'instruction_file': env_str('INSTRUCTION_FILE', None),

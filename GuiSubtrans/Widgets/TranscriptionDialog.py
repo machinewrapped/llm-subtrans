@@ -156,7 +156,14 @@ class TranscriptionDialog(QDialog):
 
         self.provider_combo = QComboBox(self)
         self.provider_combo.currentTextChanged.connect(self._on_provider_changed)
-        form.addRow(_("Provider"), self.provider_combo)
+        provider_row = QHBoxLayout()
+        provider_row.addWidget(self.provider_combo)
+        self.settings_button = QPushButton(_("Configure..."), self)
+        self.settings_button.setToolTip(_("Open transcription settings for this provider"))
+        self.settings_button.clicked.connect(self._open_transcription_settings)
+        self.settings_button.setVisible(False)
+        provider_row.addWidget(self.settings_button)
+        form.addRow(_("Provider"), provider_row)
 
         self.provider_form = QFormLayout()
         form.addRow(self.provider_form)
@@ -253,7 +260,12 @@ class TranscriptionDialog(QDialog):
         self.loader_thread = None
         self.provider_combo.addItems(names)
         if names:
-            self._on_provider_changed(names[0])
+            saved = self.global_options.get_str('transcription_provider')
+            choice = saved if isinstance(saved, str) and saved in names else names[0]
+            if self.provider_combo.currentText() != choice:
+                self.provider_combo.setCurrentText(choice)
+            else:
+                self._on_provider_changed(choice)
         if not self.media_path:
             self.status_label.setText(_("Select a media file to begin."))
 
@@ -282,6 +294,31 @@ class TranscriptionDialog(QDialog):
             # Chunk bounds follow the provider until the user overrides them
             self.min_chunk_spin.setValue(self.provider.recommended_min_chunk_seconds)
             self.max_chunk_spin.setValue(self.provider.recommended_max_chunk_seconds)
+        self._update_settings_link()
+
+    def _update_settings_link(self) -> None:
+        """
+        Show the Configure button when the selected provider is missing
+        credentials, linking straight to its settings tab.
+        """
+        if self.provider is None:
+            self.settings_button.setVisible(False)
+            return
+        for field in self.provider_fields.values():
+            self.provider.settings[field.key] = field.GetValue()
+        self.settings_button.setVisible(not self.provider.ValidateSettings())
+
+    def _open_transcription_settings(self) -> None:
+        """Edit transcription provider settings without leaving the dialog."""
+        from GuiSubtrans.SettingsDialog import SettingsDialog
+        dialog = SettingsDialog(self.global_options, parent=self, focus_transcription_settings=True)
+        if dialog.exec() != QDialog.DialogCode.Accepted:
+            return
+        updated = SettingsType({k: v for k, v in dialog.settings.items() if v != self.global_options.get(k)})
+        if updated:
+            self.global_options.update(updated)
+            self.global_options.SaveSettings()
+        self._on_provider_changed(self.provider_name)
 
     def _rebuild_provider_form(self) -> None:
         """
@@ -303,6 +340,7 @@ class TranscriptionDialog(QDialog):
 
         for key, (key_type, tooltip) in schema.items():
             field = CreateOptionWidget(key, self.provider.settings.get(key), key_type, tooltip=tooltip)
+            field.contentChanged.connect(lambda dummy=None: self._update_settings_link())
             self.provider_fields[key] = field
             self.provider_form.addRow(_(key), field)
 

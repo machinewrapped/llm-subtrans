@@ -44,6 +44,18 @@ class FakeTranscriptionClient(TranscriptionClient):
         text = self.texts[(self.calls - 1) % len(self.texts)] if self.texts else ""
         return TranscriptionResult(text=text, language=language, words=list(self.words))
 
+class FailingTranscriptionClient(FakeTranscriptionClient):
+    """Fake client with scripted backend failures for abort testing."""
+    def __init__(self, *args, fail_on : set[int]|None = None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fail_on : set[int] = set(fail_on or [])
+
+    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
+        if self.calls + 1 in self.fail_on:
+            self.calls += 1
+            raise SubtitleError("simulated backend failure")
+        return super()._transcribe_chunk(audio_bytes, audio_format, language)
+
 def _ffmpeg_available() -> bool:
     return bool(shutil.which('ffmpeg') and shutil.which('ffprobe'))
 def _make_tone_silence_wav(path : str) -> None:    # 4s tone, 2s silence, 4s tone at 16kHz mono
@@ -461,6 +473,60 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
         self.assertLoggedEqual("label", "Track 1 - ac3 - chi", str(info))
 
+    def _failing_coordinator(self, fail_on : set[int], chunks : int = 4, **settings):
+        provider = FakeTranscriptionProvider(SettingsType(), ["ok line"])
+        failing = FailingTranscriptionClient(SettingsType(), ["ok line"], fail_on=fail_on)
+        provider.GetTranscriptionClient = lambda settings: failing  # type: ignore[method-assign]
+        coordinator = TranscriptionCoordinator(provider, SettingsType({'min_chunk_seconds': 1.0, **settings}))
+        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+            AudioChunk(start=timedelta(seconds=2 * i), end=timedelta(seconds=2 * i + 2)) for i in range(chunks)
+        ]
+        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        return coordinator, failing
+
+    def test_two_initial_failures_abort_run(self):
+        """Two failures before anything works aborts instead of grinding chunks."""
+        coordinator, failing = self._failing_coordinator({1, 2}, chunks=4)
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            with self.assertRaises(SubtitleError) as raised:
+                coordinator.TranscribeMedia(media.name)
+
+        # Note: str() prefers the wrapped error, the message carries ours
+        self.assertLoggedIn("blocked message", "consecutive", raised.exception.message)
+        self.assertLoggedEqual("stopped early", 2, failing.calls)
+
+    def test_isolated_failures_do_not_abort(self):
+        """Successes reset the failure count, so blips don't kill runs."""
+        coordinator, failing = self._failing_coordinator({1, 3}, chunks=4)
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            subtitles = coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedEqual("line count", 2, subtitles.linecount)
+        self.assertLoggedEqual("all chunks attempted", 4, failing.calls)
+
+    def test_mid_run_consecutive_failures_abort(self):
+        """Three consecutive failures mid-run abort even after successes."""
+        coordinator, failing = self._failing_coordinator({2, 3, 4}, chunks=6)
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            with self.assertRaises(SubtitleError) as raised:
+                coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedIn("blocked message", "consecutive", raised.exception.message)
+        self.assertLoggedEqual("stopped early", 4, failing.calls)
+
+    def test_custom_consecutive_limit(self):
+        """The consecutive-failure budget is tunable per run."""
+        coordinator, failing = self._failing_coordinator({2, 3, 4, 5}, chunks=6,
+                                                          max_consecutive_failures=5)
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            subtitles = coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedEqual("line count", 2, subtitles.linecount)
+        self.assertLoggedEqual("all chunks attempted", 6, failing.calls)
 
     def test_project_persistence_follows_options(self):
         """GUI projects are persistent like opened files, so autosave uses the project path."""

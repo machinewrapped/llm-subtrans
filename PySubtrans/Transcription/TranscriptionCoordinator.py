@@ -177,6 +177,8 @@ class TranscriptionCoordinator:
 
         transcribed = 0
         chunks_done = 0
+        consecutive_failures = 0
+        max_consecutive = self.settings.get_int('max_consecutive_failures', 3) or 3
         self.total_cost = 0.0
         try:
             for done, chunk in enumerate(chunks):
@@ -187,15 +189,31 @@ class TranscriptionCoordinator:
                         done=done, total=total))
                     break
 
-                segment = self._transcribe_chunk(client, media_path, chunk)
-                chunks_done += 1
-                if segment is not None:
-                    for line in self._lines_for_segment(segment):
-                        builder.BuildLine(line.start, line.end, line.text,
-                                          {'speaker': line.speaker} if line.speaker else None)
-                        transcribed += 1
-                        if segment_cb:
-                            segment_cb(line)
+                try:
+                    segment = self._transcribe_chunk(client, media_path, chunk)
+                except SubtitleError as e:
+                    consecutive_failures += 1
+                    # Two failures before anything ever worked is a systemic
+                    # problem (credentials, model, endpoint): fail fast with
+                    # the real error instead of grinding through every chunk.
+                    limit = 2 if transcribed == 0 else max_consecutive
+                    if consecutive_failures >= limit:
+                        raise SubtitleError(
+                            _("Transcription blocked after {count} consecutive chunk failures: {error}").format(
+                                count=consecutive_failures, error=e),
+                            error=e)
+                    logging.warning(_("Skipping chunk {}: {}").format(self._span_label(chunk), e))
+                    chunks_done += 1
+                else:
+                    chunks_done += 1
+                    if segment is not None:
+                        consecutive_failures = 0
+                        for line in self._lines_for_segment(segment):
+                            builder.BuildLine(line.start, line.end, line.text,
+                                              {'speaker': line.speaker} if line.speaker else None)
+                            transcribed += 1
+                            if segment_cb:
+                                segment_cb(line)
 
                 if progress_cb:
                     progress_cb(done + 1, total)
@@ -248,21 +266,15 @@ class TranscriptionCoordinator:
             self._active_client.AbortTranscription()
 
     def _transcribe_chunk(self, client : TranscriptionClient, media_path : str, chunk : AudioChunk) -> TranscriptionSegment|None:
-        try:
-            audio_bytes = self.extractor.ReadChunkBytes(media_path, chunk.start, chunk.end, self.track_index)
-        except SubtitleError as e:
-            logging.warning(_("Skipping chunk {}: {}").format(self._span_label(chunk), e))
-            return None
+        # Backend and read errors propagate: the TranscribeMedia loop counts
+        # consecutive failures and aborts blocked runs instead of grinding on.
+        audio_bytes = self.extractor.ReadChunkBytes(media_path, chunk.start, chunk.end, self.track_index)
 
         if self.extractor.IsSilent(audio_bytes, self.silence_skip_db):
             logging.debug(_("Skipping silent chunk {} before requesting").format(self._span_label(chunk)))
             return None
 
-        try:
-            result = client.TranscribeChunk(audio_bytes, 'wav', self.language)
-        except SubtitleError as e:
-            logging.warning(_("Skipping chunk {}: {}").format(self._span_label(chunk), e))
-            return None
+        result = client.TranscribeChunk(audio_bytes, 'wav', self.language)
 
         text = (result.text or '').strip()
         if not text:

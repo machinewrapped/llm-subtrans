@@ -387,15 +387,22 @@ class TranscriptionCoordinator:
 
     def _merge_slivers(self, lines : list[TranscriptionSegment]) -> list[TranscriptionSegment]:
         """
-        Fold sub-second lines into their neighbour. Bounds stay truthful:
-        the merged line simply spans both words.
+        Fold sub-second lines into their neighbour, but never across a real
+        pause: a short interjection after seconds of silence is its own line,
+        not a span covering the silence. Bounds stay truthful either way.
         """
         if len(lines) < 2:
             return lines
 
+        def close_enough(first : TranscriptionSegment, second : TranscriptionSegment) -> bool:
+            """Whether two lines are close enough in time to fold together."""
+            return (second.start - first.end).total_seconds() < self.word_gap_split
+
         merged : list[TranscriptionSegment] = []
         for line in lines:
-            if merged and (line.end - line.start).total_seconds() < _MIN_LINE_SECONDS:
+            if (merged
+                    and (line.end - line.start).total_seconds() < _MIN_LINE_SECONDS
+                    and close_enough(merged[-1], line)):
                 previous = merged[-1]
                 merged[-1] = TranscriptionSegment(
                     start=previous.start, end=line.end,
@@ -407,7 +414,8 @@ class TranscriptionCoordinator:
 
         if len(merged) >= 2:
             last = merged[-1]
-            if (last.end - last.start).total_seconds() < _MIN_LINE_SECONDS:
+            if ((last.end - last.start).total_seconds() < _MIN_LINE_SECONDS
+                    and close_enough(merged[-2], last)):
                 previous = merged[-2]
                 merged[-2] = TranscriptionSegment(
                     start=previous.start, end=last.end,
@@ -418,7 +426,8 @@ class TranscriptionCoordinator:
 
         if len(merged) >= 2:
             first = merged[0]
-            if (first.end - first.start).total_seconds() < _MIN_LINE_SECONDS:
+            if ((first.end - first.start).total_seconds() < _MIN_LINE_SECONDS
+                    and close_enough(first, merged[1])):
                 nxt = merged[1]
                 merged[1] = TranscriptionSegment(
                     start=first.start, end=nxt.end,

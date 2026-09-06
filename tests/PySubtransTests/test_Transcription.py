@@ -249,6 +249,44 @@ class TestWordGrouping(LoggedTestCase):
         self.assertLoggedEqual("first speaker", "A", lines[0].speaker)
         self.assertLoggedEqual("second speaker", "B", lines[1].speaker)
 
+    def test_sliver_across_pause_stays_separate(self):
+        """A short interjection after seconds of silence keeps its own line."""
+        words = [_word("seat?", 0.0, 1.0), _word("So...", 11.0, 11.3)]
+        lines = self._scene_lines(self._coordinator(), "seat? So...", words)
+
+        self.assertLoggedEqual("line count", 2, len(lines))
+        self.assertLoggedEqual("first end", timedelta(seconds=101), lines[0].end)
+        self.assertLoggedEqual("second start", timedelta(seconds=111), lines[1].start)
+        self.assertLoggedEqual("second end", timedelta(seconds=111.3), lines[1].end)
+        self.assertLoggedEqual("second text", "So...", lines[1].text)
+
+    def test_sliver_after_short_pause_merges(self):
+        """A fragment hard on the heels of the previous line still folds in."""
+        words = [_word("yes", 0.0, 1.0, "A"), _word("um", 1.2, 1.4, "B")]
+        lines = self._scene_lines(self._coordinator(), "yes um", words)
+
+        self.assertLoggedEqual("line count", 1, len(lines))
+        self.assertLoggedEqual("merged span", timedelta(seconds=101.4), lines[0].end)
+        self.assertLoggedEqual("merged text", "yes um", lines[0].text)
+
+    def test_leading_sliver_across_pause_stays_separate(self):
+        """A leading fragment far from the next line is not pulled forward."""
+        words = [_word("oh", 0.0, 0.2), _word("hello", 5.0, 6.0)]
+        lines = self._scene_lines(self._coordinator(), "oh hello", words)
+
+        self.assertLoggedEqual("line count", 2, len(lines))
+        self.assertLoggedEqual("first text", "oh", lines[0].text)
+        self.assertLoggedEqual("second start", timedelta(seconds=105), lines[1].start)
+
+    def test_leading_sliver_after_short_pause_merges(self):
+        """A leading fragment close to the next line folds forward."""
+        words = [_word("oh.", 0.0, 0.2), _word("hello", 0.4, 1.4)]
+        lines = self._scene_lines(self._coordinator(), "oh. hello", words)
+
+        self.assertLoggedEqual("line count", 1, len(lines))
+        self.assertLoggedEqual("merged start", timedelta(seconds=100), lines[0].start)
+        self.assertLoggedEqual("merged end", timedelta(seconds=101.4), lines[0].end)
+
 class TestSettingsNamespaces(LoggedTestCase):
     def _options(self):
         options = Options()

@@ -61,8 +61,10 @@ class TranscriptionCoordinator:
         self.aborted : bool = False
 
         chunk_settings = SettingsType({
-            'min_chunk_seconds': self.settings.get_float('min_chunk_seconds', 8.0),
-            'max_chunk_seconds': self.settings.get_float('max_chunk_seconds', 60.0),
+            'min_chunk_seconds': self.settings.get_float('min_chunk_seconds')
+                or provider.recommended_min_chunk_seconds,
+            'max_chunk_seconds': self.settings.get_float('max_chunk_seconds')
+                or provider.recommended_max_chunk_seconds,
             'silence_min_duration': self.settings.get_float('silence_min_duration', 1.0),
         })
         self.chunker : AudioChunker = AudioChunker(chunk_settings)

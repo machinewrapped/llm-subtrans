@@ -41,6 +41,22 @@ class TranscriptionProvider:
         name : str|None = self.settings.get_str('model')
         return name.strip() if name else None
 
+    @property
+    def recommended_min_chunk_seconds(self) -> float:
+        """
+        Recommended minimum audio chunk length: providers with per-request
+        overhead or speaker tracking prefer longer chunks, constrained
+        engines prefer shorter ones. Explicit user settings always win.
+        """
+        return 8.0
+
+    @property
+    def recommended_max_chunk_seconds(self) -> float:
+        """
+        Recommended maximum audio chunk length (see recommended_min_chunk_seconds).
+        """
+        return 60.0
+
     def GetAvailableModels(self) -> list[str]:
         """
         Returns a list of possible models for the provider

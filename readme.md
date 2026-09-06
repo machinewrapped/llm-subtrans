@@ -185,6 +185,11 @@ LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...) to s
 Two local providers are available (no cloud account needed):
 - **Qwen Local**: runs the official `qwen-asr` package (Qwen3-ASR with word timestamps) in-process on your GPU. Needs the `transcription` extra plus a CUDA torch install (see above). No API key needed.
 
+Cloud transcription providers (metered, same API keys as translation):
+- **OpenRouter**: speech-to-text models with word timestamps and per-model diarization over one key.
+- **OpenAI**: `whisper-1` (word timestamps) and `gpt-4o-transcribe-diarize` (speaker segments). Useful for spending expiring pay-up-front credits.
+- **Gemini**: `gemini-3.5-transcribe` with word timestamps and speaker diarization. Needs `google-genai` 2.22+ (the `gemini` extra).
+
 Transcription returns flat text per audio scene, so subtitle line timings come from silence-delimited scene boundaries, refined to word timings when the engine or a word aligner provides them (Qwen Local does; other engines fall back to truthful scene-level lines).
 
 From the GUI, click **Transcribe** in the toolbar (Ctrl+R) and open the result as a project. From the command line:

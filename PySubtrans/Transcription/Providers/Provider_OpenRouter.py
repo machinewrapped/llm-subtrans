@@ -246,6 +246,16 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
     <p>Word timestamps and diarization depend on the selected model.</p>
     """
 
+    @property
+    def recommended_min_chunk_seconds(self) -> float:
+        """Short chunks bound base64 request bodies and the blast radius of retries."""
+        return 8.0
+
+    @property
+    def recommended_max_chunk_seconds(self) -> float:
+        """Short chunks bound base64 request bodies and the blast radius of retries."""
+        return 60.0
+
     def __init__(self, settings : SettingsType):
         super().__init__(self.name, SettingsType({
             'api_key': settings.get_str('api_key', os.getenv('OPENROUTER_API_KEY')),
@@ -254,6 +264,7 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
             'language': settings.get_str('language', os.getenv('TRANSCRIPTION_LANGUAGE')),
             'diarize': settings.get_bool('diarize', False),
             'request_timeout': settings.get_float('request_timeout', env_float('TRANSCRIPTION_TIMEOUT', 300.0)),
+            'rate_limit': settings.get_float('rate_limit', env_float('OPENROUTER_TRANSCRIPTION_RATE_LIMIT')),
             'proxy': settings.get_str('proxy') or os.getenv('OPENROUTER_PROXY'),
         }))
 
@@ -293,6 +304,7 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
             'language': (str, _("Spoken language hint, e.g. en or Chinese (optional)")),
             'diarize': (bool, _("Request speaker diarization (only supported by some models)")),
             'request_timeout': (float, _("Per-chunk request timeout in seconds")),
+            'rate_limit': (float, _("Maximum API requests per minute (0 for unlimited)")),
         }
 
     def ValidateSettings(self) -> bool:

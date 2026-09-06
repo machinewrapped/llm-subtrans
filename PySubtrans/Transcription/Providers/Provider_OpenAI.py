@@ -213,6 +213,16 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
     <p>Useful for spending expiring pay-up-front credits.</p>
     """
 
+    @property
+    def recommended_min_chunk_seconds(self) -> float:
+        """Short chunks bound request bodies and the blast radius of retries."""
+        return 8.0
+
+    @property
+    def recommended_max_chunk_seconds(self) -> float:
+        """Short chunks bound request bodies and the blast radius of retries."""
+        return 60.0
+
     def __init__(self, settings : SettingsType):
         super().__init__(self.name, SettingsType({
             'api_key': settings.get_str('api_key', os.getenv('OPENAI_API_KEY')),
@@ -220,6 +230,7 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
             'model': settings.get_str('model', os.getenv('OPENAI_STT_MODEL', 'whisper-1')),
             'language': settings.get_str('language', os.getenv('TRANSCRIPTION_LANGUAGE')),
             'request_timeout': settings.get_float('request_timeout', env_float('TRANSCRIPTION_TIMEOUT', 300.0)),
+            'rate_limit': settings.get_float('rate_limit', env_float('OPENAI_TRANSCRIPTION_RATE_LIMIT')),
             'proxy': settings.get_str('proxy') or os.getenv('OPENAI_PROXY'),
         }))
 
@@ -240,6 +251,7 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
             'model': (self.available_models, _("Speech-to-text model (both return timings)")),
             'language': (str, _("Spoken language hint as ISO code, e.g. en (optional)")),
             'request_timeout': (float, _("Per-chunk request timeout in seconds")),
+            'rate_limit': (float, _("Maximum API requests per minute (0 for unlimited)")),
         }
 
     def ValidateSettings(self) -> bool:

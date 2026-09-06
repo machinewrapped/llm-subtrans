@@ -31,8 +31,9 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('-m', '--model', type=str, default=None, help="Transcription model (e.g. qwen3-asr-1.7b)")
     parser.add_argument('--language', type=str, default=None, help="Spoken language hint (e.g. Chinese, English)")
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
-    parser.add_argument('--min-chunk', type=float, default=8.0, help="Minimum chunk length in seconds")
-    parser.add_argument('--max-chunk', type=float, default=60.0, help="Maximum chunk length in seconds")
+    parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
+    parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
+    parser.add_argument('--rate-limit', type=float, default=None, help="Maximum backend requests per minute (0 for unlimited)")
     parser.add_argument('--align', action='store_true', default=True, help="Request word timestamps for timed lines (default on)")
     parser.add_argument('--no-align', dest='align', action='store_false', help="Disable word timestamps (chunk-level lines)")
     parser.add_argument('-l', '--target-language', type=str, default=None, help="Target language recorded on the project")
@@ -73,10 +74,15 @@ def main() -> int:
     coordinator_settings = SettingsType({
         'audio_track': args.track,
         'language': args.language,
-        'min_chunk_seconds': args.min_chunk,
-        'max_chunk_seconds': args.max_chunk,
         'transcription_align': args.align,
     })
+    # Drop unset values so provider recommendations apply
+    if args.min_chunk is not None:
+        coordinator_settings['min_chunk_seconds'] = args.min_chunk
+    if args.max_chunk is not None:
+        coordinator_settings['max_chunk_seconds'] = args.max_chunk
+    if args.rate_limit is not None:
+        coordinator_settings['rate_limit'] = args.rate_limit
     coordinator = TranscriptionCoordinator(provider, coordinator_settings)
 
     if args.list_tracks:

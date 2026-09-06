@@ -23,6 +23,7 @@ from GuiSubtrans.NewProjectSettings import NewProjectSettings
 from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.SettingsDialog import SettingsDialog
+from GuiSubtrans.Widgets.TranscriptionDialog import TranscriptionDialog
 from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
@@ -308,8 +309,6 @@ class GuiInterface(QObject):
         Open the app-modal transcription dialog. On accept, load the
         transcribed project exactly like a freshly loaded subtitle file.
         """
-        from GuiSubtrans.Widgets.TranscriptionDialog import TranscriptionDialog
-
         dialog = TranscriptionDialog(self.global_options, parent=self.GetMainWindow())
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import time
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SettingsType import SettingsType
@@ -36,6 +37,11 @@ class TranscriptionClient:
         """Per-chunk request timeout in seconds."""
         return self.settings.get_float('request_timeout') or 300.0
 
+    @property
+    def rate_limit(self) -> float|None:
+        """Maximum backend requests per minute (None or 0 for unlimited)."""
+        return self.settings.get_float('rate_limit')
+
     def TranscribeChunk(self, audio_bytes : bytes, audio_format : str, language : str|None = None) -> TranscriptionResult:
         """
         Transcribe a single audio chunk and return its text.
@@ -46,7 +52,20 @@ class TranscriptionClient:
         if not audio_bytes:
             raise SubtitleError(_("No audio data provided for transcription"))
 
-        return self._transcribe_chunk(audio_bytes, audio_format, language)
+        start_time = time.monotonic()
+        result = self._transcribe_chunk(audio_bytes, audio_format, language)
+
+        # If a rate limit is applied ensure a minimum duration for each request
+        rate_limit = self.rate_limit
+        if rate_limit and rate_limit > 0.0:
+            minimum_duration = 60.0 / rate_limit
+            elapsed_time = time.monotonic() - start_time
+            if elapsed_time < minimum_duration:
+                sleep_time = minimum_duration - elapsed_time
+                logging.debug(f"Sleeping for {sleep_time:.2f} seconds to respect rate limit")
+                self._sleep_abortable(sleep_time)
+
+        return result
 
     def AbortTranscription(self) -> None:
         """Signal that any in-flight and subsequent requests should stop."""
@@ -59,6 +78,14 @@ class TranscriptionClient:
         """
         _ = audio_bytes, audio_format, language
         raise NotImplementedError
+
+    def _sleep_abortable(self, seconds : float) -> None:
+        """Wait out a rate-limit backoff, still honouring aborts."""
+        deadline = time.monotonic() + max(0.0, seconds)
+        while time.monotonic() < deadline:
+            if self.aborted:
+                raise SubtitleError(_("Transcription aborted"))
+            time.sleep(min(0.5, deadline - time.monotonic()))
 
     def _abort(self) -> None:
         """Terminate ongoing requests. Default signals the flag only."""

@@ -37,8 +37,9 @@ _QWEN_CHECKPOINTS : list[str] = [
 
 _ALIGNER_CHECKPOINT = 'Qwen/Qwen3-ForcedAligner-0.6B'
 
-# Loaded ASR models per (checkpoint, device): loading takes seconds
-_loaded_models : dict[tuple[str, str], object] = {}
+# Loaded ASR models per (checkpoint, device, generation budget, aligner):
+# loading takes seconds, and load-time settings only apply to fresh loads
+_loaded_models : dict[tuple[str, str, int, str], object] = {}
 
 
 def parse_qwen_result(result : object) -> tuple[str, str|None, list[WordTiming]]:
@@ -76,6 +77,9 @@ if not importlib.util.find_spec("qwen_asr"):
     logging.debug(_("qwen-asr package is not installed. Qwen Local provider will not be available"))
 else:
     try:
+        import torch
+        from qwen_asr import Qwen3ASRModel
+
         from PySubtrans.Transcription.TranscriptionAligner import NormaliseAlignerLanguage
 
 
@@ -110,8 +114,6 @@ else:
             @property
             def device(self) -> str:
                 """Compute device for both models."""
-                import torch  # type: ignore[import-not-found]
-
                 configured = (self.settings.get_str('device') or 'auto').strip().casefold()
                 if configured not in ('auto', 'cuda', 'cpu'):
                     logging.warning(_("Unknown device '{}', using automatic selection").format(configured))
@@ -134,10 +136,7 @@ else:
                 return self.settings.get_int('max_new_tokens') or 1024
 
             def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
-                import torch  # type: ignore[import-not-found]
-                from qwen_asr import Qwen3ASRModel  # type: ignore[import-not-found]
-
-                model = self._load_model(Qwen3ASRModel, torch)
+                model = self._load_model()
                 chunk_path = self._write_chunk(audio_bytes)
                 canonical = NormaliseAlignerLanguage(language, _QWEN_ALIGNER_LANGUAGES)
                 want_stamps = self.settings.get_bool('transcription_align', True) and canonical is not None
@@ -163,11 +162,11 @@ else:
                 text, detected, words = parse_qwen_result(results[0])
                 return TranscriptionResult(text=text, language=detected or language, words=words)
 
-            def _load_model(self, model_class : type, torch_module : Any) -> Any:
+            def _load_model(self) -> Any:
                 if self._model is not None:
                     return self._model
 
-                cache_key = (self.checkpoint, self.device)
+                cache_key = (self.checkpoint, self.device, self.max_new_tokens, self.aligner_checkpoint)
                 cached = _loaded_models.get(cache_key)
                 if cached is not None:
                     self._model = cached
@@ -175,14 +174,13 @@ else:
 
                 logging.info(_("Loading Qwen model {} on {}").format(self.checkpoint, self.device))
                 try:
-                    torch_bf16 = torch_module.bfloat16  # type: ignore[union-attr]
-                    model = model_class.from_pretrained(
+                    model = Qwen3ASRModel.from_pretrained(
                         self.checkpoint,
-                        dtype=torch_bf16,
+                        dtype=torch.bfloat16,
                         device_map=self.device,
                         max_new_tokens=self.max_new_tokens,
                         forced_aligner=self.aligner_checkpoint,
-                        forced_aligner_kwargs=dict(dtype=torch_bf16, device_map=self.device),
+                        forced_aligner_kwargs=dict(dtype=torch.bfloat16, device_map=self.device),
                     )
                 except Exception as e:
                     raise SubtitleError(_("Unable to load Qwen model: {}").format(str(e)), error=e)
@@ -213,6 +211,16 @@ else:
             <p>Requires the <tt>transcription</tt> extra and a CUDA torch install. No API key needed.</p>
             """
 
+            @property
+            def recommended_min_chunk_seconds(self) -> float:
+                """Short chunks fit the default generation budget and GPU memory."""
+                return 8.0
+
+            @property
+            def recommended_max_chunk_seconds(self) -> float:
+                """Longer chunks need a raised max_new_tokens to avoid silent truncation."""
+                return 60.0
+
             def __init__(self, settings : SettingsType):
                 super().__init__(self.name, SettingsType({
                     'model': settings.get_str('model', os.getenv('QWEN_LOCAL_MODEL', _QWEN_CHECKPOINTS[0])),
@@ -221,6 +229,7 @@ else:
                     'aligner_model': settings.get_str('aligner_model', os.getenv('QWEN_ALIGNER_MODEL', _ALIGNER_CHECKPOINT)),
                     'max_new_tokens': settings.get_int('max_new_tokens', env_int('QWEN_MAX_NEW_TOKENS', 1024)),
                     'request_timeout': settings.get_float('request_timeout', env_float('TRANSCRIPTION_TIMEOUT', 300.0)),
+                    'rate_limit': settings.get_float('rate_limit', env_float('QWEN_TRANSCRIPTION_RATE_LIMIT')),
                 }))
 
             def GetAvailableModels(self) -> list[str]:
@@ -241,6 +250,7 @@ else:
                     'device': (['auto', 'cuda', 'cpu'], _("Compute device for local inference")),
                     'aligner_model': (str, _("Forced-aligner checkpoint for word timestamps")),
                     'max_new_tokens': (int, _("Generation budget per chunk (long chunks need headroom)")),
+                    'rate_limit': (float, _("Maximum requests per minute (0 for unlimited; local inference is unmetered)")),
                 }
 
     except ImportError as e:

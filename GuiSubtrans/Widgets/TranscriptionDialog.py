@@ -139,15 +139,17 @@ class TranscriptionDialog(QDialog):
         form.addRow(self.provider_form)
 
         self.min_chunk_spin = QDoubleSpinBox(self)
-        self.min_chunk_spin.setRange(1.0, 60.0)
+        self.min_chunk_spin.setRange(1.0, 600.0)
         self.min_chunk_spin.setValue(8.0)
         self.min_chunk_spin.setSuffix(_(" s"))
+        self.min_chunk_spin.setToolTip(_("Provider-recommended default; reselecting the provider restores it"))
         form.addRow(_("Min chunk length"), self.min_chunk_spin)
 
         self.max_chunk_spin = QDoubleSpinBox(self)
         self.max_chunk_spin.setRange(10.0, 1800.0)
         self.max_chunk_spin.setValue(60.0)
         self.max_chunk_spin.setSuffix(_(" s"))
+        self.max_chunk_spin.setToolTip(_("Provider-recommended default; reselecting the provider restores it"))
         form.addRow(_("Max chunk length"), self.max_chunk_spin)
 
         self.align_check = QCheckBox(_("Request word timestamps for line timings"), self)
@@ -217,6 +219,10 @@ class TranscriptionDialog(QDialog):
     def _on_provider_changed(self, name : str) -> None:
         self.provider = self._current_provider()
         self._rebuild_provider_form()
+        if self.provider is not None:
+            # Chunk bounds follow the provider until the user overrides them
+            self.min_chunk_spin.setValue(self.provider.recommended_min_chunk_seconds)
+            self.max_chunk_spin.setValue(self.provider.recommended_max_chunk_seconds)
 
     def _rebuild_provider_form(self) -> None:
         """

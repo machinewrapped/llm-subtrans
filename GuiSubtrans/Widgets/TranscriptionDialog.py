@@ -14,6 +14,7 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QMessageBox,
     QProgressBar,
     QPushButton,
     QSplitter,
@@ -478,11 +479,39 @@ class TranscriptionDialog(QDialog):
         if self.coordinator is not None and self.coordinator.aborted:
             self.status_label.setText(_("Aborted - partial results ({} lines).").format(count))
         elif saved_path:
-            self.status_label.setText(_("Transcribed {} lines, saved to {}.").format(count, saved_path))
+            message = _("Transcribed {} lines, saved to {}.").format(count, saved_path)
+            self.status_label.setText(message)
+            logging.info(message)
         else:
-            self.status_label.setText(_("Transcribed {} lines.").format(count))
+            message = _("Transcribed {} lines.").format(count)
+            self.status_label.setText(message)
+            logging.info(message)
         self.progress_bar.setValue(self.progress_bar.maximum())
         self._show_results(False)
+        if self.coordinator is not None and not self.coordinator.aborted:
+            # Clean finish hands the project straight to the caller: leaving it
+            # behind Close/Back to Settings would silently discard paid work.
+            self.accept()
+
+    def _has_unaccepted_results(self) -> bool:
+        """Whether closing the dialog now would discard transcription results."""
+        return (self.project is not None
+                and self.project.subtitles is not None
+                and self.project.subtitles.linecount > 0)
+
+    def reject(self) -> None:
+        """Confirm before discarding transcription results via Close or X."""
+        if self._has_unaccepted_results():
+            count = self.project.subtitles.linecount if self.project and self.project.subtitles else 0
+            reply = QMessageBox.question(
+                self,
+                _("Discard transcription?"),
+                _("Discard the {} transcribed lines? They have not been opened as a project.").format(count),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No)
+            if reply != QMessageBox.StandardButton.Yes:
+                return
+        super().reject()
 
     def _save_transcription(self, project : SubtitleProject) -> str|None:
         """

@@ -200,11 +200,12 @@ class SSAFileHandler(SubtitleFileHandler):
         
         event.text = ssa_text
         
-        # Restore metadata if available, otherwise use pysubs2 defaults
+        # Restore metadata if available, otherwise use pysubs2 defaults.
+        # Transcription stores the speaker under 'speaker'; ASS calls it Actor ('name').
         if line.metadata:
             event.style = line.metadata.get('style', event.style)
             event.layer = line.metadata.get('layer', event.layer)
-            event.name = line.metadata.get('name', event.name)
+            event.name = line.metadata.get('name') or line.metadata.get('speaker') or event.name
             event.marginl = line.metadata.get('margin_l', event.marginl)
             event.marginr = line.metadata.get('margin_r', event.marginr)
             event.marginv = line.metadata.get('margin_v', event.marginv)

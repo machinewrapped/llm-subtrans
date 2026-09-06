@@ -192,10 +192,10 @@ Cloud transcription providers (metered, same API keys as translation):
 
 Transcription returns flat text per audio scene, so subtitle line timings come from silence-delimited scene boundaries, refined to word timings when the engine or a word aligner provides them (Qwen Local does; other engines fall back to truthful scene-level lines).
 
-From the GUI, click **Transcribe** in the toolbar (Ctrl+R) and open the result as a project. From the command line:
+From the GUI, click **Transcribe** in the toolbar (Ctrl+R) and open the result as a project. Tick **Save transcribed subtitles** (SRT, ASS or VTT) to keep the transcription alongside the media before translating. Speaker labels survive in ASS (Actor field) and VTT (voice tags); SRT has no speaker field, so labels are dropped there. From the command line:
 
 ```sh
-python scripts/transcribe.py movie.mkv --language Chinese --project
+python scripts/transcribe.py movie.mkv --language Chinese --project --format ass
 ```
 
 ## Usage

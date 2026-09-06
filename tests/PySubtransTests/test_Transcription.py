@@ -13,6 +13,7 @@ from unittest.mock import patch
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
+from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor
@@ -489,6 +490,90 @@ class TestTranscriptionRateLimit(LoggedTestCase):
             client.TranscribeChunk(b"fake-audio", "wav", "en")
 
         self.assertLoggedEqual("no pacing", 0, mock_sleep.call_count)
+
+
+class TestTranscriptionSave(LoggedTestCase):
+    def _subtitles(self):
+        builder = SubtitleBuilder()
+        builder.BuildLine(timedelta(seconds=1), timedelta(seconds=2), "hello")
+        builder.BuildLine(timedelta(seconds=3), timedelta(seconds=4), "world")
+        return builder.Build()
+
+    def test_save_srt(self):
+        """Transcribed subtitles write as SRT alongside the media."""
+        subtitles = self._subtitles()
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "clip.srt")
+            subtitles.SaveOriginal(path)
+
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+
+        self.assertLoggedIn("timing marker", "-->", content)
+        self.assertLoggedIn("first line", "hello", content)
+
+    def test_save_ass(self):
+        """Transcribed subtitles write as ASS alongside the media."""
+        subtitles = self._subtitles()
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "clip.ass")
+            subtitles.SaveOriginal(path)
+
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+
+        self.assertLoggedIn("dialogue marker", "Dialogue:", content)
+        self.assertLoggedIn("first line", "hello", content)
+
+    def _speaker_subtitles(self):
+        builder = SubtitleBuilder()
+        builder.BuildLine(timedelta(seconds=1), timedelta(seconds=2), "hello", {'speaker': 'Amina'})
+        builder.BuildLine(timedelta(seconds=3), timedelta(seconds=4), "world", {'speaker': 'Boris'})
+        return builder.Build()
+
+    def test_ass_preserves_speaker_as_actor(self):
+        """Speaker labels land in the ASS Actor field."""
+        subtitles = self._speaker_subtitles()
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "clip.ass")
+            subtitles.SaveOriginal(path)
+
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+
+        self.assertLoggedIn("first actor", ",Amina,", content)
+        self.assertLoggedIn("second actor", ",Boris,", content)
+
+    def test_vtt_preserves_speaker_as_voice(self):
+        """Speaker labels land in VTT voice tags."""
+        subtitles = self._speaker_subtitles()
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "clip.vtt")
+            subtitles.SaveOriginal(path)
+
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+
+        self.assertLoggedIn("first voice", "<v Amina>hello</v>", content)
+        self.assertLoggedIn("second voice", "<v Boris>world</v>", content)
+
+    def test_srt_drops_speaker(self):
+        """SRT has no speaker field, so labels are dropped without touching text."""
+        subtitles = self._speaker_subtitles()
+
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "clip.srt")
+            subtitles.SaveOriginal(path)
+
+            with open(path, encoding="utf-8") as f:
+                content = f.read()
+
+        self.assertLoggedNotIn("no speaker leak", "Amina", content)
+        self.assertLoggedIn("text intact", "hello", content)
 
 if __name__ == '__main__':
     unittest.main()

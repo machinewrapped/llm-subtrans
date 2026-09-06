@@ -23,6 +23,7 @@ from PySide6.QtWidgets import (
 )
 
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget
+from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Time import TimedeltaToText
 from PySubtrans.Options import Options
@@ -156,6 +157,18 @@ class TranscriptionDialog(QDialog):
         self.align_check.setToolTip(_("Engines without timestamp support fall back to chunk-level lines"))
         self.align_check.setChecked(True)
         form.addRow(self.align_check)
+
+        save_row = QHBoxLayout()
+        self.save_check = QCheckBox(_("Save transcribed subtitles"), self)
+        self.save_check.setToolTip(_("Write the transcription to a subtitle file alongside the media before translating"))
+        self.save_check.setChecked(True)
+        self.format_combo = QComboBox(self)
+        self.format_combo.addItems(["SRT", "ASS", "VTT"])
+        self.format_combo.setToolTip(_("ASS and VTT preserve speaker labels; SRT has no speaker field"))
+        save_row.addWidget(self.save_check)
+        save_row.addWidget(self.format_combo)
+        save_row.addStretch(1)
+        form.addRow(save_row)
         left_layout.addStretch(1)
 
         self.results_view = QTextEdit(self.splitter)
@@ -378,12 +391,33 @@ class TranscriptionDialog(QDialog):
         self.project = project
         self._save_provider_settings()
         count = project.subtitles.linecount if project.subtitles else 0
+        saved_path = self._save_transcription(project)
         if self.coordinator is not None and self.coordinator.aborted:
             self.status_label.setText(_("Aborted - partial results ({} lines).").format(count))
+        elif saved_path:
+            self.status_label.setText(_("Transcribed {} lines, saved to {}.").format(count, saved_path))
         else:
             self.status_label.setText(_("Transcribed {} lines.").format(count))
         self.progress_bar.setValue(self.progress_bar.maximum())
         self._show_results(False)
+
+    def _save_transcription(self, project : SubtitleProject) -> str|None:
+        """
+        Write the transcribed subtitles alongside the media file before
+        translation, when the save option is checked. Returns the path
+        written, or None when saving was skipped or failed.
+        """
+        if not self.save_check.isChecked() or not self.media_path or project.subtitles is None:
+            return None
+        outputpath = GetOutputPath(self.media_path, None, f".{self.format_combo.currentText().casefold()}")
+        if not outputpath:
+            return None
+        try:
+            project.SaveOriginal(outputpath)
+        except Exception as e:
+            logging.warning(_("Unable to save transcription to {}: {}").format(outputpath, e))
+            return None
+        return outputpath if os.path.isfile(outputpath) else None
 
     @Slot(str)
     def _on_failed(self, message : str) -> None:

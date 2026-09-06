@@ -33,6 +33,7 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
     parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
     parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
+    parser.add_argument('--format', choices=('srt', 'ass', 'vtt'), default='srt', help="Subtitle format for the transcribed output (default srt; ass and vtt preserve speaker labels)")
     parser.add_argument('--rate-limit', type=float, default=None, help="Maximum backend requests per minute (0 for unlimited)")
     parser.add_argument('--align', action='store_true', default=True, help="Request word timestamps for timed lines (default on)")
     parser.add_argument('--no-align', dest='align', action='store_false', help="Disable word timestamps (chunk-level lines)")
@@ -108,7 +109,7 @@ def main() -> int:
 
         project : SubtitleProject = coordinator.CreateTranscriptionProject(args.input, options, progress)
 
-        outputpath = args.output or GetOutputPath(args.input, args.target_language, '.srt')
+        outputpath = args.output or GetOutputPath(args.input, args.target_language, f".{args.format}")
         if not outputpath:
             logging.error("Unable to determine output path")
             return 1

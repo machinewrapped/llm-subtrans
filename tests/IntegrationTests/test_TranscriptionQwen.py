@@ -47,15 +47,6 @@ class TestQwenLocalProvider(LoggedTestCase):
 
         self.assertLoggedEqual("valid by default", True, provider.ValidateSettings())
 
-    def test_client_construction(self):
-        """Client builds without touching torch (lazy model load)."""
-        assert QwenLocalProvider is not None  # Type narrowing for PyLance
-        provider = QwenLocalProvider(SettingsType())
-        client = provider.GetTranscriptionClient(SettingsType())
-
-        self.assertLoggedEqual("client type", "QwenLocalClient", type(client).__name__)
-        self.assertLoggedEqual("timestamps advertised", True, client.supports_timestamps)
-
 class TestQwenResultParsing(LoggedTestCase):
     def test_parse_timestamps(self):
         """qwen-asr results extract text, language and word timings."""

@@ -338,26 +338,39 @@ class AudioChunker:
         return chunks
 
     def _next_silence_cut(self, silences : list[tuple[timedelta, timedelta]], index : int,
-                          cursor : timedelta, limit : timedelta,
-                          after : timedelta|None = None) -> tuple[timedelta, int]|None:
+                           cursor : timedelta, limit : timedelta,
+                           after : timedelta|None = None) -> tuple[timedelta, int]|None:
         """
-        Find the next silence start within (after, limit], returning the cut
-        point and the index to resume from. Spans below the minimum length
-        are skipped so tiny fragments do not become chunks.
+        Score candidate silences within (after, limit] by position times
+        gap length, returning the cut point and the index to resume from.
+        A long pause earlier beats a short one nearer the cap, so chunks
+        break on coherent boundaries instead of arbitrary times; position
+        still counts, so dialogue fills toward the cap (fewer requests,
+        stable speaker identities for diarization). Latest wins ties.
+        Spans below the minimum length are passed over as cut candidates —
+        their audio stays inside the surrounding chunk, so no speech is
+        ever dropped; only the cut point moves later.
         """
         lower = after or cursor
+        best : tuple[timedelta, int]|None = None
+        best_score = -1.0
         while index < len(silences):
-            silence_start, _ = silences[index]
+            silence_start, silence_end = silences[index]
             if silence_start <= cursor:
                 index += 1
                 continue
             if silence_start > limit:
                 break
-            if silence_start > lower and (silence_start - cursor).total_seconds() >= self.min_chunk_seconds:
-                return silence_start, index + 1
+            span = (silence_start - cursor).total_seconds()
+            if silence_start > lower and span >= self.min_chunk_seconds:
+                gap = (silence_end - silence_start).total_seconds()
+                score = span * gap
+                if score >= best_score:
+                    best_score = score
+                    best = (silence_start, index + 1)
             index += 1
 
-        return None
+        return best
 
     def _silence_end_after(self, silences : list[tuple[timedelta, timedelta]], index : int, cut : timedelta) -> timedelta:
         """

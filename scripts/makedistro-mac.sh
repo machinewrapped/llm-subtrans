@@ -18,7 +18,13 @@ pip uninstall boto3
 ./envsubtrans/bin/python tests/unit_tests.py
 if [ $? -ne 0 ]; then
     echo "Unit tests failed. Exiting..."
-    exit $?
+    exit 1
+fi
+
+./envsubtrans/bin/python tests/integration_tests.py
+if [ $? -ne 0 ]; then
+    echo "Integration tests failed. Exiting..."
+    exit 1
 fi
 
 ./envsubtrans/bin/pyinstaller --noconfirm \

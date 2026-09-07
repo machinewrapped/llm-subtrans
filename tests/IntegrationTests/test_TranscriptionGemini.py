@@ -20,6 +20,9 @@ from PySubtrans.Transcription.Providers.Provider_Gemini import (
 import PySubtrans.Transcription.Providers.Provider_Gemini as _gemini_module
 import PySubtrans.Transcription.Providers.Clients.GeminiTranscriptionClient as _gemini_client_module
 
+from tests.Helpers import FakeClock
+
+
 GeminiTranscriptionProvider = getattr(_gemini_module, 'GeminiTranscriptionProvider', None)
 
 class TestGeminiProvider(LoggedTestCase):
@@ -141,6 +144,13 @@ class TestGeminiRateLimitHelpers(LoggedTestCase):
 class TestGeminiChunkRetry(LoggedTestCase):
     def setUp(self):
         super().setUp()
+        clock = FakeClock()
+        monotonic_patcher = patch('time.monotonic', side_effect=clock.Monotonic)
+        sleep_patcher = patch('time.sleep', side_effect=clock.Sleep)
+        monotonic_patcher.start()
+        sleep_patcher.start()
+        self.addCleanup(monotonic_patcher.stop)
+        self.addCleanup(sleep_patcher.stop)
         if GeminiTranscriptionProvider is None:
             self.skipTest("google-genai not installed")
 

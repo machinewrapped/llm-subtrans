@@ -2,16 +2,12 @@ import array
 import io
 import math
 import os
-import shutil
-import subprocess
-import sys
 import tempfile
 import unittest
 import wave
 from datetime import timedelta
 from unittest.mock import patch
 
-import PySubtrans
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
@@ -24,6 +20,16 @@ from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionCoordinator import AudioTrackInfo, TranscriptionCoordinator
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
+
+from tests.Helpers import FakeClock
+
+
+def setUpModule() -> None:
+    """Unit fixtures supply media data and do not require FFmpeg executables."""
+    availability_patcher = patch('PySubtrans.Transcription.AudioExtractor.CheckFfmpegAvailable')
+    availability_patcher.start()
+    unittest.addModuleCleanup(availability_patcher.stop)
+
 
 class FakeTranscriptionClient(TranscriptionClient):
     def __init__(self, settings : SettingsType|None = None, texts : list[str]|None = None,
@@ -56,18 +62,20 @@ class FailingTranscriptionClient(FakeTranscriptionClient):
             raise SubtitleError("simulated backend failure")
         return super()._transcribe_chunk(audio_bytes, audio_format, language)
 
-def _ffmpeg_available() -> bool:
-    return bool(shutil.which('ffmpeg') and shutil.which('ffprobe'))
-def _make_tone_silence_wav(path : str) -> None:    # 4s tone, 2s silence, 4s tone at 16kHz mono
-    subprocess.run(
-        ['ffmpeg', '-y', '-v', 'error',
-         '-f', 'lavfi', '-i', 'sine=frequency=440:duration=4',
-         '-f', 'lavfi', '-i', 'aevalsrc=0:d=2',
-         '-f', 'lavfi', '-i', 'sine=frequency=660:duration=4',
-         '-filter_complex', '[0:a][1:a][2:a]concat=n=3:v=0:a=1',
-         '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', path],
-        check=True, timeout=60
-    )
+def stub_media(testcase : LoggedTestCase, coordinator : TranscriptionCoordinator,
+               chunks : list[AudioChunk], audio : bytes = b"fake") -> None:
+    """
+    Stub chunk planning and audio reads for a coordinator test run.
+
+    patch.object restores the real methods afterwards; plain attribute
+    assignment would need type: ignore comments and leak stubs on failure.
+    """
+    chunk_patcher = patch.object(coordinator.chunker, "PlanChunks", return_value=chunks)
+    bytes_patcher = patch.object(coordinator.extractor, "ReadChunkBytes", return_value=audio)
+    chunk_patcher.start()
+    bytes_patcher.start()
+    testcase.addCleanup(chunk_patcher.stop)
+    testcase.addCleanup(bytes_patcher.stop)
 class FakeTranscriptionProvider(TranscriptionProvider):
     """In-test transcription provider with canned client responses."""
     name = "Fake Transcription"
@@ -133,69 +141,48 @@ class TestTranscriptionProviderRegistry(LoggedTestCase):
         self.assertLoggedEqual("valid by default", True, provider.ValidateSettings())
 
 class TestAudioChunker(LoggedTestCase):
-    def test_plan_scenes_on_synthetic_audio(self):
-        """Silence in the middle of audio produces two coherent chunks."""
-        if not _ffmpeg_available():
-            self.skipTest("ffmpeg not available")
+    def test_plan_chunks_from_media_metadata(self):
+        """Chunk planning uses duration and detected silence without media processes."""
+        cases = [
+            ("middle silence", 10, [(4, 6)], 30, [(0, 4), (6, 10)]),
+            ("lookahead", 72, [(65, 67)], 60, [(0, 65), (67, 72)]),
+            ("hard cap", 12, [], 5, [(0, 5), (5, 10), (10, 12)]),
+        ]
+        for label, duration, gaps, maximum, expected in cases:
+            with self.subTest(label=label):
+                chunker = AudioChunker(SettingsType({
+                    'min_chunk_seconds': 2.0, 'max_chunk_seconds': maximum,
+                    'lookahead_seconds': 30.0}))
+                silences = [(timedelta(seconds=start), timedelta(seconds=end)) for start, end in gaps]
+                with patch.object(chunker.extractor, 'GetDuration', return_value=timedelta(seconds=duration)), \
+                     patch.object(chunker.extractor, 'DetectSilences', return_value=silences):
+                    chunks = chunker.PlanChunks('fake.wav')
+                actual = [(chunk.start.total_seconds(), chunk.end.total_seconds()) for chunk in chunks]
+                self.assertLoggedEqual(label, expected, actual)
 
-        with tempfile.TemporaryDirectory() as tmpdir:
-            wav_path = os.path.join(tmpdir, "tones.wav")
-            _make_tone_silence_wav(wav_path)
+    def test_long_gap_beats_nearer_short_gap(self):
+        """A long pause earlier wins over a short one nearer the cap."""
+        chunker = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+        silences = [
+            (timedelta(seconds=20), timedelta(seconds=25)),
+            (timedelta(seconds=55), timedelta(seconds=56)),
+        ]
+        cut = chunker._next_silence_cut(silences, 0, timedelta(seconds=0), timedelta(seconds=60))
 
-            chunker = AudioChunker(SettingsType({'min_chunk_seconds': 2.0, 'max_chunk_seconds': 30.0}))
-            chunks = chunker.PlanChunks(wav_path)
+        assert cut is not None  # Type narrowing for PyLance
+        self.assertLoggedEqual("cut at long gap", timedelta(seconds=20), cut[0])
 
-        self.assertLoggedEqual("scene count", 2, len(chunks))
-        self.assertLoggedEqual("first scene start", timedelta(seconds=0), chunks[0].start)
-        self.assertLoggedGreater("second scene start", chunks[1].start.total_seconds(), 3.0)
-        self.assertLoggedGreater("coverage", chunks[1].end.total_seconds(), 9.0)
+    def test_ties_break_toward_latest(self):
+        """Equal scores prefer the later cut, filling toward the cap."""
+        chunker = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+        silences = [
+            (timedelta(seconds=10), timedelta(seconds=15)),
+            (timedelta(seconds=25), timedelta(seconds=27)),
+        ]
+        cut = chunker._next_silence_cut(silences, 0, timedelta(seconds=0), timedelta(seconds=60))
 
-    def test_lookahead_extends_past_cap_to_silence(self):
-        """Over-long stretches extend to nearby silence instead of hard-cutting."""
-        if not _ffmpeg_available():
-            self.skipTest("ffmpeg not available")
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            wav_path = os.path.join(tmpdir, "long.wav")
-            subprocess.run(
-                ['ffmpeg', '-y', '-v', 'error',
-                 '-f', 'lavfi', '-i', 'sine=frequency=440:duration=65',
-                 '-f', 'lavfi', '-i', 'aevalsrc=0:d=2',
-                 '-f', 'lavfi', '-i', 'sine=frequency=660:duration=5',
-                 '-filter_complex', '[0:a][1:a][2:a]concat=n=3:v=0:a=1',
-                 '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', wav_path],
-                check=True, timeout=120
-            )
-            chunker = AudioChunker(SettingsType({
-                'min_chunk_seconds': 2.0, 'max_chunk_seconds': 60.0, 'lookahead_seconds': 30.0}))
-            chunks = chunker.PlanChunks(wav_path)
-
-        self.assertLoggedEqual("scene count", 2, len(chunks))
-        self.assertLoggedGreater("first cut past the cap", chunks[0].end.total_seconds(), 60.0)
-        self.assertLoggedGreater("cut near silence", 66.5, chunks[0].end.total_seconds())
-
-    def test_max_chunk_cap(self):
-        """Long stretches without silence are hard-split at the cap."""
-        if not _ffmpeg_available():
-            self.skipTest("ffmpeg not available")
-
-        with tempfile.TemporaryDirectory() as tmpdir:
-            wav_path = os.path.join(tmpdir, "tone.wav")
-            subprocess.run(
-                ['ffmpeg', '-y', '-v', 'error', '-f', 'lavfi',
-                 '-i', 'sine=frequency=440:duration=12',
-                 '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', wav_path],
-                check=True, timeout=60
-            )
-            chunker = AudioChunker(SettingsType({'min_chunk_seconds': 2.0, 'max_chunk_seconds': 5.0}))
-            chunks = chunker.PlanChunks(wav_path)
-
-        self.assertLoggedGreater("chunk count", len(chunks), 1)
-        for chunk in chunks:
-            self.assertLoggedGreater(
-                "chunk within cap",
-                5.5, (chunk.end - chunk.start).total_seconds()
-            )
+        assert cut is not None  # Type narrowing for PyLance
+        self.assertLoggedEqual("cut at later gap", timedelta(seconds=25), cut[0])
 
 def _word(text : str, start : float, end : float, speaker : str|None = None) -> WordTiming:
     return WordTiming(text=text, start=timedelta(seconds=start), end=timedelta(seconds=end), speaker=speaker)
@@ -422,10 +409,9 @@ class TestSilenceGate(LoggedTestCase):
     def test_silent_chunks_skipped_before_request(self):
         """Silent chunks cost no requests and yield no lines."""
         coordinator, provider = self._coordinator(["audible"])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=2)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: self._silent_wav()  # type: ignore[method-assign]
+        ], audio=self._silent_wav())
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             with self.assertRaisesRegex(SubtitleError, "No timed"):
@@ -444,11 +430,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         """Scenes with word timings become truly timed subtitle lines."""
         coordinator, provider = self._coordinator(
             ["first line", "second line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
             AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             subtitles = coordinator.TranscribeMedia(media.name)
@@ -472,12 +457,11 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_untimed_results_kept_as_scene_lines(self):
         """Paid-for flat text is kept over true chunk spans, not thrown away."""
-        coordinator, _ = self._coordinator(["first scene", "second scene"])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first scene", "second scene"])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=2)),
             AudioChunk(start=timedelta(seconds=2), end=timedelta(seconds=4)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             subtitles = coordinator.TranscribeMedia(media.name)
@@ -488,11 +472,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_no_speech_raises(self):
         """Media with nothing transcribable raises instead of empty project."""
-        coordinator, _ = self._coordinator(["", "   "])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["", "   "])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=2)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             with self.assertRaises(SubtitleError):
@@ -500,12 +483,11 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_segment_callback_receives_each_scene(self):
         """Per-chunk callback fires with timings for live progress display."""
-        coordinator, _ = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
             AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         seen : list = []
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
@@ -514,15 +496,28 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedEqual("callback count", 2, len(seen))
         self.assertLoggedEqual("second start", timedelta(seconds=6), seen[1].start)
 
+    def test_progress_reports_chunk_spans(self):
+        """Progress callbacks carry chunk spans, not transcribed line spans."""
+        coordinator, _unused_provider = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
+            AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
+            AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
+        ])
+
+        seen : list = []
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            coordinator.TranscribeMedia(media.name, progress_cb=lambda done, total, span: seen.append(span))
+
+        self.assertLoggedEqual("chunk spans", ["0.0s-4.0s", "6.0s-10.0s"], seen)
+
     def test_engine_words_grouped_into_lines(self):
         """Word timings from the engine produce truly timed lines."""
         words = [_word("first", 0.0, 1.0), _word("line", 1.0, 2.0),
                  _word("second", 5.0, 6.0), _word("line", 6.0, 7.0)]
-        coordinator, _ = self._coordinator(["first line second line"], words)
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line second line"], words)
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=10), end=timedelta(seconds=20)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             subtitles = coordinator.TranscribeMedia(media.name)
@@ -534,14 +529,13 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_abort_keeps_partial_results(self):
         """Cancelling keeps billed work instead of throwing it away."""
-        coordinator, _ = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
             AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
-        def abort_after_first(done : int, total : int) -> None:
+        def abort_after_first(done : int, total : int, span : str) -> None:
             if done >= 1:
                 coordinator.Abort()
 
@@ -552,11 +546,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_abort_before_anything_raises(self):
         """Cancelling with nothing transcribed still raises, not empty output."""
-        coordinator, _ = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
         coordinator.Abort()
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
@@ -572,12 +565,13 @@ class TestTranscriptionCoordinator(LoggedTestCase):
     def _failing_coordinator(self, fail_on : set[int], chunks : int = 4, **settings):
         provider = FakeTranscriptionProvider(SettingsType(), ["ok line"])
         failing = FailingTranscriptionClient(SettingsType(), ["ok line"], fail_on=fail_on)
-        provider.GetTranscriptionClient = lambda settings: failing  # type: ignore[method-assign]
+        client_patcher = patch.object(provider, "GetTranscriptionClient", return_value=failing)
+        client_patcher.start()
+        self.addCleanup(client_patcher.stop)
         coordinator = TranscriptionCoordinator(provider, SettingsType({'min_chunk_seconds': 1.0, **settings}))
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=2 * i), end=timedelta(seconds=2 * i + 2)) for i in range(chunks)
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
         return coordinator, failing
 
     def test_two_initial_failures_abort_run(self):
@@ -626,11 +620,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_project_persistence_follows_options(self):
         """GUI projects are persistent like opened files, so autosave uses the project path."""
-        coordinator, _ = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             persistent = coordinator.CreateTranscriptionProject(media.name, Options({'project_file': True}))
@@ -646,11 +639,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_project_postprocesses_transcription_text(self):
         """User normalizations apply to transcribed lines, timings untouched."""
-        coordinator, _ = self._coordinator(["a — b"])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["a — b"])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             project = coordinator.CreateTranscriptionProject(
@@ -662,13 +654,38 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedEqual("start kept", timedelta(seconds=0), project.subtitles.originals[0].start)
         self.assertLoggedEqual("end kept", timedelta(seconds=4), project.subtitles.originals[0].end)
 
+    def test_project_discards_utterances_emptied_by_postprocessing(self) -> None:
+        """Filler removal must not introduce empty source lines into a project."""
+        for texts in (["Um.", "Um, hello"], ["Um.", "Um."]):
+            with self.subTest(texts=texts):
+                coordinator, _unused_provider = self._coordinator(list(texts))
+                stub_media(self, coordinator, [
+                    AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
+                    AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
+                ])
+
+                with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+                    project = coordinator.CreateTranscriptionProject(media.name, Options({
+                        'remove_filler_words': True, 'filler_words': ['um'],
+                        'postprocess_transcription': True,
+                    }))
+
+                assert project.subtitles is not None
+                originals = project.subtitles.originals or []
+                expected = ["Hello"] if texts[1] == "Um, hello" else []
+                self.assertLoggedEqual("nonempty source text", expected, [line.text for line in originals])
+                batch_lines = [line for batch in self._project_batches(project) for line in batch.originals]
+                self.assertLoggedEqual("batch and flat lines agree", originals, batch_lines)
+                if originals:
+                    self.assertLoggedEqual("surviving start preserved", timedelta(seconds=6), originals[0].start)
+                    self.assertLoggedEqual("surviving end preserved", timedelta(seconds=10), originals[0].end)
+
     def test_project_flags_batches_for_revalidation(self):
         """Fresh transcription batches carry notes and the revalidation tag."""
-        coordinator, _ = self._coordinator(["monologue"])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["monologue"])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=60)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             project = coordinator.CreateTranscriptionProject(media.name, Options({'project_file': True}))
@@ -696,7 +713,9 @@ class TestTranscriptionRateLimit(LoggedTestCase):
         """A 60/min limit paces each request to at least one second."""
         client = FakeTranscriptionClient(SettingsType({'rate_limit': 60.0}))
 
-        with patch("time.sleep") as mock_sleep:
+        clock = FakeClock()
+        with patch("time.monotonic", side_effect=clock.Monotonic), \
+             patch("time.sleep", side_effect=clock.Sleep) as mock_sleep:
             result = client.TranscribeChunk(b"fake-audio", "wav", "en")
 
         total_slept = sum(call.args[0] for call in mock_sleep.call_args_list)
@@ -795,25 +814,6 @@ class TestTranscriptionSave(LoggedTestCase):
 
         self.assertLoggedNotIn("no speaker leak", "Amina", content)
         self.assertLoggedIn("text intact", "hello", content)
-
-class TestProviderImportCost(LoggedTestCase):
-    def test_provider_imports_stay_light(self):
-        """Registering providers must not pull heavy optional SDKs."""
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(PySubtrans.__file__)))
-        script = (
-            "import sys; "
-            "from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider; "
-            "names = sorted(TranscriptionProvider.get_providers()); "
-            "heavy = [m for m in ('torch', 'qwen_asr', 'google', 'google.genai') if m in sys.modules]; "
-            "assert not heavy, heavy; "
-            "print('light ok: ' + ','.join(names))"
-        )
-        result = subprocess.run([sys.executable, '-c', script], cwd=repo_root,
-                                capture_output=True, text=True, timeout=180)
-
-        self.assertLoggedEqual("light imports", 0, result.returncode,
-                               input_value=(result.stderr or "")[-2000:])
-
 
 if __name__ == '__main__':
     unittest.main()

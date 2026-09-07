@@ -3,6 +3,12 @@ import os
 import sys
 import unittest
 
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from tests.ProviderImportGuard import InstallProviderImportGuard
+
+InstallProviderImportGuard()
+
 from PySubtrans.Helpers.Tests import create_logfile
 
 def _check_gui_dependencies() -> tuple[bool, str]:

@@ -43,8 +43,8 @@ def _needs_space(previous : str, current : str) -> bool:
 # Lines shorter than this merge into their neighbour (bounds stay truthful)
 _MIN_LINE_SECONDS = 0.4
 
-# Signature for transcription progress callbacks: (chunks_done, chunk_total)
-TranscriptionProgressCallback = Callable[[int, int], None]
+# Signature for transcription progress callbacks: (chunks_completed, chunk_total, current_chunk_span)
+TranscriptionProgressCallback = Callable[[int, int, str], None]
 
 # Signature for per-chunk callbacks: invoked with each transcribed segment
 TranscriptionSegmentCallback = Callable[[TranscriptionSegment], None]
@@ -192,6 +192,9 @@ class TranscriptionCoordinator:
                         done=done, total=total))
                     break
 
+                if progress_cb:
+                    progress_cb(done, total, self._span_label(chunk))
+
                 try:
                     segment = self._transcribe_chunk(client, media_path, chunk)
                 except SubtitleError as e:
@@ -217,9 +220,6 @@ class TranscriptionCoordinator:
                             transcribed += 1
                             if segment_cb:
                                 segment_cb(line)
-
-                if progress_cb:
-                    progress_cb(done + 1, total)
         finally:
             self._active_client = None
 
@@ -280,7 +280,11 @@ class TranscriptionCoordinator:
         processor = SubtitleProcessor(SettingsType(options))
         for scene in subtitles.scenes:
             for batch in scene.batches:
-                batch.originals[:] = processor.PostprocessSubtitles(batch.originals)
+                # Cleanup can remove an entire filler-only utterance. Empty
+                # translations are allowed by the processor, but source lines
+                # must contain text before entering the project/view model.
+                batch.originals[:] = [line for line in processor.PostprocessSubtitles(batch.originals)
+                                      if line.text and line.text.strip()]
         # Re-derive the flat line list: batches hold the edited copies now
         subtitles.originals, subtitles.translated, dummy = UnbatchScenes(subtitles.scenes)  # type: ignore[unused-ignore]
 

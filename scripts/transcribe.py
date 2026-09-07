@@ -97,10 +97,10 @@ def main() -> int:
             return 1
         return 0
 
-    def progress(done : int, total : int) -> None:
-        logging.info(f"Transcribed chunk {done}/{total}")
+    def progress(done : int, total : int, span : str) -> None:
+        logging.info(f"Transcribing chunk {done + 1}/{total} [{span}]")
         if args.verbose:
-            print(f"Transcribed chunk {done}/{total}", flush=True)
+            print(f"Transcribing chunk {done + 1}/{total} [{span}]", flush=True)
 
     try:
         options = Options() if args.project else None

@@ -507,10 +507,9 @@ class TestSilenceGate(LoggedTestCase):
     def test_silent_chunks_skipped_before_request(self):
         """Silent chunks cost no requests and yield no lines."""
         coordinator, provider = self._coordinator(["audible"])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=2)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: self._silent_wav()  # type: ignore[method-assign]
+        ], audio=self._silent_wav())
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             with self.assertRaisesRegex(SubtitleError, "No timed"):
@@ -529,11 +528,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         """Scenes with word timings become truly timed subtitle lines."""
         coordinator, provider = self._coordinator(
             ["first line", "second line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
             AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             subtitles = coordinator.TranscribeMedia(media.name)
@@ -557,12 +555,11 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_untimed_results_kept_as_scene_lines(self):
         """Paid-for flat text is kept over true chunk spans, not thrown away."""
-        coordinator, _ = self._coordinator(["first scene", "second scene"])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first scene", "second scene"])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=2)),
             AudioChunk(start=timedelta(seconds=2), end=timedelta(seconds=4)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             subtitles = coordinator.TranscribeMedia(media.name)
@@ -573,11 +570,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_no_speech_raises(self):
         """Media with nothing transcribable raises instead of empty project."""
-        coordinator, _ = self._coordinator(["", "   "])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["", "   "])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=2)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             with self.assertRaises(SubtitleError):
@@ -585,12 +581,11 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_segment_callback_receives_each_scene(self):
         """Per-chunk callback fires with timings for live progress display."""
-        coordinator, _ = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
             AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         seen : list = []
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
@@ -649,11 +644,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_abort_before_anything_raises(self):
         """Cancelling with nothing transcribed still raises, not empty output."""
-        coordinator, _ = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
         coordinator.Abort()
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
@@ -669,12 +663,13 @@ class TestTranscriptionCoordinator(LoggedTestCase):
     def _failing_coordinator(self, fail_on : set[int], chunks : int = 4, **settings):
         provider = FakeTranscriptionProvider(SettingsType(), ["ok line"])
         failing = FailingTranscriptionClient(SettingsType(), ["ok line"], fail_on=fail_on)
-        provider.GetTranscriptionClient = lambda settings: failing  # type: ignore[method-assign]
+        client_patcher = patch.object(provider, "GetTranscriptionClient", return_value=failing)
+        client_patcher.start()
+        self.addCleanup(client_patcher.stop)
         coordinator = TranscriptionCoordinator(provider, SettingsType({'min_chunk_seconds': 1.0, **settings}))
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=2 * i), end=timedelta(seconds=2 * i + 2)) for i in range(chunks)
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
         return coordinator, failing
 
     def test_two_initial_failures_abort_run(self):
@@ -723,11 +718,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_project_persistence_follows_options(self):
         """GUI projects are persistent like opened files, so autosave uses the project path."""
-        coordinator, _ = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             persistent = coordinator.CreateTranscriptionProject(media.name, Options({'project_file': True}))
@@ -743,11 +737,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_project_postprocesses_transcription_text(self):
         """User normalizations apply to transcribed lines, timings untouched."""
-        coordinator, _ = self._coordinator(["a — b"])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["a — b"])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             project = coordinator.CreateTranscriptionProject(

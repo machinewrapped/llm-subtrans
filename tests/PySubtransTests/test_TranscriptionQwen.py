@@ -21,8 +21,8 @@ class TestQwenLocalProvider(LoggedTestCase):
 
         self.assertLoggedIn("qwen present", "Qwen Local", providers)
 
-    def test_options(self):
-        """Provider options describe settings for dynamic dialogs."""
+    def test_options_ungated(self):
+        """Keyless local provider always shows the full schema."""
         assert QwenLocalProvider is not None  # Type narrowing for PyLance
         provider = QwenLocalProvider(SettingsType())
         options = provider.GetOptions(provider.settings)

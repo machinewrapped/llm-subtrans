@@ -344,9 +344,20 @@ class TranscriptionDialog(QDialog):
             if key in self.provider.advanced_settings:
                 continue
             field = CreateOptionWidget(key, self.provider.settings.get(key), key_type, tooltip=tooltip)
-            field.contentChanged.connect(lambda dummy=None: self._update_settings_link())
+            field.contentChanged.connect(lambda dummy=None: self._on_provider_field_committed(field.key))
             self.provider_fields[key] = field
             self.provider_form.addRow(_(key), field)
+
+    def _on_provider_field_committed(self, key : str) -> None:
+        """
+        Refresh the per-run form when a refresh-triggering field commits
+        (e.g. a key unlocking the progressive options), then update the
+        Configure link as usual.
+        """
+        if self.provider is not None and key in self.provider.refresh_when_changed:
+            self.provider.settings[key] = self.provider_fields[key].GetValue()
+            self._rebuild_provider_form()
+        self._update_settings_link()
 
     def _on_file_changed(self, path : str) -> None:
         self.media_path = path.strip() or None

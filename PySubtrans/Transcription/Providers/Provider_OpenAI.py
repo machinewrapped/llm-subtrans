@@ -113,6 +113,8 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
             'proxy': settings.get_str('proxy') or os.getenv('OPENAI_PROXY'),
         }))
 
+        self.refresh_when_changed = ['api_key']
+
     def GetAvailableModels(self) -> list[str]:
         """Timed transcription models served by this provider."""
         return ['whisper-1', 'gpt-4o-transcribe-diarize']
@@ -126,14 +128,21 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
         return OpenAITranscriptionClient(client_settings)
 
     def GetOptions(self, settings : SettingsType) -> GuiSettingsType:
-        """Returns the configurable options for the provider."""
-        return {
+        """
+        Returns the configurable options for the provider.
+        """
+        options : GuiSettingsType = {
             'api_key': (str, _("An OpenAI API key (shared with translation)")),
+        }
+        if not self.settings.get_str('api_key'):
+            return options
+        options.update({
             'model': (self.available_models, _("Speech-to-text model (both return timings)")),
             'language': (str, _("Spoken language hint as ISO code, e.g. en (optional)")),
             'request_timeout': (float, _("Per-chunk request timeout in seconds")),
             'rate_limit': (float, _("Maximum API requests per minute (0 for unlimited)")),
-        }
+        })
+        return options
 
     def ValidateSettings(self) -> bool:
         """Validate the settings for the provider."""

@@ -35,13 +35,22 @@ class TestGeminiProvider(LoggedTestCase):
         self.assertLoggedIn("gemini present", "Gemini", providers)
 
     def test_options(self):
-        """Provider options describe settings for dynamic dialogs."""
+        """A non-empty key unlocks the full schema."""
         assert GeminiTranscriptionProvider is not None  # Type narrowing for PyLance
-        provider = GeminiTranscriptionProvider(SettingsType())
+        provider = GeminiTranscriptionProvider(SettingsType({'api_key': 'k'}))
         options = provider.GetOptions(provider.settings)
 
         for key in ("api_key", "model", "language", "diarize", "max_retries", "rate_limit"):
             self.assertLoggedIn(f"{key} option", key, options)
+
+    def test_progressive_options_without_key(self):
+        """Only the key shows until one is set (non-empty means set up, not valid)."""
+        assert GeminiTranscriptionProvider is not None  # Type narrowing for PyLance
+        with patch.dict(os.environ, {'GEMINI_API_KEY': ''}):
+            provider = GeminiTranscriptionProvider(SettingsType())
+            options = provider.GetOptions(provider.settings)
+
+            self.assertLoggedEqual("only api_key", ['api_key'], sorted(options.keys()))
 
     def test_validate_requires_key(self):
         """Missing API keys fail validation with a message."""

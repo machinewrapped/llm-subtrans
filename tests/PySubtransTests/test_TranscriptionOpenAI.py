@@ -1,3 +1,4 @@
+import os
 import unittest
 from datetime import timedelta
 from unittest.mock import Mock, patch
@@ -31,6 +32,22 @@ class TestOpenAIRegistered(LoggedTestCase):
         client = provider.GetTranscriptionClient(SettingsType())
 
         self.assertLoggedEqual("no limit", None, client.rate_limit)
+
+    def test_progressive_options_without_key(self):
+        """Only the key shows until one is set."""
+        with patch.dict(os.environ, {'OPENAI_API_KEY': ''}):
+            provider = OpenAITranscriptionProvider(SettingsType())
+            options = provider.GetOptions(provider.settings)
+
+            self.assertLoggedEqual("only api_key", ['api_key'], sorted(options.keys()))
+
+    def test_progressive_options_with_key(self):
+        """A non-empty key unlocks the full schema."""
+        provider = OpenAITranscriptionProvider(SettingsType({'api_key': 'k'}))
+        options = provider.GetOptions(provider.settings)
+
+        for key in ('api_key', 'model', 'language', 'request_timeout', 'rate_limit'):
+            self.assertLoggedIn(f"{key} option", key, options)
 
     def test_advanced_settings_match_schema(self):
         """Advanced keys must exist in the options schema, or filtering silently misses."""

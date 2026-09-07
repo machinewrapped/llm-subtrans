@@ -50,6 +50,8 @@ class MuseTranscriptionProvider(TranscriptionProvider):
             'proxy': settings.get_str('proxy') or os.getenv('MUSE_PROXY'),
         }))
 
+        self.refresh_when_changed = ['api_key']
+
     def GetAvailableModels(self) -> list[str]:
         """Timed transcription models served by this provider."""
         return ['muse-voice-transcribe-1.0']
@@ -63,15 +65,22 @@ class MuseTranscriptionProvider(TranscriptionProvider):
         return MuseTranscriptionClient(client_settings)
 
     def GetOptions(self, settings : SettingsType) -> GuiSettingsType:
-        """Returns the configurable options for the provider."""
-        return {
+        """
+        Returns the configurable options for the provider.
+        """
+        options : GuiSettingsType = {
             'api_key': (str, _("A Meta Model API key (MODEL_API_KEY)")),
+        }
+        if not self.settings.get_str('api_key'):
+            return options
+        options.update({
             'model': (self.available_models, _("Speech-to-text model (turns carry timings)")),
             'language': (str, _("Spoken language hint, e.g. english (optional, auto-detected when empty)")),
             'diarize': (bool, _("Identify speakers (DIARIZATION mode)")),
             'request_timeout': (float, _("Per-chunk request timeout in seconds")),
             'rate_limit': (float, _("Maximum API requests per minute (0 for unlimited)")),
-        }
+        })
+        return options
 
     def ValidateSettings(self) -> bool:
         """Validate the settings for the provider."""

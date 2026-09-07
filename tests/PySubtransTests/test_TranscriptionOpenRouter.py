@@ -1,3 +1,4 @@
+import os
 import unittest
 from datetime import timedelta
 from unittest.mock import Mock, patch
@@ -35,6 +36,38 @@ class TestOpenRouterRegistered(LoggedTestCase):
         client = provider.GetTranscriptionClient(SettingsType())
 
         self.assertLoggedEqual("no limit", None, client.rate_limit)
+
+    def test_progressive_options_without_key(self):
+        """Only the key shows until one is set (non-empty means set up, not valid)."""
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': ''}):
+            provider = OpenRouterTranscriptionProvider(SettingsType())
+            options = provider.GetOptions(provider.settings)
+
+            self.assertLoggedEqual("only api_key", ['api_key'], sorted(options.keys()))
+
+    def test_progressive_options_with_key(self):
+        """A non-empty key unlocks the full schema."""
+        provider = OpenRouterTranscriptionProvider(SettingsType({'api_key': 'k'}))
+
+        with patch('httpx.Client') as mock_client:
+            mock_client.return_value.__enter__.return_value.get.return_value = Mock(
+                is_error=False, status_code=200, text="")
+            options = provider.GetOptions(provider.settings)
+
+        for key in ('api_key', 'model', 'language', 'diarize', 'request_timeout', 'rate_limit'):
+            self.assertLoggedIn(f"{key} option", key, options)
+
+    def test_progressive_options_inherited_key(self):
+        """Keys inherited from the environment count as set up."""
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'env-key'}):
+            provider = OpenRouterTranscriptionProvider(SettingsType())
+
+            with patch('httpx.Client') as mock_client:
+                mock_client.return_value.__enter__.return_value.get.return_value = Mock(
+                    is_error=False, status_code=200, text="")
+                options = provider.GetOptions(provider.settings)
+
+            self.assertLoggedIn("model option", 'model', options)
 
     def test_advanced_settings_match_schema(self):
         """Advanced keys must exist in the options schema, or filtering silently misses."""

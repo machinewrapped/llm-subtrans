@@ -68,6 +68,35 @@ def _make_tone_silence_wav(path : str) -> None:    # 4s tone, 2s silence, 4s ton
          '-ac', '1', '-ar', '16000', '-c:a', 'pcm_s16le', path],
         check=True, timeout=60
     )
+def _make_dialogue_wav(path : str, tone_seconds : float = 6.0, pause_seconds : float = 1.0, repeats : int = 12) -> None:
+    """Dialogue-like audio: tone bursts separated by digital silence (no ffmpeg needed)."""
+    sample_rate = 16000
+    tone = array.array('h', (int(10000 * math.sin(2.0 * math.pi * 440.0 * i / sample_rate))
+                             for i in range(int(tone_seconds * sample_rate))))
+    silence = array.array('h', [0] * int(pause_seconds * sample_rate))
+    samples = array.array('h')
+    for _unused_repeat in range(repeats):
+        samples.extend(tone)
+        samples.extend(silence)
+    with wave.open(path, 'wb') as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(samples.tobytes())
+def stub_media(testcase : LoggedTestCase, coordinator : TranscriptionCoordinator,
+               chunks : list[AudioChunk], audio : bytes = b"fake") -> None:
+    """
+    Stub chunk planning and audio reads for a coordinator test run.
+
+    patch.object restores the real methods afterwards; plain attribute
+    assignment would need type: ignore comments and leak stubs on failure.
+    """
+    chunk_patcher = patch.object(coordinator.chunker, "PlanChunks", return_value=chunks)
+    bytes_patcher = patch.object(coordinator.extractor, "ReadChunkBytes", return_value=audio)
+    chunk_patcher.start()
+    bytes_patcher.start()
+    testcase.addCleanup(chunk_patcher.stop)
+    testcase.addCleanup(bytes_patcher.stop)
 class FakeTranscriptionProvider(TranscriptionProvider):
     """In-test transcription provider with canned client responses."""
     name = "Fake Transcription"
@@ -196,6 +225,62 @@ class TestAudioChunker(LoggedTestCase):
                 "chunk within cap",
                 5.5, (chunk.end - chunk.start).total_seconds()
             )
+
+    def test_dense_dialogue_respects_minimum(self):
+        """Frequent pauses never produce sub-minimum chunks."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = os.path.join(tmpdir, "dialogue.wav")
+            _make_dialogue_wav(wav_path, repeats=24)
+
+            chunker = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+            chunks = chunker.PlanChunks(wav_path)
+
+        self.assertLoggedGreater("several chunks planned", len(chunks), 2)
+        for chunk in chunks:
+            self.assertLoggedGreaterEqual(
+                "chunk respects minimum",
+                (chunk.end - chunk.start).total_seconds(), 8.0)
+
+    def test_raising_maximum_reduces_chunk_count(self):
+        """The cap is the lever for fewer, larger chunks on dialogue."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = os.path.join(tmpdir, "dialogue.wav")
+            _make_dialogue_wav(wav_path, repeats=24)
+
+            capped = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 30.0}))
+            capped_chunks = capped.PlanChunks(wav_path)
+            roomy = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+            roomy_chunks = roomy.PlanChunks(wav_path)
+
+        self.assertLoggedGreater("fewer chunks with higher cap", len(capped_chunks), len(roomy_chunks))
+        for chunk in roomy_chunks:
+            self.assertLoggedGreaterEqual(
+                "large chunks respect minimum",
+                (chunk.end - chunk.start).total_seconds(), 8.0)
+
+    def test_long_gap_beats_nearer_short_gap(self):
+        """A long pause earlier wins over a short one nearer the cap."""
+        chunker = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+        silences = [
+            (timedelta(seconds=20), timedelta(seconds=25)),
+            (timedelta(seconds=55), timedelta(seconds=56)),
+        ]
+        cut = chunker._next_silence_cut(silences, 0, timedelta(seconds=0), timedelta(seconds=60))
+
+        assert cut is not None  # Type narrowing for PyLance
+        self.assertLoggedEqual("cut at long gap", timedelta(seconds=20), cut[0])
+
+    def test_ties_break_toward_latest(self):
+        """Equal scores prefer the later cut, filling toward the cap."""
+        chunker = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+        silences = [
+            (timedelta(seconds=10), timedelta(seconds=15)),
+            (timedelta(seconds=25), timedelta(seconds=27)),
+        ]
+        cut = chunker._next_silence_cut(silences, 0, timedelta(seconds=0), timedelta(seconds=60))
+
+        assert cut is not None  # Type narrowing for PyLance
+        self.assertLoggedEqual("cut at later gap", timedelta(seconds=25), cut[0])
 
 def _word(text : str, start : float, end : float, speaker : str|None = None) -> WordTiming:
     return WordTiming(text=text, start=timedelta(seconds=start), end=timedelta(seconds=end), speaker=speaker)

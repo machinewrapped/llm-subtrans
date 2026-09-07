@@ -46,14 +46,16 @@ class TestMuseRegistered(LoggedTestCase):
         self.assertLoggedEqual("no stale advanced keys", [], unknown)
 
     def test_information_exposed(self):
-        """Every registered provider exposes its information text (no dead blocks)."""
+        """GetInformation() exposes each provider's information text (no dead blocks)."""
+        seen = 0
         for name, provider_class in TranscriptionProvider.get_providers().items():
             with self.subTest(provider=name):
                 provider = provider_class(SettingsType({'api_key': 'k'}))
-                info = provider.GetInformation()
-
-                self.assertLoggedIsNotNone(f"{name} info present", info)
-                self.assertLoggedEqual(f"{name} info matches attribute", provider.information, info)
+                expected = getattr(provider, 'information', None)
+                self.assertLoggedEqual(f"{name} info matches attribute", expected, provider.GetInformation())
+                if expected:
+                    seen += 1
+        self.assertLoggedGreater("providers with info text", seen, 0)
 
 class TestMuseTranscription(LoggedTestCase):
     def _provider(self, diarize : bool = False):

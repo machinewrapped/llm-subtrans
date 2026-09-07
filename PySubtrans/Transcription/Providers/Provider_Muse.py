@@ -16,14 +16,14 @@ class MuseTranscriptionProvider(TranscriptionProvider):
     """
     name = "Muse"
 
-    information = """
+    information = _("""
     <p>Transcribe with Meta Muse Voice Transcribe.</p>
     <p>Note that Muse does not provide word-level timings, so subtitle timing is "best effort".</p>
-    """
+    """)
 
-    information_noapikey = """
+    information_noapikey = _("""
     <p>To use this provider you need a Meta <a href="https://dev.meta.ai/">Model API key</a>.</p>
-    """
+    """)
 
     # Endpoint and quotas live in Settings; model, diarization and language vary per job
     advanced_settings = ['api_key', 'request_timeout', 'rate_limit']

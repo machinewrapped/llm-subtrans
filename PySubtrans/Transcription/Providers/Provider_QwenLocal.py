@@ -68,11 +68,11 @@ else:
             """
             name = "Qwen Local"
 
-            information = """
+            information = _("""
             <p>Transcribe locally with the official qwen-asr package (Qwen3-ASR).</p>
             <p>Requires the <tt>transcription</tt> extra and a CUDA torch install. No API key needed.</p>
             <p>A CUDA GPU is much faster than CPU inference.</p>
-            """
+            """)
 
             def _get_provider_information(self, torch_device : str = "Unknown") -> str|None:
                 """Append torch install guidance until a run records a device."""

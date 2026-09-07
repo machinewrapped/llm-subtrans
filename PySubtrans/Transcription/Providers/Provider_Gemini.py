@@ -190,14 +190,14 @@ else:
             """
             name = "Gemini"
 
-            information = """
+            information = _("""
             <p>Transcribe with Gemini 3.5 Transcribe (word timestamps, speaker diarization).</p>
             <p>Requires a <a href="https://aistudio.google.com/app/apikey">Google AI Studio API key</a>.</p>
-            """
+            """)
 
-            information_noapikey = """
+            information_noapikey = _("""
             <p>To use this provider you need a <a href="https://aistudio.google.com/app/apikey">Google AI Studio API key</a>.</p>
-            """
+            """)
 
             # Keys and quotas live in Settings; model, diarization and language vary per job
             advanced_settings = ['api_key', 'max_retries', 'rate_limit']

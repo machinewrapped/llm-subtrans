@@ -1,5 +1,6 @@
 import logging
 import os
+import sys
 import time
 
 from PySide6.QtCore import QObject, QThread, Signal, Slot
@@ -30,7 +31,7 @@ from PySubtrans.Helpers.Time import TimedeltaToText
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.Transcription.AudioExtractor import SUPPORTED_MEDIA_EXTENSIONS
+from PySubtrans.Transcription.AudioExtractor import SUPPORTED_MEDIA_EXTENSIONS, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
@@ -412,7 +413,6 @@ class TranscriptionDialog(QDialog):
         the track-listing path, so no probing cost: classification reuses
         the failure that already happened.
         """
-        from PySubtrans.Transcription.AudioExtractor import CheckFfmpegAvailable
         try:
             CheckFfmpegAvailable()
         except Exception:
@@ -561,8 +561,6 @@ class TranscriptionDialog(QDialog):
         sys.modules only: importing torch here would cost ~10s for
         cloud providers that never needed it.
         """
-        import sys
-
         torch_module = sys.modules.get('torch')
         device = TranscriptionProvider.ResolveTorchDevice(torch_module)
         if device == "Unknown":

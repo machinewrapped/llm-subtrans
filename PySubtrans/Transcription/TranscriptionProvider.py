@@ -79,7 +79,7 @@ class TranscriptionProvider:
         """
         Returns information about the provider settings
         """
-        return None
+        return getattr(self, 'information', None)
 
     def GetTranscriptionClient(self, settings : SettingsType) -> TranscriptionClient:
         """

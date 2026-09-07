@@ -62,6 +62,9 @@ class FailingTranscriptionClient(FakeTranscriptionClient):
             raise SubtitleError("simulated backend failure")
         return super()._transcribe_chunk(audio_bytes, audio_format, language)
 
+
+
+
 def stub_media(testcase : LoggedTestCase, coordinator : TranscriptionCoordinator,
                chunks : list[AudioChunk], audio : bytes = b"fake") -> None:
     """
@@ -680,6 +683,42 @@ class TestTranscriptionCoordinator(LoggedTestCase):
                     self.assertLoggedEqual("surviving start preserved", timedelta(seconds=6), originals[0].start)
                     self.assertLoggedEqual("surviving end preserved", timedelta(seconds=10), originals[0].end)
 
+    def test_project_preprocesses_like_loaded_files(self):
+        """Long flat lines split on duration under the post-process toggle."""
+        text = "First sentence here. Second sentence here. Third sentence here. Fourth sentence here."
+        coordinator, _unused_provider = self._coordinator([text])
+        stub_media(self, coordinator, [
+            AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=60)),
+        ])
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            project = coordinator.CreateTranscriptionProject(media.name, Options({
+                'project_file': True, 'postprocess_transcription': True, 'max_line_duration': 4.0}))
+
+        assert project.subtitles is not None  # Type narrowing for PyLance
+        assert project.subtitles.originals is not None  # Type narrowing for PyLance
+        self.assertLoggedGreater("line was split", len(project.subtitles.originals), 1)
+        for line in project.subtitles.originals:
+            self.assertLoggedLessEqual("split shorter than whole", line.duration.total_seconds(), 60.0)
+        self.assertLoggedEqual("span start kept", timedelta(seconds=0), project.subtitles.originals[0].start)
+        self.assertLoggedEqual("span end kept", timedelta(seconds=60), project.subtitles.originals[-1].end)
+
+    def test_project_skips_preprocess_when_toggled_off(self):
+        """Unchecking post-process keeps long flat lines whole."""
+        text = "First sentence here. Second sentence here. Third sentence here. Fourth sentence here."
+        coordinator, _unused_provider = self._coordinator([text])
+        stub_media(self, coordinator, [
+            AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=60)),
+        ])
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            project = coordinator.CreateTranscriptionProject(media.name, Options({
+                'project_file': True, 'postprocess_transcription': False}))
+
+        assert project.subtitles is not None  # Type narrowing for PyLance
+        assert project.subtitles.originals is not None  # Type narrowing for PyLance
+        self.assertLoggedEqual("line count", 1, len(project.subtitles.originals))
+
     def test_project_flags_batches_for_revalidation(self):
         """Fresh transcription batches carry notes and the revalidation tag."""
         coordinator, _unused_provider = self._coordinator(["monologue"])
@@ -814,6 +853,9 @@ class TestTranscriptionSave(LoggedTestCase):
 
         self.assertLoggedNotIn("no speaker leak", "Amina", content)
         self.assertLoggedIn("text intact", "hello", content)
+
+
+
 
 if __name__ == '__main__':
     unittest.main()

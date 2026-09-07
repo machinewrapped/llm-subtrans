@@ -45,6 +45,16 @@ class TestMuseRegistered(LoggedTestCase):
         unknown = [key for key in provider.advanced_settings if key not in options]
         self.assertLoggedEqual("no stale advanced keys", [], unknown)
 
+    def test_information_exposed(self):
+        """Every registered provider exposes its information text (no dead blocks)."""
+        for name, provider_class in TranscriptionProvider.get_providers().items():
+            with self.subTest(provider=name):
+                provider = provider_class(SettingsType({'api_key': 'k'}))
+                info = provider.GetInformation()
+
+                self.assertLoggedIsNotNone(f"{name} info present", info)
+                self.assertLoggedEqual(f"{name} info matches attribute", provider.information, info)
+
 class TestMuseTranscription(LoggedTestCase):
     def _provider(self, diarize : bool = False):
         return MuseTranscriptionProvider(SettingsType({'api_key': 'test-key', 'diarize': diarize}))

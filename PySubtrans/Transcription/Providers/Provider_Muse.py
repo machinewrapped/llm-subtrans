@@ -17,8 +17,8 @@ class MuseTranscriptionProvider(TranscriptionProvider):
     name = "Muse"
 
     information = """
-    <p>Transcribe with Meta Muse Voice Transcribe over a Model API key.</p>
-    <p>Turn-level timings with speaker diarization across 25 languages.</p>
+    <p>Transcribe with Meta Muse Voice Transcribe.</p>
+    <p>Note that Muse does not provide word-level timings, so subtitle timing is "best effort".</p>
     """
 
     # Endpoint and quotas live in Settings; model, diarization and language vary per job

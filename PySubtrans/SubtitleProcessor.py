@@ -233,7 +233,7 @@ class SubtitleProcessor:
 
         while stack:
             current_line = stack.pop()
-            if not current_line or not current_line.text or not current_line.start or not current_line.end:
+            if not current_line or not current_line.text:
                 continue
 
             if current_line.duration <= self.max_line_duration or len(current_line.text) < self.min_split_chars * 2:

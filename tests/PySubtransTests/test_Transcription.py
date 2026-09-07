@@ -599,15 +599,28 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedEqual("callback count", 2, len(seen))
         self.assertLoggedEqual("second start", timedelta(seconds=6), seen[1].start)
 
+    def test_progress_reports_chunk_spans(self):
+        """Progress callbacks carry chunk spans, not transcribed line spans."""
+        coordinator, _unused_provider = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
+            AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
+            AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
+        ])
+
+        seen : list = []
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            coordinator.TranscribeMedia(media.name, progress_cb=lambda done, total, span: seen.append(span))
+
+        self.assertLoggedEqual("chunk spans", ["0.0s-4.0s", "6.0s-10.0s"], seen)
+
     def test_engine_words_grouped_into_lines(self):
         """Word timings from the engine produce truly timed lines."""
         words = [_word("first", 0.0, 1.0), _word("line", 1.0, 2.0),
                  _word("second", 5.0, 6.0), _word("line", 6.0, 7.0)]
-        coordinator, _ = self._coordinator(["first line second line"], words)
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line second line"], words)
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=10), end=timedelta(seconds=20)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             subtitles = coordinator.TranscribeMedia(media.name)
@@ -619,14 +632,13 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_abort_keeps_partial_results(self):
         """Cancelling keeps billed work instead of throwing it away."""
-        coordinator, _ = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
-        coordinator.chunker.PlanChunks = lambda media_path, track=0: [  # type: ignore[method-assign]
+        coordinator, _unused_provider = self._coordinator(["first line", "second line"], [_word("w", 0.0, 1.0)])
+        stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
             AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
-        ]
-        coordinator.extractor.ReadChunkBytes = lambda *args, **kwargs: b"fake"  # type: ignore[method-assign]
+        ])
 
-        def abort_after_first(done : int, total : int) -> None:
+        def abort_after_first(done : int, total : int, span : str) -> None:
             if done >= 1:
                 coordinator.Abort()
 

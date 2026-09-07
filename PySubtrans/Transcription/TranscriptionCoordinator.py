@@ -43,8 +43,8 @@ def _needs_space(previous : str, current : str) -> bool:
 # Lines shorter than this merge into their neighbour (bounds stay truthful)
 _MIN_LINE_SECONDS = 0.4
 
-# Signature for transcription progress callbacks: (chunks_done, chunk_total)
-TranscriptionProgressCallback = Callable[[int, int], None]
+# Signature for transcription progress callbacks: (chunks_completed, chunk_total, current_chunk_span)
+TranscriptionProgressCallback = Callable[[int, int, str], None]
 
 # Signature for per-chunk callbacks: invoked with each transcribed segment
 TranscriptionSegmentCallback = Callable[[TranscriptionSegment], None]
@@ -192,6 +192,9 @@ class TranscriptionCoordinator:
                         done=done, total=total))
                     break
 
+                if progress_cb:
+                    progress_cb(done, total, self._span_label(chunk))
+
                 try:
                     segment = self._transcribe_chunk(client, media_path, chunk)
                 except SubtitleError as e:
@@ -217,9 +220,6 @@ class TranscriptionCoordinator:
                             transcribed += 1
                             if segment_cb:
                                 segment_cb(line)
-
-                if progress_cb:
-                    progress_cb(done + 1, total)
         finally:
             self._active_client = None
 

@@ -40,7 +40,7 @@ class _TranscriptionWorker(QObject):
     """
     Runs transcription off the GUI thread and reports back via signals.
     """
-    progressed = Signal(int, int)
+    progressed = Signal(int, int, str)
     segmented = Signal(object)
     finished = Signal(object)
     failed = Signal(str)
@@ -57,7 +57,7 @@ class _TranscriptionWorker(QObject):
         try:
             project = self.coordinator.CreateTranscriptionProject(
                 self.media_path, self.options,
-                lambda done, total: self.progressed.emit(done, total),
+                lambda done, total, span: self.progressed.emit(done, total, span),
                 lambda segment: self.segmented.emit(segment))
             self.finished.emit(project)
         except Exception as e:
@@ -446,10 +446,11 @@ class TranscriptionDialog(QDialog):
             self.coordinator.Abort()
             self.status_label.setText(_("Aborting..."))
 
-    @Slot(int, int)
-    def _on_progress(self, done : int, total : int) -> None:
+    @Slot(int, int, str)
+    def _on_progress(self, done : int, total : int, span : str) -> None:
         self._chunks_done = done
         self._chunks_total = total
+        self._last_span = span
         self.progress_bar.setRange(0, total)
         self.progress_bar.setValue(done)
         self._update_run_status()
@@ -459,9 +460,9 @@ class TranscriptionDialog(QDialog):
         """Append each transcribed line to the results pane as it completes."""
         start = TimedeltaToText(segment.start) or ""
         end = TimedeltaToText(segment.end) or ""
-        self._last_span = f"{start} --> {end}"
+        span = f"{start} --> {end}"
         speaker = f"[{segment.speaker}] " if segment.speaker else ""
-        self.results_view.append(f"[{self._last_span}] {speaker}{segment.text}")
+        self.results_view.append(f"[{span}] {speaker}{segment.text}")
         scrollbar = self.results_view.verticalScrollBar()
         if scrollbar is not None:
             scrollbar.setValue(scrollbar.maximum())
@@ -473,7 +474,8 @@ class TranscriptionDialog(QDialog):
         effective transcription speed.
         """
         elapsed = max(0.0, time.monotonic() - self._run_started) if self._run_started else 0.0
-        status = _("Transcribed chunk {done}/{total}").format(done=self._chunks_done, total=self._chunks_total)
+        status = _("Transcribing chunk {current}/{total}").format(
+            current=min(self._chunks_done + 1, self._chunks_total), total=self._chunks_total)
         if self._last_span:
             status += f" [{self._last_span}]"
         status += _(" (elapsed {})").format(_format_duration(elapsed))

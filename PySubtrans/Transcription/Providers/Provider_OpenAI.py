@@ -82,7 +82,7 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
 
     information = """
     <p>Transcribe with OpenAI speech-to-text models over one API key.</p>
-    <p>Useful for spending expiring pay-up-front credits.</p>
+    <p>Currently experimental and untested due to expired API credits. Please report your experiences!</p>
     """
 
     # Endpoint and quotas live in Settings; model and language vary per job

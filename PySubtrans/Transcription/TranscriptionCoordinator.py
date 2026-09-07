@@ -274,9 +274,8 @@ class TranscriptionCoordinator:
 
     def _postprocess_transcription(self, subtitles : Subtitles, options : Options) -> None:
         """
-        Clean transcribed lines with the user's normalizations (dashes,
-        filler words, line breaks) so translation starts from the same
-        baseline as file-loaded subtitles. Text-only: timings untouched.
+        Clean transcribed lines (dashes, filler words, line breaks)
+        Text-only: timings untouched.
         """
         processor = SubtitleProcessor(SettingsType(options))
         for scene in subtitles.scenes:

@@ -248,6 +248,10 @@ class TranscriptionCoordinator:
 
         if options is not None:
             project.UpdateProjectSettings(SettingsType(options))
+            # One "Post-process transcription" toggle covers both cleanup
+            # steps: they both run after transcription, before translation.
+            if options.get_bool('postprocess_transcription', True):
+                self._preprocess_transcription(subtitles, options)
             batch_subtitles(
                 subtitles,
                 scene_threshold=options.get_float('scene_threshold') or 60.0,
@@ -272,6 +276,23 @@ class TranscriptionCoordinator:
         if self._active_client is not None:
             self._active_client.AbortTranscription()
 
+    def _preprocess_transcription(self, subtitles : Subtitles, options : Options) -> None:
+        """
+        Run the standard preprocessing (dialog splits, duration-based line
+        splitting) so transcribed lines obey the same settings as loaded
+        files. Runs before batching, like the file-load path. Governed by
+        the "Post-process transcription" toggle alongside postprocessing:
+        in this context both are just cleanup steps after transcription.
+        """
+        if subtitles.originals:
+            processor = SubtitleProcessor(SettingsType(options))
+            processed = processor.PreprocessSubtitles(subtitles.originals)
+            # Cleanup can empty every line (filler-only utterances): keep the
+            # originals so batching still runs, the postprocess filter removes
+            # the empties afterwards instead of crashing batch_subtitles.
+            if processed:
+                subtitles.originals = processed
+
     def _postprocess_transcription(self, subtitles : Subtitles, options : Options) -> None:
         """
         Clean transcribed lines (dashes, filler words, line breaks)
@@ -280,7 +301,11 @@ class TranscriptionCoordinator:
         processor = SubtitleProcessor(SettingsType(options))
         for scene in subtitles.scenes:
             for batch in scene.batches:
-                batch.originals[:] = processor.PostprocessSubtitles(batch.originals)
+                # Cleanup can remove an entire filler-only utterance. Empty
+                # translations are allowed by the processor, but source lines
+                # must contain text before entering the project/view model.
+                batch.originals[:] = [line for line in processor.PostprocessSubtitles(batch.originals)
+                                      if line.text and line.text.strip()]
         # Re-derive the flat line list: batches hold the edited copies now
         subtitles.originals, subtitles.translated, dummy = UnbatchScenes(subtitles.scenes)  # type: ignore[unused-ignore]
 

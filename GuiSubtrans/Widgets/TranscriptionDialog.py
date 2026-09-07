@@ -196,8 +196,8 @@ class TranscriptionDialog(QDialog):
         save_row.addStretch(1)
         form.addRow(save_row)
 
-        self.clean_check = QCheckBox(_("Clean transcription with subtitle normalizations"), self)
-        self.clean_check.setToolTip(_("Apply the same text cleanup used for loaded subtitles (dashes, filler words, line breaks); timings are never changed"))
+        self.clean_check = QCheckBox(_("Post-process transcription"), self)
+        self.clean_check.setToolTip(_("Apply the same post-processing used for translations (dashes, filler words, line breaks, etc"))
         self.clean_check.setChecked(self.global_options.get_bool('postprocess_transcription', True))
         form.addRow(self.clean_check)
         left_layout.addStretch(1)

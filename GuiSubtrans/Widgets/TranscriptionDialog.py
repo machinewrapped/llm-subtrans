@@ -375,8 +375,37 @@ class TranscriptionDialog(QDialog):
             for track in tracks:
                 self.track_combo.addItem(str(track), track.index)
             self.status_label.setText(_("Found {} audio track(s).").format(len(tracks)))
+            self._record_dependency_evidence(ffmpeg_available=True)
         except Exception as e:
+            self._record_ffmpeg_if_missing(e)
             self.status_label.setText(_("Unable to read media: {error}").format(error=str(e)))
+
+    def _record_dependency_evidence(self, ffmpeg_available : bool|None = None) -> None:
+        """
+        Persist dependency facts learned from real runs, never from probes:
+        ffmpeg proven when this hook runs after extraction or track listing.
+        """
+        if ffmpeg_available is None:
+            return
+        try:
+            if self.global_options.get('transcription_ffmpeg_available') is not ffmpeg_available:
+                self.global_options['transcription_ffmpeg_available'] = ffmpeg_available
+                self.global_options.SaveSettings()
+        except Exception as e:
+            logging.debug(_("Unable to record ffmpeg state: {error}").format(error=str(e)))
+
+    def _record_ffmpeg_if_missing(self, error : Exception) -> None:
+        """
+        Clear the proven flag only when the failure is actually ffmpeg's
+        absence (CheckFfmpegAvailable), not for unreadable media. Runs on
+        the track-listing path, so no probing cost: classification reuses
+        the failure that already happened.
+        """
+        from PySubtrans.Transcription.AudioExtractor import CheckFfmpegAvailable
+        try:
+            CheckFfmpegAvailable()
+        except Exception:
+            self._record_dependency_evidence(ffmpeg_available=False)
 
     def _build_coordinator(self) -> TranscriptionCoordinator|None:
         provider = self.provider
@@ -490,6 +519,12 @@ class TranscriptionDialog(QDialog):
     def _on_finished(self, project : SubtitleProject) -> None:
         self.project = project
         self._save_provider_settings()
+        if self.coordinator is not None and not self.coordinator.aborted:
+            # Extraction and inference provably ran: record dependency facts
+            # (torch only when already imported by the run itself, so cloud
+            # providers pay nothing). This is the only success writer.
+            self._record_dependency_evidence(ffmpeg_available=True)
+            self._record_torch_device()
         count = project.subtitles.linecount if project.subtitles else 0
         saved_path = self._save_transcription(project)
         if self.coordinator is not None and self.coordinator.aborted:
@@ -508,6 +543,25 @@ class TranscriptionDialog(QDialog):
             # Clean finish hands the project straight to the caller: leaving it
             # behind Close/Back to Settings would silently discard paid work.
             self.accept()
+
+    def _record_torch_device(self) -> None:
+        """
+        Record the resolved torch device after a local run. Reads
+        sys.modules only: importing torch here would cost ~10s for
+        cloud providers that never needed it.
+        """
+        import sys
+
+        torch_module = sys.modules.get('torch')
+        device = TranscriptionProvider.ResolveTorchDevice(torch_module)
+        if device == "Unknown":
+            return
+        try:
+            if self.global_options.get_str('transcription_torch_device') != device:
+                self.global_options['transcription_torch_device'] = device
+                self.global_options.SaveSettings()
+        except Exception as e:
+            logging.debug(_("Unable to record torch state: {error}").format(error=str(e)))
 
     def _has_unaccepted_results(self) -> bool:
         """Whether closing the dialog now would discard transcription results."""

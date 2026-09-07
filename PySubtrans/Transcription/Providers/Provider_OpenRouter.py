@@ -82,6 +82,11 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
     <p>Word timestamps and diarization depend on the selected model.</p>
     """
 
+    information_noapikey = """
+    <p>To use this provider you need <a href="https://openrouter.ai/keys">an OpenRouter API key</a>.</p>
+    <p>Note that you must have credit to use OpenRouter models.</p>
+    """
+
     # Endpoint and quotas live in Settings; model, diarization and language vary per job
     advanced_settings = ['api_key', 'request_timeout', 'rate_limit']
 

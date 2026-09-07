@@ -46,16 +46,24 @@ class TestMuseRegistered(LoggedTestCase):
         self.assertLoggedEqual("no stale advanced keys", [], unknown)
 
     def test_information_exposed(self):
-        """GetInformation() exposes each provider's information text (no dead blocks)."""
-        seen = 0
-        for name, provider_class in TranscriptionProvider.get_providers().items():
-            with self.subTest(provider=name):
-                provider = provider_class(SettingsType({'api_key': 'k'}))
-                expected = getattr(provider, 'information', None)
-                self.assertLoggedEqual(f"{name} info matches attribute", expected, provider.GetInformation())
-                if expected:
-                    seen += 1
-        self.assertLoggedGreater("providers with info text", seen, 0)
+        """GetInformation() composes the ffmpeg paragraph with provider text."""
+        provider = MuseTranscriptionProvider(SettingsType({'api_key': 'k'}))
+
+        info = provider.GetInformation(ffmpeg_available=True)
+
+        self.assertLoggedIsNotNone("info present", info)
+        self.assertLoggedNotIn("no ffmpeg paragraph when proven", "ffmpeg", (info or "").casefold())
+        self.assertLoggedIn("provider text present", "Muse", info or "")
+
+    def test_information_no_key_walkthrough(self):
+        """Missing keys select the setup walkthrough instead of the base text."""
+        with patch.dict(os.environ, {'MUSE_API_KEY': '', 'MODEL_API_KEY': ''}):
+            provider = MuseTranscriptionProvider(SettingsType())
+
+            info = provider.GetInformation(ffmpeg_available=True)
+
+        self.assertLoggedIsNotNone("walkthrough present", info)
+        self.assertLoggedIn("key link", "Model API", info or "")
 
 class TestMuseTranscription(LoggedTestCase):
     def _provider(self, diarize : bool = False):

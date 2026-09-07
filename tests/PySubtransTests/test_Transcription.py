@@ -125,6 +125,8 @@ class FakeTranscriptionProvider(TranscriptionProvider):
             'language': (str, "Language hint"),
         }
 
+    information_noapikey = "Test walkthrough"
+
 class TestTranscriptionSegment(LoggedTestCase):
     def test_segment_defaults(self):
         """Segments carry timings, text and empty speaker by default."""
@@ -467,6 +469,50 @@ class TestSettingsNamespaces(LoggedTestCase):
         self.assertLoggedEqual(
             "key format", "OpenRouter Transcription",
             TranscriptionCoordinator.SettingsKey("OpenRouter"))
+
+    def test_dependency_defaults_unknown(self):
+        """Fresh installs carry unknown dependency state, not false claims."""
+        options = Options()
+
+        self.assertLoggedEqual("ffmpeg unknown", None, options.get('transcription_ffmpeg_available'))
+        self.assertLoggedEqual("torch unknown", "Unknown", options.get_str('transcription_torch_device'))
+
+    def test_information_composition_matrix(self):
+        """Info text composes ffmpeg guidance with provider content."""
+        keyed = FakeTranscriptionProvider(SettingsType({'api_key': 'k'}))
+        keyless = FakeTranscriptionProvider(SettingsType())
+
+        walkthrough = keyless.GetInformation(ffmpeg_available=True)
+        base = keyed.GetInformation(ffmpeg_available=True)
+        unknown = keyed.GetInformation(ffmpeg_available=None)
+        missing = keyed.GetInformation(ffmpeg_available=False)
+
+        self.assertLoggedEqual("walkthrough selected", "Test walkthrough", walkthrough)
+        self.assertLoggedEqual("proven has no ffmpeg paragraph", None, base)
+        self.assertLoggedIn("unknown guidance", "ffmpeg", (unknown or "").casefold())
+        self.assertLoggedIn("missing guidance", "ffmpeg", (missing or "").casefold())
+
+    def test_resolve_torch_device_never_imports(self):
+        """Device resolution reads an already-imported module only."""
+        self.assertLoggedEqual("absent module", "Unknown",
+                               TranscriptionProvider.ResolveTorchDevice(None))
+
+        class FakeCuda:
+            def __init__(self, available : bool):
+                self._available = available
+            def is_available(self) -> bool:
+                return self._available
+
+        class FakeTorch:
+            def __init__(self, available : bool):
+                self.cuda = FakeCuda(available)
+
+        self.assertLoggedEqual("cuda device", "cuda:0",
+                               TranscriptionProvider.ResolveTorchDevice(FakeTorch(True)))
+        self.assertLoggedEqual("cpu device", "cpu",
+                               TranscriptionProvider.ResolveTorchDevice(FakeTorch(False)))
+        self.assertLoggedEqual("broken module", "Unknown",
+                               TranscriptionProvider.ResolveTorchDevice(object()))
 
 class TestSilenceGate(LoggedTestCase):
     def _coordinator(self, texts : list[str]|None = None):

@@ -71,7 +71,21 @@ else:
             information = """
             <p>Transcribe locally with the official qwen-asr package (Qwen3-ASR).</p>
             <p>Requires the <tt>transcription</tt> extra and a CUDA torch install. No API key needed.</p>
+            <p>A CUDA GPU is much faster than CPU inference.</p>
             """
+
+            def _get_provider_information(self, torch_device : str = "Unknown") -> str|None:
+                """Append torch install guidance until a run records a device."""
+                base = super()._get_provider_information(torch_device)
+                if torch_device != "Unknown":
+                    if "cpu" in torch_device.casefold():
+                        note = _("<p>Running on CPU: transcription will work but is much slower than on a CUDA GPU.</p>")
+                        return f"{base}\n{note}" if base else note
+                    return base
+                note = _("<p>Needs a working torch install "
+                         "(<a href=\"https://pytorch.org/get-started/locally/\">pytorch.org</a>); "
+                         "checked after your first local transcription.</p>")
+                return f"{base}\n{note}" if base else note
 
             # Device and budgets rarely change per job; model and language do
             advanced_settings = ['device', 'aligner_model', 'max_new_tokens', 'rate_limit']

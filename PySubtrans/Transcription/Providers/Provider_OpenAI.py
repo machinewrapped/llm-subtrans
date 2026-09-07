@@ -85,6 +85,10 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
     <p>Currently experimental and untested due to expired API credits. Please report your experiences!</p>
     """
 
+    information_noapikey = """
+    <p>To use this provider you need <a href="https://platform.openai.com/account/api-keys">an OpenAI API key</a>.</p>
+    """
+
     # Endpoint and quotas live in Settings; model and language vary per job
     advanced_settings = ['api_key', 'request_timeout', 'rate_limit']
 

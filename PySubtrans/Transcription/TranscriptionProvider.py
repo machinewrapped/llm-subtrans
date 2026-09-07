@@ -22,6 +22,9 @@ class TranscriptionProvider:
     # in Settings): the dialog shows the rest for per-run tweaks.
     advanced_settings : list[str] = []
 
+    # Optional no-key walkthrough; keyed providers define information_noapikey
+    information_noapikey : str|None = None
+
     def __init__(self, name : str, settings : SettingsType):
         self.name : str = name
         self.settings : SettingsType = settings
@@ -75,11 +78,51 @@ class TranscriptionProvider:
         """
         self._available_models = []
 
-    def GetInformation(self) -> str|None:
+    def GetInformation(self, ffmpeg_available : bool|None = True, torch_device : str = "Unknown") -> str|None:
         """
-        Returns information about the provider settings
+        Returns information about the provider settings.
+
+        ffmpeg_available None means the check has not run yet; the guidance
+        paragraph shows until a successful run proves ffmpeg valid. torch_device
+        "Unknown" means no Qwen transcription has completed yet.
         """
+        parts : list[str] = []
+        if ffmpeg_available is not True:
+            parts.append(_(
+                "<p>Audio extraction needs <a href=\"https://ffmpeg.org/download.html\">ffmpeg</a> "
+                "installed and on PATH.</p>"
+            ))
+        info = self._get_provider_information(torch_device)
+        if info:
+            parts.append(info)
+        return "\n".join(parts) if parts else None
+
+    def _get_provider_information(self, torch_device : str = "Unknown") -> str|None:
+        """
+        Provider-specific text, with the no-key walkthrough when defined and
+        no effective key is configured. Qwen defines no walkthrough: it is
+        keyless, so there is nothing to walk through.
+        """
+        _ = torch_device  # Only Qwen Local cares about torch state
+        if not self.settings.get_str('api_key') and self.information_noapikey:
+            return self.information_noapikey
         return getattr(self, 'information', None)
+
+    @staticmethod
+    def ResolveTorchDevice(torch_module : object|None) -> str:
+        """
+        Record the resolved torch device without importing torch: None (not
+        imported, e.g. non-local providers) stays "Unknown", otherwise the
+        capability probe result. Never call with a fresh import; the caller
+        is a Qwen run that already paid for it.
+        """
+        if torch_module is None:
+            return "Unknown"
+        try:
+            cuda = torch_module.cuda  # type: ignore[union-attr]
+            return "cuda:0" if cuda.is_available() else "cpu"
+        except Exception:
+            return "Unknown"
 
     def GetTranscriptionClient(self, settings : SettingsType) -> TranscriptionClient:
         """

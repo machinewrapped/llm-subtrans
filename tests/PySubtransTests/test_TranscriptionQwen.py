@@ -56,6 +56,23 @@ class TestQwenLocalProvider(LoggedTestCase):
         self.assertLoggedEqual("client type", "QwenLocalClient", type(client).__name__)
         self.assertLoggedEqual("timestamps advertised", True, client.supports_timestamps)
 
+    def test_information_torch_states(self):
+        """Qwen appends install guidance until a device is recorded; CPU notes slowness."""
+        assert QwenLocalProvider is not None  # Type narrowing for PyLance
+        provider = QwenLocalProvider(SettingsType())
+
+        unknown = provider.GetInformation(ffmpeg_available=True, torch_device="Unknown")
+        cuda = provider.GetInformation(ffmpeg_available=True, torch_device="cuda:0")
+        cpu = provider.GetInformation(ffmpeg_available=True, torch_device="cpu")
+
+        self.assertLoggedIsNotNone("unknown info", unknown)
+        self.assertLoggedIn("install guidance", "pytorch.org", unknown or "")
+        self.assertLoggedNotIn("cuda clean", "pytorch.org", cuda or "")
+        self.assertLoggedNotIn("cuda slow note", "much slower", cuda or "")
+        self.assertLoggedNotIn("cpu install guidance", "pytorch.org", cpu or "")
+        self.assertLoggedIn("cpu slow note", "much slower", cpu or "")
+        self.assertLoggedIn("cuda line always present", "much faster", cuda or "")
+
 class TestQwenResultParsing(LoggedTestCase):
     def test_parse_timestamps(self):
         """qwen-asr results extract text, language and word timings."""

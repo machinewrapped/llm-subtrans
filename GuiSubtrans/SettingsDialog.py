@@ -530,6 +530,17 @@ class SettingsDialog(QDialog):
         self.loader_thread = None
         logging.error(_("Unable to load transcription providers: {error}").format(error=message))
 
+    def _transcription_dependency_state(self) -> tuple[bool|None, str]:
+        """
+        Cached dependency evidence for provider info: ffmpeg proven (or not)
+        and the resolved torch device from the last local run. Never probes
+        here; writers live on the transcription run paths.
+        """
+        ffmpeg = self.settings.get('transcription_ffmpeg_available')
+        ffmpeg_available = ffmpeg if isinstance(ffmpeg, bool|None) else None
+        torch_device = self.settings.get_str('transcription_torch_device') or "Unknown"
+        return ffmpeg_available, torch_device
+
     def _initialise_transcription_provider(self) -> None:
         """
         Initialise the transcription provider from saved settings, resolving
@@ -582,7 +593,7 @@ class SettingsDialog(QDialog):
             layout.addRow(field.name, field)
             self.widgets[key] = field
 
-        provider_info = self.transcription_provider.GetInformation()
+        provider_info = self.transcription_provider.GetInformation(*self._transcription_dependency_state())
         if provider_info:
             self._add_provider_info_widget(layout, provider_info)
 

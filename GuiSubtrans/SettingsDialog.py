@@ -261,6 +261,10 @@ class SettingsDialog(QDialog):
                     elif section_name == self.TRANSCRIPTION_SECTION:
                         if key == 'transcription_provider':
                             self.settings[key] = field.GetValue()
+                        elif key == 'postprocess_transcription':
+                            # This is a global transcription default, rather
+                            # than an option belonging to one provider.
+                            self.settings[key] = field.GetValue()
                         else:
                             provider = self.settings.get_str('transcription_provider') or 'Unknown'
                             namespace = self._get_transcription_provider_settings(provider)
@@ -340,6 +344,8 @@ class SettingsDialog(QDialog):
             elif key_type == TranscriptionProvider:
                 self._add_transcription_provider_options(section_name, layout)
             elif key in self.settings:
+                if section_name == self.TRANSCRIPTION_SECTION and key == 'postprocess_transcription':
+                    layout.addRow(QLabel(_("General transcription settings")))
                 field = CreateOptionWidget(key, self.settings[key], key_type, tooltip=tooltip)
                 field.contentChanged.connect(lambda setting=field: self._on_setting_changed(section_name, setting.key, setting.GetValue()))
                 layout.addRow(field.name, field)
@@ -441,7 +447,8 @@ class SettingsDialog(QDialog):
         """
         Create a rich text widget for provider information and add it to the layout
         """
-        provider_layout = QVBoxLayout()
+        provider_container = QWidget()
+        provider_layout = QVBoxLayout(provider_container)
         infoLabel = QLabel(provider_info)
         infoLabel.setWordWrap(True)
         infoLabel.setTextFormat(Qt.TextFormat.RichText)
@@ -452,8 +459,8 @@ class SettingsDialog(QDialog):
         scrollArea = QScrollArea()
         scrollArea.setWidgetResizable(True)
         scrollArea.setSizeAdjustPolicy(QScrollArea.SizeAdjustPolicy.AdjustToContents)
-        scrollArea.setLayout(provider_layout)
-        layout.addRow(scrollArea)
+        scrollArea.setWidget(provider_container)
+        layout.addRow(QLabel(_("Provider information")), scrollArea)
 
     def _refresh_provider_options(self):
         """
@@ -580,6 +587,8 @@ class SettingsDialog(QDialog):
         if not self.transcription_provider:
             return
 
+        layout.addRow(QLabel(_("Provider options")))
+
         try:
             schema = self.transcription_provider.GetOptions(self.transcription_provider.settings)
         except Exception as e:
@@ -635,6 +644,12 @@ class SettingsDialog(QDialog):
                 self._refresh_provider_options()
 
         elif section_name == self.TRANSCRIPTION_SECTION:
+            if key == 'postprocess_transcription':
+                self.settings[key] = value
+                self._update_section_visibility()
+                self._update_setting_visibility()
+                return
+
             provider = self.settings.get_str('transcription_provider')
             if not provider:
                 logging.error(_("Transcription provider is not set"))

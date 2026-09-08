@@ -11,6 +11,7 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from scripts.subtrans_common import InitLogger
 
@@ -125,6 +126,11 @@ def main() -> int:
         if args.project:
             project.SaveProjectFile()
             logging.info(f"Saved project to {project.projectfile}")
+
+        if coordinator.status == TranscriptionStatus.INCOMPLETE:
+            error = coordinator.last_error
+            logging.error(f"Transcription incomplete: {error or 'one or more chunks failed'}")
+            return 1
 
     except KeyboardInterrupt:
         logging.warning("Transcription interrupted")

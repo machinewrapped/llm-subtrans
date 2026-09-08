@@ -1,14 +1,13 @@
 import logging
 import os
 import time
+from typing import Any, Callable, cast
 
 from PySide6.QtCore import QObject, QThread, Qt, Signal, Slot
 from PySide6.QtWidgets import (
-    QCheckBox,
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QDoubleSpinBox,
     QFileDialog,
     QFormLayout,
     QHBoxLayout,
@@ -25,11 +24,12 @@ from PySide6.QtWidgets import (
 
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.SettingsDialog import SettingsDialog
-from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget
+from GuiSubtrans.Widgets.OptionsWidgets import CheckboxOptionWidget, CreateOptionWidget, FloatOptionWidget, OptionWidget
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Time import TimedeltaToText
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
+from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Transcription.AudioExtractor import SUPPORTED_MEDIA_EXTENSIONS, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
@@ -65,6 +65,18 @@ def _format_duration(seconds : float) -> str:
     return f"{total // 60}:{total % 60:02d}"
 
 
+def _widget_row(*widgets : QWidget, stretch : bool = False) -> QHBoxLayout:
+    """
+    Pack widgets into a horizontal row, optionally with a trailing stretch.
+    """
+    row = QHBoxLayout()
+    for widget in widgets:
+        row.addWidget(widget)
+    if stretch:
+        row.addStretch(1)
+    return row
+
+
 class TranscriptionDialog(QDialog):
     """
     App-modal dialog for transcribing media to a translation-ready project.
@@ -87,6 +99,7 @@ class TranscriptionDialog(QDialog):
         self.media_path : str|None = None
         self.provider : TranscriptionProvider|None = None
         self.provider_fields : dict[str, OptionWidget] = {}
+        self.fields : dict[str, OptionWidget] = {}
         self._phase : str = "setup"
         self._run_started : float = 0.0
         self._chunks_done : int = 0
@@ -119,63 +132,48 @@ class TranscriptionDialog(QDialog):
         form = QFormLayout()
         left_layout.addLayout(form)
 
-        file_row = QHBoxLayout()
         self.file_edit = QLineEdit(self)
         self.file_edit.setPlaceholderText(_("Select a video or audio file..."))
         self.file_edit.textChanged.connect(self._on_file_changed)
-        browse_button = QPushButton(_("Browse..."), self)
-        browse_button.clicked.connect(self._browse_file)
-        file_row.addWidget(self.file_edit)
-        file_row.addWidget(browse_button)
-        form.addRow(_("Media file"), file_row)
+        browse_button = self._button(_("Browse..."), self._browse_file)
+        form.addRow(_("Media file"), _widget_row(self.file_edit, browse_button))
 
         self.track_combo = QComboBox(self)
         form.addRow(_("Audio track"), self.track_combo)
 
         self.provider_combo = QComboBox(self)
         self.provider_combo.currentTextChanged.connect(self._on_provider_changed)
-        provider_row = QHBoxLayout()
-        provider_row.addWidget(self.provider_combo)
-        self.settings_button = QPushButton(_("Configure..."), self)
+        self.settings_button = self._button(_("Configure..."), self._open_transcription_settings)
         self.settings_button.setToolTip(_("Open transcription settings for this provider"))
-        self.settings_button.clicked.connect(self._open_transcription_settings)
         self.settings_button.setVisible(False)
-        provider_row.addWidget(self.settings_button)
-        form.addRow(_("Provider"), provider_row)
+        form.addRow(_("Provider"), _widget_row(self.provider_combo, self.settings_button))
 
         self.provider_form = QFormLayout()
         form.addRow(self.provider_form)
 
-        self.min_chunk_spin = QDoubleSpinBox(self)
-        self.min_chunk_spin.setRange(1.0, 600.0)
-        self.min_chunk_spin.setValue(8.0)
-        self.min_chunk_spin.setSuffix(_(" s"))
-        self.min_chunk_spin.setToolTip(_("Provider-recommended default; reselecting the provider restores it"))
-        form.addRow(_("Min chunk length"), self.min_chunk_spin)
+        chunk_tooltip = _("Provider-recommended default; reselecting the provider restores it")
+        seconds_suffix = _(" s")
+        for key, default, limits, label in (
+                ('min_chunk_seconds', 8.0, (1.0, 600.0), _("Min chunk length")),
+                ('max_chunk_seconds', 60.0, (10.0, 1800.0), _("Max chunk length"))):
+            field = cast(FloatOptionWidget, self._add_option_field(key, default, float, tooltip=chunk_tooltip))
+            field.SetRange(*limits)
+            field.SetSuffix(seconds_suffix)
+            form.addRow(label, field)
 
-        self.max_chunk_spin = QDoubleSpinBox(self)
-        self.max_chunk_spin.setRange(10.0, 1800.0)
-        self.max_chunk_spin.setValue(60.0)
-        self.max_chunk_spin.setSuffix(_(" s"))
-        self.max_chunk_spin.setToolTip(_("Provider-recommended default; reselecting the provider restores it"))
-        form.addRow(_("Max chunk length"), self.max_chunk_spin)
+        save_field = cast(CheckboxOptionWidget, self._add_option_field(
+            'save_transcription', True, bool,
+            tooltip=_("Write the transcription to a subtitle file alongside the media before translating")))
+        save_field.check_box.setText(_("Save transcribed subtitles"))
+        format_field = self._add_option_field(
+            'output_format', '.vtt', SubtitleFormatRegistry.enumerate_formats(),
+            tooltip=_("VTT and ASS preserve speaker labels; SRT has no speaker field"))
+        form.addRow(_widget_row(save_field, format_field, stretch=True))
 
-        save_row = QHBoxLayout()
-        self.save_check = QCheckBox(_("Save transcribed subtitles"), self)
-        self.save_check.setToolTip(_("Write the transcription to a subtitle file alongside the media before translating"))
-        self.save_check.setChecked(True)
-        self.format_combo = QComboBox(self)
-        self.format_combo.addItems(["VTT", "ASS", "SRT"])
-        self.format_combo.setToolTip(_("VTT and ASS preserve speaker labels; SRT has no speaker field"))
-        save_row.addWidget(self.save_check)
-        save_row.addWidget(self.format_combo)
-        save_row.addStretch(1)
-        form.addRow(save_row)
-
-        self.clean_check = QCheckBox(_("Post-process transcription"), self)
-        self.clean_check.setToolTip(_("Apply the same post-processing used for translations (dashes, filler words, line breaks, etc"))
-        self.clean_check.setChecked(self.global_options.get_bool('postprocess_transcription', True))
-        form.addRow(self.clean_check)
+        clean_field = self._add_option_field(
+            'postprocess_transcription', self.global_options.get_bool('postprocess_transcription', True), bool,
+            tooltip=_("Apply the same post-processing used for translations (dashes, filler words, line breaks, etc"))
+        form.addRow(clean_field.name, clean_field)
         left_layout.addStretch(1)
 
         self.results_view = QTextEdit(self.splitter)
@@ -196,23 +194,32 @@ class TranscriptionDialog(QDialog):
         self.progress_bar.setValue(0)
         layout.addWidget(self.progress_bar)
 
-        button_row = QHBoxLayout()
-        self.transcribe_button = QPushButton(_("Transcribe"), self)
-        self.transcribe_button.clicked.connect(self._start_transcription)
-        self.abort_button = QPushButton(_("Abort"), self)
-        self.abort_button.clicked.connect(self._abort_transcription)
-        self.back_button = QPushButton(_("Back to Settings"), self)
-        self.back_button.clicked.connect(self._show_setup)
-        button_row.addWidget(self.transcribe_button)
-        button_row.addWidget(self.abort_button)
-        button_row.addWidget(self.back_button)
-        layout.addLayout(button_row)
+        self.transcribe_button = self._button(_("Transcribe"), self._start_transcription)
+        self.abort_button = self._button(_("Abort"), self._abort_transcription)
+        self.back_button = self._button(_("Back to Settings"), self._show_setup)
+        layout.addLayout(_widget_row(self.transcribe_button, self.abort_button, self.back_button))
 
         self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Open | QDialogButtonBox.StandardButton.Close, self)
         self.button_box.button(QDialogButtonBox.StandardButton.Open).setText(_("Open as Project"))
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
         layout.addWidget(self.button_box)
+
+    def _add_option_field(self, key : str, value : Any, key_type : Any, tooltip : str|None = None) -> OptionWidget:
+        """
+        Create an option widget, register it in self.fields and return it.
+        """
+        field = CreateOptionWidget(key, value, key_type, tooltip=tooltip)
+        self.fields[key] = field
+        return field
+
+    def _button(self, text : str, handler : Callable[..., None]) -> QPushButton:
+        """
+        Create a push button wired to a click handler.
+        """
+        button = QPushButton(text, self)
+        button.clicked.connect(handler)
+        return button
 
     def _refresh_providers(self) -> None:
         """
@@ -281,8 +288,8 @@ class TranscriptionDialog(QDialog):
         self._rebuild_provider_form()
         if self.provider is not None:
             # Chunk bounds follow the provider until the user overrides them
-            self.min_chunk_spin.setValue(self.provider.recommended_min_chunk_seconds)
-            self.max_chunk_spin.setValue(self.provider.recommended_max_chunk_seconds)
+            self.fields['min_chunk_seconds'].SetValue(self.provider.recommended_min_chunk_seconds)
+            self.fields['max_chunk_seconds'].SetValue(self.provider.recommended_max_chunk_seconds)
         self._update_settings_link()
 
     def _update_settings_link(self) -> None:
@@ -423,16 +430,17 @@ class TranscriptionDialog(QDialog):
         settings = SettingsType({
             'audio_track': self.track_combo.currentData() or 0,
             'language': provider.settings.get_str('language'),
-            'min_chunk_seconds': self.min_chunk_spin.value(),
-            'max_chunk_seconds': self.max_chunk_spin.value(),
+            'min_chunk_seconds': self.fields['min_chunk_seconds'].GetValue(),
+            'max_chunk_seconds': self.fields['max_chunk_seconds'].GetValue(),
             'transcription_align': True,
         })
         if self.media_path is None:
             return None
+        output_format = str(self.fields['output_format'].GetValue() or '.srt').lstrip('.')
         return TranscribeMediaCommand(
             provider, self.media_path, settings, self._transcription_options(),
-            save_transcription=self.save_check.isChecked(),
-            output_format=self.format_combo.currentText())
+            save_transcription=self.fields['save_transcription'].GetValue(),
+            output_format=output_format)
 
     def _transcription_options(self) -> Options:
         """
@@ -440,7 +448,7 @@ class TranscriptionDialog(QDialog):
         choice layered on top. The dialog never writes back to globals.
         """
         options = Options(self.global_options)
-        options['postprocess_transcription'] = self.clean_check.isChecked()
+        options['postprocess_transcription'] = self.fields['postprocess_transcription'].GetValue()
         return options
 
     def _start_transcription(self) -> None:

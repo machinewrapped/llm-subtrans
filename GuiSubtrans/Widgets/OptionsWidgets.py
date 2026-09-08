@@ -157,6 +157,9 @@ class FloatOptionWidget(OptionWidget):
     def SetRange(self, min : float, max : float):
         self.double_spin_box.setRange(min, max)
 
+    def SetSuffix(self, suffix : str):
+        self.double_spin_box.setSuffix(suffix)
+
     def SetEnabled(self, enabled : bool):
         self.double_spin_box.setEnabled(enabled)
 

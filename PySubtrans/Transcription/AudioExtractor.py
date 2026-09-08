@@ -216,9 +216,9 @@ class AudioExtractor:
         min_duration = min_duration or self.settings.get_float('silence_min_duration') or 0.8
         noise_db = noise_db if noise_db is not None else self.settings.get_int('silence_noise_db') or -30
 
-        # Scanning for silences decodes the whole audio track, which can
-        # take minutes on a feature film - say so before going quiet.
-        logging.info(_("Analysing audio for silences in {} (full soundtrack scan, this can take a few minutes)").format(
+        # The scan decodes the whole audio track, but it streams events as
+        # they are found, so transcription starts on the first chunk right away
+        logging.info(_("Analysing audio for silences in {}").format(
             os.path.basename(media_path)))
 
         stream = SilenceStream(media_path, track_index, min_duration, noise_db)

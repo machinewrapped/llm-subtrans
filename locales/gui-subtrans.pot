@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-09-08 18:26+0000\n"
+"POT-Creation-Date: 2026-09-08 18:32+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "MIME-Version: 1.0\n"
@@ -294,7 +294,7 @@ msgid "An OpenRouter API key is required to use this provider (https://openroute
 msgstr ""
 
 #: PySubtrans/Transcription/AudioExtractor.py:221
-msgid "Analysing audio for silences in {} (full soundtrack scan, this can take a few minutes)"
+msgid "Analysing audio for silences in {}"
 msgstr ""
 
 #: PySubtrans/Providers/Clients/AnthropicClient.py:174

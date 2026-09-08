@@ -266,6 +266,7 @@ class TranscriptionDialog(QDialog):
         self.loader.failed.connect(self._on_providers_failed)
         self.loader.loaded.connect(self.loader_thread.quit)
         self.loader.failed.connect(self.loader_thread.quit)
+        self.loader_thread.finished.connect(self.loader.deleteLater)
         self.loader_thread.finished.connect(self._on_loader_thread_finished)
         self.loader_thread.start()
 
@@ -292,7 +293,10 @@ class TranscriptionDialog(QDialog):
     @Slot()
     def _on_loader_thread_finished(self) -> None:
         """Release the loader only after its QThread has actually stopped."""
+        finished_thread = self.loader_thread
         self.loader_thread = None
+        if finished_thread is not None:
+            finished_thread.deleteLater()
         if self._close_requested and (self.thread is None or not self.thread.isRunning()):
             self._close_requested = False
             self.reject()
@@ -485,6 +489,8 @@ class TranscriptionDialog(QDialog):
         self._chunks_done = 0
         self._chunks_total = 0
         self._last_span = ""
+        self._pending_accept = False
+        self._close_requested = False
         self.worker = _TranscriptionWorker(coordinator, self.media_path, self._transcription_options())
         self._worker_active = True
         self.thread = QThread(self)
@@ -496,8 +502,7 @@ class TranscriptionDialog(QDialog):
         self.worker.failed.connect(self._on_failed)
         self.worker.finished.connect(self.thread.quit)
         self.worker.failed.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.worker.failed.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self._on_worker_thread_finished)
         self._show_results(True)
         self.status_label.setText(_("Transcribing..."))
@@ -550,7 +555,6 @@ class TranscriptionDialog(QDialog):
 
     @Slot(object)
     def _on_finished(self, project : SubtitleProject) -> None:
-        self._worker_active = False
         self.project = project
         if self.coordinator is not None and not self.coordinator.aborted:
             # Extraction and inference provably ran: record dependency facts
@@ -614,6 +618,13 @@ class TranscriptionDialog(QDialog):
             self.coordinator.Abort()
             self.status_label.setText(_("Aborting..."))
 
+    def accept(self) -> None:
+        """Keep the dialog alive until the transcription thread has stopped."""
+        if self._worker_active or (self.thread is not None and self.thread.isRunning()):
+            self._pending_accept = True
+            return
+        super().accept()
+
     def reject(self) -> None:
         """Confirm before discarding transcription results via Close or X."""
         if self._worker_active or (self.thread is not None and self.thread.isRunning()):
@@ -657,7 +668,6 @@ class TranscriptionDialog(QDialog):
 
     @Slot(str, object)
     def _on_failed(self, message : str, partial_project : SubtitleProject|None = None) -> None:
-        self._worker_active = False
         if partial_project is not None:
             self.project = partial_project
         logging.error(_("Transcription failed: {error}").format(error=message))
@@ -670,13 +680,21 @@ class TranscriptionDialog(QDialog):
 
     @Slot()
     def _on_worker_thread_finished(self) -> None:
-        """Drop thread references after Qt confirms the worker thread stopped."""
+        """Complete a deferred dialog action after the worker thread stops."""
+        finished_thread = self.thread
         self.thread = None
         self.worker = None
-        if self._pending_accept:
+        self._worker_active = False
+        if finished_thread is not None:
+            finished_thread.deleteLater()
+        self._show_results(False)
+        if self._close_requested:
+            self._close_requested = False
+            self._pending_accept = False
+            self.reject()
+        elif self._pending_accept:
             self._pending_accept = False
             self.accept()
-
 
     def _show_setup(self) -> None:
         """
@@ -707,9 +725,10 @@ class TranscriptionDialog(QDialog):
         self.transcribe_button.setVisible(False)
         self.abort_button.setVisible(running)
         self.back_button.setVisible(not running)
+        self.back_button.setEnabled(not self._worker_active)
         open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
         if open_button is not None:
-            open_button.setEnabled(not running and self.project is not None)
+            open_button.setEnabled(not running and not self._worker_active and self.project is not None)
 
     def closeEvent(self, event) -> None:
         """Keep the dialog alive until active background work has stopped."""

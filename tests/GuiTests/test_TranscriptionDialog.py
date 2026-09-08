@@ -1,0 +1,108 @@
+"""Exercise synchronous transcription settings and result handling."""
+import os
+from unittest.mock import patch
+
+os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+
+from PySide6.QtWidgets import QApplication
+
+from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
+from GuiSubtrans.SettingsDialog import SettingsDialog
+from GuiSubtrans.Widgets.TranscriptionDialog import TranscriptionDialog
+from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import skip_if_debugger_attached
+from PySubtrans.Options import Options
+from PySubtrans.SettingsType import SettingsType
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
+from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
+
+
+class TestTranscriptionGlobalSettings(LoggedTestCase):
+    application : QApplication
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        existing = QApplication.instance()
+        cls.application = existing if isinstance(existing, QApplication) else QApplication([])
+
+    def test_cleanup_change_and_accept_write_global_option(self) -> None:
+        """The cleanup checkbox writes a global value even before providers load."""
+        options = Options({'postprocess_transcription': True})
+        with patch.object(SettingsDialog, '_refresh_transcription_providers'), \
+                patch.object(SettingsDialog, '_initialise_translation_provider'):
+            dialog = SettingsDialog(options)
+        try:
+            dialog._on_setting_changed('Transcription', 'postprocess_transcription', False)
+            self.assertLoggedEqual('global value changed immediately', False, dialog.settings['postprocess_transcription'])
+            field = dialog.widgets['postprocess_transcription']
+            field.SetValue(False)
+            dialog.settings['transcription_provider'] = 'Muse'
+            dialog.accept()
+            self.assertLoggedEqual('global value accepted', False, dialog.settings['postprocess_transcription'])
+            namespace = dialog.settings.get_dict('provider_settings').get('Muse Transcription', {})
+            self.assertLoggedNotIn('cleanup is not provider specific', 'postprocess_transcription', namespace)
+            self.assertLoggedEqual('input options unchanged until caller saves', True, options['postprocess_transcription'])
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+
+class TestTranscriptionRunEvidence(LoggedTestCase):
+    """Run-completion evidence recording on the dialog itself."""
+    application : QApplication
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        existing = QApplication.instance()
+        cls.application = existing if isinstance(existing, QApplication) else QApplication([])
+
+    def _completed_command(self) -> TranscribeMediaCommand:
+        command = TranscribeMediaCommand(FakeTranscriptionProvider(), 'media.wav', SettingsType())
+        command.ffmpeg_available = True
+        command.torch_device = 'cuda:0'
+        command.status = TranscriptionStatus.COMPLETED
+        return command
+
+    def _observe(self, dialog : TranscriptionDialog, command : TranscribeMediaCommand) -> None:
+        """Wire the dialog to the command the same way a real run does."""
+        dialog.active_command = command
+        command.progressed.connect(dialog._on_progress)
+        command.segmented.connect(dialog._on_segment)
+        command.commandCompleted.connect(dialog._on_command_completed)
+
+    def test_completion_records_dependency_evidence(self) -> None:
+        """A completed run persists proven dependency facts for future sessions."""
+        options = Options({'transcription_ffmpeg_available': None, 'transcription_torch_device': 'Unknown'})
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(options)
+        try:
+            command = self._completed_command()
+            self._observe(dialog, command)
+            with patch.object(Options, 'SaveSettings') as save_settings:
+                dialog._on_command_completed(command)
+            self.assertLoggedEqual('settings persisted once', 1, save_settings.call_count)
+            self.assertLoggedEqual('ffmpeg evidence recorded', True, options.get('transcription_ffmpeg_available'))
+            self.assertLoggedEqual('torch device recorded', 'cuda:0', options.get_str('transcription_torch_device'))
+            self.assertLoggedIsNone('dialog released the command', dialog.active_command)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+    @skip_if_debugger_attached
+    def test_completion_survives_settings_save_failure(self) -> None:
+        """A failed settings write does not disrupt the completion flow."""
+        options = Options()
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(options)
+        try:
+            command = self._completed_command()
+            self._observe(dialog, command)
+            with patch.object(Options, 'SaveSettings', side_effect=RuntimeError('settings unavailable')):
+                dialog._on_command_completed(command)
+            self.assertLoggedIsNone('dialog released the command', dialog.active_command)
+            self.assertLoggedEqual('results phase reached', 'done', dialog._phase)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()

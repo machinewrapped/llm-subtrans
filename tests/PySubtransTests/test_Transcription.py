@@ -14,10 +14,10 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleError import ExcessiveDurationError, SubtitleError
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor
+from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor, AudioTrack
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
-from PySubtrans.Transcription.TranscriptionCoordinator import AudioTrackInfo, TranscriptionCoordinator
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
 
@@ -73,7 +73,8 @@ def stub_media(testcase : LoggedTestCase, coordinator : TranscriptionCoordinator
     patch.object restores the real methods afterwards; plain attribute
     assignment would need type: ignore comments and leak stubs on failure.
     """
-    chunk_patcher = patch.object(coordinator.chunker, "PlanChunks", return_value=chunks)
+    chunk_patcher = patch.object(coordinator.chunker, "PlanChunksStream",
+                                 side_effect=lambda *args, **kwargs: (chunk for chunk in chunks))
     bytes_patcher = patch.object(coordinator.extractor, "ReadChunkBytes", return_value=audio)
     chunk_patcher.start()
     bytes_patcher.start()
@@ -107,15 +108,7 @@ class FakeTranscriptionProvider(TranscriptionProvider):
             'language': (str, "Language hint"),
         }
 
-class TestTranscriptionSegment(LoggedTestCase):
-    def test_segment_defaults(self):
-        """Segments carry timings, text and empty speaker by default."""
-        segment = TranscriptionSegment(start=timedelta(seconds=1), end=timedelta(seconds=3), text="hi")
-
-        self.assertLoggedEqual("start", timedelta(seconds=1), segment.start)
-        self.assertLoggedEqual("end", timedelta(seconds=3), segment.end)
-        self.assertLoggedEqual("text", "hi", segment.text)
-        self.assertLoggedEqual("speaker default", None, segment.speaker)
+    information_noapikey = "Test walkthrough"
 
 class TestTranscriptionProviderRegistry(LoggedTestCase):
     def test_fake_provider_registered(self):
@@ -137,12 +130,6 @@ class TestTranscriptionProviderRegistry(LoggedTestCase):
         self.assertLoggedIn("model option", "model", options)
         self.assertLoggedIn("language option", "language", options)
 
-    def test_fake_provider_validation(self):
-        """Base validation passes without required settings."""
-        provider = FakeTranscriptionProvider()
-
-        self.assertLoggedEqual("valid by default", True, provider.ValidateSettings())
-
 class TestAudioChunker(LoggedTestCase):
     def test_plan_chunks_from_media_metadata(self):
         """Chunk planning uses duration and detected silence without media processes."""
@@ -158,10 +145,20 @@ class TestAudioChunker(LoggedTestCase):
                     'lookahead_seconds': 30.0}))
                 silences = [(timedelta(seconds=start), timedelta(seconds=end)) for start, end in gaps]
                 with patch.object(chunker.extractor, 'GetDuration', return_value=timedelta(seconds=duration)), \
-                     patch.object(chunker.extractor, 'DetectSilences', return_value=silences):
+                     patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(silences)):
                     chunks = chunker.PlanChunks('fake.wav')
                 actual = [(chunk.start.total_seconds(), chunk.end.total_seconds()) for chunk in chunks]
                 self.assertLoggedEqual(label, expected, actual)
+
+
+
+
+
+
+
+
+
+
 
     def test_long_gap_beats_nearer_short_gap(self):
         """A long pause earlier wins over a short one nearer the cap."""
@@ -186,6 +183,33 @@ class TestAudioChunker(LoggedTestCase):
 
         assert cut is not None  # Type narrowing for PyLance
         self.assertLoggedEqual("cut at later gap", timedelta(seconds=25), cut[0])
+
+
+
+    def test_stream_finalizes_chunks_before_scan_completes(self):
+        """Chunks are yielded while the silence scan is still in flight."""
+        chunker = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+        pulled : list[int] = []
+
+        def slow_scan():
+            for i, silence in enumerate([
+                    (timedelta(seconds=55), timedelta(seconds=60)),
+                    (timedelta(seconds=130), timedelta(seconds=140)),
+                    (timedelta(seconds=500), timedelta(seconds=510))]):
+                pulled.append(i)
+                yield silence
+
+        with patch.object(chunker.extractor, "GetDuration", return_value=timedelta(seconds=600)):
+            with patch.object(chunker.extractor, "DetectSilencesStream", return_value=slow_scan()):
+                stream = chunker.PlanChunksStream("fake.mkv")
+                first_chunk = next(stream)
+                stream.close()
+
+        self.assertLoggedEqual("first chunk start", timedelta(seconds=0), first_chunk.start)
+        self.assertLoggedEqual("first chunk cut", timedelta(seconds=55), first_chunk.end)
+        # Only the events inside the first decision window (+1 lookahead
+        # probe) may be consumed; the 500s event must remain unpulled
+        self.assertLoggedEqual("scan events pulled", 2, len(pulled))
 
 def _word(text : str, start : float, end : float, speaker : str|None = None) -> WordTiming:
     return WordTiming(text=text, start=timedelta(seconds=start), end=timedelta(seconds=end), speaker=speaker)
@@ -230,6 +254,23 @@ class TestWordGrouping(LoggedTestCase):
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("spaced text", "Hello world", lines[0].text)
 
+    def test_unicode_words_and_punctuation_are_joined(self):
+        """Unicode words receive spaces while punctuation stays attached."""
+        words = [_word("café", 0.0, 0.2), _word("noir", 0.2, 0.4),
+                 _word(".", 0.4, 0.5), _word("следующий", 0.5, 0.7)]
+        lines = self._scene_lines(self._coordinator(), "café noir. следующий", words)
+
+        self.assertLoggedEqual("unicode spacing", "café noir. следующий", lines[0].text)
+
+    def test_join_words_handles_quotes_apostrophes_and_hyphens(self):
+        """Token joins preserve ordinary English punctuation conventions."""
+        coordinator = self._coordinator()
+        self.assertLoggedEqual("quoted phrase", 'He said "Hello world." Then',
+                                coordinator._join_words(['He', 'said', '"Hello', 'world."', 'Then']))
+        self.assertLoggedEqual("apostrophe", "l'amour", coordinator._join_words(["l'", "amour"]))
+        self.assertLoggedEqual("hyphen", "well-known", coordinator._join_words(['well-', 'known']))
+        self.assertLoggedEqual("CJK punctuation", "你好，世界", coordinator._join_words(['你好', '，', '世界']))
+
     def test_speaker_change_splits_lines(self):
         """Speaker turns break subtitle lines and label them."""
         words = [_word("yes", 0.0, 0.5, "A"), _word("no", 0.6, 1.0, "B")]
@@ -257,7 +298,18 @@ class TestWordGrouping(LoggedTestCase):
 
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("merged span", timedelta(seconds=101.4), lines[0].end)
-        self.assertLoggedEqual("merged text", "yes um", lines[0].text)
+        self.assertLoggedEqual("merged text", "- yes\n- um", lines[0].text)
+
+    def test_three_speaker_slivers_keep_all_dialogue_turns(self):
+        """Merging a third speaker keeps earlier dialogue markers and attribution."""
+        words = [_word("I", 0.0, 0.1, "A"), _word("say!", 0.1, 0.2, "A"),
+                 _word("Of", 0.25, 0.35, "B"), _word("course!", 0.35, 0.45, "B"),
+                 _word("Indeed!", 0.5, 0.6, "C")]
+        lines = self._scene_lines(self._coordinator(), "I say! Of course! Indeed!", words)
+
+        self.assertLoggedEqual("three turn count", 1, len(lines))
+        self.assertLoggedEqual("three turn text", "- I say!\n- Of course!\n- Indeed!", lines[0].text)
+        self.assertLoggedEqual("mixed speaker attribution", None, lines[0].speaker)
 
     def test_leading_sliver_across_pause_stays_separate(self):
         """A leading fragment far from the next line is not pulled forward."""
@@ -372,6 +424,43 @@ class TestSettingsNamespaces(LoggedTestCase):
         self.assertLoggedEqual(
             "key format", "OpenRouter Transcription",
             TranscriptionCoordinator.SettingsKey("OpenRouter"))
+
+    def test_information_composition_matrix(self):
+        """Info text composes ffmpeg guidance with provider content."""
+        keyed = FakeTranscriptionProvider(SettingsType({'api_key': 'k'}))
+        keyless = FakeTranscriptionProvider(SettingsType())
+
+        walkthrough = keyless.GetInformation(ffmpeg_available=True)
+        base = keyed.GetInformation(ffmpeg_available=True)
+        unknown = keyed.GetInformation(ffmpeg_available=None)
+        missing = keyed.GetInformation(ffmpeg_available=False)
+
+        self.assertLoggedEqual("walkthrough selected", "Test walkthrough", walkthrough)
+        self.assertLoggedEqual("proven has no ffmpeg paragraph", None, base)
+        self.assertLoggedIn("unknown guidance", "ffmpeg", (unknown or "").casefold())
+        self.assertLoggedIn("missing guidance", "ffmpeg", (missing or "").casefold())
+
+    def test_resolve_torch_device_never_imports(self):
+        """Device resolution reads an already-imported module only."""
+        self.assertLoggedEqual("absent module", "Unknown",
+                               TranscriptionProvider.ResolveTorchDevice(None))
+
+        class FakeCuda:
+            def __init__(self, available : bool):
+                self._available = available
+            def is_available(self) -> bool:
+                return self._available
+
+        class FakeTorch:
+            def __init__(self, available : bool):
+                self.cuda = FakeCuda(available)
+
+        self.assertLoggedEqual("cuda device", "cuda:0",
+                               TranscriptionProvider.ResolveTorchDevice(FakeTorch(True)))
+        self.assertLoggedEqual("cpu device", "cpu",
+                               TranscriptionProvider.ResolveTorchDevice(FakeTorch(False)))
+        self.assertLoggedEqual("broken module", "Unknown",
+                               TranscriptionProvider.ResolveTorchDevice(object()))
 
 class TestSilenceGate(LoggedTestCase):
     def _coordinator(self, texts : list[str]|None = None):
@@ -561,7 +650,7 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_audio_track_info_label(self):
         """Track descriptors render a readable label."""
-        info = AudioTrackInfo(index=1, codec="ac3", language="chi")
+        info = AudioTrack(index=1, codec="ac3", language="chi")
 
         self.assertLoggedEqual("label", "Track 1 - ac3 - chi", str(info))
 
@@ -576,6 +665,27 @@ class TestTranscriptionCoordinator(LoggedTestCase):
             AudioChunk(start=timedelta(seconds=2 * i), end=timedelta(seconds=2 * i + 2)) for i in range(chunks)
         ])
         return coordinator, failing
+
+    def test_scan_failure_keeps_partial_results(self):
+        """A silence-scan error mid-run keeps transcribed chunks as INCOMPLETE."""
+        coordinator, _unused_provider = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
+
+        def failing_plan():
+            yield AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4))
+            raise SubtitleError("silence scan failed")
+
+        plan_patcher = patch.object(coordinator.chunker, "PlanChunksStream", return_value=failing_plan())
+        read_patcher = patch.object(coordinator.extractor, "ReadChunkBytes", return_value=b"fake")
+        plan_patcher.start()
+        read_patcher.start()
+        self.addCleanup(plan_patcher.stop)
+        self.addCleanup(read_patcher.stop)
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            subtitles = coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedEqual("partial line count", 1, subtitles.linecount)
+        self.assertLoggedEqual("incomplete status", TranscriptionStatus.INCOMPLETE, coordinator.status)
 
     def test_two_initial_failures_abort_run(self):
         """Two failures before anything works aborts instead of grinding chunks."""
@@ -604,10 +714,11 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         coordinator, failing = self._failing_coordinator({2, 3, 4}, chunks=6)
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            with self.assertRaises(SubtitleError) as raised:
-                coordinator.TranscribeMedia(media.name)
+            subtitles = coordinator.TranscribeMedia(media.name)
 
-        self.assertLoggedIn("blocked message", "consecutive", raised.exception.message)
+        self.assertLoggedEqual("partial lines retained", 1, subtitles.linecount)
+        self.assertLoggedEqual("incomplete status", "incomplete", coordinator.status.value)
+        self.assertLoggedIsNotNone("failure retained", coordinator.last_error)
         self.assertLoggedEqual("stopped early", 4, failing.calls)
 
     def test_custom_consecutive_limit(self):

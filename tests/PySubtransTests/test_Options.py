@@ -71,6 +71,13 @@ class TestOptions(LoggedTestCase):
                 result = options.get(key)
                 self.assertLoggedIsNone(f"options.get('{key}')", result)
 
+    def test_dependency_defaults_unknown(self):
+        """Fresh installs carry unknown dependency state, not false claims."""
+        options = Options()
+
+        self.assertLoggedEqual("ffmpeg unknown", None, options.get('transcription_ffmpeg_available'))
+        self.assertLoggedEqual("torch unknown", "Unknown", options.get_str('transcription_torch_device'))
+
     def test_initialization_with_dict(self):
         """Test Options initialization with a dictionary"""
         

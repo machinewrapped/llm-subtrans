@@ -1,4 +1,7 @@
+import os
+
 from PySide6.QtCore import QCoreApplication
+from PySide6.QtWidgets import QApplication
 
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.TestableViewModel import TestableViewModel
@@ -14,7 +17,8 @@ class GuiSubtitleTestCase(SubtitleTestCase):
     def setUpClass(cls) -> None:
         super().setUpClass()
         if QCoreApplication.instance() is None:
-            cls._qt_app = QCoreApplication([])
+            os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+            cls._qt_app = QApplication([])
         else:
             cls._qt_app = QCoreApplication.instance()
 

@@ -109,41 +109,60 @@ else:
                 """
                 audio_file = None
                 attempt = 0
-                while True:
-                    if self.aborted:
-                        raise SubtitleError(_("Transcription aborted"))
-                    try:
-                        if audio_file is None:
-                            audio_file = client.files.upload(file=chunk_path)
-                        interaction = client.interactions.create(
-                            model=self.model,
-                            input=[{
-                                "type": "audio",
-                                "uri": audio_file.uri,
-                                "mime_type": "audio/wav",
-                            }],
-                            generation_config={"transcription_config": self._transcription_config(language)},
-                        )
-                        return interaction, audio_file
-                    except Exception as e:
+                completed = False
+                try:
+                    while True:
                         if self.aborted:
                             raise SubtitleError(_("Transcription aborted"))
-                        if not _is_rate_limit_error(e) or attempt >= self.max_retries:
-                            if _is_rate_limit_error(e):
+                        try:
+                            if audio_file is None:
+                                audio_file = client.files.upload(file=chunk_path)
+                            interaction = client.interactions.create(
+                                model=self.model,
+                                input=[{
+                                    "type": "audio",
+                                    "uri": audio_file.uri,
+                                    "mime_type": "audio/wav",
+                                }],
+                                generation_config={"transcription_config": self._transcription_config(language)},
+                            )
+                            completed = True
+                            return interaction, audio_file
+                        except Exception as e:
+                            if self.aborted:
+                                raise SubtitleError(_("Transcription aborted"))
+                            if not _is_rate_limit_error(e) or attempt >= self.max_retries:
+                                if _is_rate_limit_error(e):
+                                    raise SubtitleError(_(
+                                        "Gemini rate limit still exceeded after {} attempts: {}"
+                                    ).format(attempt + 1, str(e)[:200]), error=e)
+                                raise
+                            hint = _retry_hint_seconds(e)
+                            if hint is not None and hint > _RETRY_GIVE_UP_SECONDS:
                                 raise SubtitleError(_(
-                                    "Gemini rate limit still exceeded after {} attempts: {}"
-                                ).format(attempt + 1, str(e)[:200]), error=e)
-                            raise
-                        hint = _retry_hint_seconds(e)
-                        if hint is not None and hint > _RETRY_GIVE_UP_SECONDS:
-                            raise SubtitleError(_(
-                                "Gemini quota exceeded, retry in {}"
-                            ).format(_format_retry_delay(hint)), error=e)
-                        delay = _rate_limit_delay_seconds(e, attempt)
-                        logging.warning(_("Gemini rate limit hit (attempt {}/{}), retrying in {:.0f}s").format(
-                            attempt + 1, self.max_retries + 1, delay))
-                        self._sleep_abortable(delay)
-                        attempt += 1
+                                    "Gemini quota exceeded, retry in {}"
+                                ).format(_format_retry_delay(hint)), error=e)
+                            delay = _rate_limit_delay_seconds(e, attempt)
+                            logging.warning(_("Gemini rate limit hit (attempt {}/{}), retrying in {:.0f}s").format(
+                                attempt + 1, self.max_retries + 1, delay))
+                            self._sleep_abortable(delay)
+                            attempt += 1
+                finally:
+                    if not completed:
+                        self._delete_uploaded_audio(client, audio_file)
+
+            def _delete_uploaded_audio(self, client : Any, audio_file : Any) -> None:
+                """Delete an uploaded chunk when interaction creation cannot finish."""
+                if audio_file is None:
+                    return
+                file_name = getattr(audio_file, 'name', None)
+                if not file_name:
+                    logging.debug(_("Uploaded audio has no name; leaving it to expire"))
+                    return
+                try:
+                    client.files.delete(name=file_name)
+                except Exception as e:
+                    logging.warning(_("Unable to delete uploaded audio: {}").format(str(e)))
 
             def _transcription_config(self, language : str|None) -> dict:
                 mode : dict = {"type": "verbatim", "timestamp_granularities": ["word"]}

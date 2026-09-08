@@ -309,26 +309,35 @@ class GuiInterface(QObject):
         Open the app-modal transcription dialog. On accept, load the
         transcribed project exactly like a freshly loaded subtitle file.
         """
+        if self.command_queue.has_commands:
+            logging.warning(_("Cannot start transcription while another command is queued"))
+            return
         dialog = TranscriptionDialog(self.global_options, parent=self.GetMainWindow())
-        if dialog.exec() != QDialog.DialogCode.Accepted:
-            return
+        dialog.commandRequested.connect(self.QueueCommand)
+        try:
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
 
-        if dialog.project is None or dialog.project.subtitles is None:
-            logging.error(_("Transcription produced no project"))
-            return
+            if dialog.project is None or dialog.project.subtitles is None:
+                logging.error(_("Transcription produced no project"))
+                return
 
-        datamodel = ProjectDataModel(dialog.project, self.global_options)
-        if datamodel.is_project_initialised:
-            datamodel.CreateViewModel()
+            datamodel = ProjectDataModel(dialog.project, self.global_options)
+            if datamodel.is_project_initialised:
+                datamodel.CreateViewModel()
 
-        self.SetDataModel(datamodel)
-        if dialog.media_path:
-            self._update_last_used_path(dialog.media_path)
-        # Always offer project settings, like opening a fresh subtitle file:
-        # transcription arrives pre-batched, but scene/batch thresholds and
-        # project options still need user confirmation before translating.
-        if datamodel.is_project_valid:
-            self.ShowNewProjectSettings(datamodel)
+            # Partial runs do not clear history when the command finishes;
+            # opening their results must still cross the project boundary.
+            self.command_queue.ClearUndoStack()
+            self.SetDataModel(datamodel)
+            if dialog.media_path:
+                self._update_last_used_path(dialog.media_path)
+            # Transcription is already batched, but still needs the same
+            # project settings review as a newly opened subtitle file.
+            if datamodel.is_project_valid:
+                self.ShowNewProjectSettings(datamodel)
+        finally:
+            dialog.deleteLater()
 
     def ShowAboutDialog(self) -> None:
         """
@@ -381,8 +390,8 @@ class GuiInterface(QObject):
 
                 command.ClearModelUpdates()
 
-            elif command.datamodel and command.datamodel != self.datamodel:
-                # Shouldn't need to do a full model rebuild often?
+            elif command.datamodel and command.datamodel is not command.queued_datamodel:
+                # The command itself produced a new data model - install it
                 self.SetDataModel(command.datamodel)
 
             elif command.datamodel is None:

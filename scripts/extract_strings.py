@@ -130,25 +130,32 @@ class SettingKeyExtractor:
             raise Exception(f"Could not extract setting keys from Options.py: {e}")
     
     def _extract_provider_keys(self, entries: dict[tuple[str|None, str], list[tuple[str, int]]]):
-        """Extract setting keys from all translation providers"""
-        providers_dir = os.path.join(REPO_ROOT, 'PySubtrans', 'Providers')
-        provider_files = [f for f in os.listdir(providers_dir) if f.startswith('Provider_') and f.endswith('.py')]
-        
-        print(f"Found {len(provider_files)} provider files: {provider_files}")
-        
-        for provider_file in provider_files:
-            provider_path = os.path.join(providers_dir, provider_file)
-            
-            try:
-                static_keys = self._extract_provider_settings_static(provider_path)
-                self.setting_keys.update(static_keys)
-                
-                for key in static_keys:
-                    entry_key = (None, key)
-                    entries.setdefault(entry_key, []).append((f'PySubtrans/Providers/{provider_file}', 0))
-                    
-            except Exception as e:
-                raise Exception(f"Could not extract settings from {provider_file}: {e}")
+        """Extract setting keys from all translation and transcription providers"""
+        provider_dirs = [
+            os.path.join(REPO_ROOT, 'PySubtrans', 'Providers'),
+            os.path.join(REPO_ROOT, 'PySubtrans', 'Transcription', 'Providers'),
+        ]
+        for providers_dir in provider_dirs:
+            if not os.path.isdir(providers_dir):
+                continue
+            provider_files = [f for f in os.listdir(providers_dir) if f.startswith('Provider_') and f.endswith('.py')]
+
+            print(f"Found {len(provider_files)} provider files in {providers_dir}: {provider_files}")
+
+            for provider_file in provider_files:
+                provider_path = os.path.join(providers_dir, provider_file)
+                rel_dir = os.path.relpath(providers_dir, REPO_ROOT).replace('\\', '/')
+
+                try:
+                    static_keys = self._extract_provider_settings_static(provider_path)
+                    self.setting_keys.update(static_keys)
+
+                    for key in static_keys:
+                        entry_key = (None, key)
+                        entries.setdefault(entry_key, []).append((f'{rel_dir}/{provider_file}', 0))
+
+                except Exception as e:
+                    raise Exception(f"Could not extract settings from {provider_file}: {e}")
     
     def _extract_provider_settings_static(self, provider_path: str) -> set[str]:
         """Statically parse provider __init__ method to extract setting keys"""

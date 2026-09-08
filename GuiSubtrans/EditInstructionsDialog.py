@@ -8,7 +8,9 @@ from PySide6.QtWidgets import (
     QHBoxLayout,
     QPushButton,
     QFileDialog,
-    QSizePolicy
+    QSizePolicy,
+    QTabWidget,
+    QWidget
     )
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget
 
@@ -27,17 +29,23 @@ class EditInstructionsDialog(QDialog):
         self.target_language = None
         self.filters = _("Text Files (*.txt);;All Files (*))")
 
-        self.form_layout = QFormLayout()
-        self.prompt_edit = self._add_form_option("prompt", self.instructions.prompt, str, _("Prompt for each translation request"))
-        self.task_type_edit = self._add_form_option("task_type", self.instructions.task_type, str, _("Type of response expected for each line (must match the example format)"))
-        self.instructions_edit = self._add_form_option("instructions", self.instructions.instructions, MULTILINE_OPTION, _("System instructions for the translator"))
-        self.retry_instructions_edit = self._add_form_option("retry_instructions", self.instructions.retry_instructions, MULTILINE_OPTION, _("Supplementary instructions when retrying"))
-        self.terminology_instructions_edit = self._add_form_option("terminology_instructions", self.instructions.terminology_instructions, MULTILINE_OPTION, _("Instructions for building a terminology list"))
-        self.speaker_instructions_edit = self._add_form_option("speaker_instructions", self.instructions.speaker_instructions, MULTILINE_OPTION, _("Instructions for translating speaker-labelled lines"))
-        self.form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        # Top fields always visible
+        top_form = QFormLayout()
+        top_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        self.prompt_edit = self._create_option("prompt", self.instructions.prompt, str, _("Prompt for each translation request"))
+        top_form.addRow(self.prompt_edit.name, self.prompt_edit)
+        self.task_type_edit = self._create_option("task_type", self.instructions.task_type, str, _("Type of response expected for each line (must match the example format)"))
+        top_form.addRow(self.task_type_edit.name, self.task_type_edit)
 
+        # Tabbed sections for the four instruction areas
+        self.tab_widget = QTabWidget()
+        self.instructions_edit = self._add_tab(_("Instructions"), "instructions", self.instructions.instructions, _("System instructions for the translator"))
+        self.retry_instructions_edit = self._add_tab(_("Retry"), "retry_instructions", self.instructions.retry_instructions, _("Supplementary instructions when retrying"))
+        self.terminology_instructions_edit = self._add_tab(_("Terminology"), "terminology_instructions", self.instructions.terminology_instructions, _("Instructions for building a terminology list"))
+        self.speaker_instructions_edit = self._add_tab(_("Speakers"), "speaker_instructions", self.instructions.speaker_instructions, _("Instructions for translating speaker-labelled lines"))
+
+        # Button bar
         self.button_layout = QHBoxLayout()
-
         self.select_file = self._create_instruction_dropdown(self._select_instructions)
         self.load_button = self._create_button(_("Load Instructions"), self._load_instructions)
         self.save_button = self._create_button(_("Save Instructions"), self._save_instructions)
@@ -46,19 +54,31 @@ class EditInstructionsDialog(QDialog):
         self.cancel_button = self._create_button(_("Cancel"), self.reject)
 
         layout = QVBoxLayout()
-        layout.addLayout(self.form_layout)
+        layout.addLayout(top_form)
+        layout.addWidget(self.tab_widget)
         layout.addLayout(self.button_layout)
 
         self.setLayout(layout)
 
-    def _add_form_option(self, key, initial_value, key_type, tooltip = None):
+    def _create_option(self, key, initial_value, key_type, tooltip=None):
+        """Create an option widget without adding it to any layout."""
         if initial_value:
             initial_value = initial_value.replace('\r\n', '\n')
 
-        input = CreateOptionWidget(key, initial_value, key_type, tooltip)
-        input.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
-        self.form_layout.addRow(key, input)
-        return input
+        widget = CreateOptionWidget(key, initial_value, key_type, tooltip)
+        widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred)
+        return widget
+
+    def _add_tab(self, tab_title : str, key : str, initial_value, tooltip=None):
+        """Create a multiline option widget and add it as a tab."""
+        widget = self._create_option(key, initial_value, MULTILINE_OPTION, tooltip)
+        tab_form = QFormLayout()
+        tab_form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
+        tab_form.addRow(widget)
+        container = QWidget()
+        container.setLayout(tab_form)
+        self.tab_widget.addTab(container, tab_title)
+        return widget
 
     def _create_instruction_dropdown(self, on_change):
         instructions_files = GetInstructionsFiles()

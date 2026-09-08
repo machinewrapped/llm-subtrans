@@ -6,19 +6,13 @@ from datetime import timedelta
 import httpx
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import TryParseFloat
+from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.Options import SettingsType, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
-
-
-def _to_seconds(value : object) -> float|None:
-    """Non-negative seconds from a payload number, None when absent."""
-    parsed = TryParseFloat(value)
-    return max(0.0, parsed) if parsed is not None else None
 
 
 def parse_transcription_payload(payload : dict) -> tuple[str, str|None, list[TranscriptionSegment], list[WordTiming]]:
@@ -40,12 +34,12 @@ def parse_transcription_payload(payload : dict) -> tuple[str, str|None, list[Tra
         if not isinstance(entry, dict):
             continue
         entry_text = str(entry.get('text') or '').strip()
-        start = _to_seconds(entry.get('start'))
-        end = _to_seconds(entry.get('end'))
+        start = TryParseNonNegative(entry.get('start'))
+        end = TryParseNonNegative(entry.get('end'))
         if not entry_text or start is None or end is None or end <= start:
             continue
         speaker = entry.get('speaker')
-        no_speech_prob = _to_seconds(entry.get('no_speech_prob'))
+        no_speech_prob = TryParseNonNegative(entry.get('no_speech_prob'))
         parts.append(TranscriptionSegment(
             start=timedelta(seconds=start), end=timedelta(seconds=end),
             text=entry_text,
@@ -57,8 +51,8 @@ def parse_transcription_payload(payload : dict) -> tuple[str, str|None, list[Tra
         if not isinstance(entry, dict):
             continue
         word_text = str(entry.get('word') or entry.get('text') or '').strip()
-        start = _to_seconds(entry.get('start'))
-        end = _to_seconds(entry.get('end'))
+        start = TryParseNonNegative(entry.get('start'))
+        end = TryParseNonNegative(entry.get('end'))
         if not word_text or start is None or end is None or end <= start:
             continue
         speaker = entry.get('speaker')
@@ -77,10 +71,15 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
     """
     name = "OpenRouter"
 
-    information = """
+    information = _("""
     <p>Transcribe with OpenRouter speech-to-text models over one API key.</p>
     <p>Word timestamps and diarization depend on the selected model.</p>
-    """
+    """)
+
+    information_noapikey = _("""
+    <p>To use this provider you need <a href="https://openrouter.ai/keys">an OpenRouter API key</a>.</p>
+    <p>Note that you must have credit to use OpenRouter models.</p>
+    """)
 
     # Endpoint and quotas live in Settings; model, diarization and language vary per job
     advanced_settings = ['api_key', 'request_timeout', 'rate_limit']
@@ -138,15 +137,22 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
         return OpenRouterTranscriptionClient(client_settings)
 
     def GetOptions(self, settings : SettingsType) -> GuiSettingsType:
-        """Returns the configurable options for the provider."""
-        return {
+        """
+        Returns the configurable options for the provider.
+        """
+        options : GuiSettingsType = {
             'api_key': (str, _("An OpenRouter API key (shared with translation)")),
+        }
+        if not self.settings.get_str('api_key'):
+            return options
+        options.update({
             'model': (self.available_models, _("Speech-to-text model")),
             'language': (str, _("Spoken language hint, e.g. en or Chinese (optional)")),
             'diarize': (bool, _("Request speaker diarization (only supported by some models)")),
             'request_timeout': (float, _("Per-chunk request timeout in seconds")),
             'rate_limit': (float, _("Maximum API requests per minute (0 for unlimited)")),
-        }
+        })
+        return options
 
     def ValidateSettings(self) -> bool:
         """Validate the settings for the provider."""

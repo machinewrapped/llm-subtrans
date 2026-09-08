@@ -7,6 +7,7 @@ import tempfile
 import unittest
 import wave
 from datetime import timedelta
+from unittest.mock import patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.SettingsType import SettingsType
@@ -44,8 +45,6 @@ def _make_dialogue_wav(path : str, tone_seconds : float = 6.0, pause_seconds : f
 class TestAudioChunkerIntegration(LoggedTestCase):
     def test_plan_scenes_on_synthetic_audio(self):
         """Silence in the middle of audio produces two coherent chunks."""
-        if not _ffmpeg_available():
-            self.skipTest("ffmpeg not available")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             wav_path = os.path.join(tmpdir, "tones.wav")
@@ -61,8 +60,6 @@ class TestAudioChunkerIntegration(LoggedTestCase):
 
     def test_lookahead_extends_past_cap_to_silence(self):
         """Over-long stretches extend to nearby silence instead of hard-cutting."""
-        if not _ffmpeg_available():
-            self.skipTest("ffmpeg not available")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             wav_path = os.path.join(tmpdir, "long.wav")
@@ -85,8 +82,6 @@ class TestAudioChunkerIntegration(LoggedTestCase):
 
     def test_max_chunk_cap(self):
         """Long stretches without silence are hard-split at the cap."""
-        if not _ffmpeg_available():
-            self.skipTest("ffmpeg not available")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             wav_path = os.path.join(tmpdir, "tone.wav")
@@ -138,3 +133,24 @@ class TestAudioChunkerIntegration(LoggedTestCase):
                 "large chunks respect minimum",
                 (chunk.end - chunk.start).total_seconds(), 8.0)
 
+    def test_stream_plan_matches_batch_plan(self):
+        """Streaming planning reproduces the batch plan exactly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = os.path.join(tmpdir, "dialogue.wav")
+            _make_dialogue_wav(wav_path, repeats=24)
+
+            chunker = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+            batch_chunks = chunker.PlanChunks(wav_path)
+            silences = chunker.extractor.DetectSilences(wav_path)
+
+            def replay():
+                for silence in silences:
+                    yield silence
+
+            with patch.object(chunker.extractor, "DetectSilencesStream", return_value=replay()):
+                stream_chunks = list(chunker.PlanChunksStream(wav_path))
+
+        self.assertLoggedEqual("chunk count", len(batch_chunks), len(stream_chunks))
+        for batch_chunk, stream_chunk in zip(batch_chunks, stream_chunks):
+            self.assertLoggedEqual("chunk start", batch_chunk.start, stream_chunk.start)
+            self.assertLoggedEqual("chunk end", batch_chunk.end, stream_chunk.end)

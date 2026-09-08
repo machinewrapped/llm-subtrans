@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import json
 import logging
 import time
+
+import httpx
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SettingsType import SettingsType
@@ -76,7 +79,6 @@ class TranscriptionClient:
         """
         Make the backend request. Must be implemented by subclasses.
         """
-        _ = audio_bytes, audio_format, language
         raise NotImplementedError
 
     def _sleep_abortable(self, seconds : float) -> None:
@@ -86,6 +88,72 @@ class TranscriptionClient:
             if self.aborted:
                 raise SubtitleError(_("Transcription aborted"))
             time.sleep(min(0.5, deadline - time.monotonic()))
+
+    def _PostJson(self, url : str, *, headers : dict|None = None,
+                  json_body : dict|None = None, files : dict|None = None) -> dict:
+        """
+        POST to a transcription endpoint and return the parsed JSON dict.
+
+        Handles the common pattern shared by HTTP-based transcription clients:
+        open an httpx.Client with timeout and optional proxy, check for HTTP
+        errors with detailed messages, reject non-JSON gateway pages, parse
+        the response, and validate the payload is a dict.
+
+        Callers supply either ``json_body`` (sent as ``json=``) or ``files``
+        (sent as ``files=``), never both.
+        """
+        response = self._PostRequest(url, headers=headers, json_body=json_body, files=files)
+        return self._ParseJsonResponse(url, response)
+
+    def _PostRequest(self, url : str, *, headers : dict|None = None,
+                     json_body : dict|None = None, files : dict|None = None) -> httpx.Response:
+        """
+        Execute the HTTP POST, wrapping connection errors in SubtitleError.
+
+        Returns the raw httpx.Response for callers that need to inspect it
+        before JSON parsing (e.g. provider-specific status-code checks).
+        """
+        proxy = self.settings.get_str('proxy')
+        try:
+            with httpx.Client(timeout=self.request_timeout, proxy=proxy) as client:
+                if json_body is not None:
+                    return client.post(url, headers=headers or {}, json=json_body)
+                return client.post(url, headers=headers or {}, files=files or {})
+        except Exception as e:
+            raise SubtitleError(_("Transcription request failed: {}").format(str(e)), error=e)
+
+    def _ParseJsonResponse(self, url : str, response : httpx.Response) -> dict:
+        """
+        Validate an HTTP response and parse its JSON body into a dict.
+
+        Checks for HTTP errors with detailed messages, rejects non-JSON
+        gateway pages, parses the JSON, and validates the payload is a dict.
+        """
+        if response.is_error:
+            reply = (response.text or '').strip()
+            if reply.startswith(('{', '[')):
+                detail = reply[:500]
+            elif reply:
+                detail = _("non-JSON response (check the Server address): {}").format(reply[:200])
+            else:
+                detail = _("empty response body")
+            raise SubtitleError(_("Transcription request failed: POST {} returned {}: {}").format(
+                url, response.status_code, detail))
+
+        text = (response.text or '').strip()
+        if not text.startswith(('{', '[')):
+            raise SubtitleError(_("Transcription failed ({}): non-JSON response: {}").format(
+                response.status_code, text[:200]))
+
+        try:
+            payload = json.loads(text)
+        except json.JSONDecodeError as e:
+            raise SubtitleError(_("Unable to parse transcription response"), error=e)
+
+        if not isinstance(payload, dict):
+            raise SubtitleError(_("Unexpected transcription response shape"))
+
+        return payload
 
     def _abort(self) -> None:
         """Terminate ongoing requests. Default signals the flag only."""

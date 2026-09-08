@@ -190,10 +190,14 @@ else:
             """
             name = "Gemini"
 
-            information = """
+            information = _("""
             <p>Transcribe with Gemini 3.5 Transcribe (word timestamps, speaker diarization).</p>
             <p>Requires a <a href="https://aistudio.google.com/app/apikey">Google AI Studio API key</a>.</p>
-            """
+            """)
+
+            information_noapikey = _("""
+            <p>To use this provider you need a <a href="https://aistudio.google.com/app/apikey">Google AI Studio API key</a>.</p>
+            """)
 
             # Keys and quotas live in Settings; model, diarization and language vary per job
             advanced_settings = ['api_key', 'max_retries', 'rate_limit']
@@ -218,6 +222,8 @@ else:
                     'rate_limit': settings.get_float('rate_limit', env_float('GEMINI_TRANSCRIPTION_RATE_LIMIT')),
                 }))
 
+                self.refresh_when_changed = ['api_key']
+
             def GetAvailableModels(self) -> list[str]:
                 """Transcription models served by this provider."""
                 return ['gemini-3.5-transcribe']
@@ -235,15 +241,22 @@ else:
                 return GeminiTranscriptionClient(client_settings)
 
             def GetOptions(self, settings : SettingsType) -> GuiSettingsType:
-                """Returns the configurable options for the provider."""
-                return {
+                """
+                Returns the configurable options for the provider.
+                """
+                options : GuiSettingsType = {
                     'api_key': (str, _("A Google AI Studio API key (shared with translation)")),
+                }
+                if not self.settings.get_str('api_key'):
+                    return options
+                options.update({
                     'model': (self.available_models, _("Speech-to-text model")),
                     'language': (str, _("Spoken language hint, e.g. Chinese or cmn-Hans-CN (optional, auto-detected when empty)")),
                     'diarize': (bool, _("Identify speakers (up to 8, experimental past 3)")),
                     'max_retries': (int, _("Rate-limit retries per chunk before giving up")),
                     'rate_limit': (float, _("Maximum API requests per minute (0 for unlimited)")),
-                }
+                })
+                return options
 
             def ValidateSettings(self) -> bool:
                 """Validate the settings for the provider."""

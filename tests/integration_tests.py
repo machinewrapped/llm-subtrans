@@ -1,8 +1,17 @@
 """Run optional SDK and real media integration checks separately from unit tests."""
+import importlib
 import logging
+import os
 import sys
 import unittest
 from pathlib import Path
+
+
+class GuiDependenciesUnavailable(unittest.TestCase):
+    """Report optional GUI integration coverage that could not run."""
+
+    def runTest(self) -> None:
+        self.skipTest('PySide6 GUI dependencies are unavailable')
 
 
 def Main() -> int:
@@ -16,6 +25,16 @@ def Main() -> int:
                         encoding='utf-8', level=logging.INFO)
     suite = unittest.TestLoader().discover(
         str(root / 'tests' / 'IntegrationTests'), pattern='test_*.py', top_level_dir=str(root))
+    os.environ.setdefault('QT_QPA_PLATFORM', 'offscreen')
+    try:
+        importlib.import_module('PySide6.QtGui')
+        importlib.import_module('PySide6.QtWidgets')
+    except (ImportError, OSError) as error:
+        logging.info('Skipping GUI integration tests: %s', error)
+        suite.addTest(GuiDependenciesUnavailable())
+    else:
+        suite.addTests(unittest.TestLoader().discover(
+            str(root / 'tests' / 'GuiIntegrationTests'), pattern='test_*.py', top_level_dir=str(root)))
     if suite.countTestCases() == 0:
         print('No integration tests discovered.', file=sys.stderr)
         return 1

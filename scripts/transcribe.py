@@ -11,6 +11,7 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from scripts.subtrans_common import InitLogger
 
@@ -30,6 +31,8 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('-k', '--apikey', type=str, default=None, help="API key (provider-specific)")
     parser.add_argument('-m', '--model', type=str, default=None, help="Transcription model (e.g. qwen3-asr-1.7b)")
     parser.add_argument('--language', type=str, default=None, help="Spoken language hint (e.g. Chinese, English)")
+    parser.add_argument('--diarize', dest='diarize', action='store_true', default=None, help="Request speaker diarization (model-dependent)")
+    parser.add_argument('--no-diarize', dest='diarize', action='store_false', help="Explicitly disable diarization")
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
     parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
     parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
@@ -64,6 +67,7 @@ def main() -> int:
         'server_address': args.server,
         'model': args.model,
         'language': args.language,
+        'diarize': args.diarize,
     })
     # Drop unset values so provider environment defaults apply
     provider_settings = SettingsType({k: v for k, v in provider_settings.items() if v is not None})
@@ -98,17 +102,18 @@ def main() -> int:
         return 0
 
     def progress(done : int, total : int, span : str) -> None:
-        logging.info(f"Transcribing chunk {done + 1}/{total} [{span}]")
+        # Total is unknown while the chunk plan streams in (0 signals that)
+        label = f"Transcribing chunk {done + 1}/{total}" if total > 0 else f"Transcribing chunk {done + 1}"
+        logging.info(f"{label} [{span}]")
         if args.verbose:
-            print(f"Transcribing chunk {done + 1}/{total} [{span}]", flush=True)
+            print(f"{label} [{span}]", flush=True)
 
     try:
-        options = Options() if args.project else None
-        if options is not None:
-            if args.target_language:
-                options['target_language'] = args.target_language
-            options['project_file'] = True
-            options['postprocess_transcription'] = args.postprocess
+        options = Options()
+        if args.target_language:
+            options['target_language'] = args.target_language
+        options['project_file'] = args.project
+        options['postprocess_transcription'] = args.postprocess
 
         project : SubtitleProject = coordinator.CreateTranscriptionProject(args.input, options, progress)
 
@@ -118,12 +123,19 @@ def main() -> int:
             return 1
 
         project.subtitles.outputpath = outputpath
-        project.SaveOriginal(outputpath)
+        # Call the lower-level writer so an unwritable destination reaches the
+        # CLI error handler instead of being logged as a false success.
+        project.subtitles.SaveOriginal(outputpath)
         logging.info(f"Saved subtitles to {outputpath} ({project.subtitles.linecount} lines)")
 
         if args.project:
             project.SaveProjectFile()
             logging.info(f"Saved project to {project.projectfile}")
+
+        if coordinator.status == TranscriptionStatus.INCOMPLETE:
+            error = coordinator.last_error
+            logging.error(f"Transcription incomplete: {error or 'one or more chunks failed'}")
+            return 1
 
     except KeyboardInterrupt:
         logging.warning("Transcription interrupted")

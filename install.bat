@@ -91,7 +91,7 @@ if exist "envsubtrans" (
 )
 
 set "EXTRAS="
-set "SCRIPTS=llm-subtrans batch-translate"
+set "SCRIPTS=llm-subtrans batch-translate transcribe"
 
 echo Select installation type:
 echo 1 = Install with GUI
@@ -148,8 +148,9 @@ echo 3 = Anthropic Claude
 echo 4 = DeepSeek
 echo 5 = Mistral
 echo 6 = Bedrock (AWS)
+echo 7 = Qwen Local (on-device transcription)
 echo a = All except Bedrock
-set /p provider_choice="Enter your choice (0/1/2/3/4/5/6/a): "
+set /p provider_choice="Enter your choice (0/1/2/3/4/5/6/7/a): "
 
 if "!provider_choice!"=="0" (
     echo No additional provider selected.
@@ -165,6 +166,8 @@ if "!provider_choice!"=="0" (
     call :install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" "set_default"
 ) else if "!provider_choice!"=="6" (
     call :install_bedrock
+) else if "!provider_choice!"=="7" (
+    call :install_qwen_local
 ) else if /i "!provider_choice!"=="a" (
     call :install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" ""
     call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
@@ -204,6 +207,38 @@ if errorlevel 1 (
     echo Failed to install required modules.
     pause
     exit /b 1
+)
+
+echo !EXTRAS! | findstr /i "\<transcription\>" >nul
+if not errorlevel 1 (
+    echo.
+    echo Checking torch for Qwen Local transcription...
+    .\envsubtrans\Scripts\python.exe -c "import torch" >nul 2>&1
+    if errorlevel 1 (
+        echo torch is not installed, so Qwen Local cannot run. Rolling back the Qwen install:
+        .\envsubtrans\Scripts\python.exe -m pip uninstall -y qwen-asr >nul 2>&1
+        set "NEWEXTRAS="
+        for %%e in (!EXTRAS:,= !) do if /i not "%%e"=="transcription" (
+            if "!NEWEXTRAS!"=="" (set "NEWEXTRAS=%%e") else (set "NEWEXTRAS=!NEWEXTRAS!,%%e")
+        )
+        set "EXTRAS=!NEWEXTRAS!"
+        echo.
+        echo Install a GPU-enabled torch first ^(CUDA on NVIDIA, MPS on Apple
+        echo Silicon -- PyPI's default is CPU-only on most platforms^):
+        echo   https://pytorch.org/get-started/locally/
+        echo then re-run the installer and choose Qwen Local again.
+        echo The transcribe command is still installed for cloud providers.
+    ) else (
+        .\envsubtrans\Scripts\python.exe -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() or torch.backends.mps.is_available() else 1)" >nul 2>&1
+        if errorlevel 1 (
+            echo WARNING: torch has no GPU build ^(no CUDA or MPS^); Qwen Local will fall
+            echo back to slow CPU inference. For GPU transcription, install a GPU torch:
+            echo   https://pytorch.org/get-started/locally/
+        ) else (
+            echo torch with GPU support detected - Qwen Local transcription is ready.
+        )
+    )
+    echo.
 )
 
 REM Generate command scripts
@@ -274,6 +309,17 @@ if "!EXTRAS!"=="" (set "EXTRAS=bedrock") else (set "EXTRAS=!EXTRAS!,bedrock")
 set "SCRIPTS=!SCRIPTS! bedrock-subtrans"
 
 echo Bedrock setup complete. Default provider set to Bedrock.
+goto :eof
+
+:install_qwen_local
+echo Qwen Local runs on-device transcription (Qwen3-ASR with word timestamps).
+echo It needs a GPU-enabled torch in the virtual environment -- PyPI's default
+echo torch is CPU-only on most platforms and will be unusably slow (CUDA on
+echo NVIDIA, MPS on Apple Silicon -- see https://pytorch.org/get-started/locally/).
+echo After installing dependencies the installer verifies torch; if it is
+echo missing, the Qwen install is rolled back so you can add torch and re-run.
+echo.
+if "!EXTRAS!"=="" (set "EXTRAS=transcription") else (set "EXTRAS=!EXTRAS!,transcription")
 goto :eof
 
 :setup_complete

@@ -5,11 +5,14 @@ import io
 import logging
 import math
 import os
+import queue
 import shutil
 import subprocess
 import tempfile
+import threading
+import time
 import wave
-from collections.abc import Callable
+from collections.abc import Callable, Generator, Iterator
 from dataclasses import dataclass, field
 from datetime import timedelta
 
@@ -38,6 +41,18 @@ class AudioTrack:
     codec : str|None = None
     language : str|None = None
     channels : int|None = None
+
+    def __str__(self) -> str:
+        """Human-readable track label."""
+        parts = [f"Track {self.index}"]
+        if self.codec:
+            parts.append(str(self.codec))
+        if self.language:
+            parts.append(str(self.language))
+        return " - ".join(parts)
+
+    def __repr__(self) -> str:
+        return f"AudioTrack(index={self.index}, codec={self.codec!r}, language={self.language!r}, channels={self.channels!r})"
 
 
 @dataclass
@@ -200,34 +215,27 @@ class AudioExtractor:
         """
         Return (start, end) silence intervals using ffmpeg silencedetect.
         """
+        return list(self.DetectSilencesStream(media_path, track_index, min_duration, noise_db))
+
+    def DetectSilencesStream(self, media_path : str, track_index : int = 0,
+                             min_duration : float|None = None, noise_db : int|None = None) -> Generator[tuple[timedelta, timedelta], None, None]:
+        """
+        Yield (start, end) silence intervals in chronological order while
+        ffmpeg is still scanning, so chunk planning and transcription can
+        overlap the scan instead of blocking on it.
+        """
         self._check_media_path(media_path)
         min_duration = min_duration or self.settings.get_float('silence_min_duration') or 0.8
         noise_db = noise_db if noise_db is not None else self.settings.get_int('silence_noise_db') or -30
 
-        result = subprocess.run(
-            ['ffmpeg', '-v', 'info', '-i', media_path,
-             '-map', f'0:a:{track_index}',
-             '-af', f'silencedetect=noise={noise_db}dB:d={min_duration}',
-             '-f', 'null', '-'],
-            capture_output=True, text=True, timeout=900
-        )
-        # silencedetect reports to stderr and ffmpeg exits 0 regardless
-        silences : list[tuple[timedelta, timedelta]] = []
-        pending_start : float|None = None
-        for line in result.stderr.splitlines():
-            match = SILENCE_PATTERN.search(line)
-            if not match:
-                continue
-            if match.group('kind') == 'start':
-                pending_start = float(match.group('time'))
-            elif pending_start is not None:
-                start = GetTimeDeltaSafe(pending_start) or timedelta(seconds=max(0.0, pending_start))
-                end_time = float(match.group('time'))
-                end = GetTimeDeltaSafe(end_time) or timedelta(seconds=max(0.0, end_time))
-                silences.append((start, end))
-                pending_start = None
+        # The scan decodes the whole audio track, but it streams events as
+        # they are found, so transcription starts on the first chunk right away
+        logging.info(_("Analysing audio for silences in {}").format(
+            os.path.basename(media_path)))
 
-        return silences
+        stream = SilenceStream(media_path, track_index, min_duration, noise_db)
+        with stream:
+            yield from stream
 
     def _check_media_path(self, media_path : str) -> None:
         if not media_path or not os.path.isfile(media_path):
@@ -237,6 +245,111 @@ class AudioExtractor:
         handle, path = tempfile.mkstemp(suffix='.wav', prefix='subtrans-chunk-')
         os.close(handle)
         return path
+
+
+class SilenceStream:
+    """
+    Streams silence intervals from ffmpeg silencedetect while ffmpeg decodes.
+
+    A background reader thread parses stderr into a queue, so the scan keeps
+    running while the consumer transcribes finalized chunks and ffmpeg never
+    blocks on a full pipe. Events arrive in chronological order; use as a
+    context manager so ffmpeg is terminated if the consumer stops early.
+    """
+    def __init__(self, media_path : str, track_index : int = 0,
+                 min_duration : float = 0.8, noise_db : int = -30,
+                 timeout : float = 900.0):
+        self.media_path : str = media_path
+        self.track_index : int = track_index
+        self.min_duration : float = min_duration
+        self.noise_db : int = noise_db
+        self.timeout : float = timeout
+        self._events : queue.Queue[tuple[timedelta, timedelta]|None] = queue.Queue()
+        self._thread : threading.Thread|None = None
+        self._process : subprocess.Popen[str]|None = None
+        self._deadline : float = 0.0
+        self._error : SubtitleError|None = None
+
+    def __enter__(self) -> SilenceStream:
+        if not self.media_path or not os.path.isfile(self.media_path):
+            raise SubtitleError(_("Media file not found: {}").format(self.media_path))
+
+        self._deadline = time.monotonic() + self.timeout
+        self._process = subprocess.Popen(
+            ['ffmpeg', '-v', 'info', '-i', self.media_path,
+             '-map', f'0:a:{self.track_index}',
+             '-af', f'silencedetect=noise={self.noise_db}dB:d={self.min_duration}',
+             '-f', 'null', '-'],
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+        self._thread = threading.Thread(target=self._read_output, daemon=True)
+        self._thread.start()
+        return self
+
+    def __exit__(self, exc_type, exc, traceback) -> None:
+        self._shutdown()
+
+    def __iter__(self) -> Iterator[tuple[timedelta, timedelta]]:
+        if self._process is None or self._thread is None:
+            raise SubtitleError(_("Silence stream was used outside a with block"))
+
+        while True:
+            remaining = self._deadline - time.monotonic()
+            if remaining <= 0:
+                self._shutdown()
+                raise SubtitleError(_("Silence detection timed out after {} seconds").format(int(self.timeout)))
+
+            try:
+                event = self._events.get(timeout=remaining)
+            except queue.Empty:
+                self._shutdown()
+                raise SubtitleError(_("Silence detection timed out after {} seconds").format(int(self.timeout)))
+
+            if event is None:
+                if self._error is not None:
+                    raise self._error
+                return
+            yield event
+
+    def _read_output(self) -> None:
+        """Reader thread: parse silencedetect lines until ffmpeg exits."""
+        process = self._process
+        assert process is not None and process.stderr is not None
+        pending_start : float|None = None
+        try:
+            for line in process.stderr:
+                match = SILENCE_PATTERN.search(line)
+                if not match:
+                    continue
+                if match.group('kind') == 'start':
+                    pending_start = float(match.group('time'))
+                elif pending_start is not None:
+                    end_time = float(match.group('time'))
+                    self._events.put((
+                        GetTimeDeltaSafe(pending_start) or timedelta(seconds=max(0.0, pending_start)),
+                        GetTimeDeltaSafe(end_time) or timedelta(seconds=max(0.0, end_time))))
+                    pending_start = None
+        except Exception as e:
+            self._error = SubtitleError(_("Silence detection failed"), error=e)
+        finally:
+            returncode = process.wait()
+            if returncode != 0 and self._error is None:
+                logging.debug("ffmpeg silencedetect exited with code {}".format(returncode))
+            self._events.put(None)
+
+    def _shutdown(self) -> None:
+        """Stop ffmpeg and the reader thread (safe to call repeatedly)."""
+        process = self._process
+        if process is not None and process.poll() is None:
+            process.terminate()
+        thread = self._thread
+        if thread is not None and thread is not threading.current_thread():
+            thread.join(timeout=5.0)
+        if process is not None:
+            try:
+                process.wait(timeout=5.0)
+            except subprocess.TimeoutExpired:
+                process.kill()
+                process.wait()
 
 
 class AudioChunker:
@@ -282,6 +395,18 @@ class AudioChunker:
         """
         Return the ordered chunk plan for a media file (no audio extracted yet).
         """
+        return list(self.PlanChunksStream(media_path, track_index, progress_cb))
+
+    def PlanChunksStream(self, media_path : str, track_index : int = 0,
+                         progress_cb : Callable[[str], None]|None = None) -> Generator[AudioChunk, None, None]:
+        """
+        Yield chunks as silence detection streams in, so the caller can
+        transcribe finalized chunks while later ones are still being planned.
+
+        A chunk is finalized once silences past its decision window (including
+        the extension lookahead) have arrived; boundaries match PlanChunks
+        exactly, including tail absorption into the last chunk.
+        """
         duration = self.extractor.GetDuration(media_path)
         total = duration.total_seconds()
         if total <= 0:
@@ -290,9 +415,21 @@ class AudioChunker:
         if progress_cb:
             progress_cb(_("Detecting silence in {}").format(os.path.basename(media_path)))
 
-        silences = self.extractor.DetectSilences(media_path, track_index)
+        silences = self.extractor.DetectSilencesStream(media_path, track_index)
+        pending : tuple[timedelta, timedelta]|None = next(silences, None)
+        buffered : list[tuple[timedelta, timedelta]] = []
+        stream_done : bool = pending is None
 
-        chunks : list[AudioChunk] = []
+        def fill(limit : timedelta) -> None:
+            """Buffer silence events up to the planning horizon."""
+            nonlocal pending, stream_done
+            while not stream_done and pending is not None and pending[0] <= limit:
+                buffered.append(pending)
+                pending = next(silences, None)
+                if pending is None:
+                    stream_done = True
+
+        chunks_planned = 0
         cursor = timedelta(seconds=0)
         silence_index = 0
 
@@ -300,42 +437,54 @@ class AudioChunker:
             target = cursor + timedelta(seconds=self.max_chunk_seconds)
             window = min(target, duration)
 
-            # Next natural cut within the cap (or the file end)
-            cut = self._next_silence_cut(silences, silence_index, cursor, window)
+            fill(window)
+            cut = self._next_silence_cut(buffered, silence_index, cursor, window)
             if cut is not None:
                 silence_index = cut[1]
                 end = duration if cut[0] >= duration else cut[0]
-                chunks.append(AudioChunk(start=cursor, end=end))
-                cursor = duration if end >= duration else self._silence_end_after(silences, silence_index - 1, cut[0])
+                next_cursor = end if end >= duration else self._silence_end_after(buffered, silence_index - 1, cut[0])
+                if (duration - next_cursor).total_seconds() < self.min_chunk_seconds:
+                    # The remainder would be too small to stand alone: absorb
+                    # it into this chunk rather than dropping it later
+                    end = duration
+                    next_cursor = duration
+                chunks_planned += 1
+                yield AudioChunk(start=cursor, end=end)
+                cursor = next_cursor
                 continue
 
             if target >= duration:
-                chunks.append(AudioChunk(start=cursor, end=duration))
+                chunks_planned += 1
+                yield AudioChunk(start=cursor, end=duration)
                 cursor = duration
                 break
 
-            # Over-long stretch: extend to a nearby silence instead of
-            # cutting mid-sentence, hard-cutting only past the ceiling
+            fill(target + timedelta(seconds=self.lookahead_seconds))
             extended = self._next_silence_cut(
-                silences, silence_index, cursor,
+                buffered, silence_index, cursor,
                 target + timedelta(seconds=self.lookahead_seconds), after=target)
             if extended is not None:
                 silence_index = extended[1]
-                chunks.append(AudioChunk(start=cursor, end=extended[0]))
-                cursor = self._silence_end_after(silences, silence_index - 1, extended[0])
+                next_cursor = self._silence_end_after(buffered, silence_index - 1, extended[0])
+                end = extended[0]
+                if (duration - next_cursor).total_seconds() < self.min_chunk_seconds:
+                    end = duration
+                    next_cursor = duration
+                chunks_planned += 1
+                yield AudioChunk(start=cursor, end=end)
+                cursor = next_cursor
                 continue
 
-            chunks.append(AudioChunk(start=cursor, end=target))
-            cursor = target
+            hard_end = target if (duration - target).total_seconds() >= self.min_chunk_seconds else duration
+            chunks_planned += 1
+            yield AudioChunk(start=cursor, end=hard_end)
+            cursor = hard_end
 
-        if chunks and (duration - cursor).total_seconds() > 0:
-            # Absorb a tiny tail into the last chunk rather than dropping speech
-            chunks[-1].end = duration
-        elif not chunks:
-            chunks.append(AudioChunk(start=timedelta(seconds=0), end=duration))
+        if chunks_planned == 0:
+            chunks_planned += 1
+            yield AudioChunk(start=timedelta(seconds=0), end=duration)
 
-        logging.info(_("Planned {} transcription chunks for {}").format(len(chunks), os.path.basename(media_path)))
-        return chunks
+        logging.info(_("Planned {} transcription chunks for {}").format(chunks_planned, os.path.basename(media_path)))
 
     def _next_silence_cut(self, silences : list[tuple[timedelta, timedelta]], index : int,
                            cursor : timedelta, limit : timedelta,
@@ -350,6 +499,9 @@ class AudioChunker:
         Spans below the minimum length are passed over as cut candidates —
         their audio stays inside the surrounding chunk, so no speech is
         ever dropped; only the cut point moves later.
+
+        Example: a 5s gap at 20s scores 20*5=100, while a 1s gap at 55s
+        scores 55*1=55 — so the long pause wins despite being earlier.
         """
         lower = after or cursor
         best : tuple[timedelta, int]|None = None

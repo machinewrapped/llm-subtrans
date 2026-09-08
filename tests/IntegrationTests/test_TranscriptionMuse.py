@@ -37,6 +37,22 @@ class TestMuseRegistered(LoggedTestCase):
 
         self.assertLoggedEqual("no limit", None, client.rate_limit)
 
+    def test_progressive_options_without_key(self):
+        """Only the key shows until one is set."""
+        with patch.dict(os.environ, {'MUSE_API_KEY': '', 'MODEL_API_KEY': ''}):
+            provider = MuseTranscriptionProvider(SettingsType())
+            options = provider.GetOptions(provider.settings)
+
+            self.assertLoggedEqual("only api_key", ['api_key'], sorted(options.keys()))
+
+    def test_progressive_options_with_key(self):
+        """A non-empty key unlocks the full schema."""
+        provider = MuseTranscriptionProvider(SettingsType({'api_key': 'k'}))
+        options = provider.GetOptions(provider.settings)
+
+        for key in ('api_key', 'model', 'language', 'diarize', 'request_timeout', 'rate_limit'):
+            self.assertLoggedIn(f"{key} option", key, options)
+
     def test_advanced_settings_match_schema(self):
         """Advanced keys must exist in the options schema, or filtering silently misses."""
         provider = MuseTranscriptionProvider(SettingsType({'api_key': 'k'}))
@@ -46,14 +62,24 @@ class TestMuseRegistered(LoggedTestCase):
         self.assertLoggedEqual("no stale advanced keys", [], unknown)
 
     def test_information_exposed(self):
-        """Every registered provider exposes its information text (no dead blocks)."""
-        for name, provider_class in TranscriptionProvider.get_providers().items():
-            with self.subTest(provider=name):
-                provider = provider_class(SettingsType({'api_key': 'k'}))
-                info = provider.GetInformation()
+        """GetInformation() composes the ffmpeg paragraph with provider text."""
+        provider = MuseTranscriptionProvider(SettingsType({'api_key': 'k'}))
 
-                self.assertLoggedIsNotNone(f"{name} info present", info)
-                self.assertLoggedEqual(f"{name} info matches attribute", provider.information, info)
+        info = provider.GetInformation(ffmpeg_available=True)
+
+        self.assertLoggedIsNotNone("info present", info)
+        self.assertLoggedNotIn("no ffmpeg paragraph when proven", "ffmpeg", (info or "").casefold())
+        self.assertLoggedIn("provider text present", "Muse", info or "")
+
+    def test_information_no_key_walkthrough(self):
+        """Missing keys select the setup walkthrough instead of the base text."""
+        with patch.dict(os.environ, {'MUSE_API_KEY': '', 'MODEL_API_KEY': ''}):
+            provider = MuseTranscriptionProvider(SettingsType())
+
+            info = provider.GetInformation(ffmpeg_available=True)
+
+        self.assertLoggedIsNotNone("walkthrough present", info)
+        self.assertLoggedIn("key link", "Model API", info or "")
 
 class TestMuseTranscription(LoggedTestCase):
     def _provider(self, diarize : bool = False):

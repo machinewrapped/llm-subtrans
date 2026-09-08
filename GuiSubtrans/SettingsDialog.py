@@ -261,6 +261,10 @@ class SettingsDialog(QDialog):
                     elif section_name == self.TRANSCRIPTION_SECTION:
                         if key == 'transcription_provider':
                             self.settings[key] = field.GetValue()
+                        elif key == 'postprocess_transcription':
+                            # This is a global transcription default, rather
+                            # than an option belonging to one provider.
+                            self.settings[key] = field.GetValue()
                         else:
                             provider = self.settings.get_str('transcription_provider') or 'Unknown'
                             namespace = self._get_transcription_provider_settings(provider)
@@ -340,6 +344,8 @@ class SettingsDialog(QDialog):
             elif key_type == TranscriptionProvider:
                 self._add_transcription_provider_options(section_name, layout)
             elif key in self.settings:
+                if section_name == self.TRANSCRIPTION_SECTION and key == 'postprocess_transcription':
+                    layout.addRow(QLabel(_("General transcription settings")))
                 field = CreateOptionWidget(key, self.settings[key], key_type, tooltip=tooltip)
                 field.contentChanged.connect(lambda setting=field: self._on_setting_changed(section_name, setting.key, setting.GetValue()))
                 layout.addRow(field.name, field)
@@ -441,7 +447,8 @@ class SettingsDialog(QDialog):
         """
         Create a rich text widget for provider information and add it to the layout
         """
-        provider_layout = QVBoxLayout()
+        provider_container = QWidget()
+        provider_layout = QVBoxLayout(provider_container)
         infoLabel = QLabel(provider_info)
         infoLabel.setWordWrap(True)
         infoLabel.setTextFormat(Qt.TextFormat.RichText)
@@ -452,8 +459,8 @@ class SettingsDialog(QDialog):
         scrollArea = QScrollArea()
         scrollArea.setWidgetResizable(True)
         scrollArea.setSizeAdjustPolicy(QScrollArea.SizeAdjustPolicy.AdjustToContents)
-        scrollArea.setLayout(provider_layout)
-        layout.addRow(scrollArea)
+        scrollArea.setWidget(provider_container)
+        layout.addRow(QLabel(_("Provider information")), scrollArea)
 
     def _refresh_provider_options(self):
         """
@@ -530,6 +537,17 @@ class SettingsDialog(QDialog):
         self.loader_thread = None
         logging.error(_("Unable to load transcription providers: {error}").format(error=message))
 
+    def _transcription_dependency_state(self) -> tuple[bool|None, str]:
+        """
+        Cached dependency evidence for provider info: ffmpeg proven (or not)
+        and the resolved torch device from the last local run. Never probes
+        here; writers live on the transcription run paths.
+        """
+        ffmpeg = self.settings.get('transcription_ffmpeg_available')
+        ffmpeg_available = ffmpeg if isinstance(ffmpeg, bool|None) else None
+        torch_device = self.settings.get_str('transcription_torch_device') or "Unknown"
+        return ffmpeg_available, torch_device
+
     def _initialise_transcription_provider(self) -> None:
         """
         Initialise the transcription provider from saved settings, resolving
@@ -569,6 +587,8 @@ class SettingsDialog(QDialog):
         if not self.transcription_provider:
             return
 
+        layout.addRow(QLabel(_("Provider options")))
+
         try:
             schema = self.transcription_provider.GetOptions(self.transcription_provider.settings)
         except Exception as e:
@@ -582,7 +602,7 @@ class SettingsDialog(QDialog):
             layout.addRow(field.name, field)
             self.widgets[key] = field
 
-        provider_info = self.transcription_provider.GetInformation()
+        provider_info = self.transcription_provider.GetInformation(*self._transcription_dependency_state())
         if provider_info:
             self._add_provider_info_widget(layout, provider_info)
 
@@ -624,6 +644,12 @@ class SettingsDialog(QDialog):
                 self._refresh_provider_options()
 
         elif section_name == self.TRANSCRIPTION_SECTION:
+            if key == 'postprocess_transcription':
+                self.settings[key] = value
+                self._update_section_visibility()
+                self._update_setting_visibility()
+                return
+
             provider = self.settings.get_str('transcription_provider')
             if not provider:
                 logging.error(_("Transcription provider is not set"))

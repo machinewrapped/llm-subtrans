@@ -70,8 +70,8 @@ else:
 
             information = _("""
             <p>Transcribe locally with the official qwen-asr package (Qwen3-ASR).</p>
-            <p>Requires the <tt>transcription</tt> extra and a CUDA torch install. No API key needed.</p>
-            <p>A CUDA GPU is much faster than CPU inference.</p>
+            <p>Requires the <tt>transcription</tt> extra and a GPU-enabled torch install (CUDA on NVIDIA, MPS on Apple Silicon). No API key needed.</p>
+            <p>A discrete GPU is much faster than CPU inference.</p>
             """)
 
             def _get_provider_information(self, torch_device : str = "Unknown") -> str|None:
@@ -132,7 +132,7 @@ else:
                 return {
                     'model': (self.available_models, _("ASR checkpoint to run locally")),
                     'language': (str, _("Spoken language hint, e.g. Chinese or English (optional, auto-detected when empty)")),
-                    'device': (['auto', 'cuda', 'cpu'], _("Compute device for local inference")),
+                    'device': (['auto', 'cuda', 'mps', 'xpu', 'cpu'], _("Compute device for local inference (auto prefers CUDA, then MPS, then XPU)")),
                     'aligner_model': (str, _("Forced-aligner checkpoint for word timestamps")),
                     'max_new_tokens': (int, _("Generation budget per chunk (long chunks need headroom)")),
                     'rate_limit': (float, _("Maximum requests per minute (0 for unlimited; local inference is unmetered)")),

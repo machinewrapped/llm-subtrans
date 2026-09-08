@@ -98,6 +98,18 @@ function install_bedrock() {
     echo "Bedrock setup complete. Default provider set to Bedrock."
 }
 
+function install_qwen_local() {
+    echo "Qwen Local runs on-device transcription (Qwen3-ASR with word timestamps)."
+    echo "It needs a GPU-enabled torch in the virtual environment -- PyPI's default"
+    echo "torch is CPU-only on most platforms and will be unusably slow (CUDA on"
+    echo "NVIDIA, MPS on Apple Silicon -- see https://pytorch.org/get-started/locally/)."
+    echo "After installing dependencies the installer verifies torch; if it is"
+    echo "missing, the Qwen install is rolled back so you can add torch and re-run."
+    echo
+
+    extras+=("transcription")
+}
+
 if [ ! -d "scripts" ]; then
     echo "Please run the script from the root directory of the project."
     exit 1
@@ -137,7 +149,7 @@ python3 -m venv envsubtrans
 source envsubtrans/bin/activate
 
 extras=()
-scripts_to_generate=("llm-subtrans" "batch-translate")
+scripts_to_generate=("llm-subtrans" "batch-translate" "transcribe")
 
 echo "Select installation type:"
 echo "1 = Install with GUI"
@@ -191,8 +203,9 @@ echo "3 = Anthropic Claude"
 echo "4 = DeepSeek"
 echo "5 = Mistral"
 echo "6 = Bedrock (AWS)"
+echo "7 = Qwen Local (on-device transcription)"
 echo "a = All except Bedrock"
-read -p "Enter your choice (0/1/2/3/4/5/6/a): " provider_choice
+read -p "Enter your choice (0/1/2/3/4/5/6/7/a): " provider_choice
 
 case $provider_choice in
     0)
@@ -215,6 +228,9 @@ case $provider_choice in
         ;;
     6)
         install_bedrock
+        ;;
+    7)
+        install_qwen_local
         ;;
     a)
         install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" ""
@@ -240,6 +256,33 @@ else
 fi
 
 pip install --upgrade -e "$install_target"
+
+if printf '%s\n' "${extras[@]}" | grep -qx "transcription"; then
+    echo
+    echo "Checking torch for Qwen Local transcription..."
+    if ! python -c "import torch" 2>/dev/null; then
+        echo "torch is not installed, so Qwen Local cannot run. Rolling back the Qwen install:"
+        pip uninstall -y qwen-asr 2>/dev/null || true
+        filtered_extras=()
+        for extra in "${extras[@]}"; do
+            [ "$extra" != "transcription" ] && filtered_extras+=("$extra")
+        done
+        extras=("${filtered_extras[@]}")
+        echo
+        echo "Install a GPU-enabled torch first (CUDA on NVIDIA, MPS on Apple"
+        echo "Silicon -- PyPI's default is CPU-only on most platforms):"
+        echo "  https://pytorch.org/get-started/locally/"
+        echo "then re-run the installer and choose Qwen Local again."
+        echo "The transcribe command is still installed for cloud providers."
+    elif ! python -c "import torch; raise SystemExit(0 if torch.cuda.is_available() or torch.backends.mps.is_available() else 1)" 2>/dev/null; then
+        echo "WARNING: torch has no GPU build (no CUDA or MPS); Qwen Local will fall"
+        echo "back to slow CPU inference. For GPU transcription, install a GPU torch:"
+        echo "  https://pytorch.org/get-started/locally/"
+    else
+        echo "torch with GPU support detected - Qwen Local transcription is ready."
+    fi
+    echo
+fi
 
 for script in "${scripts_to_generate[@]}"; do
     scripts/generate-cmd.sh "$script"

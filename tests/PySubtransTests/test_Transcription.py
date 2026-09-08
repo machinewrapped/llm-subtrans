@@ -327,6 +327,23 @@ class TestWordGrouping(LoggedTestCase):
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("spaced text", "Hello world", lines[0].text)
 
+    def test_unicode_words_and_punctuation_are_joined(self):
+        """Unicode words receive spaces while punctuation stays attached."""
+        words = [_word("café", 0.0, 0.2), _word("noir", 0.2, 0.4),
+                 _word(".", 0.4, 0.5), _word("следующий", 0.5, 0.7)]
+        lines = self._scene_lines(self._coordinator(), "café noir. следующий", words)
+
+        self.assertLoggedEqual("unicode spacing", "café noir. следующий", lines[0].text)
+
+    def test_join_words_handles_quotes_apostrophes_and_hyphens(self):
+        """Token joins preserve ordinary English punctuation conventions."""
+        coordinator = self._coordinator()
+        self.assertLoggedEqual("quoted phrase", 'He said "Hello world." Then',
+                                coordinator._join_words(['He', 'said', '"Hello', 'world."', 'Then']))
+        self.assertLoggedEqual("apostrophe", "l'amour", coordinator._join_words(["l'", "amour"]))
+        self.assertLoggedEqual("hyphen", "well-known", coordinator._join_words(['well-', 'known']))
+        self.assertLoggedEqual("CJK punctuation", "你好，世界", coordinator._join_words(['你好', '，', '世界']))
+
     def test_speaker_change_splits_lines(self):
         """Speaker turns break subtitle lines and label them."""
         words = [_word("yes", 0.0, 0.5, "A"), _word("no", 0.6, 1.0, "B")]
@@ -354,7 +371,18 @@ class TestWordGrouping(LoggedTestCase):
 
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("merged span", timedelta(seconds=101.4), lines[0].end)
-        self.assertLoggedEqual("merged text", "yes um", lines[0].text)
+        self.assertLoggedEqual("merged text", "- yes\n- um", lines[0].text)
+
+    def test_three_speaker_slivers_keep_all_dialogue_turns(self):
+        """Merging a third speaker keeps earlier dialogue markers and attribution."""
+        words = [_word("I", 0.0, 0.1, "A"), _word("say!", 0.1, 0.2, "A"),
+                 _word("Of", 0.25, 0.35, "B"), _word("course!", 0.35, 0.45, "B"),
+                 _word("Indeed!", 0.5, 0.6, "C")]
+        lines = self._scene_lines(self._coordinator(), "I say! Of course! Indeed!", words)
+
+        self.assertLoggedEqual("three turn count", 1, len(lines))
+        self.assertLoggedEqual("three turn text", "- I say!\n- Of course!\n- Indeed!", lines[0].text)
+        self.assertLoggedEqual("mixed speaker attribution", None, lines[0].speaker)
 
     def test_leading_sliver_across_pause_stays_separate(self):
         """A leading fragment far from the next line is not pulled forward."""
@@ -745,10 +773,11 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         coordinator, failing = self._failing_coordinator({2, 3, 4}, chunks=6)
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            with self.assertRaises(SubtitleError) as raised:
-                coordinator.TranscribeMedia(media.name)
+            subtitles = coordinator.TranscribeMedia(media.name)
 
-        self.assertLoggedIn("blocked message", "consecutive", raised.exception.message)
+        self.assertLoggedEqual("partial lines retained", 1, subtitles.linecount)
+        self.assertLoggedEqual("incomplete status", "incomplete", coordinator.status.value)
+        self.assertLoggedIsNotNone("failure retained", coordinator.last_error)
         self.assertLoggedEqual("stopped early", 4, failing.calls)
 
     def test_custom_consecutive_limit(self):

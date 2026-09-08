@@ -2,10 +2,10 @@ from __future__ import annotations
 
 import logging
 import os
+import unicodedata
 from collections.abc import Callable
 from datetime import timedelta
 from enum import Enum
-import unicodedata
 
 import regex
 
@@ -38,26 +38,33 @@ class TranscriptionStatus(str, Enum):
     FAILED = "failed"
 
 
+_CJK_BOUNDARY = regex.compile(r'[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\u3000-\u303f\uff00-\uffef]')
+
+
 def _needs_space(previous : str, current : str) -> bool:
-    """
-    Whether a space belongs between two adjacent aligned units.
-    """
-    if not previous or not current:
+    """Join word tokens without separating punctuation or CJK characters."""
+    if not previous or not current or previous[-1].isspace() or current[0].isspace():
         return False
-    previous_category = unicodedata.category(previous)
-    current_category = unicodedata.category(current)
-    if current_category.startswith('P'):
+
+    last = previous[-1]
+    first = current[0]
+    if _CJK_BOUNDARY.fullmatch(last) and _CJK_BOUNDARY.fullmatch(first):
         return False
-    if previous_category.startswith('P'):
-        return previous not in '([{"\u2018\u201c'
-    previous_word = previous_category[0] in ('L', 'N')
-    current_word = current_category[0] in ('L', 'N')
-    if not (previous_word and current_word):
+
+    last_category = unicodedata.category(last)
+    first_category = unicodedata.category(first)
+    # Straight quotes need the accumulated text to distinguish opening/closing.
+    if first == '"':
+        if previous.count('"') % 2:
+            return False
+    elif first_category.startswith('P') and first_category not in ('Ps', 'Pi'):
         return False
-    # CJK scripts conventionally omit spaces between adjacent characters.
-    previous_cjk = regex.match(r'\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}', previous)
-    current_cjk = regex.match(r'\p{Script=Han}|\p{Script=Hiragana}|\p{Script=Katakana}', current)
-    return not (previous_cjk and current_cjk)
+
+    if last in "'-\u2019" or last_category in ('Ps', 'Pi'):
+        return False
+    if last == '"':
+        return previous.count('"') % 2 == 0
+    return True
 
 # Lines shorter than this merge into their neighbour (bounds stay truthful)
 _MIN_LINE_SECONDS = 0.4
@@ -491,95 +498,53 @@ class TranscriptionCoordinator:
         return self._merge_slivers(lines)
 
     def _join_words(self, words : list[str]) -> str:
-        """
-        Join aligned units, spacing latin words but not CJK characters.
-        """
+        """Join aligned word tokens with language-appropriate spacing."""
         text = ""
         for word in words:
-            if text and _needs_space(text[-1], word[:1]):
+            if _needs_space(text, word):
                 text += " "
             text += word
-
         return text.strip()
 
     def _merge_slivers(self, lines : list[TranscriptionSegment]) -> list[TranscriptionSegment]:
-        """
-        Fold sub-second lines into their neighbour, but never across a real
-        pause: a short interjection after seconds of silence is its own line,
-        not a span covering the silence. Bounds stay truthful either way.
-        """
+        """Merge brief adjacent lines, preserving pauses and dialogue turns."""
         if len(lines) < 2:
             return lines
 
         def close_enough(first : TranscriptionSegment, second : TranscriptionSegment) -> bool:
-            """Whether two lines are close enough in time to fold together."""
             return (second.start - first.end).total_seconds() < self.word_gap_split
 
+        def is_dialogue(line : TranscriptionSegment) -> bool:
+            return line.text.startswith('- ') and '\n' in line.text
+
+        def merge_pair(first : TranscriptionSegment, second : TranscriptionSegment) -> TranscriptionSegment:
+            mixed = (is_dialogue(first) or is_dialogue(second)
+                     or (first.speaker is not None and second.speaker is not None
+                         and first.speaker != second.speaker))
+            if mixed:
+                first_text = first.text if first.text.startswith('- ') else f'- {first.text}'
+                second_text = second.text if second.text.startswith('- ') else f'- {second.text}'
+                text = f'{first_text}\n{second_text}'
+            else:
+                text = self._join_words([first.text, second.text])
+            return TranscriptionSegment(
+                start=first.start, end=max(first.end, second.end), text=text,
+                speaker=None if mixed else first.speaker or second.speaker,
+                language=first.language or second.language)
+
         merged : list[TranscriptionSegment] = []
-
-        def merge_text(previous : TranscriptionSegment, current : TranscriptionSegment,
-                       cross_speaker : bool) -> str:
-            if not cross_speaker:
-                return self._join_words([previous.text, current.text])
-            prefix = previous.text if previous.text.startswith('- ') else f'- {previous.text}'
-            return f"{prefix}\n- {current.text}"
-
         for line in lines:
-            if (merged
-                    and (line.end - line.start).total_seconds() < _MIN_LINE_SECONDS
+            if (merged and (line.end - line.start).total_seconds() < _MIN_LINE_SECONDS
                     and close_enough(merged[-1], line)):
-                previous = merged[-1]
-                cross_speaker = (previous.speaker is not None
-                                 and line.speaker is not None
-                                 and previous.speaker != line.speaker)
-                mixed_dialogue = cross_speaker or (previous.speaker is None
-                                                   and previous.text.startswith('- ')
-                                                   and '\n' in previous.text)
-                merged_text = merge_text(previous, line, mixed_dialogue)
-                merged[-1] = TranscriptionSegment(
-                    start=previous.start, end=line.end,
-                    text=merged_text,
-                    speaker=None if mixed_dialogue else previous.speaker or line.speaker,
-                    language=previous.language or line.language)
+                merged[-1] = merge_pair(merged[-1], line)
             else:
                 merged.append(line)
 
-        if len(merged) >= 2:
-            last = merged[-1]
-            if ((last.end - last.start).total_seconds() < _MIN_LINE_SECONDS
-                    and close_enough(merged[-2], last)):
-                previous = merged[-2]
-                cross_speaker = (previous.speaker is not None
-                                 and last.speaker is not None
-                                 and previous.speaker != last.speaker)
-                mixed_dialogue = cross_speaker or (previous.speaker is None
-                                                   and previous.text.startswith('- ')
-                                                   and '\n' in previous.text)
-                merged[-2] = TranscriptionSegment(
-                    start=previous.start, end=last.end,
-                    text=merge_text(previous, last, mixed_dialogue),
-                    speaker=None if mixed_dialogue else previous.speaker or last.speaker,
-                    language=previous.language or last.language)
-                merged.pop()
-
-        if len(merged) >= 2:
-            first = merged[0]
-            if ((first.end - first.start).total_seconds() < _MIN_LINE_SECONDS
-                    and close_enough(first, merged[1])):
-                nxt = merged[1]
-                cross_speaker = (first.speaker is not None
-                                 and nxt.speaker is not None
-                                 and first.speaker != nxt.speaker)
-                mixed_dialogue = cross_speaker or (first.speaker is None
-                                                   and first.text.startswith('- ')
-                                                   and '\n' in first.text)
-                merged[1] = TranscriptionSegment(
-                    start=first.start, end=nxt.end,
-                    text=merge_text(first, nxt, mixed_dialogue),
-                    speaker=None if mixed_dialogue else first.speaker or nxt.speaker,
-                    language=first.language or nxt.language)
-                merged.pop(0)
-
+        if (len(merged) >= 2
+                and (merged[0].end - merged[0].start).total_seconds() < _MIN_LINE_SECONDS
+                and close_enough(merged[0], merged[1])):
+            merged[1] = merge_pair(merged[0], merged[1])
+            merged.pop(0)
         return merged
 
     def _span_label(self, span : AudioChunk|TranscriptionSegment) -> str:

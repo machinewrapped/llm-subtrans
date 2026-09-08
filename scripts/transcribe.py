@@ -31,6 +31,8 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('-k', '--apikey', type=str, default=None, help="API key (provider-specific)")
     parser.add_argument('-m', '--model', type=str, default=None, help="Transcription model (e.g. qwen3-asr-1.7b)")
     parser.add_argument('--language', type=str, default=None, help="Spoken language hint (e.g. Chinese, English)")
+    parser.add_argument('--diarize', dest='diarize', action='store_true', default=None, help="Request speaker diarization (model-dependent)")
+    parser.add_argument('--no-diarize', dest='diarize', action='store_false', help="Explicitly disable diarization")
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
     parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
     parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
@@ -65,6 +67,7 @@ def main() -> int:
         'server_address': args.server,
         'model': args.model,
         'language': args.language,
+        'diarize': args.diarize,
     })
     # Drop unset values so provider environment defaults apply
     provider_settings = SettingsType({k: v for k, v in provider_settings.items() if v is not None})

@@ -2,12 +2,15 @@
 import os
 import sys
 import unittest
+from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts')))
 
 import transcribe  # type: ignore[import-not-found] - scripts dir added to sys.path above
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import skip_if_debugger_attached
+from PySubtrans.SubtitleError import SubtitleError
 
 
 class TestTranscribeCliOptions(LoggedTestCase):
@@ -56,6 +59,81 @@ class TestTranscribeCliOptions(LoggedTestCase):
         args = self._parse("movie.mkv", "--no-postprocess")
 
         self.assertLoggedEqual("postprocess off", False, args.postprocess)
+
+
+class TestTranscribeCliExecution(LoggedTestCase):
+    def test_plain_output_passes_postprocess_options(self):
+        """Postprocessing applies even when no project file is requested."""
+        subtitles = Mock(linecount=1)
+        project = Mock(subtitles=subtitles, projectfile="project.subtrans")
+        coordinator = Mock()
+        coordinator.CreateTranscriptionProject.return_value = project
+        coordinator.status = transcribe.TranscriptionStatus.COMPLETED
+        provider = Mock()
+
+        with patch.object(transcribe, 'InitLogger'), \
+                patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=provider), \
+                patch.object(transcribe, 'TranscriptionCoordinator', return_value=coordinator), \
+                patch.object(transcribe, 'GetOutputPath', return_value='out.vtt'), \
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav', '--no-postprocess']):
+            result = transcribe.main()
+
+        self.assertLoggedEqual("exit status", 0, result)
+        options = coordinator.CreateTranscriptionProject.call_args.args[1]
+        self.assertLoggedEqual("postprocess option", False, options['postprocess_transcription'])
+        self.assertLoggedEqual("project persistence", False, options['project_file'])
+        subtitles.SaveOriginal.assert_called_once_with('out.vtt')
+
+    @skip_if_debugger_attached
+    def test_save_failure_returns_nonzero(self):
+        """An output write failure is reported as a failed CLI run."""
+        project = Mock(subtitles=Mock(linecount=1))
+        project.subtitles.SaveOriginal.side_effect = OSError("permission denied")
+        coordinator = Mock(status=transcribe.TranscriptionStatus.COMPLETED, last_error=None)
+        coordinator.CreateTranscriptionProject.return_value = project
+
+        with patch.object(transcribe, 'InitLogger'), \
+                patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=Mock()), \
+                patch.object(transcribe, 'TranscriptionCoordinator', return_value=coordinator), \
+                patch.object(transcribe, 'GetOutputPath', return_value='out.vtt'), \
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav']):
+            result = transcribe.main()
+
+        self.assertLoggedEqual("save failure status", 1, result)
+
+    def test_postprocess_defaults_on_for_plain_output(self):
+        """Plain subtitle output retains the default cleaning option."""
+        project = Mock(subtitles=Mock(linecount=1))
+        coordinator = Mock(status=transcribe.TranscriptionStatus.COMPLETED)
+        coordinator.CreateTranscriptionProject.return_value = project
+
+        with patch.object(transcribe, 'InitLogger'), \
+                patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=Mock()), \
+                patch.object(transcribe, 'TranscriptionCoordinator', return_value=coordinator), \
+                patch.object(transcribe, 'GetOutputPath', return_value='out.vtt'), \
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav']):
+            transcribe.main()
+
+        options = coordinator.CreateTranscriptionProject.call_args.args[1]
+        self.assertLoggedEqual("default postprocess", True, options['postprocess_transcription'])
+
+    def test_incomplete_run_saves_output_and_returns_nonzero(self):
+        """Partial transcription output remains recoverable and is reported incomplete."""
+        subtitles = Mock(linecount=1)
+        project = Mock(subtitles=subtitles, projectfile="project.subtrans")
+        coordinator = Mock(status=transcribe.TranscriptionStatus.INCOMPLETE,
+                            last_error=SubtitleError("chunk failed"))
+        coordinator.CreateTranscriptionProject.return_value = project
+
+        with patch.object(transcribe, 'InitLogger'), \
+                patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=Mock()), \
+                patch.object(transcribe, 'TranscriptionCoordinator', return_value=coordinator), \
+                patch.object(transcribe, 'GetOutputPath', return_value='out.vtt'), \
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav']):
+            result = transcribe.main()
+
+        self.assertLoggedEqual("incomplete status", 1, result)
+        subtitles.SaveOriginal.assert_called_once_with('out.vtt')
 
 
 if __name__ == '__main__':

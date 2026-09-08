@@ -5,6 +5,7 @@ from datetime import timedelta
 from unittest.mock import Mock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
@@ -280,6 +281,67 @@ class TestGeminiParsing(LoggedTestCase):
         self.assertLoggedEqual("empty", None, map_language_code(""))
         self.assertLoggedEqual("none", None, map_language_code(None))
         self.assertLoggedEqual("unknown", None, map_language_code("Klingon"))
+
+class TestGeminiUploadCleanup(LoggedTestCase):
+    def _client(self):
+        client_type = getattr(_gemini_client_module, 'GeminiTranscriptionClient', None)
+        if client_type is None:
+            self.skipTest("google-genai not installed")
+        return client_type(SettingsType({'api_key': 'key', 'max_retries': 0}))
+
+    @skip_if_debugger_attached
+    def test_upload_deleted_when_generation_fails(self):
+        """A failed interaction does not leave uploaded audio behind."""
+        client_type = getattr(_gemini_client_module, 'GeminiTranscriptionClient', None)
+        if client_type is None:
+            self.skipTest("google-genai not installed")
+        client = client_type(SettingsType({'api_key': 'key', 'max_retries': 1}))
+        backend = Mock()
+        uploaded = Mock(uri="uri")
+        uploaded.name = "uploaded-file"
+        backend.files.upload.return_value = uploaded
+        backend.interactions.create.side_effect = ValueError("generation failed")
+
+        with self.assertRaises(ValueError):
+            client._create_interaction(backend, "chunk.wav", "en")
+
+        backend.files.delete.assert_called_once_with(name="uploaded-file")
+
+    @skip_if_debugger_attached
+    def test_upload_deleted_when_retry_exhausts(self):
+        """A quota retry exhaustion cleans up the reused upload."""
+        client = self._client()
+        backend = Mock()
+        uploaded = Mock(uri="uri")
+        uploaded.name = "uploaded-file"
+        backend.files.upload.return_value = uploaded
+        backend.interactions.create.side_effect = _QuotaError("quota exceeded")
+
+        with self.assertRaises(SubtitleError):
+            client._create_interaction(backend, "chunk.wav", "en")
+
+        backend.files.delete.assert_called_once_with(name="uploaded-file")
+
+    @skip_if_debugger_attached
+    def test_upload_deleted_when_backoff_aborts(self):
+        """Aborting during quota backoff deletes the retained upload."""
+        client_type = getattr(_gemini_client_module, 'GeminiTranscriptionClient', None)
+        if client_type is None:
+            self.skipTest("google-genai not installed")
+        client = client_type(SettingsType({'api_key': 'key', 'max_retries': 1}))
+        backend = Mock()
+        uploaded = Mock(uri="uri")
+        uploaded.name = "uploaded-file"
+        backend.files.upload.return_value = uploaded
+        backend.interactions.create.side_effect = _QuotaError("Please retry in 30s")
+
+        with patch.object(client, '_sleep_abortable', side_effect=SubtitleError("Transcription aborted")) as sleep:
+            with self.assertRaises(SubtitleError):
+                client._create_interaction(backend, "chunk.wav", "en")
+
+        sleep.assert_called_once()
+        backend.files.delete.assert_called_once_with(name="uploaded-file")
+
 
 if __name__ == '__main__':
     unittest.main()

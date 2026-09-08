@@ -1,14 +1,16 @@
 import unittest
 from datetime import timedelta
 from types import SimpleNamespace
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.Providers.Provider_QwenLocal import parse_qwen_result
 import PySubtrans.Transcription.Providers.Provider_QwenLocal as _qwen_module
+import PySubtrans.Transcription.Providers.Clients.QwenLocalClient as qwen_module
 
 QwenLocalProvider = getattr(_qwen_module, 'QwenLocalProvider', None)
 
@@ -206,6 +208,45 @@ class TestQwenResultParsing(LoggedTestCase):
         self.assertLoggedEqual("text", "hi", text)
         self.assertLoggedEqual("language", None, language)
         self.assertLoggedEqual("word count", 0, len(words))
+
+class TestQwenAlignment(LoggedTestCase):
+    def test_auto_detect_requests_timestamps(self):
+        """An omitted hint still enables Qwen forced alignment."""
+        client_type = getattr(qwen_module, 'QwenLocalClient', None)
+        if client_type is None:
+            self.skipTest("qwen-asr not installed")
+        client = client_type(SettingsType())
+        result = type("Result", (), {"text": "hello", "language": "English", "time_stamps": None})()
+        model = Mock()
+        model.transcribe.return_value = [result]
+        with patch.object(client, '_load_model', return_value=model), \
+                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
+                patch.object(qwen_module.os, 'remove'):
+            client._transcribe_chunk(b"audio", "wav", None)
+
+        model.transcribe.assert_called_once_with(
+            audio="chunk.wav", language=None, return_time_stamps=True)
+
+    @skip_if_debugger_attached
+    def test_unsupported_detected_language_falls_back_to_text(self):
+        """Unsupported forced alignment keeps the detected transcript."""
+        client_type = getattr(qwen_module, 'QwenLocalClient', None)
+        if client_type is None:
+            self.skipTest("qwen-asr not installed")
+        client = client_type(SettingsType())
+        result = type("Result", (), {"text": "bonjour", "language": "Klingon", "time_stamps": None})()
+        model = Mock()
+        model.transcribe.side_effect = [ValueError("Unsupported language: Klingon"), [result]]
+        with patch.object(client, '_load_model', return_value=model), \
+                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
+                patch.object(qwen_module.os, 'remove'):
+            transcription = client._transcribe_chunk(b"audio", "wav", None)
+
+        self.assertLoggedEqual("fallback text", "bonjour", transcription.text)
+        self.assertLoggedEqual("retry count", 2, model.transcribe.call_count)
+        self.assertLoggedEqual("fallback timestamps", False,
+                               model.transcribe.call_args.kwargs['return_time_stamps'])
+
 
 if __name__ == '__main__':
     unittest.main()

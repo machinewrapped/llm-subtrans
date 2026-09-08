@@ -86,7 +86,11 @@ else:
                 model = self._load_model()
                 chunk_path = self._write_chunk(audio_bytes)
                 canonical = NormaliseAlignerLanguage(language, _QWEN_ALIGNER_LANGUAGES)
-                want_stamps = self.settings.get_bool('transcription_align', True) and canonical is not None
+                # Qwen can detect the language and pass it to its forced aligner
+                # when no hint is supplied.  Keep the default timestamp request
+                # enabled for auto-detection; unsupported detected languages are
+                # represented by the SDK without word timings.
+                want_stamps = self.settings.get_bool('transcription_align', True)
 
                 try:
                     results = model.transcribe(

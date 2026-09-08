@@ -32,7 +32,7 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Transcription.AudioExtractor import SUPPORTED_MEDIA_EXTENSIONS, CheckFfmpegAvailable
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 
@@ -44,7 +44,7 @@ class _TranscriptionWorker(QObject):
     progressed = Signal(int, int, str)
     segmented = Signal(object)
     finished = Signal(object)
-    failed = Signal(str)
+    failed = Signal(str, object)
 
     def __init__(self, coordinator : TranscriptionCoordinator, media_path : str, options : Options|None = None):
         super().__init__()
@@ -62,7 +62,15 @@ class _TranscriptionWorker(QObject):
                 lambda segment: self.segmented.emit(segment))
             self.finished.emit(project)
         except Exception as e:
-            self.failed.emit(str(e))
+            # Coordinators may retain a project assembled before a recoverable
+            # failure. Keep it available so the user can open the billed work.
+            partial_project = None
+            partial_subtitles = self.coordinator.partial_subtitles
+            if partial_subtitles is not None:
+                partial_project = SubtitleProject(persistent=False)
+                partial_project.subtitles = partial_subtitles
+                partial_project.projectfile = partial_project.GetProjectFilepath(self.media_path)
+            self.failed.emit(str(e), partial_project)
 
 
 class _ProviderLoaderWorker(QObject):
@@ -120,6 +128,9 @@ class TranscriptionDialog(QDialog):
         self._chunks_done : int = 0
         self._chunks_total : int = 0
         self._last_span : str = ""
+        self._close_requested : bool = False
+        self._worker_active : bool = False
+        self._pending_accept : bool = False
 
         self._build_form()
         self.status_label.setText(_("Loading transcription providers..."))
@@ -255,12 +266,12 @@ class TranscriptionDialog(QDialog):
         self.loader.failed.connect(self._on_providers_failed)
         self.loader.loaded.connect(self.loader_thread.quit)
         self.loader.failed.connect(self.loader_thread.quit)
+        self.loader_thread.finished.connect(self._on_loader_thread_finished)
         self.loader_thread.start()
 
     @Slot(list)
     def _on_providers_loaded(self, names : list) -> None:
         """Populate the provider combo once module imports complete."""
-        self.loader_thread = None
         self.provider_combo.addItems(names)
         if names:
             saved = self.global_options.get_str('transcription_provider')
@@ -275,9 +286,16 @@ class TranscriptionDialog(QDialog):
     @Slot(str)
     def _on_providers_failed(self, message : str) -> None:
         """Report provider loading failures instead of stalling silently."""
-        self.loader_thread = None
         logging.error(_("Unable to load transcription providers: {error}").format(error=message))
         self.status_label.setText(_("Unable to load transcription providers."))
+
+    @Slot()
+    def _on_loader_thread_finished(self) -> None:
+        """Release the loader only after its QThread has actually stopped."""
+        self.loader_thread = None
+        if self._close_requested and (self.thread is None or not self.thread.isRunning()):
+            self._close_requested = False
+            self.reject()
 
     def _current_provider(self) -> TranscriptionProvider|None:
         name = self.provider_name
@@ -468,6 +486,7 @@ class TranscriptionDialog(QDialog):
         self._chunks_total = 0
         self._last_span = ""
         self.worker = _TranscriptionWorker(coordinator, self.media_path, self._transcription_options())
+        self._worker_active = True
         self.thread = QThread(self)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
@@ -477,6 +496,9 @@ class TranscriptionDialog(QDialog):
         self.worker.failed.connect(self._on_failed)
         self.worker.finished.connect(self.thread.quit)
         self.worker.failed.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.worker.failed.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self._on_worker_thread_finished)
         self._show_results(True)
         self.status_label.setText(_("Transcribing..."))
         self.thread.start()
@@ -528,8 +550,8 @@ class TranscriptionDialog(QDialog):
 
     @Slot(object)
     def _on_finished(self, project : SubtitleProject) -> None:
+        self._worker_active = False
         self.project = project
-        self._save_provider_settings()
         if self.coordinator is not None and not self.coordinator.aborted:
             # Extraction and inference provably ran: record dependency facts
             # (torch only when already imported by the run itself, so cloud
@@ -540,6 +562,8 @@ class TranscriptionDialog(QDialog):
         saved_path = self._save_transcription(project)
         if self.coordinator is not None and self.coordinator.aborted:
             self.status_label.setText(_("Aborted - partial results ({} lines).").format(count))
+        elif self.coordinator is not None and not self._project_is_complete(self.coordinator.status):
+            self.status_label.setText(_("Transcription incomplete - partial results ({} lines).").format(count))
         elif saved_path:
             message = _("Transcribed {} lines, saved to {}.").format(count, saved_path)
             self.status_label.setText(message)
@@ -550,10 +574,11 @@ class TranscriptionDialog(QDialog):
             logging.info(message)
         self.progress_bar.setValue(self.progress_bar.maximum())
         self._show_results(False)
-        if self.coordinator is not None and not self.coordinator.aborted:
+        if (self.coordinator is not None and not self.coordinator.aborted
+                and self._project_is_complete(self.coordinator.status)):
             # Clean finish hands the project straight to the caller: leaving it
             # behind Close/Back to Settings would silently discard paid work.
-            self.accept()
+            self._pending_accept = True
 
     def _record_torch_device(self) -> None:
         """
@@ -578,8 +603,27 @@ class TranscriptionDialog(QDialog):
                 and self.project.subtitles is not None
                 and self.project.subtitles.linecount > 0)
 
+    @staticmethod
+    def _project_is_complete(status : TranscriptionStatus) -> bool:
+        """Return whether the coordinator reported clean completion."""
+        return status is TranscriptionStatus.COMPLETED
+
+    def _request_abort(self) -> None:
+        """Ask the active coordinator to stop after its current request."""
+        if self.coordinator is not None:
+            self.coordinator.Abort()
+            self.status_label.setText(_("Aborting..."))
+
     def reject(self) -> None:
         """Confirm before discarding transcription results via Close or X."""
+        if self._worker_active or (self.thread is not None and self.thread.isRunning()):
+            self._close_requested = True
+            self._pending_accept = False
+            self._request_abort()
+            return
+        if self.loader_thread is not None and self.loader_thread.isRunning():
+            self._close_requested = True
+            return
         if self._has_unaccepted_results():
             count = self.project.subtitles.linecount if self.project and self.project.subtitles else 0
             reply = QMessageBox.question(
@@ -590,6 +634,7 @@ class TranscriptionDialog(QDialog):
                 QMessageBox.StandardButton.No)
             if reply != QMessageBox.StandardButton.Yes:
                 return
+        self._close_requested = False
         super().reject()
 
     def _save_transcription(self, project : SubtitleProject) -> str|None:
@@ -610,22 +655,28 @@ class TranscriptionDialog(QDialog):
             return None
         return outputpath if os.path.isfile(outputpath) else None
 
-    @Slot(str)
-    def _on_failed(self, message : str) -> None:
+    @Slot(str, object)
+    def _on_failed(self, message : str, partial_project : SubtitleProject|None = None) -> None:
+        self._worker_active = False
+        if partial_project is not None:
+            self.project = partial_project
         logging.error(_("Transcription failed: {error}").format(error=message))
-        self.status_label.setText(_("Transcription failed: {error}").format(error=message))
+        if self._has_unaccepted_results():
+            count = self.project.subtitles.linecount if self.project and self.project.subtitles else 0
+            self.status_label.setText(_("Transcription failed; partial results ({} lines) are available.").format(count))
+        else:
+            self.status_label.setText(_("Transcription failed: {error}").format(error=message))
         self._show_results(False)
 
-    def _save_provider_settings(self) -> None:
-        name = self.provider_name
-        if not name or self.coordinator is None:
-            return
-        try:
-            self.global_options.InitialiseProviderSettings(
-                TranscriptionCoordinator.SettingsKey(name), self.coordinator.provider.settings)
-            self.global_options.SaveSettings()
-        except Exception as e:
-            logging.warning(_("Unable to save transcription settings: {error}").format(error=str(e)))
+    @Slot()
+    def _on_worker_thread_finished(self) -> None:
+        """Drop thread references after Qt confirms the worker thread stopped."""
+        self.thread = None
+        self.worker = None
+        if self._pending_accept:
+            self._pending_accept = False
+            self.accept()
+
 
     def _show_setup(self) -> None:
         """
@@ -661,12 +712,16 @@ class TranscriptionDialog(QDialog):
             open_button.setEnabled(not running and self.project is not None)
 
     def closeEvent(self, event) -> None:
-        """Abort any running transcription when the dialog closes."""
-        if self.coordinator is not None and self.thread is not None and self.thread.isRunning():
-            self.coordinator.Abort()
-            self.thread.quit()
-            self.thread.wait(5000)
+        """Keep the dialog alive until active background work has stopped."""
+        if self._worker_active or (self.coordinator is not None and self.thread is not None and self.thread.isRunning()):
+            self._close_requested = True
+            self._pending_accept = False
+            self._request_abort()
+            event.ignore()
+            return
         if self.loader_thread is not None and self.loader_thread.isRunning():
-            self.loader_thread.quit()
-            self.loader_thread.wait(5000)
+            self._close_requested = True
+            event.ignore()
+            return
+        event.accept()
         super().closeEvent(event)

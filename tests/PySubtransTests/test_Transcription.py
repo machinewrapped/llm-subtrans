@@ -21,7 +21,7 @@ from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
-from PySubtrans.Transcription.TranscriptionCoordinator import AudioTrackInfo, TranscriptionCoordinator
+from PySubtrans.Transcription.TranscriptionCoordinator import AudioTrackInfo, TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
 
@@ -91,7 +91,8 @@ def stub_media(testcase : LoggedTestCase, coordinator : TranscriptionCoordinator
     patch.object restores the real methods afterwards; plain attribute
     assignment would need type: ignore comments and leak stubs on failure.
     """
-    chunk_patcher = patch.object(coordinator.chunker, "PlanChunks", return_value=chunks)
+    chunk_patcher = patch.object(coordinator.chunker, "PlanChunksStream",
+                                 side_effect=lambda *args, **kwargs: (chunk for chunk in chunks))
     bytes_patcher = patch.object(coordinator.extractor, "ReadChunkBytes", return_value=audio)
     chunk_patcher.start()
     bytes_patcher.start()
@@ -283,6 +284,53 @@ class TestAudioChunker(LoggedTestCase):
 
         assert cut is not None  # Type narrowing for PyLance
         self.assertLoggedEqual("cut at later gap", timedelta(seconds=25), cut[0])
+
+    def test_stream_plan_matches_batch_plan(self):
+        """Streaming planning reproduces the batch plan exactly."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = os.path.join(tmpdir, "dialogue.wav")
+            _make_dialogue_wav(wav_path, repeats=24)
+
+            chunker = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+            batch_chunks = chunker.PlanChunks(wav_path)
+            silences = chunker.extractor.DetectSilences(wav_path)
+
+            def replay():
+                for silence in silences:
+                    yield silence
+
+            with patch.object(chunker.extractor, "DetectSilencesStream", return_value=replay()):
+                stream_chunks = list(chunker.PlanChunksStream(wav_path))
+
+        self.assertLoggedEqual("chunk count", len(batch_chunks), len(stream_chunks))
+        for batch_chunk, stream_chunk in zip(batch_chunks, stream_chunks):
+            self.assertLoggedEqual("chunk start", batch_chunk.start, stream_chunk.start)
+            self.assertLoggedEqual("chunk end", batch_chunk.end, stream_chunk.end)
+
+    def test_stream_finalizes_chunks_before_scan_completes(self):
+        """Chunks are yielded while the silence scan is still in flight."""
+        chunker = AudioChunker(SettingsType({'min_chunk_seconds': 8.0, 'max_chunk_seconds': 60.0}))
+        pulled : list[int] = []
+
+        def slow_scan():
+            for i, silence in enumerate([
+                    (timedelta(seconds=55), timedelta(seconds=60)),
+                    (timedelta(seconds=130), timedelta(seconds=140)),
+                    (timedelta(seconds=500), timedelta(seconds=510))]):
+                pulled.append(i)
+                yield silence
+
+        with patch.object(chunker.extractor, "GetDuration", return_value=timedelta(seconds=600)):
+            with patch.object(chunker.extractor, "DetectSilencesStream", return_value=slow_scan()):
+                stream = chunker.PlanChunksStream("fake.mkv")
+                first_chunk = next(stream)
+                stream.close()
+
+        self.assertLoggedEqual("first chunk start", timedelta(seconds=0), first_chunk.start)
+        self.assertLoggedEqual("first chunk cut", timedelta(seconds=55), first_chunk.end)
+        # Only the events inside the first decision window (+1 lookahead
+        # probe) may be consumed; the 500s event must remain unpulled
+        self.assertLoggedEqual("scan events pulled", 2, len(pulled))
 
 def _word(text : str, start : float, end : float, speaker : str|None = None) -> WordTiming:
     return WordTiming(text=text, start=timedelta(seconds=start), end=timedelta(seconds=end), speaker=speaker)
@@ -745,6 +793,27 @@ class TestTranscriptionCoordinator(LoggedTestCase):
             AudioChunk(start=timedelta(seconds=2 * i), end=timedelta(seconds=2 * i + 2)) for i in range(chunks)
         ])
         return coordinator, failing
+
+    def test_scan_failure_keeps_partial_results(self):
+        """A silence-scan error mid-run keeps transcribed chunks as INCOMPLETE."""
+        coordinator, _unused_provider = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
+
+        def failing_plan():
+            yield AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4))
+            raise SubtitleError("silence scan failed")
+
+        plan_patcher = patch.object(coordinator.chunker, "PlanChunksStream", return_value=failing_plan())
+        read_patcher = patch.object(coordinator.extractor, "ReadChunkBytes", return_value=b"fake")
+        plan_patcher.start()
+        read_patcher.start()
+        self.addCleanup(plan_patcher.stop)
+        self.addCleanup(read_patcher.stop)
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            subtitles = coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedEqual("partial line count", 1, subtitles.linecount)
+        self.assertLoggedEqual("incomplete status", TranscriptionStatus.INCOMPLETE, coordinator.status)
 
     def test_two_initial_failures_abort_run(self):
         """Two failures before anything works aborts instead of grinding chunks."""

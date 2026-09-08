@@ -204,10 +204,9 @@ class TranscriptionCoordinator:
                 "timestamps). Transcription without timings has no value "
                 "here, so nothing was requested and no credits were spent."
             ).format(self.provider.name))
-        chunks = self.chunker.PlanChunks(media_path, self.track_index)
-        total = len(chunks)
-        logging.info(_("Transcribing {} in {} chunks with {}").format(
-            os.path.basename(media_path), total, self.provider.name))
+        chunks = self.chunker.PlanChunksStream(media_path, self.track_index)
+        logging.info(_("Transcribing {} with {} (chunks stream in while silence detection runs)").format(
+            os.path.basename(media_path), self.provider.name))
 
         builder = SubtitleBuilder()
         builder.AddScene(summary=_("Transcription of {}").format(os.path.basename(media_path)))
@@ -224,13 +223,13 @@ class TranscriptionCoordinator:
                 if self.aborted or client.aborted:
                     # Keep everything transcribed so far: abandoning billed
                     # work would be worse than partial results.
-                    logging.warning(_("Transcription cancelled after {done}/{total} chunks").format(
-                        done=done, total=total))
+                    logging.warning(_("Transcription cancelled after {done} chunks").format(done=done))
                     had_failures = True
                     break
 
                 if progress_cb:
-                    progress_cb(done, total, self._span_label(chunk))
+                    # Total is unknown while the plan streams in (0 signals that)
+                    progress_cb(done, 0, self._span_label(chunk))
 
                 try:
                     segment = self._transcribe_chunk(client, media_path, chunk)
@@ -264,7 +263,16 @@ class TranscriptionCoordinator:
                             transcribed += 1
                             if segment_cb:
                                 segment_cb(line)
+        except SubtitleError as e:
+            # A silence-scan failure mid-run must not discard already
+            # transcribed (billed) chunks.
+            if transcribed == 0:
+                raise
+            had_failures = True
+            self.last_error = e
+            logging.error(str(e))
         finally:
+            chunks.close()
             self._active_client = None
 
         if transcribed == 0:

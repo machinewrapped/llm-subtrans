@@ -102,9 +102,11 @@ def main() -> int:
         return 0
 
     def progress(done : int, total : int, span : str) -> None:
-        logging.info(f"Transcribing chunk {done + 1}/{total} [{span}]")
+        # Total is unknown while the chunk plan streams in (0 signals that)
+        label = f"Transcribing chunk {done + 1}/{total}" if total > 0 else f"Transcribing chunk {done + 1}"
+        logging.info(f"{label} [{span}]")
         if args.verbose:
-            print(f"Transcribing chunk {done + 1}/{total} [{span}]", flush=True)
+            print(f"{label} [{span}]", flush=True)
 
     try:
         options = Options()

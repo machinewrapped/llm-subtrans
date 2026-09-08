@@ -518,8 +518,12 @@ class TranscriptionDialog(QDialog):
         self._chunks_done = done
         self._chunks_total = total
         self._last_span = span
-        self.progress_bar.setRange(0, total)
-        self.progress_bar.setValue(done)
+        if total > 0:
+            self.progress_bar.setRange(0, total)
+            self.progress_bar.setValue(done)
+        else:
+            # Total unknown while the chunk plan streams in: busy indicator
+            self.progress_bar.setRange(0, 0)
         self._update_run_status()
 
     @Slot(object)
@@ -541,8 +545,11 @@ class TranscriptionDialog(QDialog):
         effective transcription speed.
         """
         elapsed = max(0.0, time.monotonic() - self._run_started) if self._run_started else 0.0
-        status = _("Transcribing chunk {current}/{total}").format(
-            current=min(self._chunks_done + 1, self._chunks_total), total=self._chunks_total)
+        if self._chunks_total > 0:
+            status = _("Transcribing chunk {current}/{total}").format(
+                current=min(self._chunks_done + 1, self._chunks_total), total=self._chunks_total)
+        else:
+            status = _("Transcribing chunk {current}").format(current=self._chunks_done + 1)
         if self._last_span:
             status += f" [{self._last_span}]"
         status += _(" (elapsed {})").format(_format_duration(elapsed))

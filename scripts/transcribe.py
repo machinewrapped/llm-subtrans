@@ -103,12 +103,11 @@ def main() -> int:
             print(f"Transcribing chunk {done + 1}/{total} [{span}]", flush=True)
 
     try:
-        options = Options() if args.project else None
-        if options is not None:
-            if args.target_language:
-                options['target_language'] = args.target_language
-            options['project_file'] = True
-            options['postprocess_transcription'] = args.postprocess
+        options = Options()
+        if args.target_language:
+            options['target_language'] = args.target_language
+        options['project_file'] = args.project
+        options['postprocess_transcription'] = args.postprocess
 
         project : SubtitleProject = coordinator.CreateTranscriptionProject(args.input, options, progress)
 
@@ -118,7 +117,9 @@ def main() -> int:
             return 1
 
         project.subtitles.outputpath = outputpath
-        project.SaveOriginal(outputpath)
+        # Call the lower-level writer so an unwritable destination reaches the
+        # CLI error handler instead of being logged as a false success.
+        project.subtitles.SaveOriginal(outputpath)
         logging.info(f"Saved subtitles to {outputpath} ({project.subtitles.linecount} lines)")
 
         if args.project:

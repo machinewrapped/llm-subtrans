@@ -204,6 +204,11 @@ class AudioExtractor:
         min_duration = min_duration or self.settings.get_float('silence_min_duration') or 0.8
         noise_db = noise_db if noise_db is not None else self.settings.get_int('silence_noise_db') or -30
 
+        # Scanning for silences decodes the whole audio track, which can
+        # take minutes on a feature film - say so before going quiet.
+        logging.info(_("Analysing audio for silences in {} (full soundtrack scan, this can take a few minutes)").format(
+            os.path.basename(media_path)))
+
         result = subprocess.run(
             ['ffmpeg', '-v', 'info', '-i', media_path,
              '-map', f'0:a:{track_index}',

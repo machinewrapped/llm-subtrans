@@ -42,7 +42,17 @@ _CJK_BOUNDARY = regex.compile(r'[\p{Script=Han}\p{Script=Hiragana}\p{Script=Kata
 
 
 def _needs_space(previous : str, current : str) -> bool:
-    """Join word tokens without separating punctuation or CJK characters."""
+    """
+    Whether a space is needed between two adjacent word tokens.
+
+    Handles Latin scripts (space between words), CJK (no space between
+    ideographs), and punctuation (no space before closing marks or after
+    opening ones). Straight quotes use parity to distinguish open/close.
+
+    Examples: ['Hello', 'world'] -> 'Hello world'
+              ['你好', '世界']   -> '你好世界'
+              ['He', 'said', '"Hello"'] -> 'He said "Hello"'
+    """
     if not previous or not current or previous[-1].isspace() or current[0].isspace():
         return False
 
@@ -365,7 +375,7 @@ class TranscriptionCoordinator:
                 batch.originals[:] = [line for line in processor.PostprocessSubtitles(batch.originals)
                                       if line.text and line.text.strip()]
         # Re-derive the flat line list: batches hold the edited copies now
-        subtitles.originals, subtitles.translated, dummy = UnbatchScenes(subtitles.scenes)  # type: ignore[unused-ignore]
+        subtitles.originals, subtitles.translated, dummy = UnbatchScenes(subtitles.scenes)
 
     def _validate_transcription(self, subtitles : Subtitles, options : Options) -> None:
         """

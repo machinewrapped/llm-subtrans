@@ -1,15 +1,12 @@
-import json
 from datetime import timedelta
 
-import httpx
-
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
 from PySubtrans.Transcription.Providers.Provider_OpenAI import (
-    _to_seconds,
     parse_diarized_payload,
     parse_verbose_payload,
 )
@@ -95,7 +92,7 @@ class OpenAITranscriptionClient(TranscriptionClient):
         """
         Attach duration when the response reports it.
         """
-        seconds = _to_seconds(payload.get('duration'))
+        seconds = TryParseNonNegative(payload.get('duration'))
         if seconds is not None:
             result.duration = timedelta(seconds=seconds)
 
@@ -104,36 +101,4 @@ class OpenAITranscriptionClient(TranscriptionClient):
     def _post(self, fields : dict) -> dict:
         url = f"{self.server_address}/audio/transcriptions"
         headers = {'Authorization': f"Bearer {self.api_key}"} if self.api_key else {}
-
-        proxy = self.settings.get_str('proxy')
-        try:
-            with httpx.Client(timeout=self.request_timeout, proxy=proxy) as client:
-                response = client.post(url, headers=headers, files=fields)
-        except Exception as e:
-            raise SubtitleError(_("Transcription request failed: {}").format(str(e)), error=e)
-
-        if response.is_error:
-            reply = (response.text or '').strip()
-            if reply.startswith(('{', '[')):
-                detail = reply[:500]
-            elif reply:
-                detail = _("non-JSON response (check the Server address): {}").format(reply[:200])
-            else:
-                detail = _("empty response body")
-            raise SubtitleError(_("Transcription request failed: POST {} returned {}: {}").format(
-                url, response.status_code, detail))
-
-        text = (response.text or '').strip()
-        if not text.startswith(('{', '[')):
-            raise SubtitleError(_("Transcription failed ({}): non-JSON response: {}").format(
-                response.status_code, text[:200]))
-
-        try:
-            payload = json.loads(text)
-        except json.JSONDecodeError as e:
-            raise SubtitleError(_("Unable to parse transcription response"), error=e)
-
-        if not isinstance(payload, dict):
-            raise SubtitleError(_("Unexpected transcription response shape"))
-
-        return payload
+        return self._PostJson(url, headers=headers, files=fields)

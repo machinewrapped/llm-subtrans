@@ -1,19 +1,14 @@
 import base64
-import json
 import logging
 from datetime import timedelta
 
-import httpx
-
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
-from PySubtrans.Transcription.Providers.Provider_OpenRouter import (
-    _to_seconds,
-    parse_transcription_payload,
-)
+from PySubtrans.Transcription.Providers.Provider_OpenRouter import parse_transcription_payload
 
 
 class OpenRouterTranscriptionClient(TranscriptionClient):
@@ -85,13 +80,13 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
         """
         Attach duration and billed cost from the usage block when present.
         """
-        seconds = _to_seconds(payload.get('duration'))
+        seconds = TryParseNonNegative(payload.get('duration'))
         if seconds is not None:
             result.duration = timedelta(seconds=seconds)
 
         usage = payload.get('usage')
         if isinstance(usage, dict):
-            cost = _to_seconds(usage.get('cost'))
+            cost = TryParseNonNegative(usage.get('cost'))
             if cost is not None:
                 result.cost = cost
 
@@ -112,43 +107,14 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
         if options:
             body['provider'] = {'options': options}
 
-        proxy = self.settings.get_str('proxy')
-        try:
-            with httpx.Client(timeout=self.request_timeout, proxy=proxy) as client:
-                response = client.post(url, headers=headers, json=body)
-        except Exception as e:
-            raise SubtitleError(_("Transcription request failed: {}").format(str(e)), error=e)
+        response = self._PostRequest(url, headers=headers, json_body=body)
 
+        # Intercept before the generic error handler: a 400 that mentions
+        # verbose_json / timestamps means the model lacks structured output.
         if response.status_code == 400 and self._looks_like_unsupported(response.text):
             raise _StructuredOutputUnsupported(response.text[:200])
 
-        if response.is_error:
-            reply = (response.text or '').strip()
-            if reply.startswith(('{', '[')):
-                detail = reply[:500]
-            elif reply:
-                detail = _("non-JSON response (check the Server address): {}").format(reply[:200])
-            else:
-                detail = _("empty response body")
-            raise SubtitleError(_("Transcription request failed: POST {} returned {}: {}").format(
-                url, response.status_code, detail))
-
-        # Peek before parsing: gateways and proxies answer failures with
-        # HTML pages, which json.loads would report only cryptically.
-        text = (response.text or '').strip()
-        if not text.startswith(('{', '[')):
-            raise SubtitleError(_("Transcription failed ({}): non-JSON response: {}").format(
-                response.status_code, text[:200]))
-
-        try:
-            payload = json.loads(text)
-        except json.JSONDecodeError as e:
-            raise SubtitleError(_("Unable to parse transcription response"), error=e)
-
-        if not isinstance(payload, dict):
-            raise SubtitleError(_("Unexpected transcription response shape"))
-
-        return payload
+        return self._ParseJsonResponse(url, response)
 
     def _diarize_options(self) -> dict:
         """

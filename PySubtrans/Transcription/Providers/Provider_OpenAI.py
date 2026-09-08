@@ -2,19 +2,13 @@ import os
 from datetime import timedelta
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import TryParseFloat
+from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.Options import SettingsType, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
-
-
-def _to_seconds(value : object) -> float|None:
-    """Non-negative seconds from a payload number, None when absent."""
-    parsed = TryParseFloat(value)
-    return max(0.0, parsed) if parsed is not None else None
 
 
 def parse_diarized_payload(payload : dict) -> tuple[str, list[TranscriptionSegment]]:
@@ -32,8 +26,8 @@ def parse_diarized_payload(payload : dict) -> tuple[str, list[TranscriptionSegme
         if not isinstance(entry, dict):
             continue
         entry_text = str(entry.get('text') or '').strip()
-        start = _to_seconds(entry.get('start'))
-        end = _to_seconds(entry.get('end'))
+        start = TryParseNonNegative(entry.get('start'))
+        end = TryParseNonNegative(entry.get('end'))
         if not entry_text or start is None or end is None or end <= start:
             continue
         speaker = entry.get('speaker')
@@ -58,8 +52,8 @@ def parse_verbose_payload(payload : dict) -> tuple[str, str|None, list[WordTimin
         if not isinstance(entry, dict):
             continue
         word_text = str(entry.get('word') or entry.get('text') or '').strip()
-        start = _to_seconds(entry.get('start'))
-        end = _to_seconds(entry.get('end'))
+        start = TryParseNonNegative(entry.get('start'))
+        end = TryParseNonNegative(entry.get('end'))
         if not word_text or start is None or end is None or end <= start:
             continue
         words.append(WordTiming(text=word_text,

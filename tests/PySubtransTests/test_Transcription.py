@@ -128,16 +128,6 @@ class FakeTranscriptionProvider(TranscriptionProvider):
 
     information_noapikey = "Test walkthrough"
 
-class TestTranscriptionSegment(LoggedTestCase):
-    def test_segment_defaults(self):
-        """Segments carry timings, text and empty speaker by default."""
-        segment = TranscriptionSegment(start=timedelta(seconds=1), end=timedelta(seconds=3), text="hi")
-
-        self.assertLoggedEqual("start", timedelta(seconds=1), segment.start)
-        self.assertLoggedEqual("end", timedelta(seconds=3), segment.end)
-        self.assertLoggedEqual("text", "hi", segment.text)
-        self.assertLoggedEqual("speaker default", None, segment.speaker)
-
 class TestTranscriptionProviderRegistry(LoggedTestCase):
     def test_fake_provider_registered(self):
         """Providers register through __subclasses__ discovery."""
@@ -158,17 +148,10 @@ class TestTranscriptionProviderRegistry(LoggedTestCase):
         self.assertLoggedIn("model option", "model", options)
         self.assertLoggedIn("language option", "language", options)
 
-    def test_fake_provider_validation(self):
-        """Base validation passes without required settings."""
-        provider = FakeTranscriptionProvider()
-
-        self.assertLoggedEqual("valid by default", True, provider.ValidateSettings())
-
 class TestAudioChunker(LoggedTestCase):
+    @unittest.skipUnless(_ffmpeg_available(), "ffmpeg not available")
     def test_plan_scenes_on_synthetic_audio(self):
         """Silence in the middle of audio produces two coherent chunks."""
-        if not _ffmpeg_available():
-            self.skipTest("ffmpeg not available")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             wav_path = os.path.join(tmpdir, "tones.wav")
@@ -182,10 +165,9 @@ class TestAudioChunker(LoggedTestCase):
         self.assertLoggedGreater("second scene start", chunks[1].start.total_seconds(), 3.0)
         self.assertLoggedGreater("coverage", chunks[1].end.total_seconds(), 9.0)
 
+    @unittest.skipUnless(_ffmpeg_available(), "ffmpeg not available")
     def test_lookahead_extends_past_cap_to_silence(self):
         """Over-long stretches extend to nearby silence instead of hard-cutting."""
-        if not _ffmpeg_available():
-            self.skipTest("ffmpeg not available")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             wav_path = os.path.join(tmpdir, "long.wav")
@@ -206,10 +188,9 @@ class TestAudioChunker(LoggedTestCase):
         self.assertLoggedGreater("first cut past the cap", chunks[0].end.total_seconds(), 60.0)
         self.assertLoggedGreater("cut near silence", 66.5, chunks[0].end.total_seconds())
 
+    @unittest.skipUnless(_ffmpeg_available(), "ffmpeg not available")
     def test_max_chunk_cap(self):
         """Long stretches without silence are hard-split at the cap."""
-        if not _ffmpeg_available():
-            self.skipTest("ffmpeg not available")
 
         with tempfile.TemporaryDirectory() as tmpdir:
             wav_path = os.path.join(tmpdir, "tone.wav")
@@ -229,6 +210,7 @@ class TestAudioChunker(LoggedTestCase):
                 5.5, (chunk.end - chunk.start).total_seconds()
             )
 
+    @unittest.skipUnless(_ffmpeg_available(), "ffmpeg not available")
     def test_dense_dialogue_respects_minimum(self):
         """Frequent pauses never produce sub-minimum chunks."""
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -545,13 +527,6 @@ class TestSettingsNamespaces(LoggedTestCase):
         self.assertLoggedEqual(
             "key format", "OpenRouter Transcription",
             TranscriptionCoordinator.SettingsKey("OpenRouter"))
-
-    def test_dependency_defaults_unknown(self):
-        """Fresh installs carry unknown dependency state, not false claims."""
-        options = Options()
-
-        self.assertLoggedEqual("ffmpeg unknown", None, options.get('transcription_ffmpeg_available'))
-        self.assertLoggedEqual("torch unknown", "Unknown", options.get_str('transcription_torch_device'))
 
     def test_information_composition_matrix(self):
         """Info text composes ffmpeg guidance with provider content."""

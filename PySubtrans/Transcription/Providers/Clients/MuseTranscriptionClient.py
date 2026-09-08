@@ -1,20 +1,12 @@
 import json
 from datetime import timedelta
 
-import httpx
-
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import TryParseFloat
+from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
-
-
-def _to_ms(value : object) -> float|None:
-    """Millisecond offsets from a payload number, None when absent."""
-    parsed = TryParseFloat(value)
-    return max(0.0, parsed) if parsed is not None else None
 
 
 def parse_muse_payload(payload : dict, chunk_seconds : float|None = None, include_speakers : bool = True) -> tuple[str, list[TranscriptionSegment]]:
@@ -28,13 +20,13 @@ def parse_muse_payload(payload : dict, chunk_seconds : float|None = None, includ
     """
     text = str(payload.get('transcript') or payload.get('text') or '').strip()
 
-    duration_ms = _to_ms(payload.get('audioDurationMs'))
+    duration_ms = TryParseNonNegative(payload.get('audioDurationMs'))
     audio_seconds = (duration_ms / 1000.0) if duration_ms is not None else chunk_seconds
 
     turns = [entry for entry in payload.get('turns') or [] if isinstance(entry, dict)]
     starts : list[float|None] = []
     for entry in turns:
-        start_ms = _to_ms(entry.get('startMs'))
+        start_ms = TryParseNonNegative(entry.get('startMs'))
         starts.append(start_ms / 1000.0 if start_ms is not None else None)
 
     parts : list[TranscriptionSegment] = []
@@ -43,7 +35,7 @@ def parse_muse_payload(payload : dict, chunk_seconds : float|None = None, includ
         start = starts[index]
         if not entry_text or start is None:
             continue
-        end_ms = _to_ms(entry.get('endMs'))
+        end_ms = TryParseNonNegative(entry.get('endMs'))
         end = end_ms / 1000.0 if end_ms is not None else None
         if end is None:
             end = next((s for s in starts[index + 1:] if s is not None and s > start), None)
@@ -129,7 +121,7 @@ class MuseTranscriptionClient(TranscriptionClient):
         """
         Attach duration when the response reports it.
         """
-        duration_ms = _to_ms(payload.get('audioDurationMs'))
+        duration_ms = TryParseNonNegative(payload.get('audioDurationMs'))
         if duration_ms is not None:
             result.duration = timedelta(seconds=duration_ms / 1000.0)
 
@@ -143,31 +135,15 @@ class MuseTranscriptionClient(TranscriptionClient):
             'audio': ('chunk.wav', audio_bytes, 'audio/wav'),
         }
 
-        proxy = self.settings.get_str('proxy')
-        try:
-            with httpx.Client(timeout=self.request_timeout, proxy=proxy) as client:
-                response = client.post(url, headers=headers, files=fields)
-        except Exception as e:
-            raise SubtitleError(_("Transcription request failed: {}").format(str(e)), error=e)
+        response = self._PostRequest(url, headers=headers, files=fields)
 
+        # Intercept before the generic handler to provide Muse-specific
+        # status-code hints from the cookbook.
         if response.is_error:
             raise SubtitleError(_("Transcription request failed: POST {} returned {}: {}").format(
                 url, response.status_code, self._error_hint(response)))
 
-        text = (response.text or '').strip()
-        if not text.startswith(('{', '[')):
-            raise SubtitleError(_("Transcription failed ({}): non-JSON response: {}").format(
-                response.status_code, text[:200]))
-
-        try:
-            payload = json.loads(text)
-        except json.JSONDecodeError as e:
-            raise SubtitleError(_("Unable to parse transcription response"), error=e)
-
-        if not isinstance(payload, dict):
-            raise SubtitleError(_("Unexpected transcription response shape"))
-
-        return payload
+        return self._ParseJsonResponse(url, response)
 
     def _error_hint(self, response) -> str:
         """Map cookbook-documented status codes to actionable hints."""

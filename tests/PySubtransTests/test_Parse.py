@@ -2,7 +2,7 @@ import unittest
 from enum import Enum
 
 from PySubtrans.Helpers import GetValueName, GetValueFromName
-from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseDelayFromHeader, ParseKeyValuePairs, ParseNames, TryParseFloat, TryParseInt
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseDelayFromHeader, ParseKeyValuePairs, ParseNames, TryParseFloat, TryParseInt, TryParseNonNegative
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 
 
@@ -35,6 +35,36 @@ class TestTryParseFloat(LoggedTestCase):
         self.assertLoggedEqual("int", 3, TryParseInt("3.9"))
         self.assertLoggedEqual("none", None, TryParseInt(None))
         self.assertLoggedEqual("garbage", None, TryParseInt("soon"))
+
+
+class TestTryParseNonNegative(LoggedTestCase):
+    def test_positive_values(self):
+        """Positive numbers pass through unchanged."""
+        cases = [
+            (5, 5.0),
+            (2.5, 2.5),
+            ("3.25", 3.25),
+            ("  7  ", 7.0),
+            ("1e3", 1000.0),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"non-negative from {value!r}", expected,
+                                       TryParseNonNegative(value), input_value=value)
+
+    def test_negative_values_clamped(self):
+        """Negative numbers are clamped to zero."""
+        for value in (-1.5, "-3", -0.001):
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"clamped from {value!r}", 0.0,
+                                       TryParseNonNegative(value), input_value=value)
+
+    def test_invalid_values(self):
+        """Missing and non-numeric values return None."""
+        for value in (None, "", "   ", "soon", True, object()):
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"non-negative from {value!r}", None,
+                                       TryParseNonNegative(value), input_value=value)
 
 
 class TestParseDelayFromHeader(LoggedTestCase):

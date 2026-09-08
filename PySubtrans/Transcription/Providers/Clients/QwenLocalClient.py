@@ -18,7 +18,10 @@ from PySubtrans.Transcription.Providers.Provider_QwenLocal import (
 )
 
 # Loaded ASR models per (checkpoint, device, generation budget, aligner):
-# loading takes seconds, and load-time settings only apply to fresh loads
+# loading takes seconds, and load-time settings only apply to fresh loads.
+# No eviction: entries accumulate across settings changes within a session.
+# Acceptable for a single-user desktop app, but revisit if memory pressure
+# becomes an issue (each checkpoint holds ~1-3 GB of GPU memory).
 _loaded_models : dict[tuple[str, str, int, str], object] = {}
 
 

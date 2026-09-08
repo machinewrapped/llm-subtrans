@@ -91,6 +91,18 @@ def TryParseFloat(value : Any) -> float|None:
     return float(text)
 
 
+def TryParseNonNegative(value : Any) -> float|None:
+    """
+    Parse a non-negative float from a payload value, clamping to zero.
+
+    Returns None for missing/blank/non-numeric values, otherwise
+    ``max(0.0, parsed)``. Used for durations, offsets, and costs in
+    transcription payloads where negative values are meaningless.
+    """
+    parsed = TryParseFloat(value)
+    return max(0.0, parsed) if parsed is not None else None
+
+
 def TryParseInt(value : Any) -> int|None:
     """
     Parse an integer without raising (see TryParseFloat).

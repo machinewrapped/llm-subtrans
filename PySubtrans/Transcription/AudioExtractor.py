@@ -487,6 +487,9 @@ class AudioChunker:
         Spans below the minimum length are passed over as cut candidates —
         their audio stays inside the surrounding chunk, so no speech is
         ever dropped; only the cut point moves later.
+
+        Example: a 5s gap at 20s scores 20*5=100, while a 1s gap at 55s
+        scores 55*1=55 — so the long pause wins despite being earlier.
         """
         lower = after or cursor
         best : tuple[timedelta, int]|None = None

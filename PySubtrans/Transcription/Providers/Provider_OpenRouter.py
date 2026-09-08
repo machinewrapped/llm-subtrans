@@ -6,19 +6,13 @@ from datetime import timedelta
 import httpx
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import TryParseFloat
+from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.Options import SettingsType, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
-
-
-def _to_seconds(value : object) -> float|None:
-    """Non-negative seconds from a payload number, None when absent."""
-    parsed = TryParseFloat(value)
-    return max(0.0, parsed) if parsed is not None else None
 
 
 def parse_transcription_payload(payload : dict) -> tuple[str, str|None, list[TranscriptionSegment], list[WordTiming]]:
@@ -40,12 +34,12 @@ def parse_transcription_payload(payload : dict) -> tuple[str, str|None, list[Tra
         if not isinstance(entry, dict):
             continue
         entry_text = str(entry.get('text') or '').strip()
-        start = _to_seconds(entry.get('start'))
-        end = _to_seconds(entry.get('end'))
+        start = TryParseNonNegative(entry.get('start'))
+        end = TryParseNonNegative(entry.get('end'))
         if not entry_text or start is None or end is None or end <= start:
             continue
         speaker = entry.get('speaker')
-        no_speech_prob = _to_seconds(entry.get('no_speech_prob'))
+        no_speech_prob = TryParseNonNegative(entry.get('no_speech_prob'))
         parts.append(TranscriptionSegment(
             start=timedelta(seconds=start), end=timedelta(seconds=end),
             text=entry_text,
@@ -57,8 +51,8 @@ def parse_transcription_payload(payload : dict) -> tuple[str, str|None, list[Tra
         if not isinstance(entry, dict):
             continue
         word_text = str(entry.get('word') or entry.get('text') or '').strip()
-        start = _to_seconds(entry.get('start'))
-        end = _to_seconds(entry.get('end'))
+        start = TryParseNonNegative(entry.get('start'))
+        end = TryParseNonNegative(entry.get('end'))
         if not word_text or start is None or end is None or end <= start:
             continue
         speaker = entry.get('speaker')

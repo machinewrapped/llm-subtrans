@@ -21,7 +21,7 @@ from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleScene import UnbatchScenes
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleValidator import SubtitleValidator
-from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioChunk, AudioChunker, CheckFfmpegAvailable
+from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioChunk, AudioChunker, AudioTrack, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
@@ -179,13 +179,12 @@ class TranscriptionCoordinator:
         """
         return f"{provider_name} Transcription"
 
-    def CheckRequirements(self, media_path : str) -> list[AudioTrackInfo]:
+    def CheckRequirements(self, media_path : str) -> list[AudioTrack]:
         """
         Verify ffmpeg availability and return the media audio tracks.
         """
         CheckFfmpegAvailable()
-        tracks = self.extractor.ListAudioTracks(media_path)
-        return [AudioTrackInfo(index=t.index, codec=t.codec, language=t.language) for t in tracks]
+        return self.extractor.ListAudioTracks(media_path)
 
     def PlanChunks(self, media_path : str) -> list[AudioChunk]:
         """
@@ -570,24 +569,3 @@ class TranscriptionCoordinator:
         end = span.end.total_seconds()
         return f"{start:.1f}s-{end:.1f}s"
 
-
-class AudioTrackInfo:
-    """
-    Lightweight audio track descriptor for UI pickers and CLI listing.
-    """
-    def __init__(self, index : int, codec : str|None = None, language : str|None = None):
-        self.index : int = index
-        self.codec : str|None = codec
-        self.language : str|None = language
-
-    def __str__(self) -> str:
-        """Human-readable track label."""
-        parts = [f"Track {self.index}"]
-        if self.codec:
-            parts.append(str(self.codec))
-        if self.language:
-            parts.append(str(self.language))
-        return " - ".join(parts)
-
-    def __repr__(self) -> str:
-        return f"AudioTrackInfo(index={self.index}, codec={self.codec!r}, language={self.language!r})"

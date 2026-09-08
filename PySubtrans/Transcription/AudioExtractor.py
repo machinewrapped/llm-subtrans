@@ -42,6 +42,18 @@ class AudioTrack:
     language : str|None = None
     channels : int|None = None
 
+    def __str__(self) -> str:
+        """Human-readable track label."""
+        parts = [f"Track {self.index}"]
+        if self.codec:
+            parts.append(str(self.codec))
+        if self.language:
+            parts.append(str(self.language))
+        return " - ".join(parts)
+
+    def __repr__(self) -> str:
+        return f"AudioTrack(index={self.index}, codec={self.codec!r}, language={self.language!r}, channels={self.channels!r})"
+
 
 @dataclass
 class AudioChunk:

@@ -18,10 +18,10 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleError import ExcessiveDurationError, SubtitleError
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor
+from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor, AudioTrack
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
-from PySubtrans.Transcription.TranscriptionCoordinator import AudioTrackInfo, TranscriptionCoordinator, TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
 
@@ -753,7 +753,7 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
     def test_audio_track_info_label(self):
         """Track descriptors render a readable label."""
-        info = AudioTrackInfo(index=1, codec="ac3", language="chi")
+        info = AudioTrack(index=1, codec="ac3", language="chi")
 
         self.assertLoggedEqual("label", "Track 1 - ac3 - chi", str(info))
 

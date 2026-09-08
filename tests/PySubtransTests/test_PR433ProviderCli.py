@@ -1,6 +1,6 @@
+import os
 import sys
 import unittest
-import os
 from unittest.mock import Mock, patch
 
 sys.path.insert(0, os.path.normpath(os.path.join(os.path.dirname(__file__), '..', '..', 'scripts')))
@@ -33,6 +33,7 @@ class TestPR433Qwen(LoggedTestCase):
         model.transcribe.assert_called_once_with(
             audio="chunk.wav", language=None, return_time_stamps=True)
 
+    @skip_if_debugger_attached
     def test_unsupported_detected_language_falls_back_to_text(self):
         """Unsupported forced alignment keeps the detected transcript."""
         client_type = getattr(qwen_module, 'QwenLocalClient', None)
@@ -67,7 +68,10 @@ class TestPR433Gemini(LoggedTestCase):
     @skip_if_debugger_attached
     def test_upload_deleted_when_generation_fails(self):
         """A failed interaction does not leave uploaded audio behind."""
-        client = self._client()
+        client_type = getattr(gemini_module, 'GeminiTranscriptionClient', None)
+        if client_type is None:
+            self.skipTest("google-genai not installed")
+        client = client_type(SettingsType({'api_key': 'key', 'max_retries': 1}))
         backend = Mock()
         uploaded = Mock(uri="uri")
         uploaded.name = "uploaded-file"
@@ -97,17 +101,21 @@ class TestPR433Gemini(LoggedTestCase):
     @skip_if_debugger_attached
     def test_upload_deleted_when_backoff_aborts(self):
         """Aborting during quota backoff deletes the retained upload."""
-        client = self._client()
+        client_type = getattr(gemini_module, 'GeminiTranscriptionClient', None)
+        if client_type is None:
+            self.skipTest("google-genai not installed")
+        client = client_type(SettingsType({'api_key': 'key', 'max_retries': 1}))
         backend = Mock()
         uploaded = Mock(uri="uri")
         uploaded.name = "uploaded-file"
         backend.files.upload.return_value = uploaded
         backend.interactions.create.side_effect = _QuotaError("Please retry in 30s")
 
-        with patch.object(client, '_sleep_abortable', side_effect=SubtitleError("Transcription aborted")):
+        with patch.object(client, '_sleep_abortable', side_effect=SubtitleError("Transcription aborted")) as sleep:
             with self.assertRaises(SubtitleError):
                 client._create_interaction(backend, "chunk.wav", "en")
 
+        sleep.assert_called_once()
         backend.files.delete.assert_called_once_with(name="uploaded-file")
 
 
@@ -134,6 +142,7 @@ class TestPR433Cli(LoggedTestCase):
         self.assertLoggedEqual("project persistence", False, options['project_file'])
         subtitles.SaveOriginal.assert_called_once_with('out.vtt')
 
+    @skip_if_debugger_attached
     def test_save_failure_returns_nonzero(self):
         """An output write failure is reported as a failed CLI run."""
         project = Mock(subtitles=Mock(linecount=1))

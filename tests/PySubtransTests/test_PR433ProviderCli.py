@@ -28,6 +28,26 @@ class TestPR433Qwen(LoggedTestCase):
         model.transcribe.assert_called_once_with(
             audio="chunk.wav", language=None, return_time_stamps=True)
 
+    def test_unsupported_detected_language_falls_back_to_text(self):
+        """Unsupported forced alignment keeps the detected transcript."""
+        client_type = getattr(qwen_module, 'QwenLocalClient', None)
+        if client_type is None:
+            self.skipTest("qwen-asr not installed")
+        client = client_type(SettingsType())
+        result = type("Result", (), {"text": "bonjour", "language": "Klingon", "time_stamps": None})()
+        model = Mock()
+        model.transcribe.side_effect = [ValueError("Unsupported language: Klingon"), [result]]
+        client._load_model = Mock(return_value=model)
+        client._write_chunk = Mock(return_value="chunk.wav")
+
+        with patch.object(qwen_module.os, 'remove'):
+            transcription = client._transcribe_chunk(b"audio", "wav", None)
+
+        self.assertLoggedEqual("fallback text", "bonjour", transcription.text)
+        self.assertLoggedEqual("retry count", 2, model.transcribe.call_count)
+        self.assertLoggedEqual("fallback timestamps", False,
+                               model.transcribe.call_args.kwargs['return_time_stamps'])
+
 
 class _QuotaError(Exception):
     code = 429

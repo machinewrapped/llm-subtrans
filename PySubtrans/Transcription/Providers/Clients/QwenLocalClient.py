@@ -93,11 +93,25 @@ else:
                 want_stamps = self.settings.get_bool('transcription_align', True)
 
                 try:
-                    results = model.transcribe(
-                        audio=chunk_path,
-                        language=canonical,
-                        return_time_stamps=want_stamps,
-                    )
+                    try:
+                        results = model.transcribe(
+                            audio=chunk_path,
+                            language=canonical,
+                            return_time_stamps=want_stamps,
+                        )
+                    except ValueError as e:
+                        # The ASR model may detect a language outside the
+                        # forced aligner's coverage. Preserve the transcript
+                        # and report it without timings in that case.
+                        message = str(e).casefold()
+                        unsupported = 'unsupported language' in message or 'language is not supported' in message
+                        if not (want_stamps and unsupported):
+                            raise
+                        results = model.transcribe(
+                            audio=chunk_path,
+                            language=canonical,
+                            return_time_stamps=False,
+                        )
                 except Exception as e:
                     raise SubtitleError(_("Qwen transcription failed: {}").format(str(e)), error=e)
                 finally:

@@ -33,9 +33,9 @@ try:
 except ImportError:
     print("Warning: python-dotenv not available; environment variables from .env file will not be loaded.")
 
-# Model to use for auto-translation
-free_translation_model = os.getenv('FREE_TRANSLATION_MODEL', 'openai/gpt-oss-120b:free')               # Free but may be rate-limited or disappear
-paid_translation_model = os.getenv('PAID_TRANSLATION_MODEL', 'google/gemini-3.1-flash-lite-preview')              # Fast and reliable but not free
+# Model to use for auto-translation - let OpenRouter choose
+free_translation_model = os.getenv('FREE_TRANSLATION_MODEL', 'openrouter/free')
+paid_translation_model = os.getenv('PAID_TRANSLATION_MODEL', 'openrouter/auto')
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 

@@ -41,6 +41,7 @@ class TestOptions(LoggedTestCase):
             ('ui_language', 'en'),
             ('filler_words', standard_filler_words),
             ('provider_settings', {}),
+            ('transcription_provider', 'OpenRouter'),
         ]
         
         for key, expected in test_cases:
@@ -64,7 +65,7 @@ class TestOptions(LoggedTestCase):
                 self.assertLoggedEqual(f"options.get('{key}')", expected, result)
         
         # Test None values
-        none_test_cases = [ 'last_used_path', 'transcription_provider' ]
+        none_test_cases = [ 'last_used_path' ]
         
         for key in none_test_cases:
             with self.subTest(key=key):

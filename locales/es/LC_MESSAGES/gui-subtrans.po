@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-07-13 09:03+0000\n"
+"POT-Creation-Date: 2026-09-08 22:48+0000\n"
 "PO-Revision-Date: 2025-01-01 00:00+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Spanish <EMAIL@ADDRESS>\n"
@@ -11,18 +11,94 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
 
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:198
+msgid "\n            <p>To use this provider you need a <a href=\"https://aistudio.google.com/app/apikey\">Google AI Studio API key</a>.</p>\n            "
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:71
+msgid "\n            <p>Transcribe locally with the official qwen-asr package (Qwen3-ASR).</p>\n            <p>Requires the <tt>transcription</tt> extra and a GPU-enabled torch install (CUDA on NVIDIA, MPS on Apple Silicon). No API key needed.</p>\n            <p>A discrete GPU is much faster than CPU inference.</p>\n            "
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:193
+msgid "\n            <p>Transcribe with Gemini 3.5 Transcribe (word timestamps, speaker diarization).</p>\n            <p>Requires a <a href=\"https://aistudio.google.com/app/apikey\">Google AI Studio API key</a>.</p>\n            "
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:79
+msgid "\n    <p>To use this provider you need <a href=\"https://openrouter.ai/keys\">an OpenRouter API key</a>.</p>\n    <p>Note that you must have credit to use OpenRouter models.</p>\n    "
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:82
+msgid "\n    <p>To use this provider you need <a href=\"https://platform.openai.com/account/api-keys\">an OpenAI API key</a>.</p>\n    "
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:24
+msgid "\n    <p>To use this provider you need a Meta <a href=\"https://dev.meta.ai/\">Model API key</a>.</p>\n    "
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:19
+msgid "\n    <p>Transcribe with Meta Muse Voice Transcribe.</p>\n    <p>Note that Muse does not provide word-level timings, so subtitle timing is \"best effort\".</p>\n    "
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:77
+msgid "\n    <p>Transcribe with OpenAI speech-to-text models over one API key.</p>\n    <p>Currently experimental and untested due to expired API credits. Please report your experiences!</p>\n    "
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:74
+msgid "\n    <p>Transcribe with OpenRouter speech-to-text models over one API key.</p>\n    <p>Word timestamps and diarization depend on the selected model.</p>\n    "
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:532
+msgid " (about {} left)"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:527
+msgid " (elapsed {})"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:155
+msgid " s"
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:211
+msgid "'{}' cannot provide subtitle timings (no word or segment timestamps). Transcription without timings has no value here, so nothing was requested and no credits were spent."
+msgstr ""
+
+#: GuiSubtrans/Widgets/Widgets.py:155
+msgid ", Speaker: {speaker}"
+msgstr ""
+
 #: GuiSubtrans/ViewModel/BatchItem.py:203
 #: GuiSubtrans/ViewModel/SceneItem.py:144
 msgid "1 line"
 msgstr "1 línea"
 
+#: PySubtrans/Transcription/TranscriptionProvider.py:91
+msgid "<p>Audio extraction needs <a href=\"https://ffmpeg.org/download.html\">ffmpeg</a> installed and on PATH.</p>"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:85
+msgid "<p>Needs a working torch install (<a href=\"https://pytorch.org/get-started/locally/\">pytorch.org</a>); checked after your first local transcription.</p>"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:82
+msgid "<p>Running on CPU: transcription will work but is much slower than on a CUDA GPU.</p>"
+msgstr ""
+
 #: PySubtrans/Providers/Provider_DeepSeek.py:62
 msgid "A DeepSeek API key is required to use this provider (https://platform.deepseek.com/api_keys)"
 msgstr "Se requiere una clave API de DeepSeek para usar este proveedor (https://platform.deepseek.com/api_keys)"
 
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:248
+msgid "A Google AI Studio API key (shared with translation)"
+msgstr ""
+
 #: PySubtrans/Providers/Provider_Gemini.py:75
 msgid "A Google Gemini API key is required to use this provider (https://makersuite.google.com/app/apikey)"
 msgstr "Se requiere una clave API de Google Gemini para usar este proveedor (https://makersuite.google.com/app/apikey)"
+
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:72
+msgid "A Meta Model API key (MODEL_API_KEY)"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Mistral.py:69
 msgid "A Mistral API key is required to use this provider (https://console.mistral.ai/api-keys/)"
@@ -47,6 +123,10 @@ msgstr "Modelo de IA a usar como traductor"
 #: PySubtrans/Providers/Provider_OpenAI.py:181
 #: PySubtrans/Providers/Provider_OpenRouter.py:198
 #: PySubtrans/Providers/Provider_Requesty.py:193
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:264
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:88
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:144
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:160
 msgid "API Key is required"
 msgstr "Se requiere clave API"
 
@@ -92,23 +172,39 @@ msgstr "Error de estado de la API: {error}, reintentando en {backoff_time} segun
 msgid "API version must be set in .env or provided as an argument"
 msgstr "La versión de la API debe configurarse en .env o proporcionarse como argumento"
 
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:133
+msgid "ASR checkpoint to run locally"
+msgstr ""
+
 #: PySubtrans/Providers/Clients/BedrockClient.py:63
 msgid "AWS region must be set in .env or provided as an argument"
 msgstr "La región de AWS debe configurarse en .env o proporcionarse como argumento"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:198
+msgid "Abort"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:549
+msgid "Aborted - partial results ({} lines)."
+msgstr ""
 
 #: GuiSubtrans/Commands/TranslateSceneCommand.py:90
 msgid "Aborted translation of scene {scene}"
 msgstr "Traducción de la escena {scene} abortada"
 
-#: GuiSubtrans/Command.py:86
+#: GuiSubtrans/Command.py:87
 msgid "Aborted {type}"
 msgstr "{type} abortado"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:486
+msgid "Aborting..."
+msgstr ""
 
 #: GuiSubtrans/AboutDialog.py:16
 msgid "About GUI-Subtrans"
 msgstr "Acerca de GUI-Subtrans"
 
-#: GuiSubtrans/MainToolbar.py:57
+#: GuiSubtrans/MainToolbar.py:58
 msgid "About this program"
 msgstr "Acerca de este programa"
 
@@ -129,24 +225,25 @@ msgstr "Se ha alcanzado la cuota de la cuenta, actualiza tu plan o espera a que 
 msgid "Add RTL Markers"
 msgstr "Agregar marcadores RTL"
 
-#: GuiSubtrans/SettingsDialog.py:36
+#: GuiSubtrans/SettingsDialog.py:59
 msgid "Add RTL markers around translated lines that contain primarily right-to-left script on save"
 msgstr "Añadir marcadores RTL alrededor de las líneas traducidas que contengan principalmente escritura de derecha a izquierda al guardar"
 
-#: GuiSubtrans/SettingsDialog.py:63
+#: GuiSubtrans/SettingsDialog.py:96
 msgid "Add line breaks to long single lines (post-process)"
 msgstr "Agregar saltos de línea a líneas largas (posprocesado)"
 
-#: GuiSubtrans/SettingsDialog.py:58
+#: GuiSubtrans/SettingsDialog.py:91
 msgid "Add line breaks to text with dialog markers"
 msgstr "Agregar saltos de línea al texto con marcas de diálogo"
 
-#: GuiSubtrans/SettingsDialog.py:88
+#: GuiSubtrans/SettingsDialog.py:122
 msgid "Advanced"
 msgstr "Avanzado"
 
-#: GuiSubtrans/ProjectActions.py:133 GuiSubtrans/ProjectActions.py:161
-#: GuiSubtrans/ProjectActions.py:163
+#: GuiSubtrans/ProjectActions.py:134 GuiSubtrans/ProjectActions.py:168
+#: GuiSubtrans/ProjectActions.py:170
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:368
 msgid "All Files"
 msgstr "Todos los archivos"
 
@@ -204,13 +301,25 @@ msgstr "Se requiere una clave API de Azure"
 msgid "An Azure API version is required"
 msgstr "Se requiere una versión de API de Azure"
 
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:129
+msgid "An OpenAI API key (shared with translation)"
+msgstr ""
+
 #: PySubtrans/Providers/Provider_OpenAI.py:101
 msgid "An OpenAI API key is required to use this provider (https://platform.openai.com/account/api-keys)"
 msgstr "Se requiere una clave API de OpenAI para usar este proveedor (https://platform.openai.com/account/api-keys)"
 
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:144
+msgid "An OpenRouter API key (shared with translation)"
+msgstr ""
+
 #: PySubtrans/Providers/Provider_OpenRouter.py:116
 msgid "An OpenRouter API key is required to use this provider (https://openrouter.ai/keys)"
 msgstr "Se requiere una clave API de OpenRouter para usar este proveedor (https://openrouter.ai/keys)"
+
+#: PySubtrans/Transcription/AudioExtractor.py:233
+msgid "Analysing audio for silences in {}"
+msgstr ""
 
 #: PySubtrans/Providers/Clients/AnthropicClient.py:174
 msgid "Anthropic API error: {error}, retrying in {sleep_time} seconds..."
@@ -224,9 +333,21 @@ msgstr "El SDK de Anthropic no está instalado. El proveedor Claude no estará d
 msgid "Anthropic account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Cuota de la cuenta de Anthropic alcanzada, por favor actualice su plan o espere a que se renueve"
 
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:175
+msgid "Apply the same post-processing used for translations (dashes, filler words, line breaks, etc"
+msgstr ""
+
 #: PySubtrans/Providers/Provider_Custom.py:99
 msgid "Attempt to communicate with the endpoint using chat format"
 msgstr "Intentar comunicarse con el endpoint usando formato de chat"
+
+#: PySubtrans/Transcription/AudioExtractor.py:164
+msgid "Audio extraction failed: {}"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:142
+msgid "Audio track"
+msgstr ""
 
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:342
 msgid "Authentication failed: {error}"
@@ -236,7 +357,7 @@ msgstr "Autenticación fallida: {error}"
 msgid "Auto-Split Batch"
 msgstr "Dividir lote automáticamente"
 
-#: GuiSubtrans/SettingsDialog.py:415
+#: GuiSubtrans/SettingsDialog.py:505
 msgid "Auto-selected model {model} for {provider} to ensure valid configuration"
 msgstr "Modelo {model} seleccionado automáticamente para {provider} para garantizar una configuración válida"
 
@@ -244,13 +365,17 @@ msgstr "Modelo {model} seleccionado automáticamente para {provider} para garant
 msgid "Auto-splitting batch {scene} batch {batch}"
 msgstr "Dividiendo automáticamente el lote {scene} lote {batch}"
 
-#: GuiSubtrans/SettingsDialog.py:41
+#: GuiSubtrans/SettingsDialog.py:64
 msgid "Automatically save the project/translation after each scene is translated"
 msgstr "Guardar automáticamente el proyecto/traducción después de traducir cada escena"
 
-#: GuiSubtrans/SettingsDialog.py:71
+#: GuiSubtrans/SettingsDialog.py:104
 msgid "Avoid creating a new batch smaller than this"
 msgstr "Evitar crear un lote nuevo más pequeño que esto"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:199
+msgid "Back to Settings"
+msgstr ""
 
 #: GuiSubtrans/Commands/EditBatchCommand.py:36
 #: GuiSubtrans/Commands/EditBatchCommand.py:64
@@ -265,15 +390,19 @@ msgstr "El lote {batch} en la escena {scene} no está traducido"
 msgid "Batch {num}"
 msgstr "Lote {num}"
 
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:138
+msgid "Browse..."
+msgstr ""
+
 #: GuiSubtrans/Widgets/ProjectSettings.py:145
 msgid "Build Terminology Map"
 msgstr "Crear mapa de terminología"
 
-#: GuiSubtrans/NewProjectSettings.py:37 GuiSubtrans/SettingsDialog.py:34
+#: GuiSubtrans/NewProjectSettings.py:37 GuiSubtrans/SettingsDialog.py:57
 msgid "Build a terminology map during translation to keep terminology consistent"
 msgstr "Cree un mapa de terminología durante la traducción para mantener la coherencia terminológica"
 
-#: GuiSubtrans/ProjectActions.py:397
+#: GuiSubtrans/ProjectActions.py:404
 msgid "Can only autosplit a single batch"
 msgstr "Solo se puede dividir automáticamente un lote"
 
@@ -281,7 +410,7 @@ msgstr "Solo se puede dividir automáticamente un lote"
 msgid "Can only model subtitle files"
 msgstr "Solo se pueden procesar archivos de subtítulos"
 
-#: GuiSubtrans/ProjectActions.py:408
+#: GuiSubtrans/ProjectActions.py:415
 msgid "Can only swap text of a single batch"
 msgstr "Solo se puede intercambiar el texto de un único lote"
 
@@ -293,11 +422,11 @@ msgstr "Se puede rehacer {command}"
 msgid "Can undo {command}"
 msgstr "Se puede deshacer {command}"
 
-#: GuiSubtrans/EditInstructionsDialog.py:45
+#: GuiSubtrans/EditInstructionsDialog.py:54
 msgid "Cancel"
 msgstr "Cancelar"
 
-#: GuiSubtrans/ProjectActions.py:355
+#: GuiSubtrans/ProjectActions.py:362
 msgid "Cannot delete scenes or batches yet"
 msgstr "Aún no se pueden eliminar escenas o lotes"
 
@@ -314,11 +443,11 @@ msgstr "No se pueden fusionar menos de dos escenas"
 msgid "Cannot merge lines, some lines are missing"
 msgstr "No se pueden fusionar líneas, faltan algunas líneas"
 
-#: GuiSubtrans/ProjectActions.py:328
+#: GuiSubtrans/ProjectActions.py:335
 msgid "Cannot merge non-sequential elements"
 msgstr "No se pueden fusionar elementos no secuenciales"
 
-#: GuiSubtrans/ProjectActions.py:114
+#: GuiSubtrans/ProjectActions.py:115
 msgid "Cannot redo the last command"
 msgstr "No se puede rehacer la última acción"
 
@@ -327,7 +456,7 @@ msgstr "No se puede rehacer la última acción"
 msgid "Cannot retrieve model list, check API key"
 msgstr "No se puede obtener la lista de modelos, compruebe la clave API"
 
-#: PySubtrans/SubtitleProject.py:498
+#: PySubtrans/SubtitleProject.py:501
 msgid "Cannot set {setting_name}, no subtitles loaded"
 msgstr "No se puede establecer {setting_name}, no hay subtítulos cargados"
 
@@ -335,11 +464,15 @@ msgstr "No se puede establecer {setting_name}, no hay subtítulos cargados"
 msgid "Cannot split scene {scene} because it doesn't exist"
 msgstr "No se puede dividir la escena {scene} porque no existe"
 
+#: GuiSubtrans/GuiInterface.py:313
+msgid "Cannot start transcription while another command is queued"
+msgstr ""
+
 #: GuiSubtrans/Commands/MergeScenesCommand.py:54
 msgid "Cannot undo merge, scene sizes were not saved"
 msgstr "No se puede deshacer la fusión, los tamaños de escena no se guardaron"
 
-#: GuiSubtrans/ProjectActions.py:95
+#: GuiSubtrans/ProjectActions.py:96
 msgid "Cannot undo the last command"
 msgstr "No se puede deshacer la última acción"
 
@@ -362,6 +495,14 @@ msgstr "Comprueba que la clave API esté autorizada y vuelve a intentarlo"
 msgid "CheckProviderSettings: {error}"
 msgstr "VerificarConfiguraciónProveedor: {error}"
 
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:462
+msgid "Chunk {}: low-confidence segment ({:.0%} no-speech probability): '{}'"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:76
+msgid "Clean transcribed lines with the same normalizations used for loaded subtitles (dashes, filler words, line breaks)"
+msgstr ""
+
 #: PySubtrans/Providers/Clients/CustomClient.py:195
 #: PySubtrans/Providers/Clients/CustomClient.py:226
 msgid "Client error: {status_code} {text}"
@@ -374,11 +515,19 @@ msgstr "Error del cliente: {status_code} {text}"
 msgid "Client is not initialized"
 msgstr "El cliente no está inicializado"
 
-#: GuiSubtrans/SettingsDialog.py:67
+#: GuiSubtrans/SettingsDialog.py:100
 msgid "Comma-separated list of filler_words to remove"
 msgstr "Lista separada por comas de filler_words para eliminar"
 
-#: GuiSubtrans/SettingsDialog.py:73
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:135
+msgid "Compute device for local inference (auto prefers CUDA, then MPS, then XPU)"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:146
+msgid "Configure..."
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:106
 msgid "Consider a new scene to have started after this many seconds without subtitles"
 msgstr "Considerar que empieza una nueva escena después de este número de segundos sin subtítulos"
 
@@ -413,11 +562,11 @@ msgstr "El contenido debe ser una cadena para Gemini"
 msgid "Context"
 msgstr "Contexto"
 
-#: GuiSubtrans/SettingsDialog.py:60
+#: GuiSubtrans/SettingsDialog.py:93
 msgid "Convert blocks of whitespace and Chinese Commas to newlines"
 msgstr "Convertir bloques de espacios y comas chinas en nuevas líneas"
 
-#: GuiSubtrans/SettingsDialog.py:62
+#: GuiSubtrans/SettingsDialog.py:95
 msgid "Convert wide dashes (emdash) to standard dashes"
 msgstr "Convertir guiones anchos (emdash) a guiones estándar"
 
@@ -429,7 +578,7 @@ msgstr "Copiar desde otro proyecto"
 msgid "Could not detect subtitle format for file: {}"
 msgstr "No se pudo detectar el formato de subtítulos para el archivo: {}"
 
-#: GuiSubtrans/SettingsDialog.py:39
+#: GuiSubtrans/SettingsDialog.py:62
 msgid "Create a project file to allow resuming or revising translation"
 msgstr "Crear un archivo de proyecto para permitir reanudar o revisar la traducción"
 
@@ -445,7 +594,7 @@ msgstr "Personaliza la apariencia de gui-subtrans"
 msgid "Default language to translate the subtitles to"
 msgstr "Idioma predeterminado al que traducir los subtítulos"
 
-#: GuiSubtrans/EditInstructionsDialog.py:43
+#: GuiSubtrans/EditInstructionsDialog.py:52
 msgid "Defaults"
 msgstr "Predeterminados"
 
@@ -482,15 +631,31 @@ msgstr "Formato de subtítulos detectado '{format}' desde el contenido"
 msgid "Detected subtitle format '{format}' is not supported."
 msgstr "El formato de subtítulos detectado '{format}' no es compatible."
 
+#: PySubtrans/Transcription/AudioExtractor.py:416
+msgid "Detecting silence in {}"
+msgstr ""
+
 #: GuiSubtrans/AboutDialog.py:54
 msgid "Developed by: MachineWrapped<br>Contact: machinewrapped@gmail.com<br><a href=\"https://github.com/machinewrapped/llm-subtrans\">GitHub Repository</a><br>Thanks to all contributors and those who have reported issues."
 msgstr "Desarrollado por: MachineWrapped<br>Contacto: machinewrapped@gmail.com<br><a href=\\\"https://github.com/machinewrapped/llm-subtrans\\\">Repositorio en GitHub</a><br>Gracias a todos los colaboradores y a quienes han informado de problemas."
 
-#: GuiSubtrans/SettingsDialog.py:72
+#: PySubtrans/Transcription/Providers/Clients/OpenRouterTranscriptionClient.py:135
+msgid "Diarization is not mapped for model '{}', requesting without it"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:608
+msgid "Discard the {} transcribed lines? They have not been opened as a project."
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:607
+msgid "Discard transcription?"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:105
 msgid "Divide any batches larger than this into multiple batches"
 msgstr "Dividir cualquier lote mayor que esto en varios lotes"
 
-#: GuiSubtrans/EditInstructionsDialog.py:23
+#: GuiSubtrans/EditInstructionsDialog.py:25
 #: GuiSubtrans/Widgets/ProjectSettings.py:153
 msgid "Edit Instructions"
 msgstr "Editar instrucciones"
@@ -508,6 +673,10 @@ msgstr "Editando lote ({scene},{batch})"
 msgid "Editing line {line}"
 msgstr "Editando línea {line}"
 
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:408
+msgid "Empty transcription for chunk {}"
+msgstr ""
+
 #: PySubtrans/Providers/Provider_Gemini.py:85
 msgid "Enable reasoning capabilities for more complex translations (increases cost)"
 msgstr "Habilitar capacidades de razonamiento para traducciones más complejas (aumenta el costo)"
@@ -520,15 +689,15 @@ msgstr "Habilitar respuestas de streaming para actualizaciones de traducción en
 msgid "Enable thinking mode for translations"
 msgstr "Habilitar modo de pensamiento para traducciones"
 
-#: GuiSubtrans/SettingsDialog.py:59
+#: GuiSubtrans/SettingsDialog.py:92
 msgid "Ensure dialog markers match in multi-line subtitles"
 msgstr "Asegurar que las marcas de diálogo coincidan en subtítulos de varias líneas"
 
-#: GuiSubtrans/SettingsDialog.py:61
+#: GuiSubtrans/SettingsDialog.py:94
 msgid "Ensure full-width punctuation is used in Asian languages"
 msgstr "Asegurar que se use puntuación de ancho completo en idiomas asiáticos"
 
-#: GuiSubtrans/GuiInterface.py:417
+#: GuiSubtrans/GuiInterface.py:456
 msgid "Error"
 msgstr "Error"
 
@@ -540,7 +709,7 @@ msgstr "Error al comunicarse con Bedrock: {error}"
 msgid "Error communicating with provider"
 msgstr "Error al comunicarse con el proveedor"
 
-#: PySubtrans/SubtitleProject.py:381
+#: PySubtrans/SubtitleProject.py:384
 msgid "Error decoding JSON file: {}"
 msgstr "Error al decodificar el archivo JSON: {}"
 
@@ -548,7 +717,7 @@ msgstr "Error al decodificar el archivo JSON: {}"
 msgid "Error during streaming: {error}"
 msgstr "Error durante la transmisión: {error}"
 
-#: GuiSubtrans/Command.py:99
+#: GuiSubtrans/Command.py:100
 msgid "Error executing {type}: {str}"
 msgstr "Error al ejecutar {type}: {str}"
 
@@ -558,27 +727,23 @@ msgstr "Error al ejecutar {type}: {str}"
 msgid "Error fetching models: {status} {text}"
 msgstr "Error al obtener los modelos: {status} {text}"
 
-#: GuiSubtrans/Command.py:130
+#: GuiSubtrans/Command.py:131
 msgid "Error in {command}: {message}"
 msgstr "Error en {command}: {message}"
 
-#: PySubtrans/Options.py:234
+#: PySubtrans/Options.py:240
 msgid "Error loading settings from {}"
 msgstr "Error al cargar la configuración desde {}"
 
-#: PySubtrans/Options.py:295
-msgid "Error migrating settings from {} to {}. You can copy the files manually and restart the application."
-msgstr "Error al migrar la configuración de {} a {}. Puede copiar los archivos manualmente y reiniciar la aplicación."
-
-#: PySubtrans/Subtitles.py:204
+#: PySubtrans/Subtitles.py:231
 msgid "Error parsing file... attempting format detection"
 msgstr "Error al analizar el archivo... intentando detectar el formato"
 
-#: PySubtrans/SubtitleTranslator.py:543
+#: PySubtrans/SubtitleTranslator.py:554
 msgid "Error processing streaming update for scene {scene} batch {batch}: {error}"
 msgstr "Error al procesar la actualización en streaming para la escena {scene}, lote {batch}: {error}"
 
-#: GuiSubtrans/ProjectActions.py:121
+#: GuiSubtrans/ProjectActions.py:122
 msgid "Error redoing the last command: {error}"
 msgstr "Error al rehacer la última acción: {error}"
 
@@ -586,11 +751,11 @@ msgstr "Error al rehacer la última acción: {error}"
 msgid "Error reparsing scene {scene} batch {batch}: {error}"
 msgstr "Error al reanalizar la escena {scene} lote {batch}: {error}"
 
-#: PySubtrans/Options.py:261
+#: PySubtrans/Options.py:269
 msgid "Error saving settings to {}"
 msgstr "Error al guardar la configuración en {}"
 
-#: PySubtrans/SubtitleTranslator.py:191
+#: PySubtrans/SubtitleTranslator.py:199
 msgid "Error translating scene {scene} batch {batch}: {error}"
 msgstr "Error al traducir la escena {scene} lote {batch}: {error}"
 
@@ -599,15 +764,15 @@ msgstr "Error al traducir la escena {scene} lote {batch}: {error}"
 msgid "Error translating scene {scene}: {error}"
 msgstr "Error al traducir la escena {scene}: {error}"
 
-#: GuiSubtrans/ProjectActions.py:102
+#: GuiSubtrans/ProjectActions.py:103
 msgid "Error undoing the last command: {error}"
 msgstr "Error al deshacer la última acción: {error}"
 
-#: GuiSubtrans/NewProjectSettings.py:254
+#: GuiSubtrans/NewProjectSettings.py:255
 msgid "Error: {error}"
 msgstr "Error: {error}"
 
-#: PySubtrans/SubtitleTranslator.py:204
+#: PySubtrans/SubtitleTranslator.py:212
 msgid "Errors encountered translating scene {scene} batch {batch}"
 msgstr "Se encontraron errores al traducir la escena {scene} lote {batch}"
 
@@ -635,10 +800,14 @@ msgstr "Saliendo del programa"
 msgid "Expected a dictionary, got a {type}"
 msgstr "Se esperaba un diccionario, se obtuvo un {type}"
 
-#: GuiSubtrans/ViewModel/ViewModel.py:367
-#: GuiSubtrans/ViewModel/ViewModel.py:471
+#: GuiSubtrans/ViewModel/ViewModel.py:368
+#: GuiSubtrans/ViewModel/ViewModel.py:473
 msgid "Expected a patch dictionary"
 msgstr "Se esperaba un diccionario de parches"
+
+#: GuiSubtrans/SettingsDialog.py:82
+msgid "Extend short subtitles to a minimum reading duration when saving"
+msgstr ""
 
 #: PySubtrans/Providers/Clients/AnthropicClient.py:186
 #: PySubtrans/Providers/Clients/AzureOpenAIClient.py:148
@@ -683,15 +852,15 @@ msgstr "No se pudo inicializar el SDK de OpenAI. El proveedor OpenAI no estará 
 msgid "Failed to initialize Anthropic client"
 msgstr "No se pudo inicializar el cliente de Anthropic"
 
-#: GuiSubtrans/GuiInterface.py:248
+#: GuiSubtrans/GuiInterface.py:250
 msgid "Failed to load instructions from {instructions_file}"
 msgstr "Error al cargar instrucciones desde {instructions_file}"
 
-#: GuiSubtrans/GuiInterface.py:384
+#: GuiSubtrans/GuiInterface.py:423
 msgid "Failed to load project data model."
 msgstr "No se pudo cargar el modelo de datos del proyecto."
 
-#: PySubtrans/SubtitleProject.py:167
+#: PySubtrans/SubtitleProject.py:170
 msgid "Failed to load subtitle file {}: {}"
 msgstr "No se pudo cargar el archivo de subtítulos {}: {}"
 
@@ -713,7 +882,7 @@ msgstr "Error al analizar el contenido: {}"
 msgid "Failed to parse file: {}"
 msgstr "Error al analizar el archivo: {}"
 
-#: PySubtrans/Subtitles.py:228
+#: PySubtrans/Subtitles.py:255
 msgid "Failed to parse subtitles string: {}"
 msgstr "No se pudo analizar la cadena de subtítulos: {}"
 
@@ -722,23 +891,23 @@ msgstr "No se pudo analizar la cadena de subtítulos: {}"
 msgid "Failed to parse subtitles: {}"
 msgstr "Error al analizar subtítulos: {}"
 
-#: PySubtrans/SubtitleProject.py:451
+#: PySubtrans/SubtitleProject.py:454
 msgid "Failed to save project file after translation: {}"
 msgstr "Error al guardar el archivo del proyecto tras la traducción: {}"
 
-#: GuiSubtrans/GuiInterface.py:202
+#: GuiSubtrans/GuiInterface.py:204
 msgid "Failed to switch language - restart the application: {error}"
 msgstr "No se pudo cambiar el idioma - reinicie la aplicación: {error}"
 
-#: PySubtrans/SubtitleTranslator.py:141
+#: PySubtrans/SubtitleTranslator.py:149
 msgid "Failed to translate scene {scene}... stopping translation"
 msgstr "No se pudo traducir la escena {scene}... deteniendo traducción"
 
-#: PySubtrans/SubtitleProject.py:443
+#: PySubtrans/SubtitleProject.py:446
 msgid "Failed to translate subtitles: {}"
 msgstr "No se pudieron traducir los subtítulos: {}"
 
-#: PySubtrans/SubtitleTranslator.py:155
+#: PySubtrans/SubtitleTranslator.py:163
 msgid "Failed to translate {count} lines:"
 msgstr "No se pudieron traducir {count} líneas:"
 
@@ -750,23 +919,31 @@ msgstr "Menor número de líneas para enviar en lote separado"
 msgid "First Run Options"
 msgstr "Opciones de primera ejecución"
 
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:136
+msgid "Forced-aligner checkpoint for word timestamps"
+msgstr ""
+
 #: PySubtrans/SubtitleFormatRegistry.py:63
 msgid "Format cannot be deduced from filename or extension '{name}'. Available formats: {formats}"
 msgstr "El formato no se puede deducir del nombre de archivo o extensión '{name}'. Formatos disponibles: {formats}"
 
-#: PySubtrans/TranslationParser.py:176
+#: PySubtrans/TranslationParser.py:203
 msgid "Found fuzzy match for line {number} in translations"
 msgstr "Se encontró una coincidencia difusa para la línea {number} en las traducciones"
 
-#: PySubtrans/TranslationParser.py:205
+#: PySubtrans/TranslationParser.py:232
 msgid "Found unclosed tag {tag} in translation"
 msgstr "Se encontró una etiqueta sin cerrar {tag} en la traducción"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:381
+msgid "Found {} audio track(s)."
+msgstr ""
 
 #: GuiSubtrans/MainWindow.py:33 GuiSubtrans/MainWindow.py:211
 msgid "GUI-Subtrans"
 msgstr "GUI-Subtrans"
 
-#: GuiSubtrans/SettingsDialog.py:122
+#: GuiSubtrans/SettingsDialog.py:161
 msgid "GUI-Subtrans Settings"
 msgstr "Configuración de GUI-Subtrans"
 
@@ -786,9 +963,21 @@ msgstr "GUI-Subtrans utiliza modelos de lenguaje grande (LLM) para traducir subt
 msgid "GUI-Subtrans would not work without these libraries:\n"
 msgstr "GUI-Subtrans no funcionaría sin estas bibliotecas:\n"
 
-#: GuiSubtrans/Widgets/Widgets.py:119
+#: GuiSubtrans/Widgets/Widgets.py:149
 msgid "Gap: {gap}, Length: {duration}"
 msgstr "Pausa: {gap}, Duración: {duration}"
+
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:142
+msgid "Gemini quota exceeded, retry in {}"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:146
+msgid "Gemini rate limit hit (attempt {}/{}), retrying in {:.0f}s"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:136
+msgid "Gemini rate limit still exceeded after {} attempts: {}"
+msgstr ""
 
 #: PySubtrans/Providers/Clients/GeminiClient.py:118
 msgid "Gemini request failure {error}, retrying in {sleep_time} seconds..."
@@ -818,13 +1007,30 @@ msgstr "La respuesta de Gemini fue bloqueada por razones de seguridad"
 msgid "Gemini response was incomplete"
 msgstr "La respuesta de Gemini fue incompleta"
 
-#: GuiSubtrans/SettingsDialog.py:85
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:80
+msgid "Gemini transcription failed: {}"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:238
+msgid "Gemini transcription runtime is not installed"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:118
 msgid "General"
 msgstr "General"
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:137
+msgid "Generation budget per chunk (long chunks need headroom)"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Gemini.py:10
 msgid "Google SDK (google-genai) is not installed. Gemini provider will not be available"
 msgstr "El SDK de Google (google-genai) no está instalado. El proveedor Gemini no estará disponible"
+
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:25
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:182
+msgid "Google SDK (google-genai) is not installed. Gemini transcription will not be available"
+msgstr ""
 
 #: GuiSubtrans/ProjectToolbar.py:19 GuiSubtrans/ProjectToolbar.py:26
 msgid "Hide/Show Project Options"
@@ -838,19 +1044,27 @@ msgstr "Instrucciones de alto nivel para el traductor"
 msgid "Higher temperature introduces more randomness to the translation (default 0.0)"
 msgstr "Una temperatura más alta introduce más aleatoriedad en la traducción (por defecto 0.0)"
 
-#: PySubtrans/SubtitleTranslator.py:276
+#: PySubtrans/SubtitleTranslator.py:287
 msgid "Hit API token limit with errors, retrying batch without context..."
 msgstr "Se alcanzó el límite de tokens de la API con errores, reintentando el lote sin contexto..."
 
-#: PySubtrans/Subtitles.py:259
+#: PySubtrans/Subtitles.py:289
 msgid "I don't know where to save the translated subtitles"
 msgstr "No sé dónde guardar los subtítulos traducidos"
 
-#: GuiSubtrans/SettingsDialog.py:42
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:79
+msgid "Identify speakers (DIARIZATION mode)"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:255
+msgid "Identify speakers (up to 8, experimental past 3)"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:65
 msgid "If a batch fails validation, split it in half and retry each half separately"
 msgstr "Si un lote falla la validación, dividirlo por la mitad y reintentar cada mitad por separado"
 
-#: GuiSubtrans/SettingsDialog.py:43
+#: GuiSubtrans/SettingsDialog.py:66
 msgid "If true, translations that fail validation will be retried with a note about the error"
 msgstr "Si es verdadero, las traducciones que no pasen la validación se reintentarán con una nota sobre el error"
 
@@ -862,23 +1076,35 @@ msgstr "Mejorar selección"
 msgid "Include Original Text"
 msgstr "Incluir texto original"
 
-#: GuiSubtrans/SettingsDialog.py:35
+#: GuiSubtrans/SettingsDialog.py:58
 msgid "Include original text in translated subtitles"
 msgstr "Incluir el texto original en los subtítulos traducidos"
 
-#: GuiSubtrans/EditInstructionsDialog.py:35
+#: GuiSubtrans/SettingsDialog.py:77
+msgid "Information about the selected transcription provider"
+msgstr ""
+
+#: GuiSubtrans/EditInstructionsDialog.py:42
+msgid "Instructions"
+msgstr ""
+
+#: GuiSubtrans/EditInstructionsDialog.py:44
 msgid "Instructions for building a terminology list"
 msgstr "Instrucciones para crear una lista de terminología"
 
-#: GuiSubtrans/SettingsDialog.py:37
+#: GuiSubtrans/SettingsDialog.py:60
 msgid "Instructions for the translation provider to follow"
 msgstr "Instrucciones que debe seguir el proveedor de traducción"
+
+#: GuiSubtrans/EditInstructionsDialog.py:45
+msgid "Instructions for translating speaker-labelled lines"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Custom.py:102
 msgid "Instructions will be sent as system messages rather than the user prompt"
 msgstr "Las instrucciones se enviarán como mensajes del sistema en lugar de como solicitud del usuario"
 
-#: GuiSubtrans/NewProjectSettings.py:127
+#: GuiSubtrans/NewProjectSettings.py:128
 msgid "Instructions: {text}"
 msgstr "Instrucciones: {text}"
 
@@ -890,15 +1116,23 @@ msgstr "Archivo WebVTT inválido: falta el encabezado WEBVTT"
 msgid "Invalid batch"
 msgstr "Lote no válido"
 
+#: PySubtrans/Transcription/AudioExtractor.py:149
+msgid "Invalid chunk time span"
+msgstr ""
+
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:230
 msgid "Invalid message role: {role}. Must be one of 'user', 'system', 'developer', or 'assistant'."
 msgstr "Rol de mensaje inválido: {role}. Debe ser uno de 'usuario', 'sistema', 'desarrollador' o 'asistente'."
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:428
+msgid "Invalid provider settings"
+msgstr ""
 
 #: PySubtrans/Providers/Clients/OpenAIClient.py:146
 msgid "Invalid response received, retrying in {backoff_time} seconds..."
 msgstr "Se recibió una respuesta no válida, reintentando en {backoff_time} segundos..."
 
-#: PySubtrans/SubtitleTranslator.py:72
+#: PySubtrans/SubtitleTranslator.py:80
 msgid "Invalid substitutions list, must be a dictionary, list or string"
 msgstr "La lista de sustituciones no es válida, debe ser un diccionario, una lista o una cadena"
 
@@ -926,11 +1160,11 @@ msgstr "Idioma al que traducir los subtítulos"
 msgid "Latest Google AI SDK (google-genai) is not installed. Gemini provider will not be available. Run installer or `pip install google-genai` to fix."
 msgstr "El SDK más reciente de Google AI (google-genai) no está instalado. El proveedor Gemini no estará disponible. Ejecuta el instalador o `pip install google-genai` para solucionarlo."
 
-#: GuiSubtrans/Widgets/Widgets.py:119
+#: GuiSubtrans/Widgets/Widgets.py:151
 msgid "Length: {duration}"
 msgstr "Duración: {duration}"
 
-#: GuiSubtrans/SettingsDialog.py:75
+#: GuiSubtrans/SettingsDialog.py:108
 msgid "Limits the number of scene/batch summaries to include as context with each translation batch"
 msgstr "Limita el número de resúmenes de escena/lote que se incluyen como contexto con cada lote de traducción"
 
@@ -957,7 +1191,7 @@ msgstr "Línea {line}: {start} --> {end}"
 msgid "Lines {first}-{last} ({start} -> {end})"
 msgstr "Líneas {first}-{last} ({start} -> {end})"
 
-#: GuiSubtrans/ViewModel/ViewModel.py:542
+#: GuiSubtrans/ViewModel/ViewModel.py:544
 msgid "Lines {lines} not found in batch {batch}"
 msgstr "Líneas {lines} no encontradas en el lote {batch}"
 
@@ -977,8 +1211,8 @@ msgstr "LiteLLM no está instalado. El proveedor LiteLLM no estará disponible"
 msgid "LiteLLM transient error (retry {retry}/{max_retries}): {error}, retrying in {backoff} seconds..."
 msgstr "Error transitorio de LiteLLM (reintento {retry}/{max_retries}): {error}, reintentando en {backoff} segundos..."
 
-#: GuiSubtrans/EditInstructionsDialog.py:41
-#: GuiSubtrans/EditInstructionsDialog.py:140
+#: GuiSubtrans/EditInstructionsDialog.py:50
+#: GuiSubtrans/EditInstructionsDialog.py:165
 msgid "Load Instructions"
 msgstr "Cargar instrucciones"
 
@@ -990,11 +1224,23 @@ msgstr "Cargar proyecto/traducción (Mantener shift para recargar subtítulos)"
 msgid "Load project/translation (reload subtitles)"
 msgstr "Cargar proyecto/traducción (recargar subtítulos)"
 
-#: PySubtrans/SubtitleProject.py:135
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:184
+msgid "Loading Qwen model {} on {}"
+msgstr ""
+
+#: PySubtrans/SubtitleProject.py:138
 msgid "Loading existing project file {}"
 msgstr "Cargando archivo de proyecto existente {}"
 
-#: scripts/gui-subtrans.py:124
+#: PySubtrans/Transcription/TranscriptionProvider.py:164
+msgid "Loading transcription providers"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:113
+msgid "Loading transcription providers..."
+msgstr ""
+
+#: scripts/gui-subtrans.py:127
 msgid "Logging to {path}"
 msgstr "Registrando en {path}"
 
@@ -1002,29 +1248,44 @@ msgstr "Registrando en {path}"
 msgid "Logo generated with <a href=\"https://qwen.ai/home\">Qwen3</a>"
 msgstr "Logotipo generado con <a href=\\\"https://qwen.ai/home\\\">Qwen3</a>"
 
-#: PySubtrans/SubtitleTranslator.py:310
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:446
+msgid "Long transcription line ({:.1f}s, no word timings to split it): '{}'"
+msgstr ""
+
+#: PySubtrans/SubtitleTranslator.py:321
 msgid "Made substitutions in input:\n{replaced}"
 msgstr ""
 "Se hicieron sustituciones en la entrada:\n"
 "{replaced}"
 
-#: PySubtrans/SubtitleTranslator.py:368
+#: PySubtrans/SubtitleTranslator.py:379
 msgid "Made substitutions in output:\n{replaced}"
 msgstr ""
 "Se hicieron sustituciones en la salida:\n"
 "{replaced}"
 
-#: GuiSubtrans/MainToolbar.py:61
+#: GuiSubtrans/MainToolbar.py:62
 msgid "Main Toolbar"
 msgstr "Barra de herramientas principal"
 
-#: GuiSubtrans/NewProjectSettings.py:243
+#: GuiSubtrans/NewProjectSettings.py:244
 msgid "Max batch size is less than min batch size"
 msgstr "El tamaño máximo de lote es menor que el mínimo"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:158
+msgid "Max chunk length"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_LiteLLM.py:77
 msgid "Maximum API requests per minute"
 msgstr "Máximo de solicitudes de API por minuto"
+
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:257
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:81
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:137
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:153
+msgid "Maximum API requests per minute (0 for unlimited)"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:75
 #: PySubtrans/Providers/Provider_Gemini.py:87
@@ -1038,15 +1299,15 @@ msgstr "Número máximo de solicitudes API por minuto."
 msgid "Maximum OpenAI API requests per minute. Mainly useful if you are on the restricted free plan"
 msgstr "Número máximo de solicitudes API de OpenAI por minuto. Principalmente útil si estás en el plan gratuito restringido"
 
-#: GuiSubtrans/SettingsDialog.py:54
+#: GuiSubtrans/SettingsDialog.py:85
 msgid "Maximum duration of a single line of subtitles"
 msgstr "Duración máxima de una línea de subtítulos"
 
-#: GuiSubtrans/SettingsDialog.py:64
+#: GuiSubtrans/SettingsDialog.py:97
 msgid "Maximum length of a single line of subtitles"
 msgstr "Longitud máxima de una línea de subtítulos"
 
-#: GuiSubtrans/SettingsDialog.py:76
+#: GuiSubtrans/SettingsDialog.py:109
 msgid "Maximum length of the context summary to include with each translation batch"
 msgstr "Longitud máxima del resumen de contexto que se incluirá con cada lote de traducción"
 
@@ -1060,13 +1321,35 @@ msgstr "Número máximo de tokens de salida a devolver en la respuesta"
 msgid "Maximum number of output tokens to return in the response."
 msgstr "Número máximo de tokens de salida que se devolverán en la respuesta."
 
-#: GuiSubtrans/SettingsDialog.py:70
+#: GuiSubtrans/SettingsDialog.py:103
 msgid "Maximum number of simultaneous translation threads for fast translation"
 msgstr "Número máximo de hilos simultáneos para traducción rápida"
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:138
+msgid "Maximum requests per minute (0 for unlimited; local inference is unmetered)"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_OpenAI.py:118
 msgid "Maximum tokens a completion can contain (only applicable for -instruct models)"
 msgstr "Número máximo de tokens que puede contener una finalización (solo aplicable a modelos -instruct)"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:139
+msgid "Media file"
+msgstr ""
+
+#: PySubtrans/Transcription/AudioExtractor.py:413
+msgid "Media file has no playable duration"
+msgstr ""
+
+#: PySubtrans/Transcription/AudioExtractor.py:242
+#: PySubtrans/Transcription/AudioExtractor.py:275
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:205
+msgid "Media file not found: {}"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:368
+msgid "Media files"
+msgstr ""
 
 #: GuiSubtrans/Widgets/SelectionView.py:92
 msgid "Merge Batches"
@@ -1080,7 +1363,7 @@ msgstr "Combinar líneas"
 msgid "Merge Scenes"
 msgstr "Combinar escenas"
 
-#: GuiSubtrans/SettingsDialog.py:56
+#: GuiSubtrans/SettingsDialog.py:89
 msgid "Merge lines with a duration less than this with the previous line"
 msgstr "Unir líneas con una duración menor que esta con la línea anterior"
 
@@ -1096,21 +1379,33 @@ msgstr "Combinando escenas {scenes}"
 msgid "Messages"
 msgstr "Mensajes"
 
-#: GuiSubtrans/SettingsDialog.py:55
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:157
+msgid "Min chunk length"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:86
 msgid "Minimum duration of a single line of subtitles"
 msgstr "Duración mínima de una línea de subtítulos"
 
-#: GuiSubtrans/SettingsDialog.py:65
+#: GuiSubtrans/SettingsDialog.py:88
+msgid "Minimum gap between consecutive subtitles, in seconds, used when preprocess_subtitles, extend_short_subtitles, or prevent_overlapping_times is enabled"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:98
 msgid "Minimum length of a single line of subtitles"
 msgstr "Longitud mínima de una línea de subtítulos"
 
-#: GuiSubtrans/SettingsDialog.py:57
+#: GuiSubtrans/SettingsDialog.py:90
 msgid "Minimum number of characters to split a line at"
 msgstr "Número mínimo de caracteres para dividir una línea"
 
 #: PySubtrans/Providers/Provider_Custom.py:114
 msgid "Minimum probability threshold for token sampling (0.0 to disable)"
 msgstr "Umbral de probabilidad mínima para el muestreo de tokens (0.0 para desactivar)"
+
+#: GuiSubtrans/SettingsDialog.py:87
+msgid "Minimum reading time per visible character in seconds"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Mistral.py:12
 msgid "Mistral SDK is not installed. Mistral provider will not be available"
@@ -1127,6 +1422,14 @@ msgstr "Cuota de la cuenta de Mistral alcanzada, por favor actualice su plan o e
 #: GuiSubtrans/Widgets/ProjectSettings.py:159
 msgid "Model"
 msgstr "Modelo"
+
+#: PySubtrans/Transcription/Providers/Clients/OpenRouterTranscriptionClient.py:65
+msgid "Model '{}' does not support timestamped transcription (verbose_json was rejected{}). Choose a model with timestamp support instead of spending credits on untimed text."
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:149
+msgid "Model '{}' returns no timings and cannot produce subtitles"
+msgstr ""
 
 #: PySubtrans/Providers/Clients/BedrockClient.py:66
 msgid "Model ID must be provided as an argument"
@@ -1152,6 +1455,14 @@ msgstr "Nombres"
 #: PySubtrans/Providers/Clients/CustomClient.py:151
 msgid "Network error communicating with server: {error}"
 msgstr "Error de red al comunicarse con el servidor: {error}"
+
+#: PySubtrans/Transcription/TranscriptionClient.py:56
+msgid "No audio data provided for transcription"
+msgstr ""
+
+#: PySubtrans/Transcription/AudioExtractor.py:137
+msgid "No audio tracks found in {}"
+msgstr ""
 
 #: GuiSubtrans/Commands/MergeLinesCommand.py:33
 msgid "No batches found for lines to merge"
@@ -1184,7 +1495,7 @@ msgstr "No se proporcionó contenido para la traducción"
 msgid "No datamodel available to check provider settings"
 msgstr "No hay un modelo de datos disponible para verificar la configuración del proveedor"
 
-#: GuiSubtrans/ProjectActions.py:243
+#: GuiSubtrans/ProjectActions.py:250
 msgid "No datamodel provided"
 msgstr "No se proporcionó ningún modelo de datos"
 
@@ -1192,7 +1503,7 @@ msgstr "No se proporcionó ningún modelo de datos"
 msgid "No deletions to undo"
 msgstr "No hay eliminaciones que deshacer"
 
-#: PySubtrans/Subtitles.py:236
+#: PySubtrans/Subtitles.py:263
 msgid "No file path set"
 msgstr "No se ha establecido ruta de archivo"
 
@@ -1200,11 +1511,11 @@ msgstr "No se ha establecido ruta de archivo"
 msgid "No file path specified"
 msgstr "No se especificó una ruta de archivo"
 
-#: PySubtrans/SubtitleTranslator.py:251
+#: PySubtrans/SubtitleTranslator.py:259
 msgid "No instructions provided for translation"
 msgstr "No se proporcionaron instrucciones para la traducción"
 
-#: PySubtrans/TranslationPrompt.py:168
+#: PySubtrans/TranslationPrompt.py:171
 msgid "No line template provided"
 msgstr "No se proporcionó plantilla de línea"
 
@@ -1242,15 +1553,15 @@ msgstr "No se especificó ningún modelo para LiteLLM"
 msgid "No models available"
 msgstr "No hay modelos disponibles"
 
-#: GuiSubtrans/SettingsDialog.py:408
+#: GuiSubtrans/SettingsDialog.py:498
 msgid "No models available for {provider}"
 msgstr "No hay modelos disponibles para {provider}"
 
-#: PySubtrans/Subtitles.py:247
+#: PySubtrans/Subtitles.py:274
 msgid "No original subtitles to save to {}"
 msgstr "No hay subtítulos originales para guardar en {}"
 
-#: PySubtrans/Subtitles.py:256
+#: PySubtrans/Subtitles.py:286
 msgid "No output path specified, saving to {}"
 msgstr "No se especificó ruta de salida, guardando en {}"
 
@@ -1281,19 +1592,19 @@ msgstr "No se devolvió ninguna salida en la respuesta"
 #: GuiSubtrans/Commands/SplitSceneCommand.py:48
 #: GuiSubtrans/Commands/SwapTextAndTranslations.py:32
 #: GuiSubtrans/Commands/TranslateSceneCommand.py:42
-#: GuiSubtrans/GuiInterface.py:275 GuiSubtrans/GuiInterface.py:290
+#: GuiSubtrans/GuiInterface.py:277 GuiSubtrans/GuiInterface.py:292
 msgid "No project data"
 msgstr "No hay datos del proyecto"
 
-#: PySubtrans/SubtitleProject.py:363
+#: PySubtrans/SubtitleProject.py:366
 msgid "No project file path provided"
 msgstr "No se proporcionó la ruta del archivo del proyecto"
 
-#: PySubtrans/SubtitleProject.py:129
+#: PySubtrans/SubtitleProject.py:132
 msgid "No project or subtitles to load"
 msgstr "No hay proyecto o subtítulos para cargar"
 
-#: PySubtrans/SubtitleTranslator.py:397
+#: PySubtrans/SubtitleTranslator.py:408
 msgid "No prompt to retranslate"
 msgstr "No hay ningún prompt para volver a traducir"
 
@@ -1301,19 +1612,19 @@ msgstr "No hay ningún prompt para volver a traducir"
 msgid "No response from Gemini"
 msgstr "Sin respuesta de Gemini"
 
-#: PySubtrans/SubtitleTranslator.py:400
+#: PySubtrans/SubtitleTranslator.py:411
 msgid "No retry instructions provided"
 msgstr "No se proporcionaron instrucciones de reintento"
 
-#: PySubtrans/Subtitles.py:267
+#: PySubtrans/Subtitles.py:297
 msgid "No scenes in subtitles"
 msgstr "No hay escenas en los subtítulos"
 
-#: GuiSubtrans/ProjectActions.py:265
+#: GuiSubtrans/ProjectActions.py:272
 msgid "No scenes selected for translation"
 msgstr "No hay escenas seleccionadas para traducir"
 
-#: scripts/subtrans_common.py:330
+#: scripts/subtrans_common.py:338
 msgid "No scenes were created from the subtitles"
 msgstr "No se crearon escenas a partir de los subtítulos"
 
@@ -1324,7 +1635,7 @@ msgstr "No se crearon escenas a partir de los subtítulos"
 #: GuiSubtrans/Commands/SplitBatchCommand.py:75
 #: GuiSubtrans/Commands/SplitSceneCommand.py:24
 #: GuiSubtrans/Commands/SplitSceneCommand.py:53
-#: GuiSubtrans/ProjectActions.py:422
+#: GuiSubtrans/ProjectActions.py:429
 msgid "No subtitles"
 msgstr "No hay subtítulos"
 
@@ -1336,15 +1647,15 @@ msgstr "No hay subtítulos en el proyecto"
 msgid "No subtitles to batch"
 msgstr "No hay subtítulos para lotear"
 
-#: PySubtrans/SubtitleTranslator.py:111
+#: PySubtrans/SubtitleTranslator.py:119
 msgid "No subtitles to translate"
 msgstr "No hay subtítulos para traducir"
 
-#: PySubtrans/SubtitleProject.py:173
+#: PySubtrans/SubtitleProject.py:176
 msgid "No subtitles to translate in {}"
 msgstr "No hay subtítulos que traducir en {}"
 
-#: PySubtrans/Subtitles.py:273
+#: PySubtrans/Subtitles.py:303
 msgid "No subtitles translated"
 msgstr "No se tradujeron subtítulos"
 
@@ -1360,7 +1671,11 @@ msgstr "No se encontró contenido de texto en la respuesta"
 msgid "No text returned in the response"
 msgstr "No se devolvió texto en la respuesta"
 
-#: PySubtrans/SubtitleTranslator.py:331
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:289
+msgid "No timed subtitles could be produced from {}"
+msgstr ""
+
+#: PySubtrans/SubtitleTranslator.py:342
 msgid "No translation provided"
 msgstr "No se proporcionó ninguna traducción"
 
@@ -1372,21 +1687,25 @@ msgstr "No hay proveedor de traducción disponible"
 msgid "No translation provider configured"
 msgstr "No hay proveedor de traducción configurado"
 
-#: GuiSubtrans/GuiInterface.py:416 GuiSubtrans/GuiInterface.py:417
+#: GuiSubtrans/GuiInterface.py:455 GuiSubtrans/GuiInterface.py:456
 msgid "No translation providers available. Please install one or more providers."
 msgstr "No hay proveedores de traducción disponibles. Por favor, instala uno o más proveedores."
 
-#: PySubtrans/SubtitleTranslator.py:465
+#: PySubtrans/SubtitleTranslator.py:476
 msgid "No translation returned for batch half"
 msgstr "No se devolvió ninguna traducción para la mitad del lote"
 
-#: PySubtrans/SubtitleTranslator.py:403
+#: PySubtrans/SubtitleTranslator.py:414
 msgid "No translation text to retranslate"
 msgstr "No hay texto de traducción para volver a traducir"
 
-#: PySubtrans/SubtitleTranslator.py:393
+#: PySubtrans/SubtitleTranslator.py:404
 msgid "No translation to retranslate"
 msgstr "No hay ninguna traducción para volver a traducir"
+
+#: GuiSubtrans/Commands/SaveTranslationFile.py:26
+msgid "No translations to save yet"
+msgstr ""
 
 #: GuiSubtrans/Commands/EditBatchCommand.py:57
 #: GuiSubtrans/Commands/EditLineCommand.py:77
@@ -1407,27 +1726,27 @@ msgstr "Ninguno"
 msgid "Not sure what you just double-clicked on"
 msgstr "No estoy seguro de qué acabas de hacer doble clic"
 
-#: GuiSubtrans/ProjectActions.py:352
+#: GuiSubtrans/ProjectActions.py:359
 msgid "Nothing selected to delete"
 msgstr "Nada seleccionado para eliminar"
 
-#: GuiSubtrans/ProjectActions.py:325
+#: GuiSubtrans/ProjectActions.py:332
 msgid "Nothing selected to merge"
 msgstr "Nada seleccionado para fusionar"
 
-#: GuiSubtrans/ProjectActions.py:276
+#: GuiSubtrans/ProjectActions.py:283
 msgid "Nothing selected to reparse"
 msgstr "Nada seleccionado para reanalizar"
 
-#: GuiSubtrans/ProjectActions.py:234
+#: GuiSubtrans/ProjectActions.py:241
 msgid "Nothing selected to translate"
 msgstr "Nada seleccionado para traducir"
 
-#: GuiSubtrans/MainToolbar.py:305
+#: GuiSubtrans/MainToolbar.py:316
 msgid "Nothing to redo"
 msgstr "Nada que rehacer"
 
-#: GuiSubtrans/ProjectActions.py:145
+#: GuiSubtrans/ProjectActions.py:152
 msgid "Nothing to save!"
 msgstr "¡Nada que guardar!"
 
@@ -1435,7 +1754,7 @@ msgstr "¡Nada que guardar!"
 msgid "Nothing to translate"
 msgstr "Nada que traducir"
 
-#: GuiSubtrans/MainToolbar.py:299
+#: GuiSubtrans/MainToolbar.py:310
 msgid "Nothing to undo"
 msgstr "Nada que deshacer"
 
@@ -1443,11 +1762,11 @@ msgstr "Nada que deshacer"
 msgid "Number of seconds gap to consider it a new scene"
 msgstr "Número de segundos de pausa para considerar una nueva escena"
 
-#: GuiSubtrans/SettingsDialog.py:79
+#: GuiSubtrans/SettingsDialog.py:112
 msgid "Number of times to retry a failed translation before giving up"
 msgstr "Número de reintentos antes de abandonar una traducción fallida"
 
-#: GuiSubtrans/EditInstructionsDialog.py:44
+#: GuiSubtrans/EditInstructionsDialog.py:53
 msgid "OK"
 msgstr "Aceptar"
 
@@ -1455,9 +1774,17 @@ msgstr "Aceptar"
 msgid "Only show models from the translation category"
 msgstr "Mostrar solo modelos de la categoría de traducción"
 
-#: GuiSubtrans/ProjectActions.py:134
+#: GuiSubtrans/ProjectActions.py:135
 msgid "Open File"
 msgstr "Abrir archivo"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:203
+msgid "Open as Project"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:147
+msgid "Open transcription settings for this provider"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Azure.py:9
 msgid "OpenAI SDK is not installed. Azure provider will not be available"
@@ -1499,6 +1826,12 @@ msgstr "Formato de subtítulos de salida"
 msgid "Penalise token repetition — values > 1.0 reduce repetitive output (0.0 to disable)"
 msgstr "Penalizar la repetición de tokens: valores > 1.0 reducen la salida repetitiva (0.0 para desactivar)"
 
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:80
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:136
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:152
+msgid "Per-chunk request timeout in seconds"
+msgstr ""
+
 #: GuiSubtrans/MainWindow.py:149
 msgid "Performing {action}"
 msgstr "Realizando {action}"
@@ -1507,23 +1840,27 @@ msgstr "Realizando {action}"
 msgid "Permission denied: {error}"
 msgstr "Permiso denegado: {error}"
 
-#: GuiSubtrans/GuiInterface.py:439
+#: PySubtrans/Transcription/AudioExtractor.py:487
+msgid "Planned {} transcription chunks for {}"
+msgstr ""
+
+#: GuiSubtrans/GuiInterface.py:478
 msgid "Please configure the translation provider settings"
 msgstr "Configura la configuración del proveedor de traducción"
 
-#: GuiSubtrans/ProjectActions.py:381
+#: GuiSubtrans/ProjectActions.py:388
 msgid "Please select a batch to split the scene at"
 msgstr "Selecciona un lote donde dividir la escena"
 
-#: GuiSubtrans/ProjectActions.py:365
+#: GuiSubtrans/ProjectActions.py:372
 msgid "Please select a line to split the batch at"
 msgstr "Selecciona una línea donde dividir el lote"
 
-#: GuiSubtrans/ProjectActions.py:368 GuiSubtrans/ProjectActions.py:384
+#: GuiSubtrans/ProjectActions.py:375 GuiSubtrans/ProjectActions.py:391
 msgid "Please select a single split point"
 msgstr "Selecciona un único punto de división"
 
-#: GuiSubtrans/SettingsDialog.py:52
+#: GuiSubtrans/SettingsDialog.py:81
 msgid "Postprocess subtitles after translation"
 msgstr "Posprocesar subtítulos después de la traducción"
 
@@ -1531,11 +1868,15 @@ msgstr "Posprocesar subtítulos después de la traducción"
 msgid "Preprocess subtitles before batching"
 msgstr "Preprocesar subtítulos antes de agrupar"
 
-#: GuiSubtrans/SettingsDialog.py:51
+#: GuiSubtrans/SettingsDialog.py:80
 msgid "Preprocess subtitles when they are loaded"
 msgstr "Preprocesar subtítulos al cargarlos"
 
-#: GuiSubtrans/SettingsDialog.py:87
+#: GuiSubtrans/SettingsDialog.py:83
+msgid "Prevent overlapping subtitle display times"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:121
 msgid "Processing"
 msgstr "Procesamiento"
 
@@ -1549,7 +1890,7 @@ msgstr "Configuración del proyecto"
 msgid "Project Toolbar"
 msgstr "Barra de herramientas del proyecto"
 
-#: PySubtrans/SubtitleProject.py:146
+#: PySubtrans/SubtitleProject.py:149
 msgid "Project file loaded"
 msgstr "Archivo de proyecto cargado"
 
@@ -1557,11 +1898,11 @@ msgstr "Archivo de proyecto cargado"
 msgid "Project file path must be specified."
 msgstr "Se debe especificar la ruta del archivo del proyecto."
 
-#: PySubtrans/SubtitleProject.py:132
+#: PySubtrans/SubtitleProject.py:135
 msgid "Project file {} exists but will not be used"
 msgstr "El archivo de proyecto {} existe pero no se utilizará"
 
-#: PySubtrans/SubtitleProject.py:377
+#: PySubtrans/SubtitleProject.py:380
 msgid "Project file {} not found"
 msgstr "Archivo de proyecto {} no encontrado"
 
@@ -1569,7 +1910,7 @@ msgstr "Archivo de proyecto {} no encontrado"
 msgid "Project instructions set from {file}"
 msgstr "Instrucciones del proyecto establecidas desde {file}"
 
-#: GuiSubtrans/ProjectActions.py:419
+#: GuiSubtrans/ProjectActions.py:426
 msgid "Project is not valid"
 msgstr "El proyecto no es válido"
 
@@ -1577,27 +1918,32 @@ msgstr "El proyecto no es válido"
 msgid "Prompt"
 msgstr "Solicitud"
 
-#: GuiSubtrans/EditInstructionsDialog.py:31
+#: GuiSubtrans/EditInstructionsDialog.py:35
 msgid "Prompt for each translation request"
 msgstr "Solicitud para cada petición de traducción"
 
-#: GuiSubtrans/NewProjectSettings.py:126
+#: GuiSubtrans/NewProjectSettings.py:127
 msgid "Prompt: {text}"
 msgstr "Solicitud: {text}"
 
 #: GuiSubtrans/Widgets/ProjectSettings.py:157
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:149
 msgid "Provider"
 msgstr "Proveedor"
 
-#: GuiSubtrans/SettingsDialog.py:86
+#: GuiSubtrans/SettingsDialog.py:119
 msgid "Provider Settings"
 msgstr "Configuración del proveedor"
 
-#: GuiSubtrans/NewProjectSettings.py:156
+#: GuiSubtrans/NewProjectSettings.py:157
 msgid "Provider error: {error}"
 msgstr "Error del proveedor: {error}"
 
-#: GuiSubtrans/SettingsDialog.py:441
+#: GuiSubtrans/SettingsDialog.py:480
+msgid "Provider information"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:650
 msgid "Provider is not set"
 msgstr "El proveedor no está configurado"
 
@@ -1609,7 +1955,7 @@ msgstr "Proveedor no especificado en las opciones"
 msgid "Provider settings container is not a dictionary"
 msgstr "El contenedor de configuración del proveedor no es un diccionario"
 
-#: GuiSubtrans/ProjectActions.py:183
+#: GuiSubtrans/ProjectActions.py:190
 msgid "Provider settings validated"
 msgstr "Configuración del proveedor validada"
 
@@ -1621,6 +1967,18 @@ msgstr "El proveedor {provider} necesita configuración: {message}"
 msgid "Provider-prefixed model name (e.g. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
 msgstr "Nombre del modelo con prefijo del proveedor (ej. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
 
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:154
+msgid "Provider-recommended default; reselecting the provider restores it"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:160
+msgid "Qwen transcription failed: {}"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:125
+msgid "Qwen transcription runtime is not installed"
+msgstr ""
+
 #: PySubtrans/Providers/Clients/OpenAIClient.py:119
 msgid "Rate limit hit, retrying in {backoff_time} seconds..."
 msgstr "Límite de peticiones alcanzado, reintentando en {backoff_time} segundos..."
@@ -1629,11 +1987,15 @@ msgstr "Límite de peticiones alcanzado, reintentando en {backoff_time} segundos
 msgid "Rate limit hit, retrying in {retry_seconds} seconds..."
 msgstr "Límite de peticiones alcanzado, reintentando en {retry_seconds} segundos..."
 
-#: PySubtrans/SubtitleTranslator.py:212
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:256
+msgid "Rate-limit retries per chunk before giving up"
+msgstr ""
+
+#: PySubtrans/SubtitleTranslator.py:220
 msgid "Reached max_lines limit of ({lines} lines)... finishing"
 msgstr "Se alcanzó el límite de max_lines de ({lines} líneas)... finalizando"
 
-#: PySubtrans/SubtitleProject.py:366
+#: PySubtrans/SubtitleProject.py:369
 msgid "Reading project data from {}"
 msgstr "Leyendo datos del proyecto desde {}"
 
@@ -1645,19 +2007,19 @@ msgstr "Listo."
 msgid "Reasoning"
 msgstr "Razonamiento"
 
-#: GuiSubtrans/MainToolbar.py:56
+#: GuiSubtrans/MainToolbar.py:57
 msgid "Redo last undone action"
 msgstr "Rehacer la última acción deshecha"
 
-#: GuiSubtrans/MainToolbar.py:303
+#: GuiSubtrans/MainToolbar.py:314
 msgid "Redo {command}"
 msgstr "Rehacer {command}"
 
-#: PySubtrans/SubtitleProject.py:153
+#: PySubtrans/SubtitleProject.py:156
 msgid "Reloading subtitles from the source file"
 msgstr "Recargando subtítulos desde el archivo original"
 
-#: GuiSubtrans/SettingsDialog.py:66
+#: GuiSubtrans/SettingsDialog.py:99
 msgid "Remove filler_words and filler words from subtitles"
 msgstr "Eliminar filler_words y muletillas de los subtítulos"
 
@@ -1665,7 +2027,7 @@ msgstr "Eliminar filler_words y muletillas de los subtítulos"
 msgid "Removing {} translated lines in batch ({},{}) that don't match an original line"
 msgstr "Eliminando {} líneas traducidas en el lote ({},{}) que no coinciden con una línea original"
 
-#: PySubtrans/Subtitles.py:317
+#: PySubtrans/Subtitles.py:351
 msgid "Renumbering subtitle lines due to missing indices"
 msgstr "Renumbrando las líneas de subtítulos debido a índices faltantes"
 
@@ -1677,9 +2039,13 @@ msgstr "Reanalizar traducción"
 msgid "Reparse batches {batches}"
 msgstr "Reanalizar lotes {batches}"
 
-#: PySubtrans/SubtitleTranslator.py:232
+#: PySubtrans/SubtitleTranslator.py:240
 msgid "Reparsing scene {scene} batch {batch} with {count} lines..."
 msgstr "Reanalizando la escena {scene} lote {batch} con {count} líneas..."
+
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:151
+msgid "Request speaker diarization (only supported by some models)"
+msgstr ""
 
 #: PySubtrans/Providers/Clients/CustomClient.py:157
 msgid "Request to server timed out: {error}"
@@ -1705,19 +2071,23 @@ msgstr "Restaurando líneas eliminadas"
 msgid "Resuming"
 msgstr "Reanudando"
 
-#: PySubtrans/SubtitleTranslator.py:114
+#: PySubtrans/SubtitleTranslator.py:122
 msgid "Resuming translation"
 msgstr "Reanudando traducción"
 
-#: PySubtrans/SubtitleTranslator.py:421
+#: PySubtrans/SubtitleTranslator.py:432
 msgid "Retranslation is not the expected type"
 msgstr "La re-traducción no es del tipo esperado"
 
-#: PySubtrans/SubtitleTranslator.py:428
+#: GuiSubtrans/EditInstructionsDialog.py:43
+msgid "Retry"
+msgstr ""
+
+#: PySubtrans/SubtitleTranslator.py:439
 msgid "Retry failed validation: {errors}"
 msgstr "Reintentando tras fallar la validación: {errors}"
 
-#: PySubtrans/SubtitleTranslator.py:430
+#: PySubtrans/SubtitleTranslator.py:441
 msgid "Retry passed validation"
 msgstr "Reintento superó la validación"
 
@@ -1731,40 +2101,44 @@ msgstr "Reintentando en {sleep_time} segundos..."
 msgid "Reuse connection for multiple requests (otherwise a new connection is established for each)"
 msgstr "Reutilizar la conexión para varias solicitudes (de lo contrario, se establece una nueva conexión para cada una)"
 
-#: GuiSubtrans/EditInstructionsDialog.py:42
-#: GuiSubtrans/EditInstructionsDialog.py:157
+#: GuiSubtrans/EditInstructionsDialog.py:51
+#: GuiSubtrans/EditInstructionsDialog.py:183
 msgid "Save Instructions"
 msgstr "Guardar instrucciones"
 
-#: GuiSubtrans/ProjectActions.py:165
+#: GuiSubtrans/ProjectActions.py:172
 msgid "Save Project File"
 msgstr "Guardar archivo de proyecto"
 
-#: GuiSubtrans/ProjectActions.py:165
+#: GuiSubtrans/ProjectActions.py:172
 msgid "Save Translation"
 msgstr "Guardar Traducción"
 
-#: GuiSubtrans/SettingsDialog.py:40
+#: GuiSubtrans/SettingsDialog.py:63
 msgid "Save a backup copy of the project when opening it"
 msgstr "Guardar una copia de seguridad del proyecto al abrirlo"
 
-#: GuiSubtrans/SettingsDialog.py:53
+#: GuiSubtrans/SettingsDialog.py:84
 msgid "Save preprocessed subtitles to a separate file"
 msgstr "Guardar los subtítulos preprocesados en un archivo separado"
 
-#: GuiSubtrans/MainToolbar.py:40
+#: GuiSubtrans/MainToolbar.py:41
 msgid "Save project/translation (Hold shift to save as...)"
 msgstr "Guardar proyecto/traducción (Mantener shift para guardar como...)"
 
-#: GuiSubtrans/MainToolbar.py:41
+#: GuiSubtrans/MainToolbar.py:42
 msgid "Save project/translation as..."
 msgstr "Guardar proyecto/traducción como..."
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:167
+msgid "Save transcribed subtitles"
+msgstr ""
 
 #: GuiSubtrans/Commands/LoadSubtitleFile.py:35
 msgid "Saving backup copy of the project"
 msgstr "Guardando copia de seguridad del proyecto"
 
-#: PySubtrans/Subtitles.py:279
+#: PySubtrans/Subtitles.py:313
 msgid "Saving translation to {}"
 msgstr "Guardando traducción en {}"
 
@@ -1777,19 +2151,19 @@ msgstr "Escena {num}"
 msgid "Scene {scene} Batch {batch}"
 msgstr "Escena {scene} Lote {batch}"
 
-#: PySubtrans/SubtitleTranslator.py:132
+#: PySubtrans/SubtitleTranslator.py:140
 msgid "Scene {scene} already translated {linecount} lines..."
 msgstr "La escena {scene} ya tiene traducidas {linecount} líneas..."
 
-#: PySubtrans/SubtitleTranslator.py:237
+#: PySubtrans/SubtitleTranslator.py:245
 msgid "Scene {scene} batch {batch} already translated {lines} lines..."
 msgstr "La escena {scene} lote {batch} ya tiene traducidas {lines} líneas..."
 
-#: PySubtrans/SubtitleTranslator.py:284
+#: PySubtrans/SubtitleTranslator.py:295
 msgid "Scene {scene} batch {batch} failed validation, requesting retranslation"
 msgstr "La escena {scene} lote {batch} no pasó la validación, solicitando retraducción"
 
-#: PySubtrans/SubtitleTranslator.py:377
+#: PySubtrans/SubtitleTranslator.py:388
 msgid "Scene {scene} batch {batch}: {translated} lines and {untranslated} untranslated."
 msgstr "Escena {scene} lote {batch}: {translated} líneas traducidas y {untranslated} sin traducir."
 
@@ -1797,13 +2171,30 @@ msgstr "Escena {scene} lote {batch}: {translated} líneas traducidas y {untransl
 msgid "Scene {scene}, batch {batch}"
 msgstr "Escena {scene}, lote {batch}"
 
-#: GuiSubtrans/SettingsDialog.py:80
+#: GuiSubtrans/SettingsDialog.py:113
 msgid "Seconds to wait before retrying a failed translation"
 msgstr "Segundos de espera antes de reintentar una traducción fallida"
 
 #: PySubtrans/Providers/Clients/BedrockClient.py:60
 msgid "Secret access key must be set in .env or provided as an argument"
 msgstr "La clave de acceso secreta debe configurarse en .env o proporcionarse como argumento"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:369
+msgid "Select Media File"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:189
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:256
+msgid "Select a media file to begin."
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:458
+msgid "Select a valid media file first."
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:136
+msgid "Select a video or audio file..."
+msgstr ""
 
 #: GuiSubtrans/Widgets/ProjectSettings.py:398
 msgid "Select project to copy settings from"
@@ -1822,13 +2213,51 @@ msgstr "La dirección del servidor o el punto final no están configurados"
 msgid "Server error: {status_code} {text}"
 msgstr "Error del servidor: {status_code} {text}"
 
-#: GuiSubtrans/ProjectDataModel.py:122
+#: GuiSubtrans/ProjectDataModel.py:126
 msgid "Setting output path to {}"
 msgstr "Estableciendo ruta de salida a {}"
 
-#: GuiSubtrans/MainToolbar.py:43
+#: GuiSubtrans/MainToolbar.py:44
 msgid "Settings"
 msgstr "Ajustes"
+
+#: PySubtrans/Transcription/AudioExtractor.py:332
+msgid "Silence detection failed"
+msgstr ""
+
+#: PySubtrans/Transcription/AudioExtractor.py:299
+#: PySubtrans/Transcription/AudioExtractor.py:305
+msgid "Silence detection timed out after {} seconds"
+msgstr ""
+
+#: PySubtrans/Transcription/AudioExtractor.py:293
+msgid "Silence stream was used outside a with block"
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:263
+msgid "Skipping chunk {}: {}"
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:398
+msgid "Skipping silent chunk {} before requesting"
+msgstr ""
+
+#: GuiSubtrans/EditInstructionsDialog.py:45
+msgid "Speakers"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:253
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:149
+msgid "Speech-to-text model"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:134
+msgid "Speech-to-text model (both return timings)"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:77
+msgid "Speech-to-text model (turns carry timings)"
+msgstr ""
 
 #: GuiSubtrans/Widgets/SelectionView.py:88
 msgid "Split Batch"
@@ -1838,11 +2267,11 @@ msgstr "Dividir lote"
 msgid "Split Scene"
 msgstr "Dividir escena"
 
-#: PySubtrans/SubtitleTranslator.py:501
+#: PySubtrans/SubtitleTranslator.py:512
 msgid "Split retranslation has errors: {errors}"
 msgstr "La re-traducción dividida tiene errores: {errors}"
 
-#: PySubtrans/SubtitleTranslator.py:503
+#: PySubtrans/SubtitleTranslator.py:514
 msgid "Split retranslation passed validation"
 msgstr "La re-traducción dividida superó la validación"
 
@@ -1850,7 +2279,7 @@ msgstr "La re-traducción dividida superó la validación"
 msgid "Splitting batch {scene} at batch {batch}"
 msgstr "Dividiendo la escena {scene} en el lote {batch}"
 
-#: PySubtrans/SubtitleTranslator.py:450
+#: PySubtrans/SubtitleTranslator.py:461
 msgid "Splitting scene {scene} batch {batch} into two halves for retranslation..."
 msgstr "Dividiendo la escena {scene} lote {batch} en dos mitades para la re-traducción..."
 
@@ -1858,19 +2287,39 @@ msgstr "Dividiendo la escena {scene} lote {batch} en dos mitades para la re-trad
 msgid "Splitting scene {scene} batch: {batch} at line {line}"
 msgstr "Dividiendo la escena {scene} lote: {batch} en la línea {line}"
 
-#: GuiSubtrans/MainToolbar.py:46
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:135
+msgid "Spoken language hint as ISO code, e.g. en (optional)"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:134
+msgid "Spoken language hint, e.g. Chinese or English (optional, auto-detected when empty)"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:254
+msgid "Spoken language hint, e.g. Chinese or cmn-Hans-CN (optional, auto-detected when empty)"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:150
+msgid "Spoken language hint, e.g. en or Chinese (optional)"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:78
+msgid "Spoken language hint, e.g. english (optional, auto-detected when empty)"
+msgstr ""
+
+#: GuiSubtrans/MainToolbar.py:47
 msgid "Start Translating (hold shift to retranslate)"
 msgstr "Iniciar traducción (mantén pulsado shift para retraducir)"
 
-#: GuiSubtrans/MainToolbar.py:47
+#: GuiSubtrans/MainToolbar.py:48
 msgid "Start retranslating"
 msgstr "Iniciar retraducción"
 
-#: GuiSubtrans/MainToolbar.py:52
+#: GuiSubtrans/MainToolbar.py:53
 msgid "Start retranslating on multiple threads"
 msgstr "Iniciar retraducción en múltiples hilos"
 
-#: GuiSubtrans/MainToolbar.py:51
+#: GuiSubtrans/MainToolbar.py:52
 msgid "Start translating on multiple threads (fast but unsafe)"
 msgstr "Iniciar traducción en varios hilos (rápido pero inseguro)"
 
@@ -1878,11 +2327,11 @@ msgstr "Iniciar traducción en varios hilos (rápido pero inseguro)"
 msgid "Starting"
 msgstr "Iniciando"
 
-#: GuiSubtrans/SettingsDialog.py:44
+#: GuiSubtrans/SettingsDialog.py:67
 msgid "Stop translating if an error is encountered"
 msgstr "Detener la traducción si ocurre un error"
 
-#: GuiSubtrans/MainToolbar.py:54
+#: GuiSubtrans/MainToolbar.py:55
 msgid "Stop translation"
 msgstr "Detener traducción"
 
@@ -1914,19 +2363,19 @@ msgstr "Modo de sustitución"
 msgid "Substitutions"
 msgstr "Sustituciones"
 
-#: scripts/subtrans_common.py:300
+#: scripts/subtrans_common.py:306
 msgid "Subtitle file contains no translatable content"
 msgstr "El archivo de subtítulos no contiene contenido traducible"
 
-#: GuiSubtrans/ProjectActions.py:133 GuiSubtrans/ProjectActions.py:163
+#: GuiSubtrans/ProjectActions.py:134 GuiSubtrans/ProjectActions.py:170
 msgid "Subtitle files"
 msgstr "Archivos de subtítulos"
 
-#: GuiSubtrans/ProjectActions.py:425 PySubtrans/Subtitles.py:82
+#: GuiSubtrans/ProjectActions.py:432 PySubtrans/Subtitles.py:109
 msgid "Subtitles have not been batched"
 msgstr "Los subtítulos no han sido agrupados en lotes"
 
-#: PySubtrans/SubtitleTranslator.py:117
+#: PySubtrans/SubtitleTranslator.py:125
 msgid "Subtitles must be batched before translation"
 msgstr "Los subtítulos deben agruparse en lotes antes de la traducción"
 
@@ -1934,11 +2383,11 @@ msgstr "Los subtítulos deben agruparse en lotes antes de la traducción"
 msgid "Subtrans Files (*.subtrans);;All Files (*)"
 msgstr "Archivos Subtrans (*.subtrans);;Todos los archivos (*)"
 
-#: GuiSubtrans/ProjectActions.py:161
+#: GuiSubtrans/ProjectActions.py:168
 msgid "Subtrans projects"
 msgstr "Proyectos Subtrans"
 
-#: PySubtrans/SubtitleTranslator.py:152
+#: PySubtrans/SubtitleTranslator.py:160
 msgid "Successfully translated {count} lines!"
 msgstr "¡{count} líneas traducidas con éxito!"
 
@@ -1946,15 +2395,15 @@ msgstr "¡{count} líneas traducidas con éxito!"
 msgid "Summary"
 msgstr "Resumen"
 
-#: PySubtrans/SubtitleTranslator.py:522
+#: PySubtrans/SubtitleTranslator.py:533
 msgid "Summary was truncated from {original} to {truncated} characters"
 msgstr "El resumen se truncó de {original} a {truncated} caracteres"
 
-#: PySubtrans/SubtitleTranslator.py:385
+#: PySubtrans/SubtitleTranslator.py:396
 msgid "Summary: {summary}"
 msgstr "Resumen: {summary}"
 
-#: GuiSubtrans/EditInstructionsDialog.py:34
+#: GuiSubtrans/EditInstructionsDialog.py:43
 msgid "Supplementary instructions when retrying"
 msgstr "Instrucciones suplementarias al reintentar"
 
@@ -1962,7 +2411,7 @@ msgstr "Instrucciones suplementarias al reintentar"
 msgid "Swap Text"
 msgstr "Intercambiar texto"
 
-#: GuiSubtrans/EditInstructionsDialog.py:33
+#: GuiSubtrans/EditInstructionsDialog.py:42
 msgid "System instructions for the translator"
 msgstr "Instrucciones del sistema para el traductor"
 
@@ -1981,19 +2430,23 @@ msgstr "Idioma objetivo"
 msgid "Template for the prompt to send to the server (use {prompt} and {context} tags)"
 msgstr "Plantilla para la instrucción a enviar al servidor (use las etiquetas {prompt} y {context})"
 
+#: GuiSubtrans/EditInstructionsDialog.py:44
+msgid "Terminology"
+msgstr ""
+
 #: GuiSubtrans/Widgets/ProjectSettings.py:147
 msgid "Terminology Map"
 msgstr "Mapa de terminología"
 
-#: GuiSubtrans/EditInstructionsDialog.py:28
+#: GuiSubtrans/EditInstructionsDialog.py:30
 msgid "Text Files (*.txt);;All Files (*))"
 msgstr "Archivos de texto (*.txt);;Todos los archivos (*))"
 
-#: GuiSubtrans/SettingsDialog.py:38
+#: GuiSubtrans/SettingsDialog.py:61
 msgid "The (brief) instruction for each batch of subtitles. Some [tags] are automatically filled in"
 msgstr "La instrucción (breve) para cada lote de subtítulos. Algunas [etiquetas] se rellenan automáticamente"
 
-#: GuiSubtrans/NewProjectSettings.py:31 GuiSubtrans/SettingsDialog.py:47
+#: GuiSubtrans/NewProjectSettings.py:31 GuiSubtrans/SettingsDialog.py:70
 msgid "The AI translation service to use"
 msgstr "El servicio de traducción de IA a utilizar"
 
@@ -2030,11 +2483,11 @@ msgstr "La URL base para las solicitudes (por defecto es https://api.mistral.ai)
 msgid "The base URL to use for requests - leave as default unless you know you need something else"
 msgstr "La URL base para las solicitudes: déjala por defecto salvo que sepas que necesitas otra"
 
-#: GuiSubtrans/SettingsDialog.py:33
+#: GuiSubtrans/SettingsDialog.py:56
 msgid "The default language to translate the subtitles to"
 msgstr "El idioma predeterminado al que traducir los subtítulos"
 
-#: GuiSubtrans/FirstRunOptions.py:17 GuiSubtrans/SettingsDialog.py:31
+#: GuiSubtrans/FirstRunOptions.py:17 GuiSubtrans/SettingsDialog.py:54
 msgid "The language of the application interface"
 msgstr "El idioma de la interfaz de la aplicación"
 
@@ -2078,6 +2531,10 @@ msgstr "El límite de velocidad a usar para traducciones (por defecto 60.0)"
 msgid "The temperature to use for translations (default 0.0)"
 msgstr "La temperatura a usar para traducciones (por defecto 0.0)"
 
+#: GuiSubtrans/SettingsDialog.py:74
+msgid "The transcription service to use"
+msgstr ""
+
 #: GuiSubtrans/FirstRunOptions.py:19
 msgid "The translation provider to use"
 msgstr "El proveedor de traducción a utilizar"
@@ -2096,6 +2553,122 @@ msgstr "Presupuesto de tokens para razonamiento. Valores más altos aumentan el 
 #: PySubtrans/Providers/Clients/OpenAIClient.py:75
 msgid "Too many tokens in translation"
 msgstr "Demasiados tokens en la traducción"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:197
+msgid "Transcribe"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:92
+msgid "Transcribe Media"
+msgstr ""
+
+#: GuiSubtrans/MainToolbar.py:38
+msgid "Transcribe audio/video to subtitles"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:181
+msgid "Transcribed lines will appear here..."
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:291
+msgid "Transcribed {} lines from {} chunks"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:556
+msgid "Transcribed {} lines, saved to {}."
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:560
+msgid "Transcribed {} lines."
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:524
+msgid "Transcribing chunk {current}"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:521
+msgid "Transcribing chunk {current}/{total}"
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:217
+msgid "Transcribing {} with {} (chunks stream in while silence detection runs)"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:475
+msgid "Transcribing..."
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:120
+msgid "Transcription Settings"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:116
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:133
+#: PySubtrans/Transcription/TranscriptionClient.py:53
+#: PySubtrans/Transcription/TranscriptionClient.py:89
+msgid "Transcription aborted"
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:255
+msgid "Transcription blocked after {count} consecutive chunk failures: {error}"
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:235
+msgid "Transcription cancelled after {done} chunks"
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:293
+msgid "Transcription cost: ${:.4f}"
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionClient.py:145
+msgid "Transcription failed ({}): non-JSON response: {}"
+msgstr ""
+
+#: GuiSubtrans/Commands/TranscribeMediaCommand.py:152
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:552
+msgid "Transcription failed: {error}"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:551
+msgid "Transcription failed; partial results ({} lines) are available."
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:554
+msgid "Transcription incomplete - partial results ({} lines)."
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:221
+msgid "Transcription of {}"
+msgstr ""
+
+#: GuiSubtrans/GuiInterface.py:322
+msgid "Transcription produced no project"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:668
+msgid "Transcription provider is not set"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:423
+msgid "Transcription providers are still loading..."
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:143
+#: PySubtrans/Transcription/TranscriptionClient.py:140
+msgid "Transcription request failed: POST {} returned {}: {}"
+msgstr ""
+
+#: PySubtrans/Transcription/TranscriptionClient.py:123
+msgid "Transcription request failed: {}"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:98
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:102
+#: PySubtrans/Transcription/Providers/Clients/OpenAITranscriptionClient.py:68
+#: PySubtrans/Transcription/Providers/Clients/OpenAITranscriptionClient.py:82
+msgid "Transcription returned no text"
+msgstr ""
 
 #: GuiSubtrans/Widgets/SelectionView.py:55
 #: GuiSubtrans/Widgets/SelectionView.py:85
@@ -2142,16 +2715,16 @@ msgstr "Traduciendo con el modelo {model}, usando la Base de API: {api_base}"
 msgid "Translating with server at {server_address}{endpoint}"
 msgstr "Traduciendo con el servidor en {server_address}{endpoint}"
 
-#: PySubtrans/SubtitleTranslator.py:119
+#: PySubtrans/SubtitleTranslator.py:127
 msgid "Translating {linecount} lines in {scenecount} scenes"
 msgstr "Traduciendo {linecount} líneas en {scenecount} escenas"
 
-#: PySubtrans/SubtitleError.py:40 PySubtrans/SubtitleProject.py:436
-#: PySubtrans/SubtitleTranslator.py:145
+#: PySubtrans/SubtitleError.py:40 PySubtrans/SubtitleProject.py:439
+#: PySubtrans/SubtitleTranslator.py:153
 msgid "Translation aborted"
 msgstr "Traducción cancelada"
 
-#: PySubtrans/SubtitleTranslator.py:334
+#: PySubtrans/SubtitleTranslator.py:345
 msgid "Translation contains no translated text"
 msgstr "La traducción no contiene texto traducido"
 
@@ -2159,7 +2732,7 @@ msgstr "La traducción no contiene texto traducido"
 msgid "Translation error: {error}, retrying in {backoff_time} seconds..."
 msgstr "Error de traducción: {error}, reintentando en {backoff_time} segundos..."
 
-#: PySubtrans/SubtitleProject.py:440
+#: PySubtrans/SubtitleProject.py:443
 msgid "Translation failed, saving partial results"
 msgstr "La traducción falló, guardando resultados parciales"
 
@@ -2167,7 +2740,7 @@ msgstr "La traducción falló, guardando resultados parciales"
 msgid "Translation provider settings are invalid"
 msgstr "Las configuraciones del proveedor de traducción son inválidas"
 
-#: GuiSubtrans/GuiInterface.py:182
+#: GuiSubtrans/GuiInterface.py:184
 msgid "Translation provider settings are not valid. Please check the settings."
 msgstr "La configuración del proveedor de traducción no es válida. Por favor, revise la configuración."
 
@@ -2175,7 +2748,7 @@ msgstr "La configuración del proveedor de traducción no es válida. Por favor,
 msgid "Translation response error: {error}, retrying in {backoff_time} seconds..."
 msgstr "Error en la respuesta de la traducción: {error}, reintentando en {backoff_time} segundos..."
 
-#: PySubtrans/SubtitleTranslator.py:321
+#: PySubtrans/SubtitleTranslator.py:332
 msgid "Truncating batch to remain within max_lines"
 msgstr "Truncando lote para permanecer dentro de max_lines"
 
@@ -2186,7 +2759,7 @@ msgstr "Truncando lote para permanecer dentro de max_lines"
 msgid "Try a different model family or change filter settings"
 msgstr "Pruebe con otra familia de modelos o cambie la configuración del filtro"
 
-#: GuiSubtrans/EditInstructionsDialog.py:32
+#: GuiSubtrans/EditInstructionsDialog.py:37
 msgid "Type of response expected for each line (must match the example format)"
 msgstr "Tipo de respuesta esperada para cada línea (debe coincidir con el formato del ejemplo)"
 
@@ -2198,17 +2771,26 @@ msgstr "No se puede adquirir el bloqueo de subtítulos"
 msgid "Unable to create option widget for {key}: {error}"
 msgstr "No se puede crear el widget de opción para {key}: {error}"
 
-#: PySubtrans/SubtitleTranslator.py:92
+#: PySubtrans/SubtitleTranslator.py:100
 msgid "Unable to create provider client: {error}"
 msgstr "No se puede crear el cliente del proveedor: {error}"
 
-#: PySubtrans/SubtitleTranslator.py:95
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:283
+msgid "Unable to create transcription provider: {error}"
+msgstr ""
+
+#: PySubtrans/SubtitleTranslator.py:103
 msgid "Unable to create translation client"
 msgstr "No se puede crear el cliente de traducción"
 
-#: GuiSubtrans/ProjectDataModel.py:135
+#: GuiSubtrans/ProjectDataModel.py:139
 msgid "Unable to create {provider} provider: {error}"
 msgstr "No se puede crear el proveedor {provider}: {error}"
+
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:92
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:165
+msgid "Unable to delete uploaded audio: {}"
+msgstr ""
 
 #: GuiSubtrans/Commands/EditBatchCommand.py:28
 #: GuiSubtrans/Commands/EditLineCommand.py:29
@@ -2224,25 +2806,54 @@ msgstr "No se puede encontrar el lote {batch} en la escena {scene}"
 msgid "Unable to initialise Anthropic SDK. Claude provider will not be available"
 msgstr "No se pudo inicializar el SDK de Anthropic. El proveedor Claude no estará disponible"
 
-#: GuiSubtrans/NewProjectSettings.py:130 GuiSubtrans/NewProjectSettings.py:178
+#: PySubtrans/Transcription/AudioExtractor.py:124
+msgid "Unable to list audio tracks: {}"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:196
+msgid "Unable to load Qwen model: {}"
+msgstr ""
+
+#: GuiSubtrans/NewProjectSettings.py:131 GuiSubtrans/NewProjectSettings.py:179
 msgid "Unable to load instructions from {file}: {error}"
 msgstr "No se pueden cargar instrucciones desde {file}: {error}"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:333
+msgid "Unable to load provider options: {error}"
+msgstr ""
 
 #: GuiSubtrans/Commands/LoadSubtitleFile.py:31
 msgid "Unable to load subtitles from {file}"
 msgstr "No se pueden cargar subtítulos de {file}"
 
+#: GuiSubtrans/SettingsDialog.py:612
+msgid "Unable to load transcription provider options: {error}"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:262
+msgid "Unable to load transcription providers."
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:555
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:261
+msgid "Unable to load transcription providers: {error}"
+msgstr ""
+
 #: GuiSubtrans/Commands/LoadSubtitleFile.py:47
 msgid "Unable to load {file} ({error})"
 msgstr "No se puede cargar {file} ({error})"
 
-#: PySubtrans/SubtitleTranslator.py:360
+#: PySubtrans/SubtitleTranslator.py:371
 msgid "Unable to match {count} lines with a source line"
 msgstr "No se pudieron emparejar {count} líneas con una línea fuente"
 
-#: GuiSubtrans/ProjectActions.py:343
+#: GuiSubtrans/ProjectActions.py:350
 msgid "Unable to merge selection ({selection})"
 msgstr "No se puede combinar la selección ({selection})"
+
+#: PySubtrans/Transcription/AudioExtractor.py:110
+msgid "Unable to parse media duration"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:111
 #: PySubtrans/Providers/Provider_OpenRouter.py:275
@@ -2250,13 +2861,29 @@ msgstr "No se puede combinar la selección ({selection})"
 msgid "Unable to parse server response as JSON: {response_text}"
 msgstr "No se puede analizar la respuesta del servidor como JSON: {response_text}"
 
-#: GuiSubtrans/NewProjectSettings.py:194
+#: PySubtrans/Transcription/TranscriptionClient.py:151
+msgid "Unable to parse transcription response"
+msgstr ""
+
+#: GuiSubtrans/NewProjectSettings.py:195
 msgid "Unable to preview batches: {error}"
 msgstr "No se pueden previsualizar los lotes: {error}"
 
-#: PySubtrans/SubtitleProject.py:158
+#: PySubtrans/Transcription/AudioExtractor.py:105
+msgid "Unable to probe media duration: {}"
+msgstr ""
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:385
+msgid "Unable to read media: {error}"
+msgstr ""
+
+#: PySubtrans/SubtitleProject.py:161
 msgid "Unable to read project file, starting afresh"
 msgstr "No se pudo leer el archivo de proyecto, comenzando de nuevo"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:405
+msgid "Unable to record dependency evidence: {error}"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Claude.py:155
 msgid "Unable to retrieve Claude model list: {error}"
@@ -2284,19 +2911,19 @@ msgstr "No se pueden obtener modelos disponibles: {error}"
 msgid "Unable to retrieve models"
 msgstr "No se pueden obtener los modelos"
 
-#: PySubtrans/SubtitleProject.py:248
+#: PySubtrans/SubtitleProject.py:251
 msgid "Unable to save original subtitles: {}"
 msgstr "No se pudieron guardar los subtítulos originales: {}"
 
-#: scripts/subtrans_common.py:387
+#: scripts/subtrans_common.py:395
 msgid "Unable to save terminology file '{path}': {error}"
 msgstr "No se pudo guardar el archivo de terminología '{path}': {error}"
 
-#: PySubtrans/SubtitleProject.py:259
+#: PySubtrans/SubtitleProject.py:262
 msgid "Unable to save translation: {}"
 msgstr "No se pudo guardar la traducción: {}"
 
-#: PySubtrans/SubtitleTranslator.py:264
+#: PySubtrans/SubtitleTranslator.py:275
 msgid "Unable to translate scene {scene} batch {batch}"
 msgstr "No se pudo traducir la escena {scene}, lote {batch}"
 
@@ -2308,15 +2935,15 @@ msgstr "No se puede deshacer el comando SplitBatchCommand: {error}"
 msgid "Unable to undo SplitScene command: {error}"
 msgstr "No se puede deshacer el comando SplitScene: {error}"
 
-#: GuiSubtrans/NewProjectSettings.py:133
+#: GuiSubtrans/NewProjectSettings.py:134
 msgid "Unable to update settings: {error}"
 msgstr "No se puede actualizar la configuración: {error}"
 
-#: GuiSubtrans/MainToolbar.py:55
+#: GuiSubtrans/MainToolbar.py:56
 msgid "Undo last action"
 msgstr "Deshacer última acción"
 
-#: GuiSubtrans/MainToolbar.py:297
+#: GuiSubtrans/MainToolbar.py:308
 msgid "Undo {command}"
 msgstr "Deshacer {command}"
 
@@ -2351,11 +2978,19 @@ msgstr "Error inesperado al analizar SRT: {}"
 msgid "Unexpected response type: {response_type}"
 msgstr "Tipo de respuesta inesperado: {response_type}"
 
+#: PySubtrans/Transcription/TranscriptionClient.py:154
+msgid "Unexpected transcription response shape"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:85
+msgid "Unknown device '{}', using automatic selection"
+msgstr ""
+
 #: PySubtrans/SubtitleFormatRegistry.py:50
 msgid "Unknown subtitle format: {extension}. Available formats: {available}"
 msgstr "Formato de subtítulos desconocido: {extension}. Formatos disponibles: {available}"
 
-#: GuiSubtrans/Command.py:88
+#: GuiSubtrans/Command.py:89
 msgid "Unrecoverable error in {name}"
 msgstr "Error irrecuperable en {name}"
 
@@ -2363,9 +2998,14 @@ msgstr "Error irrecuperable en {name}"
 msgid "Unsupported reasoning effort: {error}. Choose a different reasoning effort or model."
 msgstr "Esfuerzo de razonamiento no compatible: {error}. Elige un esfuerzo de razonamiento o modelo diferente."
 
-#: PySubtrans/SubtitleTranslator.py:157
+#: PySubtrans/SubtitleTranslator.py:165
 msgid "Untranslated > {number}. {text}"
 msgstr "Sin traducir > {number}. {text}"
+
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:94
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:160
+msgid "Uploaded audio has no name; leaving it to expire"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Custom.py:112
 msgid "Use parallel threads for translation requests (may be faster but may not work with the server)"
@@ -2393,19 +3033,27 @@ msgstr "Usando el modelo: {model}"
 msgid "Using proxy: {proxy}"
 msgstr "Usando proxy: {proxy}"
 
-#: GuiSubtrans/SettingsDialog.py:77
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:170
+msgid "VTT and ASS preserve speaker labels; SRT has no speaker field"
+msgstr ""
+
+#: GuiSubtrans/SettingsDialog.py:110
 msgid "Validator: Maximum number of characters to allow in a single translated line"
 msgstr "Validador: número máximo de caracteres permitidos en una sola línea traducida"
 
-#: GuiSubtrans/SettingsDialog.py:78
+#: GuiSubtrans/SettingsDialog.py:111
 msgid "Validator: Maximum number of newlines to allow in a single translated line"
 msgstr "Validador: número máximo de saltos de línea permitidos en una sola línea traducida"
 
-#: GuiSubtrans/SettingsDialog.py:74
+#: GuiSubtrans/SettingsDialog.py:107
 msgid "Whether to substitute whole words or partial matches, or choose automatically based on input language"
 msgstr "Si sustituir palabras completas o coincidencias parciales, o elegir automáticamente según el idioma de entrada"
 
-#: PySubtrans/SubtitleProject.py:401
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:166
+msgid "Write the transcription to a subtitle file alongside the media before translating"
+msgstr ""
+
+#: PySubtrans/SubtitleProject.py:404
 msgid "Writing project data to {}"
 msgstr "Escribiendo datos del proyecto en {}"
 
@@ -2413,9 +3061,13 @@ msgstr "Escribiendo datos del proyecto en {}"
 msgid "access_key"
 msgstr "Clave De Acceso"
 
-#: PySubtrans/Options.py:58
+#: PySubtrans/Options.py:57
 msgid "add_right_to_left_markers"
 msgstr "Añadir Marcadores De Derecha A Izquierda"
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
+msgid "aligner_model"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Azure.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
@@ -2434,6 +3086,10 @@ msgstr "Base Api"
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
 msgid "api_key"
 msgstr "Clave Api"
 
@@ -2441,11 +3097,15 @@ msgstr "Clave Api"
 msgid "api_version"
 msgstr "Versión Api"
 
-#: PySubtrans/Options.py:93
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:153
+msgid "audio over the 10-minute cap, or a malformed request"
+msgstr ""
+
+#: PySubtrans/Options.py:96
 msgid "autosave"
 msgstr "Guardado Automático"
 
-#: PySubtrans/Options.py:86
+#: PySubtrans/Options.py:89
 msgid "autosplit_on_error"
 msgstr "División automática en caso de error"
 
@@ -2453,23 +3113,27 @@ msgstr "División automática en caso de error"
 msgid "aws_region"
 msgstr "Región Aws"
 
-#: PySubtrans/Options.py:91
+#: PySubtrans/Options.py:94
 msgid "backoff_time"
 msgstr "Tiempo De Espera"
 
-#: PySubtrans/Options.py:72
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:156
+msgid "body over 32 MB"
+msgstr ""
+
+#: PySubtrans/Options.py:73
 msgid "break_dialog_on_one_line"
 msgstr "Romper Diálogo En Una Línea"
 
-#: PySubtrans/Options.py:71
+#: PySubtrans/Options.py:72
 msgid "break_long_lines"
 msgstr "Romper Líneas Largas"
 
-#: PySubtrans/Options.py:84
+#: PySubtrans/Options.py:87
 msgid "build_terminology_map"
 msgstr "Crear mapa de terminología"
 
-#: PySubtrans/Options.py:83
+#: PySubtrans/Options.py:86
 msgid "convert_wide_dashes"
 msgstr "Convertir Guiones Largos"
 
@@ -2488,6 +3152,21 @@ msgstr "modelo predeterminado"
 msgid "deployment_name"
 msgstr "Nombre Despliegue"
 
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
+msgid "device"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
+msgid "diarize"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:151
+#: PySubtrans/Transcription/TranscriptionClient.py:139
+msgid "empty response body"
+msgstr ""
+
 #: PySubtrans/Providers/Provider_Gemini.py:0
 msgid "enable_thinking"
 msgstr "Habilitar razonamiento"
@@ -2497,11 +3176,23 @@ msgstr "Habilitar razonamiento"
 msgid "endpoint"
 msgstr "Punto Final"
 
-#: PySubtrans/Options.py:79
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:155
+msgid "endpoint not found"
+msgstr ""
+
+#: PySubtrans/Options.py:67
+msgid "extend_short_subtitles"
+msgstr ""
+
+#: PySubtrans/Transcription/AudioExtractor.py:75
+msgid "ffmpeg and ffprobe are required for transcription but were not found on PATH"
+msgstr ""
+
+#: PySubtrans/Options.py:82
 msgid "filler_words"
 msgstr "Palabras De Relleno"
 
-#: PySubtrans/Options.py:103
+#: PySubtrans/Options.py:108
 msgid "firstrun"
 msgstr "Primera Ejecución"
 
@@ -2509,27 +3200,40 @@ msgstr "Primera Ejecución"
 msgid "free_plan"
 msgstr "Plan Gratuito"
 
-#: PySubtrans/Options.py:82
+#: PySubtrans/Options.py:85
 msgid "full_width_punctuation"
 msgstr "Puntuación Ancho Completo"
 
-#: PySubtrans/Options.py:57
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:186
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:270
+msgid "google-genai dependencies missing, Gemini transcription unavailable ({})"
+msgstr ""
+
+#: PySubtrans/Options.py:56
 msgid "include_original"
 msgstr "Incluir Original"
 
-#: PySubtrans/Options.py:55
+#: PySubtrans/Options.py:54
 msgid "instruction_file"
 msgstr "Archivo Instrucciones"
 
-#: PySubtrans/Options.py:98
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
+msgid "language"
+msgstr ""
+
+#: PySubtrans/Options.py:101
 msgid "last_used_path"
 msgstr "Última Ruta Usada"
 
-#: PySubtrans/Options.py:61
+#: PySubtrans/Options.py:60
 msgid "max_batch_size"
 msgstr "Tamaño Máximo Lote"
 
-#: PySubtrans/Options.py:63
+#: PySubtrans/Options.py:62
 msgid "max_characters"
 msgstr "Máximo Caracteres"
 
@@ -2537,7 +3241,7 @@ msgstr "Máximo Caracteres"
 msgid "max_completion_tokens"
 msgstr "Máximo Tokens Completados"
 
-#: PySubtrans/Options.py:62
+#: PySubtrans/Options.py:61
 msgid "max_context_summaries"
 msgstr "Máximo Resúmenes Contexto"
 
@@ -2545,27 +3249,32 @@ msgstr "Máximo Resúmenes Contexto"
 msgid "max_instruct_tokens"
 msgstr "Máximo Tokens Instrucción"
 
-#: PySubtrans/Options.py:73
+#: PySubtrans/Options.py:74
 msgid "max_line_duration"
 msgstr "Duración Máxima Línea"
 
-#: PySubtrans/Options.py:87
+#: PySubtrans/Options.py:90
 msgid "max_lines"
 msgstr "Máximo Líneas"
 
-#: PySubtrans/Options.py:64
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
+msgid "max_new_tokens"
+msgstr ""
+
+#: PySubtrans/Options.py:63
 msgid "max_newlines"
 msgstr "Máximo Saltos Línea"
 
-#: PySubtrans/Options.py:89
+#: PySubtrans/Options.py:92
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
 msgid "max_retries"
 msgstr "Máximo Reintentos"
 
-#: PySubtrans/Options.py:65
+#: PySubtrans/Options.py:64
 msgid "max_single_line_length"
 msgstr "Longitud Máxima Línea Única"
 
-#: PySubtrans/Options.py:90
+#: PySubtrans/Options.py:93
 msgid "max_summary_length"
 msgstr "Longitud Máxima Resumen"
 
@@ -2573,7 +3282,7 @@ msgstr "Longitud Máxima Resumen"
 msgid "max_thinking_tokens"
 msgstr "Máximo Tokens Pensamiento"
 
-#: PySubtrans/Options.py:88
+#: PySubtrans/Options.py:91
 msgid "max_threads"
 msgstr "Máximo Hilos"
 
@@ -2587,15 +3296,19 @@ msgstr "Máximo Hilos"
 msgid "max_tokens"
 msgstr "Máximo Tokens"
 
-#: PySubtrans/Options.py:75
+#: PySubtrans/Options.py:78
 msgid "merge_line_duration"
 msgstr "Duración Fusión Línea"
 
-#: PySubtrans/Options.py:60
+#: PySubtrans/Options.py:59
 msgid "min_batch_size"
 msgstr "Tamaño Mínimo Lote"
 
-#: PySubtrans/Options.py:74
+#: PySubtrans/Options.py:77
+msgid "min_gap"
+msgstr ""
+
+#: PySubtrans/Options.py:75
 msgid "min_line_duration"
 msgstr "Duración Mínima Línea"
 
@@ -2603,11 +3316,11 @@ msgstr "Duración Mínima Línea"
 msgid "min_p"
 msgstr "Probabilidad mínima (min_p)"
 
-#: PySubtrans/Options.py:66
+#: PySubtrans/Options.py:65
 msgid "min_single_line_length"
 msgstr "Longitud Mínima Línea Única"
 
-#: PySubtrans/Options.py:76
+#: PySubtrans/Options.py:79
 msgid "min_split_chars"
 msgstr "Mínimo Caracteres División"
 
@@ -2621,6 +3334,11 @@ msgstr "Mínimo Caracteres División"
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
 msgid "model"
 msgstr "Modelo"
 
@@ -2633,7 +3351,11 @@ msgstr "Familia de modelos"
 msgid "multithreaded"
 msgstr "multihilo"
 
-#: PySubtrans/Options.py:77
+#: PySubtrans/Transcription/TranscriptionClient.py:137
+msgid "non-JSON response (check the Server address): {}"
+msgstr ""
+
+#: PySubtrans/Options.py:80
 msgid "normalise_dialog_tags"
 msgstr "Normalizar Etiquetas Diálogo"
 
@@ -2641,27 +3363,31 @@ msgstr "Normalizar Etiquetas Diálogo"
 msgid "only_translation_models"
 msgstr "Solo modelos de traducción"
 
+#: PySubtrans/Options.py:69
+msgid "postprocess_transcription"
+msgstr ""
+
 #: PySubtrans/Options.py:68
 msgid "postprocess_translation"
 msgstr "Postprocesar Traducción"
 
-#: PySubtrans/Options.py:69
+#: PySubtrans/Options.py:70
 msgid "preprocess_subtitles"
 msgstr "Preprocesar Subtítulos"
 
-#: PySubtrans/Options.py:67
+#: PySubtrans/Options.py:66
 msgid "prevent_overlapping_times"
 msgstr "Prevenir tiempos superpuestos"
 
-#: PySubtrans/Options.py:94
+#: PySubtrans/Options.py:97
 msgid "preview"
 msgstr "vista previa"
 
-#: PySubtrans/Options.py:92
+#: PySubtrans/Options.py:95
 msgid "project_file"
 msgstr "Archivo de Proyecto"
 
-#: PySubtrans/Options.py:54
+#: PySubtrans/Options.py:53
 msgid "prompt"
 msgstr "Solicitud"
 
@@ -2669,11 +3395,11 @@ msgstr "Solicitud"
 msgid "prompt_template"
 msgstr "Plantilla Solicitud"
 
-#: PySubtrans/Options.py:52
+#: PySubtrans/Options.py:50
 msgid "provider"
 msgstr "Proveedor"
 
-#: PySubtrans/Options.py:53
+#: PySubtrans/Options.py:52
 msgid "provider_settings"
 msgstr "Configuración Proveedor"
 
@@ -2687,8 +3413,25 @@ msgstr "Configuración Proveedor"
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
 msgid "proxy"
 msgstr "Proxy"
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:209
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:142
+msgid "qwen-asr dependencies missing, Qwen Local provider unavailable ({})"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:29
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:58
+msgid "qwen-asr package is not installed. Qwen Local provider will not be available"
+msgstr ""
+
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:157
+msgid "rate limited"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Bedrock.py:0
 #: PySubtrans/Providers/Provider_Claude.py:0
@@ -2699,6 +3442,11 @@ msgstr "Proxy"
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
 msgid "rate_limit"
 msgstr "Límite Tasa"
 
@@ -2706,15 +3454,15 @@ msgstr "Límite Tasa"
 msgid "reasoning_effort"
 msgstr "Esfuerzo Razonamiento"
 
-#: PySubtrans/Options.py:97
+#: PySubtrans/Options.py:100
 msgid "reload"
 msgstr "recargar"
 
-#: PySubtrans/Options.py:78
+#: PySubtrans/Options.py:81
 msgid "remove_filler_words"
 msgstr "Eliminar Palabras De Relleno"
 
-#: PySubtrans/Options.py:96
+#: PySubtrans/Options.py:99
 msgid "reparse"
 msgstr "reanalizar"
 
@@ -2722,11 +3470,18 @@ msgstr "reanalizar"
 msgid "repetition_penalty"
 msgstr "Penalización por repetición"
 
-#: PySubtrans/Options.py:95
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
+msgid "request_timeout"
+msgstr ""
+
+#: PySubtrans/Options.py:98
 msgid "retranslate"
 msgstr "retraducir"
 
-#: PySubtrans/Options.py:85
+#: PySubtrans/Options.py:88
 msgid "retry_on_error"
 msgstr "Reintentar En Error"
 
@@ -2736,13 +3491,17 @@ msgstr "Reintentar En Error"
 msgid "reuse_client"
 msgstr "Reutilizar Cliente"
 
-#: PySubtrans/Options.py:70
+#: PySubtrans/Options.py:71
 msgid "save_preprocessed_subtitles"
 msgstr "Guardar Subtítulos Preprocesados"
 
-#: PySubtrans/Options.py:59
+#: PySubtrans/Options.py:58
 msgid "scene_threshold"
 msgstr "Umbral Escena"
+
+#: PySubtrans/Options.py:76
+msgid "seconds_per_character"
+msgstr ""
 
 #: PySubtrans/Providers/Provider_Bedrock.py:0
 msgid "secret_access_key"
@@ -2751,6 +3510,9 @@ msgstr "Clave Secreta Acceso"
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
 msgid "server_address"
 msgstr "Dirección Servidor"
 
@@ -2762,7 +3524,7 @@ msgstr "Url Servidor"
 msgid "single threaded"
 msgstr "de un solo hilo"
 
-#: PySubtrans/Options.py:99
+#: PySubtrans/Options.py:104
 msgid "stop_on_error"
 msgstr "Detener En Error"
 
@@ -2775,7 +3537,7 @@ msgstr "Detener En Error"
 msgid "stream_responses"
 msgstr "Transmitir respuestas"
 
-#: PySubtrans/Options.py:80
+#: PySubtrans/Options.py:83
 msgid "substitution_mode"
 msgstr "Modo Sustitución"
 
@@ -2791,7 +3553,7 @@ msgstr "Soporta Hilos Paralelos"
 msgid "supports_system_messages"
 msgstr "Soporta Mensajes Sistema"
 
-#: PySubtrans/Options.py:56
+#: PySubtrans/Options.py:55
 msgid "target_language"
 msgstr "Idioma Destino"
 
@@ -2808,7 +3570,11 @@ msgstr "Idioma Destino"
 msgid "temperature"
 msgstr "Temperatura"
 
-#: PySubtrans/Options.py:101
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:154
+msgid "the credential was not accepted"
+msgstr ""
+
+#: PySubtrans/Options.py:106
 msgid "theme"
 msgstr "Tema"
 
@@ -2825,6 +3591,18 @@ msgid "timeout"
 msgstr "Tiempo De Espera"
 
 #: PySubtrans/Options.py:102
+msgid "transcription_ffmpeg_available"
+msgstr ""
+
+#: PySubtrans/Options.py:51
+msgid "transcription_provider"
+msgstr ""
+
+#: PySubtrans/Options.py:103
+msgid "transcription_torch_device"
+msgstr ""
+
+#: PySubtrans/Options.py:107
 msgid "ui_language"
 msgstr "Idioma Interfaz"
 
@@ -2841,15 +3619,15 @@ msgstr "Usar modelo predeterminado"
 msgid "use_httpx"
 msgstr "Usar Httpx"
 
-#: PySubtrans/Options.py:51
+#: PySubtrans/Options.py:49
 msgid "version"
 msgstr "Versión"
 
-#: PySubtrans/Options.py:81
+#: PySubtrans/Options.py:84
 msgid "whitespaces_to_newline"
 msgstr "Espacios A Salto De Línea"
 
-#: PySubtrans/Options.py:100
+#: PySubtrans/Options.py:105
 msgid "write_backup"
 msgstr "Escribir Copia Seguridad"
 
@@ -2901,7 +3679,7 @@ msgstr "{done} de {total} líneas traducidas"
 msgid "{lines} lines in {batches} batches"
 msgstr "{lines} líneas en {batches} lotes"
 
-#: GuiSubtrans/NewProjectSettings.py:250
+#: GuiSubtrans/NewProjectSettings.py:251
 msgid "{lines} lines in {scenes} scenes and {batches} batches"
 msgstr "{lines} líneas en {scenes} escenas y {batches} lotes"
 
@@ -2920,6 +3698,13 @@ msgstr "{} líneas estaban vacías y no se escribieron en el archivo de salida"
 #: PySubtrans/Formats/SrtFileHandler.py:75
 msgid "{} lines were invalid and were not written to the output file"
 msgstr "{} líneas no eran válidas y no se escribieron en el archivo de salida"
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:95
+msgid "{} unavailable, running Qwen transcription on CPU (slow)"
+msgstr ""
+
+#~ msgid "Error migrating settings from {} to {}. You can copy the files manually and restart the application."
+#~ msgstr "Error al migrar la configuración de {} a {}. Puede copiar los archivos manualmente y reiniciar la aplicación."
 
 #~ msgid "Hit API token limit, retrying batch without context..."
 #~ msgstr "Se alcanzó el límite de tokens de la API, reintentando el lote sin contexto..."

@@ -48,7 +48,7 @@ class SettingsDialog(QDialog):
     Some dropdowns are populated dynamically when the dialog is created, based on the available themes and instruction files.
     """
     PROVIDER_SECTION = 'Provider Settings'
-    TRANSCRIPTION_SECTION = 'Transcription'
+    TRANSCRIPTION_SECTION = 'Transcription Settings'
     SECTIONS = {
         'General': {
             'ui_language': (str, _("The language of the application interface")),
@@ -74,6 +74,7 @@ class SettingsDialog(QDialog):
             'transcription_provider': ([], _("The transcription service to use")),
             'transcription_provider_settings': TranscriptionProvider,
             'postprocess_transcription': (bool, _("Clean transcribed lines with the same normalizations used for loaded subtitles (dashes, filler words, line breaks)")),
+            'provider_info': (str, _("Information about the selected transcription provider")),
         },
         'Processing': {
             'preprocess_subtitles': (bool, _("Preprocess subtitles when they are loaded")),
@@ -116,7 +117,7 @@ class SettingsDialog(QDialog):
     _translated_sections = {
         'General': _("General"),
         PROVIDER_SECTION: _("Provider Settings"),
-        TRANSCRIPTION_SECTION: _("Transcription"),
+        TRANSCRIPTION_SECTION: _("Transcription Settings"),
         'Processing': _("Processing"),
         'Advanced': _("Advanced")
     }
@@ -265,6 +266,9 @@ class SettingsDialog(QDialog):
                             # This is a global transcription default, rather
                             # than an option belonging to one provider.
                             self.settings[key] = field.GetValue()
+                        elif key == 'provider_info':
+                            # This is a read-only field, not a setting to save.
+                            continue
                         else:
                             provider = self.settings.get_str('transcription_provider') or 'Unknown'
                             namespace = self._get_transcription_provider_settings(provider)
@@ -343,9 +347,10 @@ class SettingsDialog(QDialog):
                 self._add_provider_options(section_name, layout)
             elif key_type == TranscriptionProvider:
                 self._add_transcription_provider_options(section_name, layout)
+            elif key == 'provider_info':
+                # This is a read-only field, not a setting to save.
+                self._add_provider_info(section_name, layout)
             elif key in self.settings:
-                if section_name == self.TRANSCRIPTION_SECTION and key == 'postprocess_transcription':
-                    layout.addRow(QLabel(_("General transcription settings")))
                 field = CreateOptionWidget(key, self.settings[key], key_type, tooltip=tooltip)
                 field.contentChanged.connect(lambda setting=field: self._on_setting_changed(section_name, setting.key, setting.GetValue()))
                 layout.addRow(field.name, field)
@@ -439,7 +444,19 @@ class SettingsDialog(QDialog):
             layout.addRow(field.name, field)
             self.widgets[key] = field
 
-        provider_info = self.translation_provider.GetInformation()
+        self._add_provider_info(section_name, layout)
+
+    def _add_provider_info(self, section_name : str, layout : QFormLayout):
+        """
+        Add a read-only field for provider information to the form
+        """
+        if section_name == self.TRANSCRIPTION_SECTION and self.transcription_provider:
+            provider_info = self.transcription_provider.GetInformation(*self._transcription_dependency_state())
+        elif section_name == self.PROVIDER_SECTION and self.translation_provider:
+            provider_info = self.translation_provider.GetInformation()
+        else:
+            return
+
         if provider_info:
             self._add_provider_info_widget(layout, provider_info)
 
@@ -587,7 +604,7 @@ class SettingsDialog(QDialog):
         if not self.transcription_provider:
             return
 
-        layout.addRow(QLabel(_("Provider options")))
+        # layout.addRow(QLabel(_("Provider options")))
 
         try:
             schema = self.transcription_provider.GetOptions(self.transcription_provider.settings)
@@ -601,10 +618,6 @@ class SettingsDialog(QDialog):
             field.contentChanged.connect(lambda setting=field: self._on_setting_changed(section_name, setting.key, setting.GetValue()))
             layout.addRow(field.name, field)
             self.widgets[key] = field
-
-        provider_info = self.transcription_provider.GetInformation(*self._transcription_dependency_state())
-        if provider_info:
-            self._add_provider_info_widget(layout, provider_info)
 
     def closeEvent(self, event) -> None:
         """Stop the provider loader if the dialog closes early."""

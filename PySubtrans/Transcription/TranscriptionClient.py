@@ -76,7 +76,6 @@ class TranscriptionClient:
         """
         Make the backend request. Must be implemented by subclasses.
         """
-        _ = audio_bytes, audio_format, language
         raise NotImplementedError
 
     def _sleep_abortable(self, seconds : float) -> None:

@@ -103,7 +103,7 @@ class TranscriptionProvider:
         no effective key is configured. Qwen defines no walkthrough: it is
         keyless, so there is nothing to walk through.
         """
-        _ = torch_device  # Only Qwen Local cares about torch state
+        # Only Qwen Local cares about torch state.
         if not self.settings.get_str('api_key') and self.information_noapikey:
             return self.information_noapikey
         return getattr(self, 'information', None)

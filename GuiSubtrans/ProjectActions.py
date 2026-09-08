@@ -141,10 +141,6 @@ class ProjectActions(QObject):
         """
         Open the transcription dialog for a new media file
         """
-        if self._command_queue.has_running_commands:
-            logging.warning(_("Cannot transcribe while commands are running"))
-            return
-
         self.transcribeMedia.emit()
 
     def SaveProject(self):

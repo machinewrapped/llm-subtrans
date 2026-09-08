@@ -374,7 +374,7 @@ class TranscriptionCoordinator:
                 batch.originals[:] = [line for line in processor.PostprocessSubtitles(batch.originals)
                                       if line.text and line.text.strip()]
         # Re-derive the flat line list: batches hold the edited copies now
-        subtitles.originals, subtitles.translated, dummy = UnbatchScenes(subtitles.scenes)
+        subtitles.originals, subtitles.translated, _dummy = UnbatchScenes(subtitles.scenes)
 
     def _validate_transcription(self, subtitles : Subtitles, options : Options) -> None:
         """

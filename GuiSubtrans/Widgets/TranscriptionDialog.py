@@ -1,9 +1,8 @@
 import logging
 import os
-import sys
 import time
 
-from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtCore import QObject, QThread, Qt, Signal, Slot
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -24,8 +23,9 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
+from GuiSubtrans.SettingsDialog import SettingsDialog
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget
-from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Time import TimedeltaToText
 from PySubtrans.Options import Options
@@ -35,42 +35,6 @@ from PySubtrans.Transcription.AudioExtractor import SUPPORTED_MEDIA_EXTENSIONS, 
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
-
-
-class _TranscriptionWorker(QObject):
-    """
-    Runs transcription off the GUI thread and reports back via signals.
-    """
-    progressed = Signal(int, int, str)
-    segmented = Signal(object)
-    finished = Signal(object)
-    failed = Signal(str, object)
-
-    def __init__(self, coordinator : TranscriptionCoordinator, media_path : str, options : Options|None = None):
-        super().__init__()
-        self.coordinator : TranscriptionCoordinator = coordinator
-        self.media_path : str = media_path
-        self.options : Options|None = options
-
-    @Slot()
-    def run(self) -> None:
-        """Transcribe the media file, emitting progress as chunks complete."""
-        try:
-            project = self.coordinator.CreateTranscriptionProject(
-                self.media_path, self.options,
-                lambda done, total, span: self.progressed.emit(done, total, span),
-                lambda segment: self.segmented.emit(segment))
-            self.finished.emit(project)
-        except Exception as e:
-            # Coordinators may retain a project assembled before a recoverable
-            # failure. Keep it available so the user can open the billed work.
-            partial_project = None
-            partial_subtitles = self.coordinator.partial_subtitles
-            if partial_subtitles is not None:
-                partial_project = SubtitleProject(persistent=False)
-                partial_project.subtitles = partial_subtitles
-                partial_project.projectfile = partial_project.GetProjectFilepath(self.media_path)
-            self.failed.emit(str(e), partial_project)
 
 
 class _ProviderLoaderWorker(QObject):
@@ -105,10 +69,12 @@ class TranscriptionDialog(QDialog):
     """
     App-modal dialog for transcribing media to a translation-ready project.
 
-    The dialog owns its worker thread: the main window stays blocked while
-    transcription runs, and accepting the dialog hands a SubtitleProject to
-    the existing translation workflow (same as loading a source subtitle).
+    Builds a queue-owned transcription command and observes its signals
+    while the main window stays blocked. Acceptance hands its project to
+    the existing loading flow.
     """
+    commandRequested = Signal(object)
+
     def __init__(self, options : Options, parent=None):
         super().__init__(parent)
         self.setWindowTitle(_("Transcribe Media"))
@@ -116,8 +82,6 @@ class TranscriptionDialog(QDialog):
         self.setMinimumHeight(560)
 
         self.global_options : Options = options
-        self.coordinator : TranscriptionCoordinator|None = None
-        self.thread : QThread|None = None
         self.loader_thread : QThread|None = None
         self.project : SubtitleProject|None = None
         self.media_path : str|None = None
@@ -129,7 +93,7 @@ class TranscriptionDialog(QDialog):
         self._chunks_total : int = 0
         self._last_span : str = ""
         self._close_requested : bool = False
-        self._worker_active : bool = False
+        self.active_command : TranscribeMediaCommand|None = None
         self._pending_accept : bool = False
 
         self._build_form()
@@ -297,7 +261,7 @@ class TranscriptionDialog(QDialog):
         self.loader_thread = None
         if finished_thread is not None:
             finished_thread.deleteLater()
-        if self._close_requested and (self.thread is None or not self.thread.isRunning()):
+        if self._close_requested and self.active_command is None:
             self._close_requested = False
             self.reject()
 
@@ -335,7 +299,6 @@ class TranscriptionDialog(QDialog):
 
     def _open_transcription_settings(self) -> None:
         """Edit transcription provider settings without leaving the dialog."""
-        from GuiSubtrans.SettingsDialog import SettingsDialog
         dialog = SettingsDialog(self.global_options, parent=self, focus_transcription_settings=True)
         if dialog.exec() != QDialog.DialogCode.Accepted:
             return
@@ -414,19 +377,25 @@ class TranscriptionDialog(QDialog):
             self._record_ffmpeg_if_missing(e)
             self.status_label.setText(_("Unable to read media: {error}").format(error=str(e)))
 
-    def _record_dependency_evidence(self, ffmpeg_available : bool|None = None) -> None:
+    def _record_dependency_evidence(self, ffmpeg_available : bool|None = None, torch_device : str|None = None) -> None:
         """
         Persist dependency facts learned from real runs, never from probes:
-        ffmpeg proven when this hook runs after extraction or track listing.
+        ffmpeg proven by extraction or track listing; the torch device only
+        when the run itself imported it (cloud providers pay nothing).
         """
-        if ffmpeg_available is None:
+        evidence : dict[str, object] = {}
+        if ffmpeg_available is not None:
+            evidence['transcription_ffmpeg_available'] = ffmpeg_available
+        if torch_device:
+            evidence['transcription_torch_device'] = torch_device
+        changed = {key: value for key, value in evidence.items() if self.global_options.get(key) != value}
+        if not changed:
             return
         try:
-            if self.global_options.get('transcription_ffmpeg_available') is not ffmpeg_available:
-                self.global_options['transcription_ffmpeg_available'] = ffmpeg_available
-                self.global_options.SaveSettings()
+            self.global_options.update(changed)
+            self.global_options.SaveSettings()
         except Exception as e:
-            logging.debug(_("Unable to record ffmpeg state: {error}").format(error=str(e)))
+            logging.debug(_("Unable to record dependency evidence: {error}").format(error=str(e)))
 
     def _record_ffmpeg_if_missing(self, error : Exception) -> None:
         """
@@ -440,7 +409,8 @@ class TranscriptionDialog(QDialog):
         except Exception:
             self._record_dependency_evidence(ffmpeg_available=False)
 
-    def _build_coordinator(self) -> TranscriptionCoordinator|None:
+    def _build_command(self) -> TranscribeMediaCommand|None:
+        """Snapshot widget values for a queue-owned transcription run."""
         provider = self.provider
         if provider is None:
             self.status_label.setText(_("Transcription providers are still loading..."))
@@ -450,13 +420,6 @@ class TranscriptionDialog(QDialog):
         if not provider.ValidateSettings():
             self.status_label.setText(provider.validation_message or _("Invalid provider settings"))
             return None
-        client = provider.GetTranscriptionClient(SettingsType())
-        if not client.supports_timestamps:
-            self.status_label.setText(_(
-                "'{}' cannot provide subtitle timings, so transcription "
-                "would produce no usable subtitles."
-            ).format(provider.name))
-            return None
         settings = SettingsType({
             'audio_track': self.track_combo.currentData() or 0,
             'language': provider.settings.get_str('language'),
@@ -464,7 +427,12 @@ class TranscriptionDialog(QDialog):
             'max_chunk_seconds': self.max_chunk_spin.value(),
             'transcription_align': True,
         })
-        return TranscriptionCoordinator(provider, settings)
+        if self.media_path is None:
+            return None
+        return TranscribeMediaCommand(
+            provider, self.media_path, settings, self._transcription_options(),
+            save_transcription=self.save_check.isChecked(),
+            output_format=self.format_combo.currentText())
 
     def _transcription_options(self) -> Options:
         """
@@ -476,13 +444,14 @@ class TranscriptionDialog(QDialog):
         return options
 
     def _start_transcription(self) -> None:
+        if self.active_command is not None:
+            return
         if not self.media_path or not os.path.isfile(self.media_path):
             self.status_label.setText(_("Select a valid media file first."))
             return
-        coordinator = self._build_coordinator()
-        if coordinator is None:
+        command = self._build_command()
+        if command is None:
             return
-        self.coordinator = coordinator
         self.project = None
         self.results_view.clear()
         self._run_started = time.monotonic()
@@ -491,26 +460,21 @@ class TranscriptionDialog(QDialog):
         self._last_span = ""
         self._pending_accept = False
         self._close_requested = False
-        self.worker = _TranscriptionWorker(coordinator, self.media_path, self._transcription_options())
-        self._worker_active = True
-        self.thread = QThread(self)
-        self.worker.moveToThread(self.thread)
-        self.thread.started.connect(self.worker.run)
-        self.worker.progressed.connect(self._on_progress)
-        self.worker.segmented.connect(self._on_segment)
-        self.worker.finished.connect(self._on_finished)
-        self.worker.failed.connect(self._on_failed)
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.failed.connect(self.thread.quit)
-        self.thread.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self._on_worker_thread_finished)
+        self.active_command = command
+        command.progressed.connect(self._on_progress, Qt.ConnectionType.QueuedConnection)
+        command.segmented.connect(self._on_segment, Qt.ConnectionType.QueuedConnection)
         self._show_results(True)
         self.status_label.setText(_("Transcribing..."))
-        self.thread.start()
+        self.commandRequested.emit(command)
+        # The completion observer is connected after submission so the queue's
+        # own completion handling (undo bookkeeping and follow-up commands)
+        # has been processed before the dialog reacts to the result.
+        command.commandCompleted.connect(self._on_command_completed, Qt.ConnectionType.QueuedConnection)
 
     def _abort_transcription(self) -> None:
-        if self.coordinator is not None:
-            self.coordinator.Abort()
+        """Stop the run after its current chunk; partial results are retained."""
+        if self.active_command is not None:
+            self.active_command.FinishEarly()
             self.status_label.setText(_("Aborting..."))
 
     @Slot(int, int, str)
@@ -561,52 +525,49 @@ class TranscriptionDialog(QDialog):
         self.status_label.setText(status)
 
     @Slot(object)
-    def _on_finished(self, project : SubtitleProject) -> None:
-        self.project = project
-        if self.coordinator is not None and not self.coordinator.aborted:
-            # Extraction and inference provably ran: record dependency facts
-            # (torch only when already imported by the run itself, so cloud
-            # providers pay nothing). This is the only success writer.
-            self._record_dependency_evidence(ffmpeg_available=True)
-            self._record_torch_device()
-        count = project.subtitles.linecount if project.subtitles else 0
-        saved_path = self._save_transcription(project)
-        if self.coordinator is not None and self.coordinator.aborted:
+    def _on_command_completed(self, command : TranscribeMediaCommand) -> None:
+        """Consume the completion notification from the observed command."""
+        if command is not self.active_command:
+            return
+        self.project = command.project
+        if not command.aborted:
+            # Extraction and inference provably ran: record what the run
+            # learned about the local runtime for future sessions.
+            self._record_dependency_evidence(
+                ffmpeg_available=command.ffmpeg_available or None,
+                torch_device=command.torch_device)
+        count = self.project.subtitles.linecount if self.project and self.project.subtitles else 0
+        if command.aborted or command.stopped_early:
             self.status_label.setText(_("Aborted - partial results ({} lines).").format(count))
-        elif self.coordinator is not None and not self._project_is_complete(self.coordinator.status):
+        elif command.status is TranscriptionStatus.FAILED:
+            self.status_label.setText(_("Transcription failed; partial results ({} lines) are available.").format(count)
+                                      if count else _("Transcription failed: {error}").format(error=command.error))
+        elif command.status is not TranscriptionStatus.COMPLETED:
             self.status_label.setText(_("Transcription incomplete - partial results ({} lines).").format(count))
-        elif saved_path:
-            message = _("Transcribed {} lines, saved to {}.").format(count, saved_path)
+        elif command.saved_path:
+            message = _("Transcribed {} lines, saved to {}.").format(count, command.saved_path)
             self.status_label.setText(message)
             logging.info(message)
         else:
             message = _("Transcribed {} lines.").format(count)
             self.status_label.setText(message)
             logging.info(message)
+        self.progress_bar.setRange(0, max(1, self.progress_bar.maximum()))
         self.progress_bar.setValue(self.progress_bar.maximum())
+        command.progressed.disconnect(self._on_progress)
+        command.segmented.disconnect(self._on_segment)
+        command.commandCompleted.disconnect(self._on_command_completed)
+        self.active_command = None
         self._show_results(False)
-        if (self.coordinator is not None and not self.coordinator.aborted
-                and self._project_is_complete(self.coordinator.status)):
-            # Clean finish hands the project straight to the caller: leaving it
-            # behind Close/Back to Settings would silently discard paid work.
+        if command.status is TranscriptionStatus.COMPLETED and not command.aborted:
             self._pending_accept = True
-
-    def _record_torch_device(self) -> None:
-        """
-        Record the resolved torch device after a local run. Reads
-        sys.modules only: importing torch here would cost ~10s for
-        cloud providers that never needed it.
-        """
-        torch_module = sys.modules.get('torch')
-        device = TranscriptionProvider.ResolveTorchDevice(torch_module)
-        if device == "Unknown":
-            return
-        try:
-            if self.global_options.get_str('transcription_torch_device') != device:
-                self.global_options['transcription_torch_device'] = device
-                self.global_options.SaveSettings()
-        except Exception as e:
-            logging.debug(_("Unable to record torch state: {error}").format(error=str(e)))
+        if self._close_requested:
+            self._close_requested = False
+            self._pending_accept = False
+            self.reject()
+        elif self._pending_accept:
+            self._pending_accept = False
+            self.accept()
 
     def _has_unaccepted_results(self) -> bool:
         """Whether closing the dialog now would discard transcription results."""
@@ -614,30 +575,19 @@ class TranscriptionDialog(QDialog):
                 and self.project.subtitles is not None
                 and self.project.subtitles.linecount > 0)
 
-    @staticmethod
-    def _project_is_complete(status : TranscriptionStatus) -> bool:
-        """Return whether the coordinator reported clean completion."""
-        return status is TranscriptionStatus.COMPLETED
-
-    def _request_abort(self) -> None:
-        """Ask the active coordinator to stop after its current request."""
-        if self.coordinator is not None:
-            self.coordinator.Abort()
-            self.status_label.setText(_("Aborting..."))
-
     def accept(self) -> None:
-        """Keep the dialog alive until the transcription thread has stopped."""
-        if self._worker_active or (self.thread is not None and self.thread.isRunning()):
+        """Keep the dialog alive until the queue command has stopped."""
+        if self.active_command is not None:
             self._pending_accept = True
             return
         super().accept()
 
     def reject(self) -> None:
         """Confirm before discarding transcription results via Close or X."""
-        if self._worker_active or (self.thread is not None and self.thread.isRunning()):
+        if self.active_command is not None:
             self._close_requested = True
             self._pending_accept = False
-            self._request_abort()
+            self._abort_transcription()
             return
         if self.loader_thread is not None and self.loader_thread.isRunning():
             self._close_requested = True
@@ -654,54 +604,6 @@ class TranscriptionDialog(QDialog):
                 return
         self._close_requested = False
         super().reject()
-
-    def _save_transcription(self, project : SubtitleProject) -> str|None:
-        """
-        Write the transcribed subtitles alongside the media file before
-        translation, when the save option is checked. Returns the path
-        written, or None when saving was skipped or failed.
-        """
-        if not self.save_check.isChecked() or not self.media_path or project.subtitles is None:
-            return None
-        outputpath = GetOutputPath(self.media_path, None, f".{self.format_combo.currentText().casefold()}")
-        if not outputpath:
-            return None
-        try:
-            project.SaveOriginal(outputpath)
-        except Exception as e:
-            logging.warning(_("Unable to save transcription to {}: {}").format(outputpath, e))
-            return None
-        return outputpath if os.path.isfile(outputpath) else None
-
-    @Slot(str, object)
-    def _on_failed(self, message : str, partial_project : SubtitleProject|None = None) -> None:
-        if partial_project is not None:
-            self.project = partial_project
-        logging.error(_("Transcription failed: {error}").format(error=message))
-        if self._has_unaccepted_results():
-            count = self.project.subtitles.linecount if self.project and self.project.subtitles else 0
-            self.status_label.setText(_("Transcription failed; partial results ({} lines) are available.").format(count))
-        else:
-            self.status_label.setText(_("Transcription failed: {error}").format(error=message))
-        self._show_results(False)
-
-    @Slot()
-    def _on_worker_thread_finished(self) -> None:
-        """Complete a deferred dialog action after the worker thread stops."""
-        finished_thread = self.thread
-        self.thread = None
-        self.worker = None
-        self._worker_active = False
-        if finished_thread is not None:
-            finished_thread.deleteLater()
-        self._show_results(False)
-        if self._close_requested:
-            self._close_requested = False
-            self._pending_accept = False
-            self.reject()
-        elif self._pending_accept:
-            self._pending_accept = False
-            self.accept()
 
     def _show_setup(self) -> None:
         """
@@ -732,17 +634,17 @@ class TranscriptionDialog(QDialog):
         self.transcribe_button.setVisible(False)
         self.abort_button.setVisible(running)
         self.back_button.setVisible(not running)
-        self.back_button.setEnabled(not self._worker_active)
+        self.back_button.setEnabled(self.active_command is None)
         open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
         if open_button is not None:
-            open_button.setEnabled(not running and not self._worker_active and self.project is not None)
+            open_button.setEnabled(not running and self.active_command is None and self.project is not None)
 
     def closeEvent(self, event) -> None:
         """Keep the dialog alive until active background work has stopped."""
-        if self._worker_active or (self.coordinator is not None and self.thread is not None and self.thread.isRunning()):
+        if self.active_command is not None:
             self._close_requested = True
             self._pending_accept = False
-            self._request_abort()
+            self._abort_transcription()
             event.ignore()
             return
         if self.loader_thread is not None and self.loader_thread.isRunning():

@@ -89,6 +89,7 @@ class MainToolbar(QToolBar):
         """
         self.UpdateBusyStatus()
         self.UpdateSaveButton()
+        self.UpdateTranscribeButton()
         self.UpdateTranslateButtons()
         self.UpdateTooltips()
 
@@ -271,6 +272,14 @@ class MainToolbar(QToolBar):
 
         if datamodel and datamodel.project and not datamodel.project.needs_writing:
             self.SetActionsEnabled(["Save Project"], False)
+
+    def UpdateTranscribeButton(self):
+        """
+        Update the transcribe button to disable it while other commands are queued or running
+        """
+        command_queue : CommandQueue = self.gui.GetCommandQueue()
+        if command_queue.has_commands:
+            self.SetActionsEnabled([ "Transcribe" ], False)
 
     def UpdateTranslateButtons(self):
         """

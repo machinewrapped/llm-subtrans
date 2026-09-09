@@ -578,6 +578,13 @@ class TranscriptionDialog(QDialog):
     def reject(self) -> None:
         """Confirm before discarding transcription results via Close or X."""
         if self.active_command is not None:
+            if self._close_requested:
+                # Second close attempt while aborting: force-close without
+                # waiting for the in-flight request to finish or timeout.
+                self.active_command = None
+                self._close_requested = False
+                super().reject()
+                return
             self._close_requested = True
             self._pending_accept = False
             self._abort_transcription()

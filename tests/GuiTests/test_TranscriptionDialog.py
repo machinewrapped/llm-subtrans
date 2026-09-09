@@ -8,6 +8,12 @@ from PySide6.QtWidgets import QApplication
 
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.SettingsDialog import SettingsDialog
+from GuiSubtrans.Widgets.OptionsWidgets import (
+    CheckboxOptionWidget,
+    DropdownOptionWidget,
+    FloatOptionWidget,
+    IntegerOptionWidget,
+)
 from GuiSubtrans.Widgets.TranscriptionDialog import TranscriptionDialog
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
@@ -106,3 +112,62 @@ class TestTranscriptionRunEvidence(LoggedTestCase):
         finally:
             dialog.deleteLater()
             self.application.processEvents()
+
+
+class TestTranscriptionDialogLayout(LoggedTestCase):
+    application : QApplication
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        existing = QApplication.instance()
+        cls.application = existing if isinstance(existing, QApplication) else QApplication([])
+
+    def test_provider_rows_inserted_into_single_form(self) -> None:
+        """Provider rows are dynamically inserted into and removed from the main form."""
+        options = Options()
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(options)
+        try:
+            initial_row_count = dialog.form.rowCount()
+            # Initial static rows: Media file, Audio track, Provider, Min chunk, Max chunk, Save, Postprocess
+            self.assertLoggedEqual('initial row count', 7, initial_row_count)
+
+            # Assign a fake provider with options and rebuild
+            provider = FakeTranscriptionProvider()
+            provider.GetOptions = lambda settings: {'model': (['model-a', 'model-b'], None), 'language': (str, None)}  # type: ignore
+            dialog.provider = provider
+            dialog._rebuild_provider_form()
+
+            self.assertLoggedEqual('provider row count tracked', 2, dialog._provider_row_count)
+            self.assertLoggedEqual('form row count with provider options', 9, dialog.form.rowCount())
+            self.assertLoggedIn('provider field registered', 'model', dialog.provider_fields)
+            self.assertLoggedIn('provider field registered', 'language', dialog.provider_fields)
+
+            # Rebuild with different options
+            provider.GetOptions = lambda settings: {'single_opt': (bool, None)}  # type: ignore
+            dialog._rebuild_provider_form()
+
+            self.assertLoggedEqual('provider row count updated', 1, dialog._provider_row_count)
+            self.assertLoggedEqual('form row count after rebuild', 8, dialog.form.rowCount())
+
+            # Clear provider
+            dialog.provider = None
+            dialog._rebuild_provider_form()
+            self.assertLoggedEqual('row count restored to initial', initial_row_count, dialog.form.rowCount())
+            self.assertLoggedEqual('provider row count zeroed', 0, dialog._provider_row_count)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+    def test_option_widgets_have_valid_size_hints(self) -> None:
+        """Option widgets report valid size hints and non-zero layouts."""
+        int_w = IntegerOptionWidget('int_key', 10)
+        float_w = FloatOptionWidget('float_key', 10.0)
+        cb_w = CheckboxOptionWidget('cb_key', True)
+        dd_w = DropdownOptionWidget('dd_key', ['a', 'b'], 'a')
+
+        self.assertLoggedGreater('int widget width hint', int_w.sizeHint().width(), 0)
+        self.assertLoggedGreater('float widget width hint', float_w.sizeHint().width(), 0)
+        self.assertLoggedGreater('checkbox widget width hint', cb_w.sizeHint().width(), 0)
+        self.assertLoggedGreater('dropdown widget width hint', dd_w.sizeHint().width(), 0)

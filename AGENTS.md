@@ -6,7 +6,7 @@ GUI framework is PySide6, be sure to use the correct syntax (e.g. scoped enum va
 
 Secrets are stored in a .env file - the agent must NEVER read the contents of the file.
 
-Always run the unit_tests at the end of a task to validate any changes to the code.
+Always run the unit_tests at the end of a task that changed code to validate the changes.
 
 ## Console Output
 **IMPORTANT** Avoid Unicode characters (✓ ✗) in log messages as these trigger Windows console errors

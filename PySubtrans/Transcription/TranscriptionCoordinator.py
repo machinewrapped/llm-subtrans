@@ -81,6 +81,8 @@ _MIN_LINE_SECONDS = 0.4
 
 # Signature for transcription progress callbacks: (chunks_completed, chunk_total, current_chunk_span)
 TranscriptionProgressCallback = Callable[[int, int, str], None]
+# Signature for audio progress callbacks: (audio_seconds_processed, total_audio_seconds)
+TranscriptionAudioProgressCallback = Callable[[float, float], None]
 
 # Signature for per-chunk callbacks: invoked with each transcribed segment
 TranscriptionSegmentCallback = Callable[[TranscriptionSegment], None]
@@ -192,7 +194,8 @@ class TranscriptionCoordinator:
         return self.chunker.PlanChunks(media_path, self.track_index)
 
     def TranscribeMedia(self, media_path : str, progress_cb : TranscriptionProgressCallback|None = None,
-                        segment_cb : TranscriptionSegmentCallback|None = None) -> Subtitles:
+                        segment_cb : TranscriptionSegmentCallback|None = None,
+                        audio_progress_cb : TranscriptionAudioProgressCallback|None = None) -> Subtitles:
         """
         Transcribe a media file into timestamped subtitles.
         """
@@ -212,7 +215,16 @@ class TranscriptionCoordinator:
                 "timestamps). Transcription without timings has no value "
                 "here, so nothing was requested and no credits were spent."
             ).format(self.provider.name))
-        chunks = self.chunker.PlanChunksStream(media_path, self.track_index)
+        audio_total_seconds = 0.0
+
+        def on_duration(duration : timedelta) -> None:
+            nonlocal audio_total_seconds
+            audio_total_seconds = max(0.0, duration.total_seconds())
+            if audio_progress_cb and audio_total_seconds > 0.0:
+                audio_progress_cb(0.0, audio_total_seconds)
+
+        chunks = self.chunker.PlanChunksStream(
+            media_path, self.track_index, duration_cb=on_duration)
         logging.info(_("Transcribing {} with {} (chunks stream in while silence detection runs)").format(
             os.path.basename(media_path), self.provider.name))
 
@@ -271,6 +283,11 @@ class TranscriptionCoordinator:
                             transcribed += 1
                             if segment_cb:
                                 segment_cb(line)
+                finally:
+                    if audio_progress_cb and audio_total_seconds > 0.0:
+                        audio_progress_cb(
+                            min(audio_total_seconds, max(0.0, chunk.end.total_seconds())),
+                            audio_total_seconds)
         except SubtitleError as e:
             # A silence-scan failure mid-run must not discard already
             # transcribed (billed) chunks.
@@ -302,11 +319,12 @@ class TranscriptionCoordinator:
 
     def CreateTranscriptionProject(self, media_path : str, options : Options|None = None,
                                    progress_cb : TranscriptionProgressCallback|None = None,
-                                   segment_cb : TranscriptionSegmentCallback|None = None) -> SubtitleProject:
+                                   segment_cb : TranscriptionSegmentCallback|None = None,
+                                   audio_progress_cb : TranscriptionAudioProgressCallback|None = None) -> SubtitleProject:
         """
         Transcribe media and return a project ready for the translation workflow.
         """
-        subtitles = self.TranscribeMedia(media_path, progress_cb, segment_cb)
+        subtitles = self.TranscribeMedia(media_path, progress_cb, segment_cb, audio_progress_cb)
 
         project = SubtitleProject(persistent=bool(options and options.use_project_file))
         project.subtitles = subtitles

@@ -20,6 +20,7 @@ class TranscribeMediaCommand(Command):
     """Run a media transcription as a project-opening command."""
 
     progressed = Signal(int, int, str)
+    audioProgressed = Signal(float, float)
     segmented = Signal(object)
 
     def __init__(self, provider : TranscriptionProvider, media_path : str,
@@ -112,7 +113,8 @@ class TranscribeMediaCommand(Command):
         self.project = coordinator.CreateTranscriptionProject(
             self.media_path, self.options,
             lambda done, total, span: self.progressed.emit(done, total, span),
-            lambda segment: self.segmented.emit(segment))
+            lambda segment: self.segmented.emit(segment),
+            lambda processed, total: self.audioProgressed.emit(processed, total))
 
         self.status = coordinator.status
         if coordinator.last_error is not None:

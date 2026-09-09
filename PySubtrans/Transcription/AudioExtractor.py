@@ -29,6 +29,7 @@ SILENCE_PATTERN = regex.compile(
 )
 
 SUPPORTED_MEDIA_EXTENSIONS = ('.mp4', '.mkv', '.m4a', '.mp3', '.wav', '.flac', '.ogg', '.webm', '.aac', '.mov', '.avi')
+FFMPEG_TEXT_ENCODING = 'utf-8'
 
 
 @dataclass
@@ -98,7 +99,8 @@ class AudioExtractor:
         result = subprocess.run(
             ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
              '-of', 'default=noprint_wrappers=1:nokey=1', media_path],
-            capture_output=True, text=True, timeout=60
+            capture_output=True, text=True, encoding=FFMPEG_TEXT_ENCODING,
+            errors='replace', timeout=60
         )
         if result.returncode != 0:
             raise SubtitleError(_("Unable to probe media duration: {}").format(result.stderr.strip()))
@@ -117,7 +119,8 @@ class AudioExtractor:
             ['ffprobe', '-v', 'error', '-select_streams', 'a',
              '-show_entries', 'stream=index,codec_name,channels:stream_tags=language',
              '-of', 'csv=p=0', media_path],
-            capture_output=True, text=True, timeout=60
+            capture_output=True, text=True, encoding=FFMPEG_TEXT_ENCODING,
+            errors='replace', timeout=60
         )
         if result.returncode != 0:
             raise SubtitleError(_("Unable to list audio tracks: {}").format(result.stderr.strip()))
@@ -157,7 +160,8 @@ class AudioExtractor:
              '-map', f'0:a:{track_index}',
              '-ac', '1', '-ar', str(self.sample_rate),
              '-c:a', 'pcm_s16le', output_path],
-            capture_output=True, text=True, timeout=600
+            capture_output=True, text=True, encoding=FFMPEG_TEXT_ENCODING,
+            errors='replace', timeout=600
         )
         if result.returncode != 0:
             raise SubtitleError(_("Audio extraction failed: {}").format(result.stderr.strip()[-500:]))
@@ -277,7 +281,8 @@ class SilenceStream:
              '-map', f'0:a:{self.track_index}',
              '-af', f'silencedetect=noise={self.noise_db}dB:d={self.min_duration}',
              '-f', 'null', '-'],
-            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+            stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True,
+            encoding=FFMPEG_TEXT_ENCODING, errors='replace')
         self._thread = threading.Thread(target=self._read_output, daemon=True)
         self._thread.start()
         return self
@@ -385,14 +390,16 @@ class AudioChunker:
         return self.settings.get_float('lookahead_seconds') or 30.0
 
     def PlanChunks(self, media_path : str, track_index : int = 0,
-                   progress_cb : Callable[[str], None]|None = None) -> list[AudioChunk]:
+                   progress_cb : Callable[[str], None]|None = None,
+                   duration_cb : Callable[[timedelta], None]|None = None) -> list[AudioChunk]:
         """
         Return the ordered chunk plan for a media file (no audio extracted yet).
         """
-        return list(self.PlanChunksStream(media_path, track_index, progress_cb))
+        return list(self.PlanChunksStream(media_path, track_index, progress_cb, duration_cb))
 
     def PlanChunksStream(self, media_path : str, track_index : int = 0,
-                         progress_cb : Callable[[str], None]|None = None) -> Generator[AudioChunk, None, None]:
+                         progress_cb : Callable[[str], None]|None = None,
+                         duration_cb : Callable[[timedelta], None]|None = None) -> Generator[AudioChunk, None, None]:
         """
         Yield chunks as silence detection streams in, so the caller can
         transcribe finalized chunks while later ones are still being planned.
@@ -405,6 +412,9 @@ class AudioChunker:
         total = duration.total_seconds()
         if total <= 0:
             raise SubtitleError(_("Media file has no playable duration"))
+
+        if duration_cb:
+            duration_cb(duration)
 
         if progress_cb:
             progress_cb(_("Detecting silence in {}").format(os.path.basename(media_path)))

@@ -14,7 +14,7 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleError import ExcessiveDurationError, SubtitleError
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor, AudioTrack
+from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor, AudioTrack, SilenceStream
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
@@ -131,6 +131,18 @@ class TestTranscriptionProviderRegistry(LoggedTestCase):
         self.assertLoggedIn("language option", "language", options)
 
 class TestAudioChunker(LoggedTestCase):
+    def test_duration_callback_reports_total_audio(self):
+        """Streaming chunk planning exposes the media duration before the first chunk."""
+        chunker = AudioChunker(SettingsType({'min_chunk_seconds': 1.0}))
+        durations : list[timedelta] = []
+
+        with patch.object(chunker.extractor, 'GetDuration', return_value=timedelta(seconds=10)), \
+             patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(())):
+            chunks = list(chunker.PlanChunksStream('fake.wav', duration_cb=durations.append))
+
+        self.assertLoggedEqual('reported duration', [timedelta(seconds=10)], durations)
+        self.assertLoggedEqual('planned chunk end', timedelta(seconds=10), chunks[0].end)
+
     def test_plan_chunks_from_media_metadata(self):
         """Chunk planning uses duration and detected silence without media processes."""
         cases = [
@@ -210,6 +222,50 @@ class TestAudioChunker(LoggedTestCase):
         # Only the events inside the first decision window (+1 lookahead
         # probe) may be consumed; the 500s event must remain unpulled
         self.assertLoggedEqual("scan events pulled", 2, len(pulled))
+
+
+class TestSilenceStream(LoggedTestCase):
+    def test_ffmpeg_stderr_uses_tolerant_utf8_decoding(self):
+        """Invalid diagnostic bytes do not prevent silence events from being parsed."""
+        class FakeProcess:
+            def __init__(self):
+                self.stderr : io.TextIOBase|None = None
+
+            def poll(self) -> int:
+                return 0
+
+            def wait(self, timeout : float|None = None) -> int:
+                return 0
+
+        fake_process = FakeProcess()
+
+        def create_process(*command_args : object, **process_kwargs : object) -> FakeProcess:
+            encoding = process_kwargs.get('encoding')
+            errors = process_kwargs.get('errors')
+            assert isinstance(encoding, str)
+            assert isinstance(errors, str)
+            fake_process.stderr = io.TextIOWrapper(
+                io.BytesIO(
+                    b"[ffmpeg]\x81 diagnostic bytes\n"
+                    b"[silencedetect] silence_start: 1.25\n"
+                    b"[silencedetect] silence_end: 2.50\n"),
+                encoding=encoding, errors=errors)
+            return fake_process
+
+        with tempfile.NamedTemporaryFile(suffix='.mkv') as media:
+            with patch('PySubtrans.Transcription.AudioExtractor.subprocess.Popen',
+                       side_effect=create_process) as popen:
+                with SilenceStream(media.name) as stream:
+                    events = list(stream)
+
+        call_args = popen.call_args
+        assert call_args is not None
+        process_kwargs = call_args.kwargs
+        self.assertLoggedEqual('ffmpeg text encoding', 'utf-8', process_kwargs['encoding'])
+        self.assertLoggedEqual('ffmpeg decode error handling', 'replace', process_kwargs['errors'])
+        self.assertLoggedEqual('silence event count', 1, len(events))
+        self.assertLoggedEqual('silence start', timedelta(seconds=1.25), events[0][0])
+        self.assertLoggedEqual('silence end', timedelta(seconds=2.5), events[0][1])
 
 def _word(text : str, start : float, end : float, speaker : str|None = None) -> WordTiming:
     return WordTiming(text=text, start=timedelta(seconds=start), end=timedelta(seconds=end), speaker=speaker)

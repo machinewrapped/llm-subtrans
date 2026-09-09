@@ -90,6 +90,8 @@ class TranscriptionDialog(QDialog):
         self._run_started : float = 0.0
         self._chunks_done : int = 0
         self._chunks_total : int = 0
+        self._audio_done_seconds : float = 0.0
+        self._audio_total_seconds : float = 0.0
         self._last_span : str = ""
         self._close_requested : bool = False
         self.active_command : TranscribeMediaCommand|None = None
@@ -453,11 +455,14 @@ class TranscriptionDialog(QDialog):
         self._run_started = time.monotonic()
         self._chunks_done = 0
         self._chunks_total = 0
+        self._audio_done_seconds = 0.0
+        self._audio_total_seconds = 0.0
         self._last_span = ""
         self._pending_accept = False
         self._close_requested = False
         self.active_command = command
         command.progressed.connect(self._on_progress, Qt.ConnectionType.QueuedConnection)
+        command.audioProgressed.connect(self._on_audio_progress, Qt.ConnectionType.QueuedConnection)
         command.segmented.connect(self._on_segment, Qt.ConnectionType.QueuedConnection)
         self._show_results(True)
         self.status_label.setText(_("Transcribing..."))
@@ -484,6 +489,13 @@ class TranscriptionDialog(QDialog):
         else:
             # Total unknown while the chunk plan streams in: busy indicator
             self.progress_bar.setRange(0, 0)
+        self._update_run_status()
+
+    @Slot(float, float)
+    def _on_audio_progress(self, processed : float, total : float) -> None:
+        """Track source-audio progress for ETA when chunk count is unknown."""
+        self._audio_done_seconds = max(0.0, processed)
+        self._audio_total_seconds = max(0.0, total)
         self._update_run_status()
 
     @Slot(object)
@@ -513,8 +525,8 @@ class TranscriptionDialog(QDialog):
         if self._last_span:
             status += f" [{self._last_span}]"
         status += _(" (elapsed {})").format(_format_duration(elapsed))
-        if elapsed > 5.0 and self._chunks_done > 0 and self._chunks_total > 0:
-            fraction = self._chunks_done / self._chunks_total
+        if elapsed > 5.0 and self._audio_total_seconds > 0.0 and self._audio_done_seconds > 0.0:
+            fraction = min(1.0, self._audio_done_seconds / self._audio_total_seconds)
             if fraction > 0.02:
                 remaining = elapsed / fraction - elapsed
                 status += _(" (about {} left)").format(_format_duration(remaining))
@@ -551,6 +563,7 @@ class TranscriptionDialog(QDialog):
         self.progress_bar.setRange(0, max(1, self.progress_bar.maximum()))
         self.progress_bar.setValue(self.progress_bar.maximum())
         command.progressed.disconnect(self._on_progress)
+        command.audioProgressed.disconnect(self._on_audio_progress)
         command.segmented.disconnect(self._on_segment)
         command.commandCompleted.disconnect(self._on_command_completed)
         self.active_command = None

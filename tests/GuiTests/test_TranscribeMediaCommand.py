@@ -42,8 +42,9 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         segment_events = []
         segment = TranscriptionSegment(timedelta(), timedelta(seconds=1), 'Recovered text')
 
-        def create_project(media : str, options : Options, progress, on_segment) -> SubtitleProject:
+        def create_project(media : str, options : Options, progress, on_segment, on_audio_progress) -> SubtitleProject:
             progress(1, 2, '0:00-0:10')
+            on_audio_progress(10.0, 20.0)
             on_segment(segment)
             return project
 
@@ -52,6 +53,8 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         command = TranscribeMediaCommand(provider, 'media.wav', SettingsType(), Options())
         progress = []
         command.progressed.connect(lambda done, total, span: progress.append((done, total, span)))
+        audio_progress = []
+        command.audioProgressed.connect(lambda processed, total: audio_progress.append((processed, total)))
         command.segmented.connect(segment_events.append)
         with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=coordinator):
             result = command.execute()
@@ -59,6 +62,7 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         self.assertLoggedTrue('completed command succeeds', result)
         self.assertLoggedEqual('project retained', project, command.project)
         self.assertLoggedEqual('progress forwarded', [(1, 2, '0:00-0:10')], progress)
+        self.assertLoggedEqual('audio progress forwarded', [(10.0, 20.0)], audio_progress)
         self.assertLoggedEqual('segment forwarded', [segment], segment_events)
 
     def test_incomplete_run_returns_failure_and_retains_project(self) -> None:

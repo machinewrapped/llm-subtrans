@@ -75,6 +75,7 @@ class TestTranscriptionRunEvidence(LoggedTestCase):
         """Wire the dialog to the command the same way a real run does."""
         dialog.active_command = command
         command.progressed.connect(dialog._on_progress)
+        command.audioProgressed.connect(dialog._on_audio_progress)
         command.segmented.connect(dialog._on_segment)
         command.commandCompleted.connect(dialog._on_command_completed)
 
@@ -109,6 +110,24 @@ class TestTranscriptionRunEvidence(LoggedTestCase):
                 dialog._on_command_completed(command)
             self.assertLoggedIsNone('dialog released the command', dialog.active_command)
             self.assertLoggedEqual('results phase reached', 'done', dialog._phase)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+    def test_audio_progress_drives_eta_without_chunk_total(self) -> None:
+        """Audio progress restores ETA while the streamed chunk total is unknown."""
+        options = Options()
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(options)
+        try:
+            dialog._run_started = 100.0
+            dialog._chunks_done = 1
+            dialog._chunks_total = 0
+            dialog._last_span = '0.0s-10.0s'
+            with patch('GuiSubtrans.Widgets.TranscriptionDialog.time.monotonic', return_value=160.0):
+                dialog._on_audio_progress(10.0, 100.0)
+
+            self.assertLoggedIn('audio-based eta', 'about 9:00 left', dialog.status_label.text())
         finally:
             dialog.deleteLater()
             self.application.processEvents()

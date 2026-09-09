@@ -9,6 +9,7 @@ all providers are available regardless of installation method.
 
 # Explicitly import all provider modules to ensure they're registered
 # This is required for pip-installed packages where dynamic discovery may fail
+from . import Provider_AtlasCloud
 from . import Provider_Azure
 from . import Provider_Bedrock
 from . import Provider_Claude
@@ -20,4 +21,3 @@ from . import Provider_OpenAI
 from . import Provider_OpenRouter
 from . import Provider_Requesty
 from . import Provider_LiteLLM
-

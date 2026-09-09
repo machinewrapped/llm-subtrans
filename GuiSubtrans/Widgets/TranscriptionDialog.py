@@ -3,7 +3,7 @@ import os
 import time
 from typing import Any, Callable, cast
 
-from PySide6.QtCore import QObject, QThread, Qt, Signal, Slot
+from PySide6.QtCore import QThread, Qt, Signal, Slot
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from GuiSubtrans.Widgets.OptionsWidgets import CheckboxOptionWidget, CreateOptionWidget, FloatOptionWidget, OptionWidget
+from GuiSubtrans.Widgets.TranscriptionProviderLoader import TranscriptionProviderLoader
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Time import TimedeltaToText
 from PySubtrans.Options import Options
@@ -37,24 +38,6 @@ from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 
 
-class _ProviderLoaderWorker(QObject):
-    """
-    Imports transcription provider modules off the GUI thread.
-
-    The first import pulls heavy optional SDKs (qwen_asr takes ~10s),
-    which used to freeze the UI between toolbar click and dialog.
-    """
-    loaded = Signal(list)
-    failed = Signal(str)
-
-    @Slot()
-    def run(self) -> None:
-        """Resolve provider names, emitting them back to the dialog."""
-        try:
-            names = sorted(TranscriptionProvider.get_providers())
-            self.loaded.emit(names)
-        except Exception as e:
-            self.failed.emit(str(e))
 
 
 def _format_duration(seconds : float) -> str:
@@ -172,7 +155,7 @@ class TranscriptionDialog(QDialog):
 
         clean_field = self._add_option_field(
             'postprocess_transcription', self.global_options.get_bool('postprocess_transcription', True), bool,
-            tooltip=_("Apply the same post-processing used for translations (dashes, filler words, line breaks, etc"))
+            tooltip=_("Apply the same post-processing used for translations (dashes, filler words, line breaks, etc.)"))
         form.addRow(clean_field.name, clean_field)
         left_layout.addStretch(1)
 
@@ -229,7 +212,7 @@ class TranscriptionDialog(QDialog):
         if self.loader_thread is not None:
             return
         self.provider_combo.clear()
-        self.loader = _ProviderLoaderWorker()
+        self.loader = TranscriptionProviderLoader()
         self.loader_thread = QThread(self)
         self.loader.moveToThread(self.loader_thread)
         self.loader_thread.started.connect(self.loader.run)
@@ -337,7 +320,7 @@ class TranscriptionDialog(QDialog):
             if key in self.provider.advanced_settings:
                 continue
             field = CreateOptionWidget(key, self.provider.settings.get(key), key_type, tooltip=tooltip)
-            field.contentChanged.connect(lambda dummy=None: self._on_provider_field_committed(field.key))
+            field.contentChanged.connect(lambda dummy=None, k=field.key: self._on_provider_field_committed(k))
             self.provider_fields[key] = field
             self.provider_form.addRow(_(key), field)
 
@@ -649,15 +632,5 @@ class TranscriptionDialog(QDialog):
 
     def closeEvent(self, event) -> None:
         """Keep the dialog alive until active background work has stopped."""
-        if self.active_command is not None:
-            self._close_requested = True
-            self._pending_accept = False
-            self._abort_transcription()
-            event.ignore()
-            return
-        if self.loader_thread is not None and self.loader_thread.isRunning():
-            self._close_requested = True
-            event.ignore()
-            return
-        event.accept()
-        super().closeEvent(event)
+        event.ignore()
+        self.reject()

@@ -150,7 +150,7 @@ def FormatLineMeta(line : LineItem) -> str:
     else:
         meta = _("Length: {duration}").format(duration=str(line.duration))
     if line.style:
-        meta += f", Style: {line.style}"
+        meta += _(", Style: {style}").format(style=line.style)
     if line.speaker:
         meta += _(", Speaker: {speaker}").format(speaker=line.speaker)
     return meta

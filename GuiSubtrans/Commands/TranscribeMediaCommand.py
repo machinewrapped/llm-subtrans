@@ -143,7 +143,8 @@ class TranscribeMediaCommand(Command):
         self.error = str(error)
         self.status = TranscriptionStatus.FAILED
 
-        partial_subtitles = self.coordinator.partial_subtitles if self.coordinator else None
+        with self._coordinator_lock:
+            partial_subtitles = self.coordinator.partial_subtitles if self.coordinator else None
         if partial_subtitles is not None:
             self.project = SubtitleProject(persistent=False)
             self.project.subtitles = partial_subtitles

@@ -1,9 +1,10 @@
 import logging
-from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
+from PySide6.QtCore import Qt, QThread, Slot
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBox, QWidget, QFormLayout, QFrame, QLabel, QScrollArea)
 from GuiSubtrans.GuiHelpers import ClearForm, GetThemeNames
 
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget
+from GuiSubtrans.Widgets.TranscriptionProviderLoader import TranscriptionProviderLoader
 from PySubtrans.Helpers.InstructionsHelpers import GetInstructionsFiles, LoadInstructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
@@ -13,25 +14,6 @@ from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoord
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Helpers.Localization import LocaleDisplayItem, _, get_locale_display_items
 
-
-class _TranscriptionProviderLoader(QObject):
-    """
-    Resolves transcription provider names off the GUI thread.
-
-    The first import pulls heavy optional SDKs, so a synchronous load
-    would stall the settings dialog on first open.
-    """
-    loaded = Signal(list)
-    failed = Signal(str)
-
-    @Slot()
-    def run(self) -> None:
-        """Resolve provider names, emitting them back to the dialog."""
-        try:
-            names = sorted(TranscriptionProvider.get_providers())
-            self.loaded.emit(names)
-        except Exception as e:
-            self.failed.emit(str(e))
 
 class SettingsDialog(QDialog):
     """
@@ -519,7 +501,7 @@ class SettingsDialog(QDialog):
         """
         if self.loader_thread is not None:
             return
-        self.loader = _TranscriptionProviderLoader()
+        self.loader = TranscriptionProviderLoader()
         self.loader_thread = QThread(self)
         self.loader.moveToThread(self.loader_thread)
         self.loader_thread.started.connect(self.loader.run)
@@ -527,6 +509,7 @@ class SettingsDialog(QDialog):
         self.loader.failed.connect(self._on_transcription_providers_failed)
         self.loader.loaded.connect(self.loader_thread.quit)
         self.loader.failed.connect(self.loader_thread.quit)
+        self.loader_thread.finished.connect(self.loader.deleteLater)
         self.loader_thread.start()
 
     @Slot(list)

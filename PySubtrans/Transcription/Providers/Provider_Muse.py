@@ -1,7 +1,7 @@
 import os
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Options import SettingsType, env_float
+from PySubtrans.Options import env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider

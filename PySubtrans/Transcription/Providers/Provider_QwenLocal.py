@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import TryParseFloat
-from PySubtrans.Options import SettingsType, env_float, env_int
+from PySubtrans.Options import env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming

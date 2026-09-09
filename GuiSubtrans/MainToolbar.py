@@ -360,24 +360,26 @@ def _create_disabled_icon(svg_path : str) -> QIcon:
         with open(svg_path, 'r', encoding='utf-8') as f:
             svg_content = f.read()
         
-        # Replace colors for disabled look
+        # Keep disabled outlines visible on both light and #808080 dark toolbars.
         disabled_svg = svg_content.replace('fill="#fff"', 'fill="#D0D0D0"')
         disabled_svg = disabled_svg.replace('fill="white"', 'fill="#D0D0D0"')
-        disabled_svg = disabled_svg.replace('stroke="#000"', 'stroke="#808080"')
-        disabled_svg = disabled_svg.replace('stroke="black"', 'stroke="#808080"')
+        disabled_svg = disabled_svg.replace('stroke="#000"', 'stroke="#484848"')
+        disabled_svg = disabled_svg.replace('stroke="black"', 'stroke="#484848"')
         disabled_svg = disabled_svg.replace('fill="black"', 'fill="#606060"')
         
         # Create QIcon from modified SVG
         svg_bytes = QByteArray(disabled_svg.encode('utf-8'))
         svg_renderer = QSvgRenderer(svg_bytes)
-        pixmap = QPixmap(24, 24)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        svg_renderer.render(painter)
-        painter.end()
-        
         disabled_icon = QIcon()
-        disabled_icon.addPixmap(pixmap)
+        # Supply crisp raster sizes and explicit modes to avoid a second style effect.
+        for size in (16, 20, 24, 32, 40, 48, 64, 96, 128):
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            svg_renderer.render(painter)
+            painter.end()
+            disabled_icon.addPixmap(pixmap, QIcon.Mode.Normal)
+            disabled_icon.addPixmap(pixmap, QIcon.Mode.Disabled)
         return disabled_icon
         
     except Exception as e:

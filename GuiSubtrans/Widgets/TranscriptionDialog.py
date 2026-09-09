@@ -235,7 +235,9 @@ class TranscriptionDialog(QDialog):
                 self.provider_combo.setCurrentText(choice)
             else:
                 self._on_provider_changed(choice)
-        if not self.media_path:
+        if self.media_path and os.path.isfile(self.media_path) and self.track_combo.count() == 0:
+            self._load_tracks()
+        elif not self.media_path:
             self.status_label.setText(_("Select a media file to begin."))
 
     @Slot(str)
@@ -536,7 +538,7 @@ class TranscriptionDialog(QDialog):
         elif command.status is not TranscriptionStatus.COMPLETED:
             self.status_label.setText(_("Transcription incomplete - partial results ({} lines).").format(count))
         elif command.saved_path:
-            message = _("Transcribed {} lines, saved to {}.").format(count, command.saved_path)
+            message = _("Transcribed {} lines (saving to {}).").format(count, command.saved_path)
             self.status_label.setText(message)
             logging.info(message)
         else:

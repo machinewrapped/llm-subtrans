@@ -267,14 +267,12 @@ class SilenceStream:
         self._events : queue.Queue[tuple[timedelta, timedelta]|None] = queue.Queue()
         self._thread : threading.Thread|None = None
         self._process : subprocess.Popen[str]|None = None
-        self._deadline : float = 0.0
         self._error : SubtitleError|None = None
 
     def __enter__(self) -> SilenceStream:
         if not self.media_path or not os.path.isfile(self.media_path):
             raise SubtitleError(_("Media file not found: {}").format(self.media_path))
 
-        self._deadline = time.monotonic() + self.timeout
         self._process = subprocess.Popen(
             ['ffmpeg', '-v', 'info', '-i', self.media_path,
              '-map', f'0:a:{self.track_index}',
@@ -293,13 +291,10 @@ class SilenceStream:
             raise SubtitleError(_("Silence stream was used outside a with block"))
 
         while True:
-            remaining = self._deadline - time.monotonic()
-            if remaining <= 0:
-                self._shutdown()
-                raise SubtitleError(_("Silence detection timed out after {} seconds").format(int(self.timeout)))
-
+            # Per-wait timeout so pauses between iterations (e.g. the consumer
+            # transcribing a chunk) do not count against the deadline.
             try:
-                event = self._events.get(timeout=remaining)
+                event = self._events.get(timeout=self.timeout)
             except queue.Empty:
                 self._shutdown()
                 raise SubtitleError(_("Silence detection timed out after {} seconds").format(int(self.timeout)))

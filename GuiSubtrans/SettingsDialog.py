@@ -243,7 +243,9 @@ class SettingsDialog(QDialog):
                             provider_settings[key] = field.GetValue()
                     elif section_name == self.TRANSCRIPTION_SECTION:
                         if key == 'transcription_provider':
-                            self.settings[key] = field.GetValue()
+                            # Skip if providers haven't loaded yet (dropdown empty)
+                            if field.GetValue():
+                                self.settings[key] = field.GetValue()
                         elif key == 'postprocess_transcription':
                             # This is a global transcription default, rather
                             # than an option belonging to one provider.

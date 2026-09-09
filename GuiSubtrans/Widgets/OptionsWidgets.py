@@ -114,6 +114,9 @@ class MultilineTextOptionWidget(OptionWidget):
 class IntegerOptionWidget(OptionWidget):
     def __init__(self, key, initial_value, tooltip = None):
         super().__init__(key, initial_value, tooltip=tooltip)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
         self.spin_box = QSpinBox(self)
         self.spin_box.setMaximum(99999)
         self.spin_box.setMinimumWidth(100)
@@ -121,6 +124,7 @@ class IntegerOptionWidget(OptionWidget):
         self.spin_box.valueChanged.connect(self.contentChanged)
         if initial_value:
             self.spin_box.setValue(initial_value)
+        self._layout.addWidget(self.spin_box)
 
     def GetValue(self):
         return self.spin_box.value()
@@ -140,6 +144,9 @@ class IntegerOptionWidget(OptionWidget):
 class FloatOptionWidget(OptionWidget):
     def __init__(self, key, initial_value, tooltip = None):
         super().__init__(key, initial_value, tooltip=tooltip)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
         self.double_spin_box = QDoubleSpinBox(self)
         self.double_spin_box.setMaximum(9999.99)
         self.double_spin_box.setMinimumWidth(100)
@@ -147,6 +154,7 @@ class FloatOptionWidget(OptionWidget):
         self.double_spin_box.valueChanged.connect(self.contentChanged)
         if initial_value:
             self.double_spin_box.setValue(initial_value)
+        self._layout.addWidget(self.double_spin_box)
 
     def GetValue(self):
         return self.double_spin_box.value()
@@ -169,10 +177,14 @@ class FloatOptionWidget(OptionWidget):
 class CheckboxOptionWidget(OptionWidget):
     def __init__(self, key, initial_value, tooltip = None):
         super().__init__(key, initial_value, tooltip=tooltip)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
         self.check_box = QCheckBox(self)
         self.check_box.stateChanged.connect(self.contentChanged)
         if initial_value:
             self.check_box.setChecked(initial_value)
+        self._layout.addWidget(self.check_box)
 
     def GetValue(self):
         return self.check_box.isChecked()
@@ -192,10 +204,14 @@ class CheckboxOptionWidget(OptionWidget):
 class DropdownOptionWidget(OptionWidget):
     def __init__(self, key, values, initial_value, tooltip = None):
         super().__init__(key, initial_value, tooltip=tooltip)
+        self.setSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Preferred)
+        self._layout = QHBoxLayout(self)
+        self._layout.setContentsMargins(0, 0, 0, 0)
         self.combo_box = QComboBox(self)
         self.combo_box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToContents)
         self.SetOptions(values, initial_value)
         self.combo_box.currentTextChanged.connect(self.contentChanged)
+        self._layout.addWidget(self.combo_box)
 
     def GetValue(self):
         value = self.combo_box.currentText()

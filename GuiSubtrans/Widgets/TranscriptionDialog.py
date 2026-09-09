@@ -68,6 +68,8 @@ class TranscriptionDialog(QDialog):
     while the main window stays blocked. Acceptance hands its project to
     the existing loading flow.
     """
+    PROVIDER_ROW_START : int = 3
+
     commandRequested = Signal(object)
 
     def __init__(self, options : Options, parent=None):
@@ -82,6 +84,7 @@ class TranscriptionDialog(QDialog):
         self.media_path : str|None = None
         self.provider : TranscriptionProvider|None = None
         self.provider_fields : dict[str, OptionWidget] = {}
+        self._provider_row_count : int = 0
         self.fields : dict[str, OptionWidget] = {}
         self._phase : str = "setup"
         self._run_started : float = 0.0
@@ -112,27 +115,25 @@ class TranscriptionDialog(QDialog):
         left_layout = QVBoxLayout(self.left_pane)
         left_layout.setContentsMargins(0, 0, 0, 0)
 
-        form = QFormLayout()
-        left_layout.addLayout(form)
+        self.form = QFormLayout()
+        self.form.setVerticalSpacing(4)
+        left_layout.addLayout(self.form)
 
         self.file_edit = QLineEdit(self)
         self.file_edit.setPlaceholderText(_("Select a video or audio file..."))
         self.file_edit.textChanged.connect(self._on_file_changed)
         browse_button = self._button(_("Browse..."), self._browse_file)
-        form.addRow(_("Media file"), _widget_row(self.file_edit, browse_button))
+        self.form.addRow(_("Media file"), _widget_row(self.file_edit, browse_button))
 
         self.track_combo = QComboBox(self)
-        form.addRow(_("Audio track"), self.track_combo)
+        self.form.addRow(_("Audio track"), self.track_combo)
 
         self.provider_combo = QComboBox(self)
         self.provider_combo.currentTextChanged.connect(self._on_provider_changed)
         self.settings_button = self._button(_("Configure..."), self._open_transcription_settings)
         self.settings_button.setToolTip(_("Open transcription settings for this provider"))
         self.settings_button.setVisible(False)
-        form.addRow(_("Provider"), _widget_row(self.provider_combo, self.settings_button))
-
-        self.provider_form = QFormLayout()
-        form.addRow(self.provider_form)
+        self.form.addRow(_("Provider"), _widget_row(self.provider_combo, self.settings_button))
 
         chunk_tooltip = _("Provider-recommended default; reselecting the provider restores it")
         seconds_suffix = _(" s")
@@ -142,21 +143,21 @@ class TranscriptionDialog(QDialog):
             field = cast(FloatOptionWidget, self._add_option_field(key, default, float, tooltip=chunk_tooltip))
             field.SetRange(*limits)
             field.SetSuffix(seconds_suffix)
-            form.addRow(label, field)
+            self.form.addRow(label, field)
 
         save_field = cast(CheckboxOptionWidget, self._add_option_field(
             'save_transcription', True, bool,
             tooltip=_("Write the transcription to a subtitle file alongside the media before translating")))
-        save_field.check_box.setText(_("Save transcribed subtitles"))
         format_field = self._add_option_field(
             'output_format', '.vtt', SubtitleFormatRegistry.enumerate_formats(),
             tooltip=_("VTT and ASS preserve speaker labels; SRT has no speaker field"))
-        form.addRow(_widget_row(save_field, format_field, stretch=True))
+        save_field.contentChanged.connect(lambda: format_field.setEnabled(save_field.GetValue()))
+        self.form.addRow(_("Save transcribed subtitles"), _widget_row(save_field, format_field, stretch=True))
 
         clean_field = self._add_option_field(
             'postprocess_transcription', self.global_options.get_bool('postprocess_transcription', True), bool,
             tooltip=_("Apply the same post-processing used for translations (dashes, filler words, line breaks, etc.)"))
-        form.addRow(clean_field.name, clean_field)
+        self.form.addRow(clean_field.name, clean_field)
         left_layout.addStretch(1)
 
         self.results_view = QTextEdit(self.splitter)
@@ -305,8 +306,9 @@ class TranscriptionDialog(QDialog):
         Render the selected provider's per-run settings. Stable choices
         (models, keys, quotas) live in Settings; only basic options show here.
         """
-        while self.provider_form.rowCount():
-            self.provider_form.removeRow(0)
+        while self._provider_row_count > 0:
+            self.form.removeRow(self.PROVIDER_ROW_START)
+            self._provider_row_count -= 1
 
         self.provider_fields = {}
         if self.provider is None:
@@ -324,7 +326,8 @@ class TranscriptionDialog(QDialog):
             field = CreateOptionWidget(key, self.provider.settings.get(key), key_type, tooltip=tooltip)
             field.contentChanged.connect(lambda dummy=None, k=field.key: self._on_provider_field_committed(k))
             self.provider_fields[key] = field
-            self.provider_form.addRow(_(key), field)
+            self.form.insertRow(self.PROVIDER_ROW_START + self._provider_row_count, field.name, field)
+            self._provider_row_count += 1
 
     def _on_provider_field_committed(self, key : str) -> None:
         """

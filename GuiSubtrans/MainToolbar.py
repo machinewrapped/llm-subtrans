@@ -21,7 +21,7 @@ class MainToolbar(QToolBar):
     Main toolbar for the application
     """
     _action_groups = [
-        ["Load Subtitles", "Transcribe", "Save Project"],
+        ["Load Subtitles", "Transcribe Audio", "Save Project"],
         ["Start Translating", "Start Translating Fast", "Stop Translating"],
         ["Undo", "Redo"],
         ["Settings"],
@@ -240,20 +240,20 @@ class MainToolbar(QToolBar):
 
         if not datamodel or not datamodel.is_project_initialised:
             self.DisableActions([ "Save Project", "Start Translating", "Start Translating Fast", "Stop Translating", "Undo", "Redo" ])
-            self.EnableActions([ "Load Subtitles", "Transcribe" ])
+            self.EnableActions([ "Load Subtitles", "Transcribe Audio" ])
             return
 
         # Enable or disable toolbar commands  depending on whether any translations are ongoing
         command_queue : CommandQueue = self.gui.GetCommandQueue()
         if command_queue.Contains(type_list = [TranslateSceneCommand, StartTranslationCommand]):
-            self.DisableActions([ "Load Subtitles", "Transcribe", "Save Project", "Start Translating", "Start Translating Fast", "Undo", "Redo"])
+            self.DisableActions([ "Load Subtitles", "Transcribe Audio", "Save Project", "Start Translating", "Start Translating Fast", "Undo", "Redo"])
             self.EnableActions([ "Stop Translating" ])
             return
 
         self.DisableActions(["Stop Translating"])
 
         no_blocking_commands = not command_queue.has_blocking_commands
-        self.SetActionsEnabled([ "Load Subtitles", "Transcribe", "Save Project", "Start Translating" ], no_blocking_commands)
+        self.SetActionsEnabled([ "Load Subtitles", "Transcribe Audio", "Save Project", "Start Translating" ], no_blocking_commands)
         self.SetActionsEnabled([ "Start Translating Fast" ], no_blocking_commands and datamodel.allow_multithreaded_translation)
         self.SetActionsEnabled([ "Undo" ], no_blocking_commands and command_queue.can_undo)
         self.SetActionsEnabled([ "Redo" ], no_blocking_commands and command_queue.can_redo)
@@ -279,7 +279,7 @@ class MainToolbar(QToolBar):
         """
         command_queue : CommandQueue = self.gui.GetCommandQueue()
         if command_queue.has_commands:
-            self.SetActionsEnabled([ "Transcribe" ], False)
+            self.SetActionsEnabled([ "Transcribe Audio" ], False)
 
     def UpdateTranslateButtons(self):
         """

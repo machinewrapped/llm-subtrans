@@ -26,7 +26,6 @@ class Command(QRunnable, QObject):
         QRunnable.__init__(self)
         QObject.__init__(self)
         self.datamodel : ProjectDataModel|None = datamodel
-        self.queued_datamodel : ProjectDataModel|None = None
         self.can_undo : bool = True             # If true, cannot undo past this command
         self.skip_undo : bool = False           # If true, do not add this command to the undo stack
         self.is_blocking : bool = False         # If true, do not execute any other commands in parallel

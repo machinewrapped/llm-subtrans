@@ -310,11 +310,6 @@ class CommandQueue(QObject):
         if undo_callback:
             command.SetUndoCallback(undo_callback)
 
-        # Remember the model the command was queued with, so the completion
-        # handler can tell a command-produced model replacement apart from
-        # model changes made elsewhere while the command was running.
-        command.queued_datamodel = command.datamodel
-
         command.setAutoDelete(False)
         command.commandStarted.connect(self._on_command_started, Qt.ConnectionType.QueuedConnection)
         command.commandCompleted.connect(self._on_command_executed, Qt.ConnectionType.QueuedConnection)

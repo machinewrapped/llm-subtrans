@@ -390,8 +390,8 @@ class GuiInterface(QObject):
 
                 command.ClearModelUpdates()
 
-            elif command.datamodel and command.datamodel is not command.queued_datamodel:
-                # The command itself produced a new data model - install it
+            elif command.datamodel and command.datamodel is not self.datamodel:
+                # The command produced a data model that is not the current one
                 self.SetDataModel(command.datamodel)
 
             elif command.datamodel is None:

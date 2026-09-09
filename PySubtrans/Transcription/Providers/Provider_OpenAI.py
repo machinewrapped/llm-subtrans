@@ -75,7 +75,7 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
     name = "OpenAI"
 
     information = _("""
-    <p>Transcribe with OpenAI speech-to-text models over one API key.</p>
+    <p>Transcribe with OpenAI speech-to-text models.</p>
     <p>Currently experimental and untested due to expired API credits. Please report your experiences!</p>
     """)
 

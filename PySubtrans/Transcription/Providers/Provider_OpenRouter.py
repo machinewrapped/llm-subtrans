@@ -72,13 +72,13 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
     name = "OpenRouter"
 
     information = _("""
-    <p>Transcribe with OpenRouter speech-to-text models over one API key.</p>
+    <p>Transcribe with OpenRouter speech-to-text models.</p>
     <p>Word timestamps and diarization depend on the selected model.</p>
+    <p>You must have credit to use OpenRouter models.</p>
     """)
 
     information_noapikey = _("""
     <p>To use this provider you need <a href="https://openrouter.ai/keys">an OpenRouter API key</a>.</p>
-    <p>Note that you must have credit to use OpenRouter models.</p>
     """)
 
     # Endpoint and quotas live in Settings; model, diarization and language vary per job

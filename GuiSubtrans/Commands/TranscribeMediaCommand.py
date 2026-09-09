@@ -12,6 +12,7 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 
@@ -25,7 +26,8 @@ class TranscribeMediaCommand(Command):
 
     def __init__(self, provider : TranscriptionProvider, media_path : str,
                  settings : SettingsType, options : Options|None = None,
-                 save_transcription : bool = False, output_format : str = "srt") -> None:
+                 save_transcription : bool = False, output_format : str = "srt",
+                 prior_subtitles : Subtitles|None = None) -> None:
         super().__init__()
         self.provider : TranscriptionProvider = copy(provider)
         self.provider.settings = SettingsType(deepcopy(provider.settings))
@@ -34,6 +36,7 @@ class TranscribeMediaCommand(Command):
         self.options : Options = Options(options)
         self.save_transcription : bool = save_transcription
         self.output_format : str = output_format.casefold()
+        self.prior_subtitles : Subtitles|None = prior_subtitles
         self.coordinator : TranscriptionCoordinator|None = None
         self.project : SubtitleProject|None = None
         self.status : TranscriptionStatus = TranscriptionStatus.IDLE
@@ -114,7 +117,8 @@ class TranscribeMediaCommand(Command):
             self.media_path, self.options,
             lambda done, total, span: self.progressed.emit(done, total, span),
             lambda segment: self.segmented.emit(segment),
-            lambda processed, total: self.audioProgressed.emit(processed, total))
+            lambda processed, total: self.audioProgressed.emit(processed, total),
+            prior_subtitles=self.prior_subtitles)
 
         self.status = coordinator.status
         if coordinator.last_error is not None:

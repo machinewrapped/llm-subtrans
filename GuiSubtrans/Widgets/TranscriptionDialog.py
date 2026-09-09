@@ -4,6 +4,7 @@ import time
 from typing import Any, Callable, cast
 
 from PySide6.QtCore import QThread, Qt, Signal, Slot
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -96,8 +97,10 @@ class TranscriptionDialog(QDialog):
         self._close_requested : bool = False
         self.active_command : TranscribeMediaCommand|None = None
         self._pending_accept : bool = False
+        self._resume_project : SubtitleProject|None = None
 
         self._build_form()
+        self.setAcceptDrops(True)
         self.status_label.setText(_("Loading transcription providers..."))
         self._refresh_providers()
         self._show_setup()
@@ -122,6 +125,7 @@ class TranscriptionDialog(QDialog):
         left_layout.addLayout(self.form)
 
         self.file_edit = QLineEdit(self)
+        self.file_edit.setReadOnly(True)
         self.file_edit.setPlaceholderText(_("Select a video or audio file..."))
         self.file_edit.textChanged.connect(self._on_file_changed)
         browse_button = self._button(_("Browse..."), self._browse_file)
@@ -181,9 +185,10 @@ class TranscriptionDialog(QDialog):
         layout.addWidget(self.progress_bar)
 
         self.transcribe_button = self._button(_("Transcribe"), self._start_transcription)
+        self.resume_button = self._button(_("Resume"), self._resume_transcription)
         self.abort_button = self._button(_("Abort"), self._abort_transcription)
         self.back_button = self._button(_("Back to Settings"), self._show_setup)
-        layout.addLayout(_widget_row(self.transcribe_button, self.abort_button, self.back_button))
+        layout.addLayout(_widget_row(self.transcribe_button, self.resume_button, self.abort_button, self.back_button))
 
         self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Open | QDialogButtonBox.StandardButton.Close, self)
         self.button_box.button(QDialogButtonBox.StandardButton.Open).setText(_("Open as Project"))
@@ -346,6 +351,7 @@ class TranscriptionDialog(QDialog):
         self.media_path = path.strip() or None
         self.track_combo.clear()
         self.project = None
+        self._resume_project = None
         if self.media_path and os.path.isfile(self.media_path):
             self._load_tracks()
         if self._phase == "setup":
@@ -450,6 +456,7 @@ class TranscriptionDialog(QDialog):
         command = self._build_command()
         if command is None:
             return
+        self._resume_project = None
         self.project = None
         self.results_view.clear()
         self._run_started = time.monotonic()
@@ -470,6 +477,36 @@ class TranscriptionDialog(QDialog):
         # The completion observer is connected after submission so the queue's
         # own completion handling (undo bookkeeping and follow-up commands)
         # has been processed before the dialog reacts to the result.
+        command.commandCompleted.connect(self._on_command_completed, Qt.ConnectionType.QueuedConnection)
+
+    def _resume_transcription(self) -> None:
+        """Resume a previously aborted transcription from the last completed chunk."""
+        if self.active_command is not None:
+            return
+        resume = self._resume_project
+        if (resume is None or resume.subtitles is None
+                or not resume.subtitles.originals
+                or resume.subtitles.originals[-1].end is None):
+            self.status_label.setText(_("No partial results to resume from."))
+            return
+        if not self.media_path or not os.path.isfile(self.media_path):
+            self.status_label.setText(_("Select a valid media file first."))
+            return
+        command = self._build_command()
+        if command is None:
+            return
+        command.prior_subtitles = resume.subtitles
+        # Keep the existing results visible; only reset run-timing state.
+        self._run_started = time.monotonic()
+        self._pending_accept = False
+        self._close_requested = False
+        self.active_command = command
+        command.progressed.connect(self._on_progress, Qt.ConnectionType.QueuedConnection)
+        command.audioProgressed.connect(self._on_audio_progress, Qt.ConnectionType.QueuedConnection)
+        command.segmented.connect(self._on_segment, Qt.ConnectionType.QueuedConnection)
+        self._show_results(True)
+        self.status_label.setText(_("Resuming transcription..."))
+        self.commandRequested.emit(command)
         command.commandCompleted.connect(self._on_command_completed, Qt.ConnectionType.QueuedConnection)
 
     def _abort_transcription(self) -> None:
@@ -538,6 +575,15 @@ class TranscriptionDialog(QDialog):
         if command is not self.active_command:
             return
         self.project = command.project
+        # Allow resuming when the run did not complete fully and has results.
+        if (command.status is not TranscriptionStatus.COMPLETED
+                or command.aborted or command.stopped_early):
+            if self.project and self.project.subtitles and self.project.subtitles.linecount > 0:
+                self._resume_project = self.project
+            else:
+                self._resume_project = None
+        else:
+            self._resume_project = None
         if not command.aborted:
             # Extraction and inference provably ran: record what the run
             # learned about the local runtime for future sessions.
@@ -632,6 +678,11 @@ class TranscriptionDialog(QDialog):
         self.progress_bar.setVisible(False)
         self.transcribe_button.setVisible(True)
         self.transcribe_button.setEnabled(bool(self.media_path))
+        can_resume = (self._resume_project is not None
+                      and self._resume_project.subtitles is not None
+                      and self._resume_project.subtitles.linecount > 0)
+        self.resume_button.setVisible(can_resume)
+        self.resume_button.setEnabled(can_resume and bool(self.media_path))
         self.abort_button.setVisible(False)
         self.back_button.setVisible(False)
         open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
@@ -648,12 +699,41 @@ class TranscriptionDialog(QDialog):
         self.results_view.setVisible(True)
         self.progress_bar.setVisible(True)
         self.transcribe_button.setVisible(False)
+        can_resume = (not running
+                      and self._resume_project is not None
+                      and self._resume_project.subtitles is not None
+                      and self._resume_project.subtitles.linecount > 0)
+        self.resume_button.setVisible(can_resume)
+        self.resume_button.setEnabled(can_resume)
         self.abort_button.setVisible(running)
         self.back_button.setVisible(not running)
         self.back_button.setEnabled(self.active_command is None)
         open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
         if open_button is not None:
             open_button.setEnabled(not running and self.active_command is None and self.project is not None)
+
+    def dragEnterEvent(self, event : QDragEnterEvent) -> None:
+        """Accept drags that carry a single supported media file."""
+        mime = event.mimeData()
+        if mime and mime.hasUrls():
+            urls = mime.urls()
+            if len(urls) == 1 and urls[0].isLocalFile():
+                path = urls[0].toLocalFile()
+                if os.path.splitext(path)[1].casefold() in SUPPORTED_MEDIA_EXTENSIONS:
+                    event.acceptProposedAction()
+                    return
+        event.ignore()
+
+    def dropEvent(self, event : QDropEvent) -> None:
+        """Set the media file from a dropped file."""
+        mime = event.mimeData()
+        if mime and mime.hasUrls():
+            urls = mime.urls()
+            if len(urls) == 1 and urls[0].isLocalFile():
+                self.file_edit.setText(urls[0].toLocalFile())
+                event.acceptProposedAction()
+                return
+        event.ignore()
 
     def closeEvent(self, event) -> None:
         """Keep the dialog alive until active background work has stopped."""

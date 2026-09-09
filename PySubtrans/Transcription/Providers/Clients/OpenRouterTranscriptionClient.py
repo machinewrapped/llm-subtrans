@@ -21,6 +21,7 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
     """
     def __init__(self, settings : SettingsType):
         super().__init__(settings)
+        self._diarize_warned : bool = False
 
     @property
     def server_address(self) -> str:
@@ -137,7 +138,9 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
         if model_cf.startswith('deepgram/'):
             return {'deepgram': {'diarize': True}}
 
-        logging.warning(_("Diarization is not mapped for model '{}', requesting without it").format(self.model))
+        if not self._diarize_warned:
+            logging.warning(_("Diarization is not mapped for model '{}', requesting without it").format(self.model))
+            self._diarize_warned = True
         return {}
 
     def _looks_like_unsupported(self, text : str) -> bool:

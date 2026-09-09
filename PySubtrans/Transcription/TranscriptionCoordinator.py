@@ -195,9 +195,14 @@ class TranscriptionCoordinator:
 
     def TranscribeMedia(self, media_path : str, progress_cb : TranscriptionProgressCallback|None = None,
                         segment_cb : TranscriptionSegmentCallback|None = None,
-                        audio_progress_cb : TranscriptionAudioProgressCallback|None = None) -> Subtitles:
+                        audio_progress_cb : TranscriptionAudioProgressCallback|None = None,
+                        prior_subtitles : Subtitles|None = None) -> Subtitles:
         """
         Transcribe a media file into timestamped subtitles.
+
+        When *prior_subtitles* is supplied (from an earlier aborted run),
+        already-transcribed chunks are skipped and the new lines are appended
+        after the existing ones.
         """
         self.status = TranscriptionStatus.IDLE
         self.last_error = None
@@ -229,9 +234,14 @@ class TranscriptionCoordinator:
             os.path.basename(media_path), self.provider.name))
 
         builder = SubtitleBuilder()
+        resume_after : timedelta|None = None
+        if prior_subtitles and prior_subtitles.originals:
+            builder.AddExistingScenes(prior_subtitles.scenes)
+            resume_after = prior_subtitles.originals[-1].end
+            logging.info(_("Resuming transcription after {}").format(resume_after))
         builder.AddScene(summary=_("Transcription of {}").format(os.path.basename(media_path)))
 
-        transcribed = 0
+        transcribed = prior_subtitles.linecount if prior_subtitles else 0
         chunks_done = 0
         consecutive_failures = 0
         had_failures = False
@@ -246,6 +256,16 @@ class TranscriptionCoordinator:
                     logging.warning(_("Transcription cancelled after {done} chunks").format(done=done))
                     had_failures = True
                     break
+
+                if resume_after is not None and chunk.end <= resume_after:
+                    chunks_done += 1
+                    if progress_cb:
+                        progress_cb(done, 0, self._span_label(chunk))
+                    if audio_progress_cb and audio_total_seconds > 0.0:
+                        audio_progress_cb(
+                            min(audio_total_seconds, max(0.0, chunk.end.total_seconds())),
+                            audio_total_seconds)
+                    continue
 
                 if progress_cb:
                     # Total is unknown while the plan streams in (0 signals that)
@@ -278,6 +298,8 @@ class TranscriptionCoordinator:
                     if segment is not None:
                         consecutive_failures = 0
                         for line in self._lines_for_segment(segment):
+                            if resume_after is not None and line.start < resume_after:
+                                continue
                             builder.BuildLine(line.start, line.end, line.text,
                                               {'speaker': line.speaker} if line.speaker else None)
                             transcribed += 1
@@ -320,11 +342,13 @@ class TranscriptionCoordinator:
     def CreateTranscriptionProject(self, media_path : str, options : Options|None = None,
                                    progress_cb : TranscriptionProgressCallback|None = None,
                                    segment_cb : TranscriptionSegmentCallback|None = None,
-                                   audio_progress_cb : TranscriptionAudioProgressCallback|None = None) -> SubtitleProject:
+                                   audio_progress_cb : TranscriptionAudioProgressCallback|None = None,
+                                   prior_subtitles : Subtitles|None = None) -> SubtitleProject:
         """
         Transcribe media and return a project ready for the translation workflow.
         """
-        subtitles = self.TranscribeMedia(media_path, progress_cb, segment_cb, audio_progress_cb)
+        subtitles = self.TranscribeMedia(media_path, progress_cb, segment_cb, audio_progress_cb,
+                                         prior_subtitles=prior_subtitles)
 
         project = SubtitleProject(persistent=bool(options and options.use_project_file))
         project.subtitles = subtitles

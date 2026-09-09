@@ -42,7 +42,7 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         segment_events = []
         segment = TranscriptionSegment(timedelta(), timedelta(seconds=1), 'Recovered text')
 
-        def create_project(media : str, options : Options, progress, on_segment, on_audio_progress) -> SubtitleProject:
+        def create_project(media : str, options : Options, progress, on_segment, on_audio_progress, **kwargs) -> SubtitleProject:
             progress(1, 2, '0:00-0:10')
             on_audio_progress(10.0, 20.0)
             on_segment(segment)
@@ -170,7 +170,7 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         with TemporaryDirectory() as directory:
             command = TranscribeMediaCommand(self.provider, str(Path(directory) / 'media.wav'), SettingsType(), save_transcription=True)
 
-            def create_project(*args) -> SubtitleProject:
+            def create_project(*args, **kwargs) -> SubtitleProject:
                 command.Abort()
                 self.coordinator.status = TranscriptionStatus.INCOMPLETE
                 return self.project
@@ -190,7 +190,7 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         with TemporaryDirectory() as directory:
             command = TranscribeMediaCommand(self.provider, str(Path(directory) / 'media.wav'), SettingsType(), save_transcription=True)
 
-            def create_project(*args) -> SubtitleProject:
+            def create_project(*args, **kwargs) -> SubtitleProject:
                 command.FinishEarly()
                 self.coordinator.status = TranscriptionStatus.INCOMPLETE
                 return self.project

@@ -60,6 +60,7 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
             return self._request_verbose(audio_bytes, language)
         except _StructuredOutputUnsupported as e:
             detail = str(e)[:200] if str(e) else ""
+
             raise SubtitleError(_(
                 "Model '{}' does not support timestamped transcription "
                 "(verbose_json was rejected{}). Choose a model with timestamp "
@@ -70,7 +71,9 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
         # Empty text is an expected outcome (music, silence, noise), not an
         # error: return it and let the coordinator skip the chunk quietly.
         payload = self._post(audio_bytes, language)
+
         text, detected, parts, words = parse_transcription_payload(payload)
+
         result = TranscriptionResult(text=text, language=detected or language, parts=parts, words=words)
         return self._attach_usage(result, payload)
 
@@ -83,6 +86,7 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
             result.duration = timedelta(seconds=seconds)
 
         usage = payload.get('usage')
+
         if isinstance(usage, dict):
             cost = TryParseNonNegative(usage.get('cost'))
             if cost is not None:
@@ -99,8 +103,10 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
             'response_format': 'verbose_json',
             'timestamp_granularities': ['word'],
         }
+
         if language:
             body['language'] = language
+
         options = self._diarize_options()
         if options:
             body['provider'] = {'options': options}
@@ -125,6 +131,7 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
             return {}
 
         model_cf = self.model.casefold()
+
         if model_cf.startswith('microsoft/'):
             return {'azure': {'diarization': {'enabled': True}}}
         if model_cf.startswith('deepgram/'):

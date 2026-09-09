@@ -27,6 +27,7 @@ else:
     try:
         from google import genai
 
+
         class GeminiTranscriptionClient(TranscriptionClient):
             """
             Speech-to-text via Gemini 3.5 Transcribe (Interactions API).
@@ -36,6 +37,9 @@ else:
             Heavy SDK imports stay inside methods so constructing the client
             never touches google-genai.
             """
+
+            # Configuration
+
             def __init__(self, settings : SettingsType):
                 super().__init__(settings)
 
@@ -68,10 +72,14 @@ else:
                 """Speaker labels only in verbatim mode with diarization enabled."""
                 return self.diarize
 
+
+            # Transcription
+
             def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
                 client = genai.Client(api_key=self.api_key)
                 chunk_path = self._write_chunk(audio_bytes)
                 audio_file = None
+
                 try:
                     result_interaction, audio_file = self._create_interaction(client, chunk_path, language)
                 except SubtitleError:
@@ -83,6 +91,7 @@ else:
                         os.remove(chunk_path)
                     except OSError:
                         pass
+
                     if audio_file is not None:
                         file_name = getattr(audio_file, 'name', None)
                         if file_name:
@@ -100,6 +109,9 @@ else:
                 words = parse_word_annotations(collect_word_annotations(result_interaction))
                 return TranscriptionResult(text=text, language=language, words=words)
 
+
+            # Retry and cleanup
+
             def _create_interaction(self, client : Any, chunk_path : str, language : str|None) -> tuple[Any, Any]:
                 """
                 Upload once, then retry transcription on quota responses.
@@ -108,15 +120,17 @@ else:
                 generation, not storage) and honours the server's retry hint.
                 """
                 audio_file = None
-                attempt = 0
                 completed = False
+                retry_limit = max(0, self.max_retries)
                 try:
-                    while True:
+                    for attempt in range(retry_limit + 1):
                         if self.aborted:
                             raise SubtitleError(_("Transcription aborted"))
+
                         try:
                             if audio_file is None:
                                 audio_file = client.files.upload(file=chunk_path)
+
                             interaction = client.interactions.create(
                                 model=self.model,
                                 input=[{
@@ -128,28 +142,38 @@ else:
                             )
                             completed = True
                             return interaction, audio_file
-                        except Exception as e:
-                            if self.aborted:
-                                raise SubtitleError(_("Transcription aborted"))
-                            if not _is_rate_limit_error(e) or attempt >= self.max_retries:
-                                if _is_rate_limit_error(e):
-                                    raise SubtitleError(_(
-                                        "Gemini rate limit still exceeded after {} attempts: {}"
-                                    ).format(attempt + 1, str(e)[:200]), error=e)
+                        except Exception as error:
+                            delay = self._rate_limit_retry_delay(error, attempt, retry_limit)
+                            if delay is None:
                                 raise
-                            hint = _retry_hint_seconds(e)
-                            if hint is not None and hint > _RETRY_GIVE_UP_SECONDS:
-                                raise SubtitleError(_(
-                                    "Gemini quota exceeded, retry in {}"
-                                ).format(_format_retry_delay(hint)), error=e)
-                            delay = _rate_limit_delay_seconds(e, attempt)
+
                             logging.warning(_("Gemini rate limit hit (attempt {}/{}), retrying in {:.0f}s").format(
-                                attempt + 1, self.max_retries + 1, delay))
+                                attempt + 1, retry_limit + 1, delay))
                             self._sleep_abortable(delay)
-                            attempt += 1
                 finally:
                     if not completed:
                         self._delete_uploaded_audio(client, audio_file)
+
+                raise SubtitleError(_("Gemini transcription failed"))
+
+            def _rate_limit_retry_delay(self, error : Exception, attempt : int, retry_limit : int) -> float|None:
+                """Return a retry delay, or raise when a failed request cannot be retried."""
+                if self.aborted:
+                    raise SubtitleError(_("Transcription aborted"))
+                if not _is_rate_limit_error(error):
+                    return None
+
+                if attempt >= retry_limit:
+                    raise SubtitleError(_(
+                        "Gemini rate limit still exceeded after {} attempts: {}"
+                    ).format(attempt + 1, str(error)[:200]), error=error)
+
+                hint = _retry_hint_seconds(error)
+                if hint is not None and hint > _RETRY_GIVE_UP_SECONDS:
+                    raise SubtitleError(_(
+                        "Gemini quota exceeded, retry in {}"
+                    ).format(_format_retry_delay(hint)), error=error)
+                return _rate_limit_delay_seconds(error, attempt)
 
             def _delete_uploaded_audio(self, client : Any, audio_file : Any) -> None:
                 """Delete an uploaded chunk when interaction creation cannot finish."""
@@ -159,6 +183,7 @@ else:
                 if not file_name:
                     logging.debug(_("Uploaded audio has no name; leaving it to expire"))
                     return
+
                 try:
                     client.files.delete(name=file_name)
                 except Exception as e:
@@ -170,6 +195,7 @@ else:
                     mode["diarization_mode"] = "speaker"
 
                 config : dict = {"mode": mode}
+
                 code = map_language_code(language)
                 if code:
                     config["language_codes"] = [code]
@@ -178,6 +204,7 @@ else:
 
             def _write_chunk(self, audio_bytes : bytes) -> str:
                 handle, path = tempfile.mkstemp(suffix='.wav', prefix='subtrans-gemini-')
+
                 with os.fdopen(handle, 'wb') as f:
                     f.write(audio_bytes)
                 return path

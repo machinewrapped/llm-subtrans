@@ -24,6 +24,7 @@ def parse_muse_payload(payload : dict, chunk_seconds : float|None = None, includ
     audio_seconds = (duration_ms / 1000.0) if duration_ms is not None else chunk_seconds
 
     turns = [entry for entry in payload.get('turns') or [] if isinstance(entry, dict)]
+
     starts : list[float|None] = []
     for entry in turns:
         start_ms = TryParseNonNegative(entry.get('startMs'))
@@ -33,16 +34,21 @@ def parse_muse_payload(payload : dict, chunk_seconds : float|None = None, includ
     for index, entry in enumerate(turns):
         entry_text = str(entry.get('transcript') or entry.get('text') or '').strip()
         start = starts[index]
+
         if not entry_text or start is None:
             continue
+
         end_ms = TryParseNonNegative(entry.get('endMs'))
         end = end_ms / 1000.0 if end_ms is not None else None
+
         if end is None:
             end = next((s for s in starts[index + 1:] if s is not None and s > start), None)
         if end is None:
             end = audio_seconds
+
         if end is None or end <= start:
             continue
+
         speaker = entry.get('speaker') if include_speakers else None
         parts.append(TranscriptionSegment(
             start=timedelta(seconds=start), end=timedelta(seconds=end),
@@ -50,6 +56,7 @@ def parse_muse_payload(payload : dict, chunk_seconds : float|None = None, includ
             speaker=str(speaker) if speaker is not None else None))
 
     parts.sort(key=lambda part: part.start)
+
     return text, parts
 
 
@@ -97,9 +104,12 @@ class MuseTranscriptionClient(TranscriptionClient):
 
     def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
         payload = self._post(audio_bytes, language)
+
         text, parts = parse_muse_payload(payload, include_speakers=self.diarize)
+
         if not text and not parts:
             raise SubtitleError(_("Transcription returned no text"))
+
         result = TranscriptionResult(text=text, language=language, parts=parts)
         return self._attach_usage(result, payload)
 
@@ -115,6 +125,7 @@ class MuseTranscriptionClient(TranscriptionClient):
         }
         if language:
             config['languageBias'] = [language]
+
         return config
 
     def _attach_usage(self, result : TranscriptionResult, payload : dict) -> TranscriptionResult:
@@ -149,6 +160,7 @@ class MuseTranscriptionClient(TranscriptionClient):
         """Map cookbook-documented status codes to actionable hints."""
         reply = (response.text or '').strip()
         detail = reply[:500] if reply.startswith(('{', '[')) else (reply[:200] if reply else _("empty response body"))
+
         hints = {
             400: _("audio over the 10-minute cap, or a malformed request"),
             401: _("the credential was not accepted"),
@@ -157,6 +169,7 @@ class MuseTranscriptionClient(TranscriptionClient):
             429: _("rate limited"),
         }
         hint = hints.get(response.status_code)
+
         if hint is None:
             return detail
         return f"{hint}: {detail}"

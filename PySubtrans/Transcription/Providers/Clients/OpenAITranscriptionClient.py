@@ -63,9 +63,12 @@ class OpenAITranscriptionClient(TranscriptionClient):
             **self._language_fields(language),
             'file': ('chunk.wav', audio_bytes, 'audio/wav'),
         })
+
         text, detected, words = parse_verbose_payload(payload)
+
         if not text:
             raise SubtitleError(_("Transcription returned no text"))
+
         result = TranscriptionResult(text=text, language=detected or language, words=words)
         return self._attach_usage(result, payload)
 
@@ -77,9 +80,12 @@ class OpenAITranscriptionClient(TranscriptionClient):
             **self._language_fields(language),
             'file': ('chunk.wav', audio_bytes, 'audio/wav'),
         })
+
         text, parts = parse_diarized_payload(payload)
+
         if not text:
             raise SubtitleError(_("Transcription returned no text"))
+
         result = TranscriptionResult(text=text, language=language, parts=parts)
         return self._attach_usage(result, payload)
 
@@ -101,4 +107,5 @@ class OpenAITranscriptionClient(TranscriptionClient):
     def _post(self, fields : dict) -> dict:
         url = f"{self.server_address}/audio/transcriptions"
         headers = {'Authorization': f"Bearer {self.api_key}"} if self.api_key else {}
+
         return self._PostJson(url, headers=headers, files=fields)

@@ -20,8 +20,7 @@ from PySubtrans.Transcription.Providers.Provider_QwenLocal import (
 # Loaded ASR models per (checkpoint, device, generation budget, aligner):
 # loading takes seconds, and load-time settings only apply to fresh loads.
 # No eviction: entries accumulate across settings changes within a session.
-# Acceptable for a single-user desktop app, but revisit if memory pressure
-# becomes an issue (each checkpoint holds ~1-3 GB of GPU memory).
+# Revisit if there are ever more than two models to choose from.
 _loaded_models : dict[tuple[str, str, int, str], object] = {}
 
 
@@ -31,7 +30,6 @@ else:
     try:
         import torch
         from qwen_asr import Qwen3ASRModel      #type: ignore[import]
-
 
         def _mps_available() -> bool:
             """Apple Silicon GPU backend; absent on torch builds without it."""
@@ -126,6 +124,8 @@ else:
                 """Generation budget per chunk (long chunks need headroom)."""
                 return self.settings.get_int('max_new_tokens') or 1024
 
+            # Transcription
+
             def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
                 model = self._load_model()
                 chunk_path = self._write_chunk(audio_bytes)
@@ -149,8 +149,10 @@ else:
                         # and report it without timings in that case.
                         message = str(e).casefold()
                         unsupported = 'unsupported language' in message or 'language is not supported' in message
+
                         if not (want_stamps and unsupported):
                             raise
+
                         results = model.transcribe(
                             audio=chunk_path,
                             language=canonical,
@@ -182,6 +184,7 @@ else:
                     return cached
 
                 logging.info(_("Loading Qwen model {} on {}").format(self.checkpoint, self.device))
+
                 try:
                     dtype = self.inference_dtype
                     model = Qwen3ASRModel.from_pretrained(
@@ -201,6 +204,7 @@ else:
 
             def _write_chunk(self, audio_bytes : bytes) -> str:
                 handle, path = tempfile.mkstemp(suffix='.wav', prefix='subtrans-qwen-')
+
                 with os.fdopen(handle, 'wb') as f:
                     f.write(audio_bytes)
                 return path

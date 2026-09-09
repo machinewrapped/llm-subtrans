@@ -2,7 +2,7 @@ import unittest
 from enum import Enum
 
 from PySubtrans.Helpers import GetValueName, GetValueFromName
-from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseDelayFromHeader, ParseKeyValuePairs, ParseNames, TryParseFloat, TryParseInt, TryParseNonNegative
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseDelayFromHeader, ParseKeyValuePairs, ParseNames, TryParseFloat, TryParseNonNegative
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 
 
@@ -29,12 +29,6 @@ class TestTryParseFloat(LoggedTestCase):
             with self.subTest(value=value):
                 self.assertLoggedEqual(f"float from {value!r}", None, TryParseFloat(value),
                                        input_value=value)
-
-    def test_try_parse_int(self):
-        """Integers truncate; invalid values stay None."""
-        self.assertLoggedEqual("int", 3, TryParseInt("3.9"))
-        self.assertLoggedEqual("none", None, TryParseInt(None))
-        self.assertLoggedEqual("garbage", None, TryParseInt("soon"))
 
 
 class TestTryParseNonNegative(LoggedTestCase):

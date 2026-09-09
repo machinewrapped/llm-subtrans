@@ -102,14 +102,6 @@ def TryParseNonNegative(value : Any) -> float|None:
     parsed = TryParseFloat(value)
     return max(0.0, parsed) if parsed is not None else None
 
-
-def TryParseInt(value : Any) -> int|None:
-    """
-    Parse an integer without raising (see TryParseFloat).
-    """
-    parsed = TryParseFloat(value)
-    return int(parsed) if parsed is not None else None
-
 def ParseNames(name_list : str|list|None|Any) -> list[str]:
     """
     Parse a list of names from a string or list of strings

@@ -143,7 +143,6 @@ class SettingsDialog(QDialog):
         self.setWindowTitle(_("GUI-Subtrans Settings"))
         self.setMinimumWidth(800)
 
-        self.global_options : Options = options
         self.translation_provider : TranslationProvider|None = None
         self.transcription_provider : TranscriptionProvider|None = None
         self.transcription_provider_names : list[str] = []
@@ -435,7 +434,8 @@ class SettingsDialog(QDialog):
         Add a read-only field for provider information to the form
         """
         if section_name == self.TRANSCRIPTION_SECTION and self.transcription_provider:
-            provider_info = self.transcription_provider.GetInformation(*self._transcription_dependency_state())
+            provider_info = self.transcription_provider.GetInformation(
+                ffmpeg_available=self.ffmpeg_available, torch_device=self.torch_device)
         elif section_name == self.PROVIDER_SECTION and self.translation_provider:
             provider_info = self.translation_provider.GetInformation()
         else:
@@ -539,16 +539,16 @@ class SettingsDialog(QDialog):
         self.loader_thread = None
         logging.error(_("Unable to load transcription providers: {error}").format(error=message))
 
-    def _transcription_dependency_state(self) -> tuple[bool|None, str]:
-        """
-        Cached dependency evidence for provider info: ffmpeg proven (or not)
-        and the resolved torch device from the last local run. Never probes
-        here; writers live on the transcription run paths.
-        """
+    @property
+    def ffmpeg_available(self) -> bool|None:
+        """Whether ffmpeg has been proven available by a previous run."""
         ffmpeg = self.settings.get('transcription_ffmpeg_available')
-        ffmpeg_available = ffmpeg if isinstance(ffmpeg, bool|None) else None
-        torch_device = self.settings.get_str('transcription_torch_device') or "Unknown"
-        return ffmpeg_available, torch_device
+        return ffmpeg if isinstance(ffmpeg, bool|None) else None
+
+    @property
+    def torch_device(self) -> str:
+        """Torch device resolved by the last local transcription run."""
+        return self.settings.get_str('transcription_torch_device') or "Unknown"
 
     def _initialise_transcription_provider(self) -> None:
         """
@@ -561,7 +561,7 @@ class SettingsDialog(QDialog):
         try:
             saved = self._get_transcription_provider_settings(name)
             resolved = TranscriptionCoordinator.ResolveProviderSettings(
-                name, SettingsType(saved), self.global_options)
+                name, SettingsType(saved), self.settings.get_dict('provider_settings'))
             self.transcription_provider = TranscriptionProvider.create_provider(name, resolved)
         except Exception as e:
             logging.error(f"Unable to create transcription provider '{name}': {e}")

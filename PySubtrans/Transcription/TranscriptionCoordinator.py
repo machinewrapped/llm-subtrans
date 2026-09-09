@@ -145,9 +145,10 @@ class TranscriptionCoordinator:
         return self.settings.get_float('silence_skip_db') or -40.0
 
     @classmethod
-    def ResolveProviderSettings(cls, provider_name : str, settings : SettingsType|Options, options : Options|None = None) -> SettingsType:
+    def ResolveProviderSettings(cls, provider_name : str, settings : SettingsType,
+                                provider_settings : SettingsType|None = None) -> SettingsType:
         """
-        Merge settings with shared credentials from Options.provider_settings.
+        Merge settings with shared credentials from the provider_settings dict.
 
         Only credentials travel across capabilities (api_key, proxy): endpoint
         conventions differ per capability (translation and transcription use
@@ -155,19 +156,17 @@ class TranscriptionCoordinator:
         shared. Transcription settings live under "<name> Transcription".
         """
         resolved = SettingsType(settings or {})
-        if options is not None and isinstance(options, Options):
-            # Membership checks first: provider_settings raises KeyError for
-            # unknown providers and missing keys are the expected case here.
-            own_key = f"{provider_name} Transcription"
-            if own_key in options.provider_settings:
-                for k, v in options.provider_settings[own_key].items():
-                    if k not in resolved:
-                        resolved[k] = v
-            if provider_name in options.provider_settings:
-                shared = options.provider_settings[provider_name]
-                for key in ('api_key', 'proxy'):
-                    if not resolved.get(key) and shared.get(key):
-                        resolved[key] = shared.get(key)
+        if provider_settings is not None:
+            # Transcription-specific settings fill gaps; explicit settings win.
+            own = provider_settings.get_dict(f"{provider_name} Transcription")
+            if own:
+                resolved = SettingsType(own | resolved)
+
+            # Only credentials travel across capabilities, never endpoints.
+            shared = provider_settings.get_dict(provider_name)
+            for key in ('api_key', 'proxy'):
+                if not resolved.get(key) and shared.get(key):
+                    resolved[key] = shared.get(key)
 
         return resolved
 

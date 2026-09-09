@@ -262,7 +262,7 @@ class TranscriptionDialog(QDialog):
         if not name:
             return None
         try:
-            saved = TranscriptionCoordinator.ResolveProviderSettings(name, SettingsType(), self.global_options)
+            saved = TranscriptionCoordinator.ResolveProviderSettings(name, SettingsType(), self.global_options.get_dict('provider_settings'))
             return TranscriptionProvider.create_provider(name, saved)
         except Exception as e:
             logging.error(_("Unable to create transcription provider: {error}").format(error=str(e)))

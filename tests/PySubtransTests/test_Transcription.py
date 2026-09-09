@@ -401,7 +401,7 @@ class TestSettingsNamespaces(LoggedTestCase):
         """Only api_key/proxy travel across capabilities, never endpoints."""
         options = self._options()
         resolved = TranscriptionCoordinator.ResolveProviderSettings(
-            "OpenRouter", SettingsType(), options)
+            "OpenRouter", SettingsType(), options.get_dict('provider_settings'))
 
         self.assertLoggedEqual("shared key", "shared-key", resolved.get_str('api_key'))
         self.assertLoggedEqual("no shared server", None, resolved.get_str('server_address'))
@@ -414,7 +414,7 @@ class TestSettingsNamespaces(LoggedTestCase):
             'model': 'openai/whisper-large-v3',
         })
         resolved = TranscriptionCoordinator.ResolveProviderSettings(
-            "OpenRouter", SettingsType(), options)
+            "OpenRouter", SettingsType(), options.get_dict('provider_settings'))
 
         self.assertLoggedEqual("own model", "openai/whisper-large-v3", resolved.get_str('model'))
         self.assertLoggedEqual("shared key", "shared-key", resolved.get_str('api_key'))

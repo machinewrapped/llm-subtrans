@@ -54,10 +54,8 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
         return self.diarize
 
     def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
-        # No silent plain-text fallback: without timings the result has no
-        # value as subtitle input, and the retry would bill a second request.
-        # Note: SubtitleError.__str__ prefers the wrapped error, so the
-        # provider detail is embedded in the message itself to stay visible.
+        # Timings are required for subtitle input, so don't fall back to plain text.
+        # Retrying would also issue and bill a second provider request.
         try:
             return self._request_verbose(audio_bytes, language)
         except _StructuredOutputUnsupported as e:

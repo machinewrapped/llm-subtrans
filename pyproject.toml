@@ -51,6 +51,7 @@ pythonVersion = "3.10"
 typeCheckingMode = "basic"
 venvPath = "."
 venv = "envsubtrans"
+useLibraryCodeForTypes = false
 
 # Stricter checking
 reportMissingImports = "error"

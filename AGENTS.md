@@ -6,7 +6,7 @@ GUI framework is PySide6, be sure to use the correct syntax (e.g. scoped enum va
 
 Secrets are stored in a .env file - the agent must NEVER read the contents of the file.
 
-Always run the unit_tests at the end of a task that changed code to validate the changes.
+Always run the unit_tests at the end of a task if testable code was changed.
 
 ## Console Output
 **IMPORTANT** Avoid Unicode characters (✓ ✗) in log messages as these trigger Windows console errors
@@ -18,7 +18,7 @@ Always run the unit_tests at the end of a task that changed code to validate the
 - Build distribution: `./scripts/makedistro.sh` (Linux/Mac) or `scripts\makedistro.bat` (Windows)
 
 ## Code Style
-**🚨 CRITICAL RULE: NEVER add imports in the middle of functions or methods - ALL imports MUST be at the top of the file.**
+**🚨 CRITICAL RULE: NEVER add imports in the middle of functions or methods - imports MUST be at the top of the file.**
 
 - **Naming**: PascalCase for classes and methods, snake_case for variables
   - NEVER use bare `_` as a throwaway variable (e.g. `filepath, _ = ...`) - `_()` is the localization function and the assignment shadows it, causing UnboundLocalError. Use `_selected_filter`, `_dummy`, etc. instead
@@ -30,6 +30,7 @@ Always run the unit_tests at the end of a task that changed code to validate the
   - Examples: 
     `def func(self, param : str) -> str|None:` ✅ 
     `def func(self, param: str) -> str | None:` ❌
+- **Whitespace**: Use blank lines to group logical operations and enhance readability
 - **Docstrings**: Triple-quoted concise descriptions for classes and methods
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()
@@ -52,5 +53,5 @@ Always run the unit_tests at the end of a task that changed code to validate the
     - Use `log_input_expected_error(input, ExpectedException, actual_exception)` for exception logging
   - **None Safety**: Use `.get(key, default)` with appropriate default values to avoid Pylance warnings, or assert then test for None values.
 
-## Information
-Consult `docs/architecture.md` for detailed information on the project architecture and components.
+## Architecture
+Consult `docs/architecture.md` for detailed information on the project architecture and components any time a task introduces new systems or requires architectural understanding, rather than trying to reverse-engineer the architecture every time. Ensure the document is maintained after making significant architectural changes.

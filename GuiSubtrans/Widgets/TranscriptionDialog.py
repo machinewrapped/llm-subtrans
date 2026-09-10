@@ -86,7 +86,6 @@ class TranscriptionDialog(QDialog):
         self.active_command : TranscribeMediaCommand|None = None
         self._completion_slot : Callable[[TranscribeMediaCommand], None]|None = None
         self._pending_accept : bool = False
-        self._resume_subtitles : Subtitles|None = None
 
         self._build_form()
         self.setAcceptDrops(True)
@@ -101,8 +100,11 @@ class TranscriptionDialog(QDialog):
 
     @property
     def _can_resume(self) -> bool:
-        """Whether partial results from an unfinished run are available."""
-        return self._resume_subtitles is not None and self._resume_subtitles.linecount > 0
+        """
+        Whether results are available to resume from. A run that completes
+        cleanly closes the dialog, so any results still on show are partial.
+        """
+        return self.subtitles is not None and self.subtitles.linecount > 0
 
     def _build_form(self) -> None:
         layout = QVBoxLayout(self)
@@ -359,7 +361,6 @@ class TranscriptionDialog(QDialog):
         self.media_path = path.strip() or None
         self.track_combo.clear()
         self.subtitles = None
-        self._resume_subtitles = None
         if self.media_path and os.path.isfile(self.media_path):
             self._load_tracks()
         if self._phase == "setup":
@@ -479,7 +480,6 @@ class TranscriptionDialog(QDialog):
         command = self._build_command()
         if command is None:
             return
-        self._resume_subtitles = None
         self.subtitles = None
         self.results_view.clear()
         self.run_progress.Reset()
@@ -489,7 +489,7 @@ class TranscriptionDialog(QDialog):
         """Resume a previously aborted transcription from the last completed chunk."""
         if self.active_command is not None:
             return
-        resume = self._resume_subtitles
+        resume = self.subtitles
         if resume is None or not resume.originals or resume.originals[-1].end is None:
             self.status_label.setText(_("No partial results to resume from."))
             return
@@ -579,7 +579,6 @@ class TranscriptionDialog(QDialog):
         if command is not self.active_command:
             return
         self.subtitles = command.subtitles
-        self._resume_subtitles = self._resumable_results(command)
 
         if not command.aborted:
             # Extraction and inference provably ran: record what the run
@@ -605,15 +604,6 @@ class TranscriptionDialog(QDialog):
             self.accept()
 
     @staticmethod
-    def _resumable_results(command : TranscribeMediaCommand) -> Subtitles|None:
-        """Partial results a later run can pick up from, if the run stopped short."""
-        finished = (command.status is TranscriptionStatus.COMPLETED
-                    and not command.aborted and not command.stopped_early)
-        if finished or command.subtitles is None or command.subtitles.linecount == 0:
-            return None
-        return command.subtitles
-
-    @staticmethod
     def _completion_message(command : TranscribeMediaCommand) -> str:
         """Status line for a finished run, logging the successful cases."""
         count = command.transcribed_lines
@@ -637,7 +627,7 @@ class TranscriptionDialog(QDialog):
 
     def _has_unaccepted_results(self) -> bool:
         """Whether closing the dialog now would discard transcription results."""
-        return self.subtitles is not None and self.subtitles.linecount > 0
+        return self._can_resume
 
     def accept(self) -> None:
         """Keep the dialog alive until the queue command has stopped."""

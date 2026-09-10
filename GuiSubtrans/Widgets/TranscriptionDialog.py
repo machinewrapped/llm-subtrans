@@ -36,7 +36,8 @@ from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioChunker, SUPPORTED_MEDIA_EXTENSIONS, CheckFfmpegAvailable
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
+from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 

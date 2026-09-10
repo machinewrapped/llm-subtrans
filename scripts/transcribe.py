@@ -11,7 +11,7 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from scripts.subtrans_common import InitLogger
 

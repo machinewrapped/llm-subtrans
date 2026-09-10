@@ -11,7 +11,7 @@ import transcribe  # type: ignore[import-not-found] - scripts dir added to sys.p
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionOutcome, TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionOutcome, TranscriptionStatus
 
 
 class TestTranscribeCliOptions(LoggedTestCase):

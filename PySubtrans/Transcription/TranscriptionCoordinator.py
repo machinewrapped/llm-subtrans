@@ -3,103 +3,25 @@ from __future__ import annotations
 import logging
 import os
 from collections.abc import Generator
-from dataclasses import dataclass
 from datetime import timedelta
-from enum import Enum
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioChunk, AudioChunker, AudioTrack, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionEvents import TranscriptionEvents
 from PySubtrans.Transcription.TranscriptionLines import SpanLabel, TranscriptionLineBuilder
+from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionOutcome, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
+from PySubtrans.Transcription.TranscriptionRun import TranscriptionRun
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
-
-
-class TranscriptionStatus(str, Enum):
-    """Final state of a transcription run."""
-    IDLE = "idle"
-    COMPLETED = "completed"
-    INCOMPLETE = "incomplete"
-    FAILED = "failed"
-
-
-@dataclass
-class TranscriptionOutcome:
-    """
-    Result of one transcription run.
-
-    COMPLETED and INCOMPLETE outcomes carry subtitles (partial ones for
-    INCOMPLETE, which can be resumed by passing them back as
-    prior_subtitles). FAILED outcomes carry the error and no subtitles.
-    """
-    status : TranscriptionStatus
-    subtitles : Subtitles|None = None
-    error : SubtitleError|None = None
-    transcribed_lines : int = 0
-    total_cost : float = 0.0
-
-    @property
-    def succeeded(self) -> bool:
-        return self.status is TranscriptionStatus.COMPLETED
-
 
 # Consecutive chunk failures before an empty run is treated as blocked
 _MAX_INITIAL_FAILURES = 2
-
-
-class _TranscriptionRun:
-    """
-    Mutable state for one TranscribeMedia call: accumulated lines,
-    resume position, cost and failure bookkeeping.
-    """
-    def __init__(self, prior_subtitles : Subtitles|None):
-        self.lines : list[SubtitleLine] = []
-        self.line_number : int = 0
-        self.resume_after : timedelta|None = None
-        self.transcribed : int = 0
-        self.chunks_done : int = 0
-        self.consecutive_failures : int = 0
-        self.had_failures : bool = False
-        self.error : SubtitleError|None = None
-        self.total_cost : float = 0.0
-        self.audio_total_seconds : float = 0.0
-
-        if prior_subtitles and prior_subtitles.originals:
-            self.lines.extend(prior_subtitles.originals)
-            self.line_number = max((line.number or 0) for line in self.lines)
-            self.resume_after = prior_subtitles.originals[-1].end
-            self.transcribed = prior_subtitles.linecount
-            logging.info(_("Resuming transcription after {}").format(self.resume_after))
-
-    def AlreadyDone(self, chunk : AudioChunk) -> bool:
-        """Whether a prior run already covered this chunk."""
-        return self.resume_after is not None and chunk.end <= self.resume_after
-
-    def AddLine(self, segment : TranscriptionSegment) -> SubtitleLine|None:
-        """
-        Append a transcribed line, unless it precedes the resume point.
-        Returns the new line, or None when skipped.
-        """
-        if self.resume_after is not None and segment.start < self.resume_after:
-            return None
-
-        self.line_number += 1
-        metadata = {'speaker': segment.speaker} if segment.speaker else None
-        line = SubtitleLine.Construct(self.line_number, segment.start, segment.end, segment.text, metadata)
-        self.lines.append(line)
-        self.transcribed += 1
-        return line
-
-    def AudioPosition(self, chunk : AudioChunk) -> float:
-        """Seconds of audio processed once this chunk is done, clamped to the total."""
-        return min(self.audio_total_seconds, max(0.0, chunk.end.total_seconds()))
 
 
 class TranscriptionCoordinator:
@@ -180,7 +102,7 @@ class TranscriptionCoordinator:
         except SubtitleError as e:
             return self._failed(e)
 
-        run = _TranscriptionRun(prior_subtitles)
+        run = TranscriptionRun(prior_subtitles)
 
         def on_duration(duration : timedelta) -> None:
             run.audio_total_seconds = max(0.0, duration.total_seconds())
@@ -244,7 +166,7 @@ class TranscriptionCoordinator:
             ).format(self.provider.name))
         return client
 
-    def _run_chunks(self, run : _TranscriptionRun, client : TranscriptionClient, media_path : str,
+    def _run_chunks(self, run : TranscriptionRun, client : TranscriptionClient, media_path : str,
                     chunks : Generator[AudioChunk, None, None]) -> None:
         """
         Transcribe each planned chunk in turn, honouring abort, resume and
@@ -282,7 +204,7 @@ class TranscriptionCoordinator:
             finally:
                 report_audio(chunk)
 
-    def _handle_chunk_failure(self, run : _TranscriptionRun, chunk : AudioChunk, error : SubtitleError) -> bool:
+    def _handle_chunk_failure(self, run : TranscriptionRun, chunk : AudioChunk, error : SubtitleError) -> bool:
         """
         Record a chunk failure and decide whether the run must stop.
 
@@ -312,7 +234,7 @@ class TranscriptionCoordinator:
         logging.warning(_("Skipping chunk {}: {}").format(SpanLabel(chunk), error))
         return False
 
-    def _accept_chunk(self, run : _TranscriptionRun, segment : TranscriptionSegment|None,
+    def _accept_chunk(self, run : TranscriptionRun, segment : TranscriptionSegment|None,
                       provider_responded : bool) -> None:
         """Fold a successfully processed chunk into the run."""
         run.chunks_done += 1
@@ -330,7 +252,7 @@ class TranscriptionCoordinator:
             if run.AddLine(line) is not None:
                 self.events.segment.send(self, segment=line)
 
-    def _finish_run(self, run : _TranscriptionRun, media_path : str) -> TranscriptionOutcome:
+    def _finish_run(self, run : TranscriptionRun, media_path : str) -> TranscriptionOutcome:
         """Assemble the run's lines into Subtitles and report the outcome."""
         if run.transcribed == 0:
             return self._failed(SubtitleError(_("No timed subtitles could be produced from {}").format(media_path)))
@@ -362,7 +284,7 @@ class TranscriptionCoordinator:
                  if line.text and line.text.strip()]
         subtitles.originals = lines
 
-    def _transcribe_chunk(self, run : _TranscriptionRun, client : TranscriptionClient, media_path : str,
+    def _transcribe_chunk(self, run : TranscriptionRun, client : TranscriptionClient, media_path : str,
                           chunk : AudioChunk) -> tuple[TranscriptionSegment|None, bool]:
         """
         Read and transcribe one chunk. Returns the segment (None for silent

@@ -16,8 +16,8 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionOutcome, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionEvents import TranscriptionEvents
+from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionOutcome, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 

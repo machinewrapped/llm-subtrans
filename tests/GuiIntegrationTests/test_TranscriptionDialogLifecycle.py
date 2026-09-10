@@ -18,7 +18,8 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionOutcome, TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionOutcome
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 
 

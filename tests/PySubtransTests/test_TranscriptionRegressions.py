@@ -6,9 +6,10 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.Transcription.AudioExtractor import AudioChunk
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus, _TranscriptionRun
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionLines import JoinWords
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
+from PySubtrans.Transcription.TranscriptionRun import TranscriptionRun
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionClient, FakeTranscriptionProvider, FailingTranscriptionClient, _subtitles_of, stub_media
 
 
@@ -40,7 +41,7 @@ class TestTranscriptionRegressions(LoggedTestCase):
         """Music or noise can produce empty text while still incurring charges."""
         client = FakeTranscriptionClient()
         chunk = AudioChunk(timedelta(), timedelta(seconds=2))
-        run = _TranscriptionRun(None)
+        run = TranscriptionRun(None)
         with patch.object(self.coordinator.extractor, 'ReadChunkBytes', return_value=b'audio'), \
                 patch.object(self.coordinator.extractor, 'IsSilent', return_value=False), \
                 patch.object(client, 'TranscribeChunk', return_value=TranscriptionResult(text='', cost=0.125)):

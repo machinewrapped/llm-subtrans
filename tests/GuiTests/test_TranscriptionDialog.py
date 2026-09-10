@@ -19,7 +19,7 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 
 

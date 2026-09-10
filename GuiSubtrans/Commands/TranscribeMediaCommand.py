@@ -133,7 +133,8 @@ class TranscribeMediaCommand(Command):
         if project is None or project.subtitles is None or not self.save_transcription:
             return
 
-        outputpath = GetOutputPath(self.media_path, None, f".{self.output_format}")
+        language = self.settings.get_str('language')
+        outputpath = GetOutputPath(self.media_path, language, f".{self.output_format}")
         if not outputpath:
             return
 

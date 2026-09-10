@@ -13,7 +13,7 @@ from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
-from PySubtrans.SubtitleError import ExcessiveDurationError, SubtitleError
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor, AudioTrack, SilenceStream
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
@@ -762,31 +762,19 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedIn("blocked message", "consecutive", raised.exception.message)
         self.assertLoggedEqual("stopped early", 2, failing.calls)
 
-    def test_isolated_failures_do_not_abort(self):
-        """Successes reset the failure count, so blips don't kill runs."""
-        coordinator, failing = self._failing_coordinator({1, 3}, chunks=4)
+    def test_initial_failure_tolerated_when_next_succeeds(self):
+        """A single failure before any transcription is tolerated."""
+        coordinator, failing = self._failing_coordinator({1}, chunks=3)
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             subtitles = coordinator.TranscribeMedia(media.name)
 
         self.assertLoggedEqual("line count", 2, subtitles.linecount)
-        self.assertLoggedEqual("all chunks attempted", 4, failing.calls)
+        self.assertLoggedEqual("all chunks attempted", 3, failing.calls)
 
-    def test_empty_provider_response_resets_failure_streak(self):
-        """Billed empty responses separate backend failures like other successes."""
-        coordinator, failing = self._failing_coordinator(
-            {2, 4}, chunks=5, max_consecutive_failures=2)
-        failing.texts = ["ok line", "ignored", ""]
-
-        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.TranscribeMedia(media.name)
-
-        self.assertLoggedEqual("all chunks attempted", 5, failing.calls)
-        self.assertLoggedEqual("successful lines retained", 2, subtitles.linecount)
-
-    def test_mid_run_consecutive_failures_abort(self):
-        """Three consecutive failures mid-run abort even after successes."""
-        coordinator, failing = self._failing_coordinator({2, 3, 4}, chunks=6)
+    def test_mid_run_failure_aborts_immediately(self):
+        """A failure after transcription started aborts to prevent unfillable gaps."""
+        coordinator, failing = self._failing_coordinator({2}, chunks=4)
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
             subtitles = coordinator.TranscribeMedia(media.name)
@@ -794,18 +782,7 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedEqual("partial lines retained", 1, subtitles.linecount)
         self.assertLoggedEqual("incomplete status", "incomplete", coordinator.status.value)
         self.assertLoggedIsNotNone("failure retained", coordinator.last_error)
-        self.assertLoggedEqual("stopped early", 4, failing.calls)
-
-    def test_custom_consecutive_limit(self):
-        """The consecutive-failure budget is tunable per run."""
-        coordinator, failing = self._failing_coordinator({2, 3, 4, 5}, chunks=6,
-                                                          max_consecutive_failures=5)
-
-        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.TranscribeMedia(media.name)
-
-        self.assertLoggedEqual("line count", 2, subtitles.linecount)
-        self.assertLoggedEqual("all chunks attempted", 6, failing.calls)
+        self.assertLoggedEqual("stopped at failure", 2, failing.calls)
 
     def test_project_persistence_follows_options(self):
         """GUI projects are persistent like opened files, so autosave uses the project path."""
@@ -821,10 +798,6 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedEqual("persistent with options", True, persistent.use_project_file)
         self.assertLoggedIn("project file alongside media", ".subtrans", persistent.projectfile or "")
         self.assertLoggedEqual("transient without options", False, transient.use_project_file)
-
-    def _project_batches(self, project):
-        assert project.subtitles is not None  # Type narrowing for PyLance
-        return [batch for scene in project.subtitles.scenes for batch in scene.batches]
 
     def test_project_postprocesses_transcription_text(self):
         """User normalizations apply to transcribed lines, timings untouched."""
@@ -863,8 +836,6 @@ class TestTranscriptionCoordinator(LoggedTestCase):
                 originals = project.subtitles.originals or []
                 expected = ["Hello"] if texts[1] == "Um, hello" else []
                 self.assertLoggedEqual("nonempty source text", expected, [line.text for line in originals])
-                batch_lines = [line for batch in self._project_batches(project) for line in batch.originals]
-                self.assertLoggedEqual("batch and flat lines agree", originals, batch_lines)
                 if originals:
                     self.assertLoggedEqual("surviving start preserved", timedelta(seconds=6), originals[0].start)
                     self.assertLoggedEqual("surviving end preserved", timedelta(seconds=10), originals[0].end)
@@ -905,22 +876,6 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         assert project.subtitles.originals is not None  # Type narrowing for PyLance
         self.assertLoggedEqual("line count", 1, len(project.subtitles.originals))
 
-    def test_project_flags_batches_for_revalidation(self):
-        """Fresh transcription batches carry notes and the revalidation tag."""
-        coordinator, _unused_provider = self._coordinator(["monologue"])
-        stub_media(self, coordinator, [
-            AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=60)),
-        ])
-
-        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            project = coordinator.CreateTranscriptionProject(media.name, Options({'project_file': True}))
-
-        batches = self._project_batches(project)
-        self.assertLoggedGreater("batches built", len(batches), 0)
-        for batch in batches:
-            self.assertLoggedEqual("revalidation tagged", True, batch.validate_originals)
-        error_types = {type(e) for batch in batches for e in batch.errors}
-        self.assertLoggedIn("duration note attached", ExcessiveDurationError, error_types)
 
 
 class TestTranscriptionRateLimit(LoggedTestCase):

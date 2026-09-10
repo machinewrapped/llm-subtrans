@@ -3,7 +3,7 @@ import logging
 from datetime import timedelta
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import TryParseNonNegative
+from PySubtrans.Helpers.Parse import ParseDelayFromHeader, TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
@@ -18,6 +18,10 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
     structured output fail fast to avoid incurring a charge for untimed text.
     Diarization is a per-model provider option (see _diarize_options).
     """
+    _MAX_RETRIES = 3
+    _BACKOFF_BASE = 5.0
+    _GIVE_UP_SECONDS = 300.0
+
     def __init__(self, settings : SettingsType):
         super().__init__(settings)
         self._diarize_warned : bool = False
@@ -111,14 +115,50 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
         if options:
             body['provider'] = {'options': options}
 
-        response = self._PostRequest(url, headers=headers, json_body=body)
+        for attempt in range(self._MAX_RETRIES + 1):
+            response = self._PostRequest(url, headers=headers, json_body=body)
 
-        # Intercept before the generic error handler: a 400 that mentions
-        # verbose_json / timestamps means the model lacks structured output.
-        if response.status_code == 400 and self._looks_like_unsupported(response.text):
-            raise _StructuredOutputUnsupported(response.text[:200])
+            # Intercept before the generic error handler: a 400 that mentions
+            # verbose_json / timestamps means the model lacks structured output.
+            if response.status_code == 400 and self._looks_like_unsupported(response.text):
+                raise _StructuredOutputUnsupported(response.text[:200])
 
+            if response.status_code != 429:
+                return self._ParseJsonResponse(url, response)
+
+            delay = self._rate_limit_delay(response, attempt)
+            if delay is None:
+                # Retries exhausted or server wants us to wait too long.
+                return self._ParseJsonResponse(url, response)
+
+            logging.warning(_("Rate limited (attempt {}/{}), retrying in {:.0f}s...").format(
+                attempt + 1, self._MAX_RETRIES + 1, delay))
+            self._sleep_abortable(delay)
+
+        # Unreachable in practice (the loop always returns), but keeps
+        # the type checker happy.
         return self._ParseJsonResponse(url, response)
+
+    def _rate_limit_delay(self, response, attempt : int) -> float|None:
+        """
+        Compute a retry delay from the 429 response, or return None to give up.
+
+        Respects Retry-After when present; falls back to exponential backoff.
+        Gives up when attempts are exhausted or the server asks for a delay
+        longer than _GIVE_UP_SECONDS (a quota-level block, not a burst limit).
+        """
+        if attempt >= self._MAX_RETRIES:
+            return None
+
+        retry_after = (response.headers.get('retry-after')
+                       or response.headers.get('x-ratelimit-reset-requests'))
+        if retry_after:
+            delay = ParseDelayFromHeader(retry_after)
+            if delay > self._GIVE_UP_SECONDS:
+                return None
+            return max(1.0, delay)
+
+        return self._BACKOFF_BASE * 2.0 ** attempt
 
     def _diarize_options(self) -> dict:
         """
@@ -136,6 +176,8 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
             return {'azure': {'diarization': {'enabled': True}}}
         if model_cf.startswith('deepgram/'):
             return {'deepgram': {'diarize': True}}
+        if model_cf.startswith('x-ai/'):
+            return {'xai': {'diarize': True}}
 
         if not self._diarize_warned:
             logging.warning(_("Diarization is not mapped for model '{}', requesting without it").format(self.model))

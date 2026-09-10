@@ -27,21 +27,13 @@ class TestTranscriptionRegressions(LoggedTestCase):
             project = self.coordinator.CreateTranscriptionProject('readme.md', Options())
         return project, client
 
-    def test_consecutive_failures_return_a_translation_ready_partial_project(self) -> None:
-        """Completed billed chunks remain usable after the failure threshold."""
-        project, client = self._run_failures({2, 3, 4}, 5)
+    def test_mid_run_failure_returns_partial_project(self) -> None:
+        """Completed billed chunks remain usable after a mid-run failure."""
+        project, client = self._run_failures({2}, 5)
         self.assertLoggedEqual('partial source lines', 1, project.subtitles.linecount)
-        self.assertLoggedGreater('partial project batched', len(project.subtitles.scenes), 0)
         self.assertLoggedEqual('incomplete result', TranscriptionStatus.INCOMPLETE, self.coordinator.status)
         self.assertLoggedIsNotNone('failure detail retained', self.coordinator.last_error)
-        self.assertLoggedEqual('stops at failure threshold', 4, client.calls)
-
-    def test_isolated_failed_chunk_marks_output_incomplete(self) -> None:
-        """Continuing after a failed chunk does not report complete subtitles."""
-        project, client = self._run_failures({2}, 3)
-        self.assertLoggedEqual('successful chunks retained', 2, project.subtitles.linecount)
-        self.assertLoggedEqual('all chunks attempted', 3, client.calls)
-        self.assertLoggedEqual('missing chunk disclosed', TranscriptionStatus.INCOMPLETE, self.coordinator.status)
+        self.assertLoggedEqual('stops at failure', 2, client.calls)
 
     def test_empty_response_still_counts_billed_usage(self) -> None:
         """Music or noise can produce empty text while still incurring charges."""

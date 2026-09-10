@@ -9,18 +9,15 @@ from enum import Enum
 
 import regex
 
-from PySubtrans import batch_subtitles
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleError import SubtitleError
+from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.SubtitleScene import UnbatchScenes
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.SubtitleValidator import SubtitleValidator
 from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioChunk, AudioChunker, AudioTrack, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
@@ -112,6 +109,7 @@ class TranscriptionCoordinator:
         self.extractor : AudioExtractor = self.chunker.extractor
         self._active_client : TranscriptionClient|None = None
         self.total_cost : float = 0.0
+        self.transcribed_lines : int = 0
         self.status : TranscriptionStatus = TranscriptionStatus.IDLE
         self.last_error : SubtitleError|None = None
         self.partial_subtitles : Subtitles|None = None
@@ -233,19 +231,19 @@ class TranscriptionCoordinator:
         logging.info(_("Transcribing {} with {} (chunks stream in while silence detection runs)").format(
             os.path.basename(media_path), self.provider.name))
 
-        builder = SubtitleBuilder()
+        lines : list[SubtitleLine] = []
+        line_number = 0
         resume_after : timedelta|None = None
         if prior_subtitles and prior_subtitles.originals:
-            builder.AddExistingScenes(prior_subtitles.scenes)
+            lines.extend(prior_subtitles.originals)
+            line_number = max((line.number or 0) for line in lines)
             resume_after = prior_subtitles.originals[-1].end
             logging.info(_("Resuming transcription after {}").format(resume_after))
-        builder.AddScene(summary=_("Transcription of {}").format(os.path.basename(media_path)))
 
         transcribed = prior_subtitles.linecount if prior_subtitles else 0
         chunks_done = 0
         consecutive_failures = 0
         had_failures = False
-        max_consecutive = self.settings.get_int('max_consecutive_failures', 3) or 3
         self.total_cost = 0.0
         incomplete_error : SubtitleError|None = None
         try:
@@ -277,22 +275,29 @@ class TranscriptionCoordinator:
                     had_failures = True
                     self.last_error = e
                     consecutive_failures += 1
-                    # Two failures before anything ever worked is a systemic
-                    # problem (credentials, model, endpoint): fail fast with
-                    # the real error instead of grinding through every chunk.
-                    limit = 2 if transcribed == 0 else max_consecutive
-                    if consecutive_failures >= limit:
-                        incomplete_error = SubtitleError(
-                            _("Transcription blocked after {count} consecutive chunk failures: {error}").format(
-                                count=consecutive_failures, error=e),
-                            error=e)
-                        if transcribed == 0:
+                    if transcribed == 0:
+                        # Two failures before anything ever worked is a
+                        # systemic problem (credentials, model, endpoint):
+                        # fail fast with the real error instead of
+                        # grinding through every chunk.
+                        if consecutive_failures >= 2:
                             self.status = TranscriptionStatus.FAILED
-                            raise incomplete_error
+                            raise SubtitleError(
+                                _("Transcription blocked after {count} consecutive chunk failures: {error}").format(
+                                    count=consecutive_failures, error=e),
+                                error=e)
+                        logging.warning(_("Skipping chunk {}: {}").format(self._span_label(chunk), e))
+                    else:
+                        # Once lines exist, any chunk failure creates an
+                        # unfillable gap (resume appends after the last
+                        # line, it cannot backfill).  Stop now so the
+                        # user can resume from this point.
+                        incomplete_error = SubtitleError(
+                            _("Transcription stopped at {span}: {error}").format(
+                                span=self._span_label(chunk), error=e),
+                            error=e)
                         logging.error(str(incomplete_error))
                         break
-                    logging.warning(_("Skipping chunk {}: {}").format(self._span_label(chunk), e))
-                    chunks_done += 1
                 else:
                     chunks_done += 1
 
@@ -306,8 +311,10 @@ class TranscriptionCoordinator:
                         for line in self._lines_for_segment(segment):
                             if resume_after is not None and line.start < resume_after:
                                 continue
-                            builder.BuildLine(line.start, line.end, line.text,
-                                              {'speaker': line.speaker} if line.speaker else None)
+                            line_number += 1
+                            lines.append(SubtitleLine.Construct(
+                                line_number, line.start, line.end, line.text,
+                                {'speaker': line.speaker} if line.speaker else None))
                             transcribed += 1
                             if segment_cb:
                                 segment_cb(line)
@@ -332,10 +339,12 @@ class TranscriptionCoordinator:
             self.status = TranscriptionStatus.FAILED
             raise SubtitleError(_("No timed subtitles could be produced from {}").format(media_path))
 
+        self.transcribed_lines = transcribed
         logging.info(_("Transcribed {} lines from {} chunks").format(transcribed, chunks_done))
         if self.total_cost > 0:
             logging.info(_("Transcription cost: ${:.4f}").format(self.total_cost))
-        subtitles = builder.Build()
+        subtitles = Subtitles()
+        subtitles.originals = lines
         subtitles.sourcepath = os.path.normpath(media_path)
         subtitles.file_format = '.srt'
         self.partial_subtitles = subtitles
@@ -351,7 +360,12 @@ class TranscriptionCoordinator:
                                    audio_progress_cb : TranscriptionAudioProgressCallback|None = None,
                                    prior_subtitles : Subtitles|None = None) -> SubtitleProject:
         """
-        Transcribe media and return a project ready for the translation workflow.
+        Transcribe media and wrap the result in a project.
+
+        Returns raw source lines — preprocessing, batching, and validation
+        happen later when the user opens the project (GUI) or are not needed
+        (CLI save).  This keeps the transcription result identical in shape
+        to a freshly loaded SRT.
         """
         subtitles = self.TranscribeMedia(media_path, progress_cb, segment_cb, audio_progress_cb,
                                          prior_subtitles=prior_subtitles)
@@ -362,25 +376,11 @@ class TranscriptionCoordinator:
 
         if options is not None:
             project.UpdateProjectSettings(SettingsType(options))
-            # One "Post-process transcription" toggle covers both cleanup
-            # steps: they both run after transcription, before translation.
             if options.get_bool('postprocess_transcription', True):
-                self._preprocess_transcription(subtitles, options)
-            batch_subtitles(
-                subtitles,
-                scene_threshold=options.get_float('scene_threshold') or 60.0,
-                min_batch_size=options.get_int('min_batch_size') or 1,
-                max_batch_size=options.get_int('max_batch_size') or 100,
-                prevent_overlap=options.get_bool('prevent_overlapping_times'),
-                min_gap=options.get_float('min_gap', 0.05) or 0.0,
-            )
+                self._process_transcription(subtitles, options)
             outputpath = GetOutputPath(media_path, options.get_str('target_language'), '.srt')
             if outputpath:
                 subtitles.outputpath = outputpath
-
-            if options.get_bool('postprocess_transcription', True):
-                self._postprocess_transcription(subtitles, options)
-            self._validate_transcription(subtitles, options)
 
         return project
 
@@ -390,51 +390,19 @@ class TranscriptionCoordinator:
         if self._active_client is not None:
             self._active_client.AbortTranscription()
 
-    def _preprocess_transcription(self, subtitles : Subtitles, options : Options) -> None:
+    def _process_transcription(self, subtitles : Subtitles, options : Options) -> None:
         """
-        Run the standard preprocessing (dialog splits, duration-based line
-        splitting) so transcribed lines obey the same settings as loaded
-        files. Runs before batching, like the file-load path. Governed by
-        the "Post-process transcription" toggle alongside postprocessing:
-        in this context both are just cleanup steps after transcription.
+        Pre- and post-process transcribed lines (dash normalization, filler
+        word removal, dialog breaks, duration-based line splitting).  Works
+        on the flat originals list — no batching or scenes involved.
         """
-        if subtitles.originals:
-            processor = SubtitleProcessor(SettingsType(options))
-            processed = processor.PreprocessSubtitles(subtitles.originals)
-            # Cleanup can empty every line (filler-only utterances): keep the
-            # originals so batching still runs, the postprocess filter removes
-            # the empties afterwards instead of crashing batch_subtitles.
-            if processed:
-                subtitles.originals = processed
-
-    def _postprocess_transcription(self, subtitles : Subtitles, options : Options) -> None:
-        """
-        Clean transcribed lines (dashes, filler words, line breaks)
-        Text-only: timings untouched.
-        """
+        if not subtitles.originals:
+            return
         processor = SubtitleProcessor(SettingsType(options))
-        for scene in subtitles.scenes:
-            for batch in scene.batches:
-                # Cleanup can remove an entire filler-only utterance. Empty
-                # translations are allowed by the processor, but source lines
-                # must contain text before entering the project/view model.
-                batch.originals[:] = [line for line in processor.PostprocessSubtitles(batch.originals)
-                                      if line.text and line.text.strip()]
-        # Re-derive the flat line list: batches hold the edited copies now
-        subtitles.originals, subtitles.translated, _dummy = UnbatchScenes(subtitles.scenes)
-
-    def _validate_transcription(self, subtitles : Subtitles, options : Options) -> None:
-        """
-        Attach source validation notes to fresh batches and tag them for
-        revalidation, so hand-edits recompute (and clear) notes via the
-        standard ValidateBatch path instead of going stale.
-        """
-        validator = SubtitleValidator(options)
-        for scene in subtitles.scenes:
-            for batch in scene.batches:
-                batch.validate_originals = True
-                notes = validator.ValidateOriginals(batch.originals, self.max_line_seconds)
-                batch.errors = list(batch.errors or []) + notes  # type: ignore[assignment]
+        lines = processor.PreprocessSubtitles(subtitles.originals)
+        lines = [line for line in processor.PostprocessSubtitles(lines)
+                 if line.text and line.text.strip()]
+        subtitles.originals = lines
 
     def _transcribe_chunk(self, client : TranscriptionClient, media_path : str,
                           chunk : AudioChunk) -> tuple[TranscriptionSegment|None, bool]:

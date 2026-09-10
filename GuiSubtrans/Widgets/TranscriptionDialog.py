@@ -616,7 +616,7 @@ class TranscriptionDialog(QDialog):
                 ffmpeg_available=command.ffmpeg_available or None,
                 torch_device=command.torch_device)
 
-        count = self.project.subtitles.linecount if self.project and self.project.subtitles else 0
+        count = command.transcribed_lines
         if command.aborted or command.stopped_early:
             self.status_label.setText(_("Aborted - partial results ({} lines).").format(count))
         elif command.status is TranscriptionStatus.FAILED:

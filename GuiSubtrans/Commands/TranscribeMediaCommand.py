@@ -39,6 +39,7 @@ class TranscribeMediaCommand(Command):
         self.project : SubtitleProject|None = None
         self.status : TranscriptionStatus = TranscriptionStatus.IDLE
         self.error : str|None = None
+        self.transcribed_lines : int = 0
         self.saved_path : str|None = None
         self.stopped_early : bool = False
         self.ffmpeg_available : bool = False
@@ -119,6 +120,7 @@ class TranscribeMediaCommand(Command):
             prior_subtitles=self.prior_subtitles)
 
         self.status = coordinator.status
+        self.transcribed_lines = coordinator.transcribed_lines
         if coordinator.last_error is not None:
             self.error = str(coordinator.last_error)
 

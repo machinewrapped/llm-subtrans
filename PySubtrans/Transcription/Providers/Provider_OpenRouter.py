@@ -126,7 +126,8 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
 
         return ['openai/whisper-large-v3', 'openai/whisper-large-v3-turbo',
                 'qwen/qwen3-asr-1.7b', 'qwen/qwen3-asr-0.6b',
-                'microsoft/mai-transcribe-2', 'google/chirp-3']
+                'microsoft/mai-transcribe-2', 'google/chirp-3',
+                'x-ai/grok-stt-1.0']
 
     def GetTranscriptionClient(self, settings : SettingsType) -> TranscriptionClient:
         """Returns a new client merging provider defaults with call settings."""

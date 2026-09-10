@@ -272,7 +272,7 @@ class TranscriptionCoordinator:
                     progress_cb(done, 0, self._span_label(chunk))
 
                 try:
-                    segment = self._transcribe_chunk(client, media_path, chunk)
+                    segment, provider_responded = self._transcribe_chunk(client, media_path, chunk)
                 except SubtitleError as e:
                     had_failures = True
                     self.last_error = e
@@ -295,8 +295,14 @@ class TranscriptionCoordinator:
                     chunks_done += 1
                 else:
                     chunks_done += 1
-                    if segment is not None:
+
+                    if provider_responded:
+                        # An empty provider response was successful and may
+                        # follow a transient backend failure. Silent chunks
+                        # are skipped before a request and must not reset it.
                         consecutive_failures = 0
+
+                    if segment is not None:
                         for line in self._lines_for_segment(segment):
                             if resume_after is not None and line.start < resume_after:
                                 continue
@@ -430,14 +436,15 @@ class TranscriptionCoordinator:
                 notes = validator.ValidateOriginals(batch.originals, self.max_line_seconds)
                 batch.errors = list(batch.errors or []) + notes  # type: ignore[assignment]
 
-    def _transcribe_chunk(self, client : TranscriptionClient, media_path : str, chunk : AudioChunk) -> TranscriptionSegment|None:
+    def _transcribe_chunk(self, client : TranscriptionClient, media_path : str,
+                          chunk : AudioChunk) -> tuple[TranscriptionSegment|None, bool]:
         # Backend and read errors propagate: the TranscribeMedia loop counts
         # consecutive failures and aborts blocked runs instead of grinding on.
         audio_bytes = self.extractor.ReadChunkBytes(media_path, chunk.start, chunk.end, self.track_index)
 
         if self.extractor.IsSilent(audio_bytes, self.silence_skip_db):
             logging.debug(_("Skipping silent chunk {} before requesting").format(self._span_label(chunk)))
-            return None
+            return None, False
 
         result = client.TranscribeChunk(audio_bytes, 'wav', self.language)
 
@@ -445,13 +452,14 @@ class TranscriptionCoordinator:
             self.total_cost += result.cost
 
         text = (result.text or '').strip()
+
         if not text:
             logging.debug(_("Empty transcription for chunk {}").format(self._span_label(chunk)))
-            return None
+            return None, True
 
         return TranscriptionSegment(start=chunk.start, end=chunk.end, text=text,
                                     language=result.language or self.language,
-                                    words=result.words, parts=result.parts)
+                                    words=result.words, parts=result.parts), True
 
     def _lines_for_segment(self, segment : TranscriptionSegment) -> list[TranscriptionSegment]:
         """

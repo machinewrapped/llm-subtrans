@@ -363,7 +363,17 @@ class AudioChunker:
     """
     def __init__(self, settings : SettingsType|None = None):
         self.settings : SettingsType = settings or SettingsType()
+        self.ValidateChunkBounds(self.min_chunk_seconds, self.max_chunk_seconds)
+
         self.extractor : AudioExtractor = AudioExtractor(self.settings)
+
+    @staticmethod
+    def ValidateChunkBounds(min_chunk_seconds : float, max_chunk_seconds : float) -> None:
+        """Reject chunk settings that cannot produce a complete plan."""
+        if min_chunk_seconds > max_chunk_seconds:
+            raise SubtitleError(_(
+                "Minimum chunk length cannot exceed maximum chunk length"
+            ))
 
     @property
     def min_chunk_seconds(self) -> float:
@@ -487,8 +497,6 @@ class AudioChunker:
         if chunks_planned == 0:
             chunks_planned += 1
             yield AudioChunk(start=timedelta(seconds=0), end=duration)
-
-        logging.info(_("Planned {} transcription chunks for {}").format(chunks_planned, os.path.basename(media_path)))
 
     def _next_silence_cut(self, silences : list[tuple[timedelta, timedelta]], index : int,
                            cursor : timedelta, limit : timedelta,

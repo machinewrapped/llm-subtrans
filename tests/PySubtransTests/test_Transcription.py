@@ -9,6 +9,7 @@ from datetime import timedelta
 from unittest.mock import patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
@@ -131,6 +132,12 @@ class TestTranscriptionProviderRegistry(LoggedTestCase):
         self.assertLoggedIn("language option", "language", options)
 
 class TestAudioChunker(LoggedTestCase):
+    @skip_if_debugger_attached
+    def test_rejects_minimum_longer_than_maximum(self):
+        """Invalid chunk bounds fail before planning can drop the tail."""
+        with self.assertRaises(SubtitleError):
+            AudioChunker(SettingsType({'min_chunk_seconds': 60.0, 'max_chunk_seconds': 10.0}))
+
     def test_duration_callback_reports_total_audio(self):
         """Streaming chunk planning exposes the media duration before the first chunk."""
         chunker = AudioChunker(SettingsType({'min_chunk_seconds': 1.0}))
@@ -764,6 +771,18 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
         self.assertLoggedEqual("line count", 2, subtitles.linecount)
         self.assertLoggedEqual("all chunks attempted", 4, failing.calls)
+
+    def test_empty_provider_response_resets_failure_streak(self):
+        """Billed empty responses separate backend failures like other successes."""
+        coordinator, failing = self._failing_coordinator(
+            {2, 4}, chunks=5, max_consecutive_failures=2)
+        failing.texts = ["ok line", "ignored", ""]
+
+        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+            subtitles = coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedEqual("all chunks attempted", 5, failing.calls)
+        self.assertLoggedEqual("successful lines retained", 2, subtitles.linecount)
 
     def test_mid_run_consecutive_failures_abort(self):
         """Three consecutive failures mid-run abort even after successes."""

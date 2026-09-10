@@ -50,8 +50,9 @@ class TestTranscriptionRegressions(LoggedTestCase):
         with patch.object(self.coordinator.extractor, 'ReadChunkBytes', return_value=b'audio'), \
                 patch.object(self.coordinator.extractor, 'IsSilent', return_value=False), \
                 patch.object(client, 'TranscribeChunk', return_value=TranscriptionResult(text='', cost=0.125)):
-            result = self.coordinator._transcribe_chunk(client, 'readme.md', chunk)
+            result, provider_responded = self.coordinator._transcribe_chunk(client, 'readme.md', chunk)
         self.assertLoggedEqual('no subtitle from empty text', None, result)
+        self.assertLoggedTrue('provider response recorded', provider_responded)
         self.assertLoggedEqual('billed usage retained', 0.125, self.coordinator.total_cost)
 
     def test_dialogue_survives_project_cleanup(self) -> None:

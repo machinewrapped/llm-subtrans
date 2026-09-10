@@ -23,7 +23,6 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser = ArgumentParser(description="Transcribe audio/video to subtitles using a transcription provider")
     parser.add_argument('input', nargs='?', help="Path to media file (mp4, mkv, m4a, mp3, wav, ...)")
     parser.add_argument('-o', '--output', help="Output subtitle file path (SRT); defaults alongside the media file")
-    parser.add_argument('--project', action='store_true', help="Also save a .subtrans project file for translation")
     parser.add_argument('--list-tracks', action='store_true', help="List audio tracks in the media file and exit")
     parser.add_argument('--list-providers', action='store_true', help="List available transcription providers and exit")
     parser.add_argument('--provider', type=str, default="Qwen Local", help="Transcription provider to use")
@@ -42,7 +41,6 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('--no-align', dest='align', action='store_false', help="Disable word timestamps (chunk-level lines)")
     parser.add_argument('--postprocess', action='store_true', default=True, help="Clean transcribed lines with subtitle normalizations (default on)")
     parser.add_argument('--no-postprocess', dest='postprocess', action='store_false', help="Keep raw transcription text")
-    parser.add_argument('-l', '--target-language', type=str, default=None, help="Target language recorded on the project")
     parser.add_argument('--debug', action='store_true', help="Run with DEBUG log level")
     parser.add_argument('--verbose', action='store_true', help="Log each transcribed chunk")
     return parser
@@ -110,14 +108,11 @@ def main() -> int:
 
     try:
         options = Options()
-        if args.target_language:
-            options['target_language'] = args.target_language
-        options['project_file'] = args.project
         options['postprocess_transcription'] = args.postprocess
 
         project : SubtitleProject = coordinator.CreateTranscriptionProject(args.input, options, progress)
 
-        outputpath = args.output or GetOutputPath(args.input, args.target_language, f".{args.format}")
+        outputpath = args.output or GetOutputPath(args.input, args.language, f".{args.format}")
         if not outputpath:
             logging.error("Unable to determine output path")
             return 1
@@ -127,10 +122,6 @@ def main() -> int:
         # CLI error handler instead of being logged as a false success.
         project.subtitles.SaveOriginal(outputpath)
         logging.info(f"Saved subtitles to {outputpath} ({project.subtitles.linecount} lines)")
-
-        if args.project:
-            project.SaveProjectFile()
-            logging.info(f"Saved project to {project.projectfile}")
 
         if coordinator.status == TranscriptionStatus.INCOMPLETE:
             error = coordinator.last_error

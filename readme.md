@@ -98,6 +98,22 @@ To use Bedrock, you must:
   1. Create an **IAM user** or **role** with appropriate permissions (e.g., `bedrock:InvokeModel`, `bedrock:ListFoundationModels`).
   2. Ensure the model you wish to use is accessible in your selected AWS region and [enabled for the IAM user](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html).
 
+## Transcription
+LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...), which can then be translated with the normal workflow. This can produce better results than a text-only translation flow, with more accurate timings and speaker identification (depending on the provider).
+
+Transcription requires a separate `ffmpeg`/`ffprobe` installation acessible on the system path.
+
+### Local transcription
+- **Qwen Local**: runs the official `qwen-asr` package in-process on your local machine. A separate torch install is required to take advantage of GPU acceleration (see https://pytorch.org/get-started/locally/).
+
+### Cloud transcription services
+- **OpenRouter**: Provides access to many speech-to-text models, e.g. the excellent MAI Transcribe 2.
+- **Gemini**: `gemini-3.5-transcribe` with word timestamps and speaker diarization. Very good, but brutal rate limits.
+- **OpenAI**: `whisper-1` (word timestamps) and `gpt-4o-transcribe-diarize`. Experimental support.
+- **Muse**: Meta `muse-voice-transcribe-1. Slow, and only provides approximate timings.
+
+From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separate dialog for transcription. A successful result will be opened as a translation project upon completion.
+
 ## Installing from source
 If you want to use the command line tools or modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.
 
@@ -171,13 +187,14 @@ During the installing process, you can choose to input an API key for each selec
     pip install -e ".[gui,openai,gemini,claude,mistral,bedrock]"   # Full install with optional providers (delete to taste)
     ```
 
-    For local transcription support, first install a CUDA-enabled torch from
-    https://pytorch.org/get-started/locally/ (PyPI's default torch is CPU-only
-    and will be unusably slow for transcription), then add the extra:
+    For local transcription support, **first** install a hardware-appropriate Torch version from
+    https://pytorch.org/get-started/locally/, **then** add the extra:
 
     ```sh
     pip install -e ".[transcription]"
     ```
+
+    This avoids pip defaulting to a CPU-only torch install.
 
 ## Usage
 The program works by dividing the subtitles up into batches and sending each one to the translation service in turn. 
@@ -196,7 +213,6 @@ See the project wiki for further details on how to use the program.
 ### Command Line
 LLM-Subtrans can be used as a console command or shell script. The install scripts create a cmd or sh file in the project root for each provider, which will take care of activating the virtual environment and calling the corresponding translation script.
 
-The most basic usage is:
 ```sh
 # Use OpenRouter with automatic model selection
 llm-subtrans --auto -l <language> <path_to_subtitle_file>
@@ -228,6 +244,28 @@ If the target language is not specified the default is English.
 
 Other options that can be specified on the command line are detailed below.
 
+Transcription is a separate process. Use `--list-providers` to see available providers (default: Qwen Local):
+
+```sh
+# Transcribe with the default local provider
+python scripts/transcribe.py movie.mkv --language Chinese --format ass
+
+# Use a cloud provider
+python scripts/transcribe.py movie.mkv --provider OpenRouter --model mai/mai-transcribe-2 --apikey sk-... --language Japanese --diarize
+```
+
+Configuration options:
+- `--provider` — transcription provider (default: `Qwen Local`; use `--list-providers` to list)
+- `--language` — spoken language hint (e.g. Chinese, English)
+- `--track` — audio track index (default: 0; use `--list-tracks` to identify audio tracks in the source)
+- `--diarize` / `--no-diarize` — request speaker diarization (model-dependent)
+- `--align` / `--no-align` — word-level timestamps (default: on)
+- `--format` — output format: `srt`, `ass`, or `vtt` (default: `vtt`; `ass`/`vtt` preserve speaker labels)
+- `-o` / `--output` — output file path (defaults to alongside the media file)
+- `-s` / `--server` — server address for the provider
+- `-k` / `--apikey` — API key for cloud providers
+- `-m` / `--model` — model name
+
 ## Project File
 
 **Note**: Project files are enabled by default in the GUI.
@@ -255,26 +293,6 @@ LLM-Subtrans is primarily a translation application, and format conversion is pr
 ```sh
 # Use OpenRouter and convert from .ass to .srt
 llm-subtrans --project --auto -l <language> -o <path_to_output_file.srt> <path_to_subtitle_file.ass>
-```
-
-## Transcription
-LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...) to subtitles, which can then be translated with the normal workflow. This requires `ffmpeg`/`ffprobe` on PATH.
-
-Two local providers are available (no cloud account needed):
-- **Qwen Local**: runs the official `qwen-asr` package (Qwen3-ASR with word timestamps) in-process on your GPU. Needs the `transcription` extra plus a CUDA torch install (see above). No API key needed.
-
-Cloud transcription providers (metered, same API keys as translation):
-- **OpenRouter**: speech-to-text models with word timestamps and per-model diarization.
-- **OpenAI**: `whisper-1` (word timestamps) and `gpt-4o-transcribe-diarize`. EXPERIMENTAL.
-- **Gemini**: `gemini-3.5-transcribe` with word timestamps and speaker diarization.
-- **Muse**: Meta `muse-voice-transcribe-1.0` with turn-level timings and speaker diarization.
-
-From the GUI, click **Transcribe** in the toolbar (Ctrl+R) and open the result as a project. Tick **Save transcribed subtitles** (SRT, ASS or VTT) to keep the transcription alongside the media before translating. Speaker labels survive in ASS (Actor field) and VTT (voice tags) only. 
-
-From the command line:
-
-```sh
-python scripts/transcribe.py movie.mkv --language Chinese --project --format ass
 ```
 
 ## Advanced usage

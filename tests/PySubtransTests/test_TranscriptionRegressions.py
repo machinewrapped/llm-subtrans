@@ -24,13 +24,13 @@ class TestTranscriptionRegressions(LoggedTestCase):
             AudioChunk(timedelta(seconds=index * 2), timedelta(seconds=(index + 1) * 2))
             for index in range(count)])
         with patch.object(self.provider, 'GetTranscriptionClient', return_value=client):
-            project = self.coordinator.CreateTranscriptionProject('readme.md', Options())
-        return project, client
+            subtitles = self.coordinator.CreateTranscription('readme.md', Options())
+        return subtitles, client
 
-    def test_mid_run_failure_returns_partial_project(self) -> None:
+    def test_mid_run_failure_returns_partial_result(self) -> None:
         """Completed billed chunks remain usable after a mid-run failure."""
-        project, client = self._run_failures({2}, 5)
-        self.assertLoggedEqual('partial source lines', 1, project.subtitles.linecount)
+        subtitles, client = self._run_failures({2}, 5)
+        self.assertLoggedEqual('partial source lines', 1, subtitles.linecount)
         self.assertLoggedEqual('incomplete result', TranscriptionStatus.INCOMPLETE, self.coordinator.status)
         self.assertLoggedIsNotNone('failure detail retained', self.coordinator.last_error)
         self.assertLoggedEqual('stops at failure', 2, client.calls)
@@ -47,17 +47,17 @@ class TestTranscriptionRegressions(LoggedTestCase):
         self.assertLoggedTrue('provider response recorded', provider_responded)
         self.assertLoggedEqual('billed usage retained', 0.125, self.coordinator.total_cost)
 
-    def test_dialogue_survives_project_cleanup(self) -> None:
-        """Default project processing preserves merged turns and clears attribution."""
+    def test_dialogue_survives_postprocessing(self) -> None:
+        """Post-processing preserves merged turns and clears attribution."""
         self.provider.words = [
             WordTiming('I say!', timedelta(), timedelta(seconds=0.5), 'A'),
             WordTiming('Of course!', timedelta(seconds=0.6), timedelta(seconds=0.8), 'B'),
             WordTiming('Indeed!', timedelta(seconds=0.9), timedelta(seconds=1.1), 'C')]
         stub_media(self, self.coordinator, [AudioChunk(timedelta(), timedelta(seconds=2))])
-        project = self.coordinator.CreateTranscriptionProject('readme.md', Options({
+        subtitles = self.coordinator.CreateTranscription('readme.md', Options({
             'postprocess_transcription': True, 'normalise_dialog_tags': True,
             'break_long_lines': False}))
-        originals = project.subtitles.originals or []
+        originals = subtitles.originals or []
         self.assertLoggedEqual('one merged subtitle', 1, len(originals))
         self.assertLoggedEqual('dialogue retained', '- I say!\n- Of course!\n- Indeed!', originals[0].text)
         self.assertLoggedEqual('no single speaker attribution', None, originals[0].metadata.get('speaker'))

@@ -9,14 +9,12 @@ from enum import Enum
 
 import regex
 
-from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
-from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioChunk, AudioChunker, AudioTrack, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
@@ -354,35 +352,19 @@ class TranscriptionCoordinator:
                        else TranscriptionStatus.COMPLETED)
         return subtitles
 
-    def CreateTranscriptionProject(self, media_path : str, options : Options|None = None,
-                                   progress_cb : TranscriptionProgressCallback|None = None,
-                                   segment_cb : TranscriptionSegmentCallback|None = None,
-                                   audio_progress_cb : TranscriptionAudioProgressCallback|None = None,
-                                   prior_subtitles : Subtitles|None = None) -> SubtitleProject:
-        """
-        Transcribe media and wrap the result in a project.
-
-        Returns raw source lines — preprocessing, batching, and validation
-        happen later when the user opens the project (GUI) or are not needed
-        (CLI save).  This keeps the transcription result identical in shape
-        to a freshly loaded SRT.
-        """
+    def CreateTranscription(self, media_path : str, options : Options|None = None,
+                            progress_cb : TranscriptionProgressCallback|None = None,
+                            segment_cb : TranscriptionSegmentCallback|None = None,
+                            audio_progress_cb : TranscriptionAudioProgressCallback|None = None,
+                            prior_subtitles : Subtitles|None = None) -> Subtitles:
+        """Transcribe media and return post-processed subtitles."""
         subtitles = self.TranscribeMedia(media_path, progress_cb, segment_cb, audio_progress_cb,
                                          prior_subtitles=prior_subtitles)
 
-        project = SubtitleProject(persistent=bool(options and options.use_project_file))
-        project.subtitles = subtitles
-        project.projectfile = project.GetProjectFilepath(media_path)
+        if options is not None and options.get_bool('postprocess_transcription', True):
+            self._process_transcription(subtitles, options)
 
-        if options is not None:
-            project.UpdateProjectSettings(SettingsType(options))
-            if options.get_bool('postprocess_transcription', True):
-                self._process_transcription(subtitles, options)
-            outputpath = GetOutputPath(media_path, options.get_str('target_language'), '.srt')
-            if outputpath:
-                subtitles.outputpath = outputpath
-
-        return project
+        return subtitles
 
     def Abort(self) -> None:
         """Stop transcription after the current chunk."""

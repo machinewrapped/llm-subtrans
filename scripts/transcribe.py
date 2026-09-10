@@ -10,7 +10,6 @@ from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
@@ -119,18 +118,18 @@ def main() -> int:
         options = Options()
         options['postprocess_transcription'] = args.postprocess
 
-        project : SubtitleProject = coordinator.CreateTranscriptionProject(args.input, options, progress)
+        subtitles = coordinator.CreateTranscription(args.input, options, progress)
 
         outputpath = args.output or GetOutputPath(args.input, args.language, f".{args.format}")
         if not outputpath:
             logging.error("Unable to determine output path")
             return 1
 
-        project.subtitles.outputpath = outputpath
+        subtitles.outputpath = outputpath
         # Call the lower-level writer so an unwritable destination reaches the
         # CLI error handler instead of being logged as a false success.
-        project.subtitles.SaveOriginal(outputpath)
-        logging.info(f"Saved subtitles to {outputpath} ({project.subtitles.linecount} lines)")
+        subtitles.SaveOriginal(outputpath)
+        logging.info(f"Saved subtitles to {outputpath} ({subtitles.linecount} lines)")
 
         if coordinator.status == TranscriptionStatus.INCOMPLETE:
             error = coordinator.last_error

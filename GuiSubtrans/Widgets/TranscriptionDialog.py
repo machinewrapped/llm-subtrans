@@ -33,7 +33,7 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
-from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioChunker, SUPPORTED_MEDIA_EXTENSIONS, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
@@ -82,7 +82,7 @@ class TranscriptionDialog(QDialog):
 
         self.global_options : Options = options
         self.loader_thread : QThread|None = None
-        self.project : SubtitleProject|None = None
+        self.subtitles : Subtitles|None = None
         self.media_path : str|None = None
         self.provider : TranscriptionProvider|None = None
         self.provider_fields : dict[str, OptionWidget] = {}
@@ -99,7 +99,7 @@ class TranscriptionDialog(QDialog):
         self.active_command : TranscribeMediaCommand|None = None
         self._completion_slot : Callable[[TranscribeMediaCommand], None]|None = None
         self._pending_accept : bool = False
-        self._resume_project : SubtitleProject|None = None
+        self._resume_subtitles : Subtitles|None = None
 
         self._build_form()
         self.setAcceptDrops(True)
@@ -352,8 +352,8 @@ class TranscriptionDialog(QDialog):
     def _on_file_changed(self, path : str) -> None:
         self.media_path = path.strip() or None
         self.track_combo.clear()
-        self.project = None
-        self._resume_project = None
+        self.subtitles = None
+        self._resume_subtitles = None
         if self.media_path and os.path.isfile(self.media_path):
             self._load_tracks()
         if self._phase == "setup":
@@ -469,8 +469,8 @@ class TranscriptionDialog(QDialog):
         command = self._build_command()
         if command is None:
             return
-        self._resume_project = None
-        self.project = None
+        self._resume_subtitles = None
+        self.subtitles = None
         self.results_view.clear()
         self._run_started = time.monotonic()
         self._chunks_done = 0
@@ -497,10 +497,10 @@ class TranscriptionDialog(QDialog):
         """Resume a previously aborted transcription from the last completed chunk."""
         if self.active_command is not None:
             return
-        resume = self._resume_project
-        if (resume is None or resume.subtitles is None
-                or not resume.subtitles.originals
-                or resume.subtitles.originals[-1].end is None):
+        resume = self._resume_subtitles
+        if (resume is None
+                or not resume.originals
+                or resume.originals[-1].end is None):
             self.status_label.setText(_("No partial results to resume from."))
             return
         if not self.media_path or not os.path.isfile(self.media_path):
@@ -509,7 +509,7 @@ class TranscriptionDialog(QDialog):
         command = self._build_command()
         if command is None:
             return
-        command.prior_subtitles = resume.subtitles
+        command.prior_subtitles = resume
         # Keep the existing results visible; only reset run-timing state.
         self._run_started = time.monotonic()
         self._pending_accept = False
@@ -597,17 +597,17 @@ class TranscriptionDialog(QDialog):
         """Consume the completion notification from the observed command."""
         if command is not self.active_command:
             return
-        self.project = command.project
+        self.subtitles = command.subtitles
 
         # Allow resuming when the run did not complete fully and has results.
         if (command.status is not TranscriptionStatus.COMPLETED
                 or command.aborted or command.stopped_early):
-            if self.project and self.project.subtitles and self.project.subtitles.linecount > 0:
-                self._resume_project = self.project
+            if self.subtitles and self.subtitles.linecount > 0:
+                self._resume_subtitles = self.subtitles
             else:
-                self._resume_project = None
+                self._resume_subtitles = None
         else:
-            self._resume_project = None
+            self._resume_subtitles = None
 
         if not command.aborted:
             # Extraction and inference provably ran: record what the run
@@ -658,9 +658,7 @@ class TranscriptionDialog(QDialog):
 
     def _has_unaccepted_results(self) -> bool:
         """Whether closing the dialog now would discard transcription results."""
-        return (self.project is not None
-                and self.project.subtitles is not None
-                and self.project.subtitles.linecount > 0)
+        return self.subtitles is not None and self.subtitles.linecount > 0
 
     def accept(self) -> None:
         """Keep the dialog alive until the queue command has stopped."""
@@ -687,7 +685,7 @@ class TranscriptionDialog(QDialog):
             self._close_requested = True
             return
         if self._has_unaccepted_results():
-            count = self.project.subtitles.linecount if self.project and self.project.subtitles else 0
+            count = self.subtitles.linecount if self.subtitles else 0
             reply = QMessageBox.question(
                 self,
                 _("Discard transcription?"),
@@ -710,16 +708,15 @@ class TranscriptionDialog(QDialog):
         self.progress_bar.setVisible(False)
         self.transcribe_button.setVisible(True)
         self.transcribe_button.setEnabled(bool(self.media_path))
-        can_resume = (self._resume_project is not None
-                      and self._resume_project.subtitles is not None
-                      and self._resume_project.subtitles.linecount > 0)
+        can_resume = (self._resume_subtitles is not None
+                      and self._resume_subtitles.linecount > 0)
         self.resume_button.setVisible(can_resume)
         self.resume_button.setEnabled(can_resume and bool(self.media_path))
         self.abort_button.setVisible(False)
         self.back_button.setVisible(False)
         open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
         if open_button is not None:
-            open_button.setEnabled(self.project is not None)
+            open_button.setEnabled(self.subtitles is not None)
 
     def _show_results(self, running : bool) -> None:
         """
@@ -732,9 +729,8 @@ class TranscriptionDialog(QDialog):
         self.progress_bar.setVisible(True)
         self.transcribe_button.setVisible(False)
         can_resume = (not running
-                      and self._resume_project is not None
-                      and self._resume_project.subtitles is not None
-                      and self._resume_project.subtitles.linecount > 0)
+                      and self._resume_subtitles is not None
+                      and self._resume_subtitles.linecount > 0)
         self.resume_button.setVisible(can_resume)
         self.resume_button.setEnabled(can_resume)
         self.abort_button.setVisible(running)
@@ -742,7 +738,7 @@ class TranscriptionDialog(QDialog):
         self.back_button.setEnabled(self.active_command is None)
         open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
         if open_button is not None:
-            open_button.setEnabled(not running and self.active_command is None and self.project is not None)
+            open_button.setEnabled(not running and self.active_command is None and self.subtitles is not None)
 
     def dragEnterEvent(self, event : QDragEnterEvent) -> None:
         """Accept drags that carry a single supported media file."""

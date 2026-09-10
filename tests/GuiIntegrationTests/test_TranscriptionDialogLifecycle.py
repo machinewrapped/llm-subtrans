@@ -17,7 +17,7 @@ from GuiSubtrans.Widgets.TranscriptionDialog import TranscriptionDialog
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
-from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 
@@ -41,11 +41,10 @@ class TestTranscriptionDialogLifecycle(LoggedTestCase):
             self.coordinator = TranscriptionCoordinator(FakeTranscriptionProvider())
         self.started = Event()
         self.release = Event()
-        self.project = SubtitleProject(persistent=False)
         builder = SubtitleBuilder()
         builder.AddScene()
         builder.BuildLine(timedelta(), timedelta(seconds=1), 'Recovered text')
-        self.project.subtitles = builder.Build()
+        self.subtitles : Subtitles = builder.Build()
         for method in ('_record_dependency_evidence',):
             patcher = patch.object(self.dialog, method, return_value=None)
             patcher.start()
@@ -57,21 +56,22 @@ class TestTranscriptionDialogLifecycle(LoggedTestCase):
         self.queue.Stop()
         with patch.object(QMessageBox, 'question', return_value=QMessageBox.StandardButton.Yes):
             self.application.processEvents()
-            self.dialog.project = None
+            self.dialog.subtitles = None
             self.dialog.close()
             self.dialog.deleteLater()
             self.application.processEvents()
         super().tearDown()
 
     def _start_worker(self) -> None:
-        def create_project(*args, **kwargs) -> SubtitleProject:
+        def create_transcription(*args, **kwargs) -> Subtitles:
             self.started.set()
             self.release.wait(3)
             self.coordinator.status = (TranscriptionStatus.INCOMPLETE if self.coordinator.aborted
                                        else TranscriptionStatus.COMPLETED)
-            return self.project
+            self.coordinator.transcribed_lines = self.subtitles.linecount
+            return self.subtitles
 
-        patcher = patch.object(self.coordinator, 'CreateTranscriptionProject', side_effect=create_project)
+        patcher = patch.object(self.coordinator, 'CreateTranscription', side_effect=create_transcription)
         patcher.start()
         self.addCleanup(patcher.stop)
         coordinator_patcher = patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=self.coordinator)
@@ -115,7 +115,7 @@ class TestTranscriptionDialogLifecycle(LoggedTestCase):
                 self.assertLoggedIn('actual subtitle content written', 'Recovered text', output_path.read_text(encoding='utf-8-sig'))
         self.assertLoggedEqual('discard confirmation offered', 1, confirm.call_count)
         self.assertLoggedTrue('partial results remain visible', self.dialog.isVisible())
-        self.assertLoggedEqual('partial project retained', self.project, self.dialog.project)
+        self.assertLoggedEqual('partial subtitles retained', self.subtitles, self.dialog.subtitles)
         button = self.dialog.button_box.button(QDialogButtonBox.StandardButton.Open)
         self.assertLoggedTrue('partial project can be opened', button.isEnabled())
 
@@ -136,7 +136,7 @@ class TestTranscriptionDialogLifecycle(LoggedTestCase):
         self.release.set()
         self._await_thread()
         self.assertLoggedEqual('clean result accepted', QDialog.DialogCode.Accepted, self.dialog.result())
-        self.assertLoggedEqual('completed project returned', self.project, self.dialog.project)
+        self.assertLoggedEqual('completed subtitles returned', self.subtitles, self.dialog.subtitles)
 
     def test_actions_stay_disabled_until_queue_completion(self) -> None:
         """Do not enable project opening or retry until queue completion."""

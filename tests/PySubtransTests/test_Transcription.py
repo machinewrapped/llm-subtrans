@@ -784,22 +784,7 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedIsNotNone("failure retained", coordinator.last_error)
         self.assertLoggedEqual("stopped at failure", 2, failing.calls)
 
-    def test_project_persistence_follows_options(self):
-        """GUI projects are persistent like opened files, so autosave uses the project path."""
-        coordinator, _unused_provider = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
-        stub_media(self, coordinator, [
-            AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
-        ])
-
-        with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            persistent = coordinator.CreateTranscriptionProject(media.name, Options({'project_file': True}))
-            transient = coordinator.CreateTranscriptionProject(media.name, None)
-
-        self.assertLoggedEqual("persistent with options", True, persistent.use_project_file)
-        self.assertLoggedIn("project file alongside media", ".subtrans", persistent.projectfile or "")
-        self.assertLoggedEqual("transient without options", False, transient.use_project_file)
-
-    def test_project_postprocesses_transcription_text(self):
+    def test_postprocesses_transcription_text(self):
         """User normalizations apply to transcribed lines, timings untouched."""
         coordinator, _unused_provider = self._coordinator(["a — b"])
         stub_media(self, coordinator, [
@@ -807,17 +792,16 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            project = coordinator.CreateTranscriptionProject(
-                media.name, Options({'project_file': True, 'convert_wide_dashes': True}))
+            subtitles = coordinator.CreateTranscription(
+                media.name, Options({'convert_wide_dashes': True}))
 
-        assert project.subtitles is not None  # Type narrowing for PyLance
-        assert project.subtitles.originals is not None  # Type narrowing for PyLance
-        self.assertLoggedEqual("dash normalised", "a - b", project.subtitles.originals[0].text)
-        self.assertLoggedEqual("start kept", timedelta(seconds=0), project.subtitles.originals[0].start)
-        self.assertLoggedEqual("end kept", timedelta(seconds=4), project.subtitles.originals[0].end)
+        assert subtitles.originals is not None  # Type narrowing for PyLance
+        self.assertLoggedEqual("dash normalised", "a - b", subtitles.originals[0].text)
+        self.assertLoggedEqual("start kept", timedelta(seconds=0), subtitles.originals[0].start)
+        self.assertLoggedEqual("end kept", timedelta(seconds=4), subtitles.originals[0].end)
 
-    def test_project_discards_utterances_emptied_by_postprocessing(self) -> None:
-        """Filler removal must not introduce empty source lines into a project."""
+    def test_discards_utterances_emptied_by_postprocessing(self) -> None:
+        """Filler removal must not introduce empty source lines."""
         for texts in (["Um.", "Um, hello"], ["Um.", "Um."]):
             with self.subTest(texts=texts):
                 coordinator, _unused_provider = self._coordinator(list(texts))
@@ -827,20 +811,19 @@ class TestTranscriptionCoordinator(LoggedTestCase):
                 ])
 
                 with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-                    project = coordinator.CreateTranscriptionProject(media.name, Options({
+                    subtitles = coordinator.CreateTranscription(media.name, Options({
                         'remove_filler_words': True, 'filler_words': ['um'],
                         'postprocess_transcription': True,
                     }))
 
-                assert project.subtitles is not None
-                originals = project.subtitles.originals or []
+                originals = subtitles.originals or []
                 expected = ["Hello"] if texts[1] == "Um, hello" else []
                 self.assertLoggedEqual("nonempty source text", expected, [line.text for line in originals])
                 if originals:
                     self.assertLoggedEqual("surviving start preserved", timedelta(seconds=6), originals[0].start)
                     self.assertLoggedEqual("surviving end preserved", timedelta(seconds=10), originals[0].end)
 
-    def test_project_preprocesses_like_loaded_files(self):
+    def test_preprocesses_like_loaded_files(self):
         """Long flat lines split on duration under the post-process toggle."""
         text = "First sentence here. Second sentence here. Third sentence here. Fourth sentence here."
         coordinator, _unused_provider = self._coordinator([text])
@@ -849,18 +832,17 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            project = coordinator.CreateTranscriptionProject(media.name, Options({
-                'project_file': True, 'postprocess_transcription': True, 'max_line_duration': 4.0}))
+            subtitles = coordinator.CreateTranscription(media.name, Options({
+                'postprocess_transcription': True, 'max_line_duration': 4.0}))
 
-        assert project.subtitles is not None  # Type narrowing for PyLance
-        assert project.subtitles.originals is not None  # Type narrowing for PyLance
-        self.assertLoggedGreater("line was split", len(project.subtitles.originals), 1)
-        for line in project.subtitles.originals:
+        assert subtitles.originals is not None  # Type narrowing for PyLance
+        self.assertLoggedGreater("line was split", len(subtitles.originals), 1)
+        for line in subtitles.originals:
             self.assertLoggedLessEqual("split shorter than whole", line.duration.total_seconds(), 60.0)
-        self.assertLoggedEqual("span start kept", timedelta(seconds=0), project.subtitles.originals[0].start)
-        self.assertLoggedEqual("span end kept", timedelta(seconds=60), project.subtitles.originals[-1].end)
+        self.assertLoggedEqual("span start kept", timedelta(seconds=0), subtitles.originals[0].start)
+        self.assertLoggedEqual("span end kept", timedelta(seconds=60), subtitles.originals[-1].end)
 
-    def test_project_skips_preprocess_when_toggled_off(self):
+    def test_skips_preprocess_when_toggled_off(self):
         """Unchecking post-process keeps long flat lines whole."""
         text = "First sentence here. Second sentence here. Third sentence here. Fourth sentence here."
         coordinator, _unused_provider = self._coordinator([text])
@@ -869,12 +851,11 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            project = coordinator.CreateTranscriptionProject(media.name, Options({
-                'project_file': True, 'postprocess_transcription': False}))
+            subtitles = coordinator.CreateTranscription(media.name, Options({
+                'postprocess_transcription': False}))
 
-        assert project.subtitles is not None  # Type narrowing for PyLance
-        assert project.subtitles.originals is not None  # Type narrowing for PyLance
-        self.assertLoggedEqual("line count", 1, len(project.subtitles.originals))
+        assert subtitles.originals is not None  # Type narrowing for PyLance
+        self.assertLoggedEqual("line count", 1, len(subtitles.originals))
 
 
 

@@ -15,7 +15,7 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
-from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 
@@ -23,10 +23,10 @@ from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 class _DialogStub(QObject):
     commandRequested = Signal(object)
 
-    def __init__(self, project : SubtitleProject|None, result : QDialog.DialogCode,
+    def __init__(self, subtitles : Subtitles|None, result : QDialog.DialogCode,
                  requested_command : object|None = None) -> None:
         super().__init__()
-        self.project = project
+        self.subtitles = subtitles
         self.media_path = 'media.wav'
         self.result_code = result
         self.requested_command = requested_command
@@ -60,17 +60,15 @@ class TestTranscriptionIntegration(LoggedTestCase):
         self.addCleanup(self.gui.command_queue.Stop)
         self.addCleanup(self.window.deleteLater)
 
-    def _project(self) -> SubtitleProject:
-        project = SubtitleProject(persistent=False)
+    def _subtitles(self) -> Subtitles:
         builder = SubtitleBuilder()
         builder.AddScene()
         builder.BuildLine(timedelta(), timedelta(seconds=1), 'Transcribed text')
-        project.subtitles = builder.Build()
-        return project
+        return builder.Build()
 
-    def _command(self, status : TranscriptionStatus, project : SubtitleProject|None = None) -> tuple[TranscribeMediaCommand, Mock]:
-        coordinator = Mock(status=status, last_error=None, partial_subtitles=None)
-        coordinator.CreateTranscriptionProject.return_value = project
+    def _command(self, status : TranscriptionStatus, subtitles : Subtitles|None = None) -> tuple[TranscribeMediaCommand, Mock]:
+        coordinator = Mock(status=status, last_error=None, partial_subtitles=None, transcribed_lines=1)
+        coordinator.CreateTranscription.return_value = subtitles
         command = TranscribeMediaCommand(FakeTranscriptionProvider(), 'media.wav', SettingsType(), Options())
         return command, coordinator
 
@@ -84,8 +82,7 @@ class TestTranscriptionIntegration(LoggedTestCase):
         self.assertLoggedEqual('GuiInterface completion delivered', expected_completions, len(self.completed))
 
     def test_real_queue_completion_preserves_current_model_until_acceptance(self) -> None:
-        project = self._project()
-        command, coordinator = self._command(TranscriptionStatus.COMPLETED, project)
+        command, coordinator = self._command(TranscriptionStatus.COMPLETED, self._subtitles())
         model_changes = []
         completions = []
         self.gui.dataModelChanged.connect(model_changes.append)
@@ -95,7 +92,7 @@ class TestTranscriptionIntegration(LoggedTestCase):
             self.gui.QueueCommand(command)
             self._wait_for_queue()
         self.assertLoggedEqual('current model retained after command', self.old_model, self.gui.datamodel)
-        self.assertLoggedIsNotNone('transcription result retained', command.project)
+        self.assertLoggedIsNotNone('transcription result retained', command.subtitles)
         self.assertLoggedEqual('completion observed by the command owner', [command], completions)
         self.assertLoggedEqual('no model reset emitted', [], model_changes)
         self.assertLoggedEqual('successful open command clears old undo history', [], self.gui.command_queue.undo_stack)
@@ -108,7 +105,7 @@ class TestTranscriptionIntegration(LoggedTestCase):
             (TranscriptionStatus.INCOMPLETE, 'abort'),
         ]
         for status, stop in cases:
-            command, coordinator = self._command(status, self._project())
+            command, coordinator = self._command(status, self._subtitles())
             if stop == 'early':
                 command.FinishEarly()
             elif stop == 'abort':
@@ -119,8 +116,7 @@ class TestTranscriptionIntegration(LoggedTestCase):
             self.assertLoggedEqual('failed, stopped or aborted model retained', self.old_model, self.gui.datamodel)
 
     def test_accepted_project_installs_once_and_partial_acceptance_clears_history(self) -> None:
-        project = self._project()
-        dialog = _DialogStub(project, QDialog.DialogCode.Accepted)
+        dialog = _DialogStub(self._subtitles(), QDialog.DialogCode.Accepted)
         self.gui.command_queue.undo_stack = [Mock()]
         with patch('GuiSubtrans.GuiInterface.TranscriptionDialog', return_value=dialog), \
                 patch.object(self.gui, 'ShowNewProjectSettings'), \
@@ -130,7 +126,7 @@ class TestTranscriptionIntegration(LoggedTestCase):
         self.assertLoggedEqual('partial acceptance clears history', 0, len(self.gui.command_queue.undo_stack))
 
     def test_discarded_dialog_preserves_current_model(self) -> None:
-        dialog = _DialogStub(self._project(), QDialog.DialogCode.Rejected)
+        dialog = _DialogStub(self._subtitles(), QDialog.DialogCode.Rejected)
         with patch('GuiSubtrans.GuiInterface.TranscriptionDialog', return_value=dialog), \
                 patch.object(self.gui, 'SetDataModel') as set_model:
             self.gui.ShowTranscriptionDialog()
@@ -148,7 +144,7 @@ class TestTranscriptionIntegration(LoggedTestCase):
     def test_dialog_requests_are_queued_like_any_other_command(self) -> None:
         """The dialog's request signal goes straight to the generic queue entry point."""
         requested = Mock()
-        dialog = _DialogStub(self._project(), QDialog.DialogCode.Accepted, requested)
+        dialog = _DialogStub(self._subtitles(), QDialog.DialogCode.Accepted, requested)
         with patch('GuiSubtrans.GuiInterface.TranscriptionDialog', return_value=dialog), \
                 patch.object(self.gui, 'QueueCommand') as queue_command, \
                 patch.object(self.gui, 'ShowNewProjectSettings'):

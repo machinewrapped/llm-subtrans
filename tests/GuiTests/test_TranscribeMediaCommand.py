@@ -15,7 +15,6 @@ from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
-from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
@@ -27,28 +26,29 @@ class TestTranscribeMediaCommand(LoggedTestCase):
     def setUp(self) -> None:
         super().setUp()
         self.provider = FakeTranscriptionProvider()
-        self.project = SubtitleProject(persistent=False)
         builder = SubtitleBuilder()
         builder.AddScene()
         builder.BuildLine(timedelta(), timedelta(seconds=1), 'Recovered text')
-        self.project.subtitles = builder.Build()
-        self.coordinator = Mock(status=TranscriptionStatus.COMPLETED, partial_subtitles=None, last_error=None)
-        self.coordinator.CreateTranscriptionProject.return_value = self.project
+        self.subtitles = builder.Build()
+        self.coordinator = Mock(status=TranscriptionStatus.COMPLETED, partial_subtitles=None,
+                                last_error=None, transcribed_lines=1)
+        self.coordinator.CreateTranscription.return_value = self.subtitles
 
     def test_completed_run_forwards_progress_and_returns_project(self) -> None:
-        project = Mock()
-        coordinator = Mock(status=TranscriptionStatus.COMPLETED, partial_subtitles=None, last_error=None)
+        subtitles = Mock()
+        coordinator = Mock(status=TranscriptionStatus.COMPLETED, partial_subtitles=None,
+                           last_error=None, transcribed_lines=1)
 
         segment_events = []
         segment = TranscriptionSegment(timedelta(), timedelta(seconds=1), 'Recovered text')
 
-        def create_project(media : str, options : Options, progress, on_segment, on_audio_progress, **kwargs) -> SubtitleProject:
+        def create_transcription(media, options, progress, on_segment, on_audio_progress, **kwargs):
             progress(1, 2, '0:00-0:10')
             on_audio_progress(10.0, 20.0)
             on_segment(segment)
-            return project
+            return subtitles
 
-        coordinator.CreateTranscriptionProject.side_effect = create_project
+        coordinator.CreateTranscription.side_effect = create_transcription
         provider = Mock(settings=SettingsType())
         command = TranscribeMediaCommand(provider, 'media.wav', SettingsType(), Options())
         progress = []
@@ -60,37 +60,34 @@ class TestTranscribeMediaCommand(LoggedTestCase):
             result = command.execute()
 
         self.assertLoggedTrue('completed command succeeds', result)
-        self.assertLoggedEqual('project retained', project, command.project)
+        self.assertLoggedEqual('subtitles retained', subtitles, command.subtitles)
         self.assertLoggedEqual('progress forwarded', [(1, 2, '0:00-0:10')], progress)
         self.assertLoggedEqual('audio progress forwarded', [(10.0, 20.0)], audio_progress)
         self.assertLoggedEqual('segment forwarded', [segment], segment_events)
 
     def test_incomplete_run_returns_failure_and_retains_project(self) -> None:
-        project = Mock()
-        coordinator = Mock(status=TranscriptionStatus.INCOMPLETE, partial_subtitles=None, last_error=None)
-        coordinator.CreateTranscriptionProject.return_value = project
+        subtitles = Mock()
+        coordinator = Mock(status=TranscriptionStatus.INCOMPLETE, partial_subtitles=None,
+                           last_error=None, transcribed_lines=0)
+        coordinator.CreateTranscription.return_value = subtitles
         command = TranscribeMediaCommand(Mock(settings=SettingsType()), 'media.wav', SettingsType(), Options())
         with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=coordinator):
             result = command.execute()
 
         self.assertLoggedFalse('incomplete command fails', result)
-        self.assertLoggedEqual('incomplete project retained', project, command.project)
+        self.assertLoggedEqual('subtitles retained', subtitles, command.subtitles)
 
     @skip_if_debugger_attached
     def test_exception_recovers_partial_subtitles_without_saving(self) -> None:
         partial = Mock()
         coordinator = Mock(status=TranscriptionStatus.FAILED, partial_subtitles=partial, last_error=None)
-        coordinator.CreateTranscriptionProject.side_effect = RuntimeError('provider failed')
+        coordinator.CreateTranscription.side_effect = RuntimeError('provider failed')
         command = TranscribeMediaCommand(Mock(settings=SettingsType()), 'media.wav', SettingsType(), Options(), save_transcription=True)
-        with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=coordinator), \
-                patch.object(SubtitleProject, 'SaveOriginal') as save:
+        with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=coordinator):
             result = command.execute()
 
         self.assertLoggedFalse('failed command returns failure', result)
-        self.assertLoggedIsInstance('partial project recovered', command.project, SubtitleProject)
-        if command.project is not None:
-            self.assertLoggedEqual('partial subtitles retained', partial, command.project.subtitles)
-        self.assertLoggedEqual('no save attempted after exception', 0, save.call_count)
+        self.assertLoggedEqual('partial subtitles retained', partial, command.subtitles)
         self.assertLoggedIsNone('exception result not saved', command.saved_path)
 
     def test_abort_forwards_to_active_coordinator(self) -> None:
@@ -102,12 +99,12 @@ class TestTranscribeMediaCommand(LoggedTestCase):
 
     @skip_if_debugger_attached
     def test_failure_without_results_retains_error(self) -> None:
-        self.coordinator.CreateTranscriptionProject.side_effect = RuntimeError('provider failed')
+        self.coordinator.CreateTranscription.side_effect = RuntimeError('provider failed')
         command = TranscribeMediaCommand(self.provider, 'media.wav', SettingsType())
         with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=self.coordinator):
             result = command.execute()
         self.assertLoggedFalse('failed command returns failure', result)
-        self.assertLoggedIsNone('no fabricated project', command.project)
+        self.assertLoggedIsNone('no fabricated subtitles', command.subtitles)
         self.assertLoggedEqual('error retained', 'provider failed', command.error)
 
     @skip_if_debugger_attached
@@ -148,24 +145,24 @@ class TestTranscribeMediaCommand(LoggedTestCase):
                 worker.join(3)
         self.assertLoggedFalse('worker finished', worker.is_alive())
         self.assertLoggedEqual('constructed coordinator receives abort', 1, self.coordinator.Abort.call_count)
-        self.assertLoggedEqual('inference never begins', 0, self.coordinator.CreateTranscriptionProject.call_count)
+        self.assertLoggedEqual('inference never begins', 0, self.coordinator.CreateTranscription.call_count)
 
     def test_active_abort_preserves_partial_result_without_saving(self) -> None:
         """A cancelled command keeps its partial result, but the queue drops its follow-ups."""
         with TemporaryDirectory() as directory:
             command = TranscribeMediaCommand(self.provider, str(Path(directory) / 'media.wav'), SettingsType(), save_transcription=True)
 
-            def create_project(*args, **kwargs) -> SubtitleProject:
+            def create_transcription(*args, **kwargs):
                 command.Abort()
                 self.coordinator.status = TranscriptionStatus.INCOMPLETE
-                return self.project
+                return self.subtitles
 
-            self.coordinator.CreateTranscriptionProject.side_effect = create_project
+            self.coordinator.CreateTranscription.side_effect = create_transcription
             with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=self.coordinator):
                 result = command.execute()
             self.assertLoggedFalse('cancelled run not successful', result)
             self.assertLoggedEqual('abort forwarded', 1, self.coordinator.Abort.call_count)
-            self.assertLoggedIs('partial project retained', self.project, command.project)
+            self.assertLoggedEqual('subtitles retained', self.subtitles, command.subtitles)
             self.assertLoggedFalse('partial subtitles not written by the command', (Path(directory) / 'media.srt').is_file())
             self.assertLoggedEqual('no follow-up commands queued', 0, len(command.commands_to_queue))
             self.assertLoggedFalse('aborted run does not write dependency evidence', command.ffmpeg_available)
@@ -175,12 +172,12 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         with TemporaryDirectory() as directory:
             command = TranscribeMediaCommand(self.provider, str(Path(directory) / 'media.wav'), SettingsType(), save_transcription=True)
 
-            def create_project(*args, **kwargs) -> SubtitleProject:
+            def create_transcription(*args, **kwargs):
                 command.FinishEarly()
                 self.coordinator.status = TranscriptionStatus.INCOMPLETE
-                return self.project
+                return self.subtitles
 
-            self.coordinator.CreateTranscriptionProject.side_effect = create_project
+            self.coordinator.CreateTranscription.side_effect = create_transcription
             with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=self.coordinator):
                 result = command.execute()
             output = Path(directory) / 'media.srt'
@@ -188,7 +185,7 @@ class TestTranscribeMediaCommand(LoggedTestCase):
             self.assertLoggedTrue('early finish recorded', command.stopped_early)
             self.assertLoggedFalse('command is not marked aborted', command.aborted)
             self.assertLoggedEqual('stop forwarded to coordinator', 1, self.coordinator.Abort.call_count)
-            self.assertLoggedIs('partial project retained', self.project, command.project)
+            self.assertLoggedEqual('subtitles retained', self.subtitles, command.subtitles)
             self.assertLoggedEqual('partial save queued', 1, len(command.commands_to_queue))
             self.assertLoggedTrue('dependency evidence recorded', command.ffmpeg_available)
             save_command = command.commands_to_queue[0] if command.commands_to_queue else None
@@ -205,7 +202,7 @@ class TestTranscribeMediaCommand(LoggedTestCase):
             result = command.execute()
         self.assertLoggedFalse('early-finished run not successful', result)
         self.assertLoggedEqual('constructed coordinator is stopped', 1, self.coordinator.Abort.call_count)
-        self.assertLoggedEqual('inference never begins', 0, self.coordinator.CreateTranscriptionProject.call_count)
+        self.assertLoggedEqual('inference never begins', 0, self.coordinator.CreateTranscription.call_count)
         self.assertLoggedEqual('nothing to save', 0, len(command.commands_to_queue))
 
     def test_incomplete_run_queues_partial_save(self) -> None:
@@ -220,11 +217,9 @@ class TestTranscribeMediaCommand(LoggedTestCase):
 
     def test_saving_disabled_does_not_write(self) -> None:
         command = TranscribeMediaCommand(self.provider, 'media.wav', SettingsType())
-        with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=self.coordinator), \
-                patch.object(self.project, 'SaveOriginal') as save:
+        with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=self.coordinator):
             result = command.execute()
         self.assertLoggedTrue('transcription successful', result)
-        self.assertLoggedEqual('no save requested', 0, save.call_count)
         self.assertLoggedEqual('no follow-up commands queued', 0, len(command.commands_to_queue))
         self.assertLoggedIsNone('no saved path', command.saved_path)
 
@@ -246,14 +241,14 @@ class TestTranscribeMediaCommand(LoggedTestCase):
             self.assertLoggedIn('actual subtitle content written', 'Recovered text', output.read_text(encoding='utf-8-sig'))
 
     @skip_if_debugger_attached
-    def test_save_failure_does_not_discard_completed_project(self) -> None:
+    def test_save_failure_does_not_discard_completed_subtitles(self) -> None:
         """A failing save command leaves the transcription results untouched."""
         command = TranscribeMediaCommand(self.provider, 'media.wav', SettingsType(), save_transcription=True)
         with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=self.coordinator), \
-                patch.object(self.project, 'SaveOriginal', side_effect=OSError('disk full')) as save:
+                patch.object(self.subtitles, 'SaveOriginal', side_effect=OSError('disk full')) as save:
             result = command.execute()
             self.assertLoggedTrue('transcription remains successful', result)
-            self.assertLoggedIs('completed project retained', self.project, command.project)
+            self.assertLoggedIs('completed subtitles retained', self.subtitles, command.subtitles)
             self.assertLoggedIsNotNone('save command queued', command.saved_path)
             save_command = command.commands_to_queue[0] if command.commands_to_queue else None
             self.assertLoggedIsInstance('follow-up writes the subtitles', save_command, SaveSubtitleFile)
@@ -261,16 +256,6 @@ class TestTranscribeMediaCommand(LoggedTestCase):
                 with self.assertRaises(OSError):
                     save_command.execute()
         self.assertLoggedEqual('save attempted by follow-up command', 1, save.call_count)
-
-    def test_command_run_does_not_dirty_current_project(self) -> None:
-        command = TranscribeMediaCommand(self.provider, 'media.wav', SettingsType())
-        old_project = SubtitleProject(persistent=False)
-        old_project.needs_writing = False
-        command.datamodel = Mock(project=old_project)
-        with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=self.coordinator):
-            command.run()
-        self.assertLoggedEqual('run succeeds', True, command.succeeded)
-        self.assertLoggedFalse('old project remains clean', old_project.needs_writing)
 
     def test_dependency_capture_uses_already_loaded_torch(self) -> None:
         command = TranscribeMediaCommand(self.provider, 'media.wav', SettingsType())

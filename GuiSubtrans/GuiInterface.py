@@ -28,6 +28,7 @@ from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import ProviderConfigurationError, SubtitleError
+from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.VersionCheck import CheckIfUpdateAvailable, CheckIfUpdateCheckIsRequired
 from PySubtrans.version import __version__
@@ -318,11 +319,16 @@ class GuiInterface(QObject):
             if dialog.exec() != QDialog.DialogCode.Accepted:
                 return
 
-            if dialog.project is None or dialog.project.subtitles is None:
-                logging.error(_("Transcription produced no project"))
+            if dialog.subtitles is None or dialog.subtitles.linecount == 0:
+                logging.error(_("Transcription produced no subtitles"))
                 return
 
-            datamodel = ProjectDataModel(dialog.project, self.global_options)
+            project = SubtitleProject(persistent=self.global_options.use_project_file)
+            project.subtitles = dialog.subtitles
+            if dialog.media_path:
+                project.projectfile = project.GetProjectFilepath(dialog.media_path)
+
+            datamodel = ProjectDataModel(project, self.global_options)
             if datamodel.is_project_initialised:
                 datamodel.CreateViewModel()
 
@@ -332,8 +338,8 @@ class GuiInterface(QObject):
             self.SetDataModel(datamodel)
             if dialog.media_path:
                 self._update_last_used_path(dialog.media_path)
-            # Transcription is already batched, but still needs the same
-            # project settings review as a newly opened subtitle file.
+            # Like a freshly loaded SRT, the transcription needs the
+            # project settings review (which handles batching).
             if datamodel.is_project_valid:
                 self.ShowNewProjectSettings(datamodel)
         finally:

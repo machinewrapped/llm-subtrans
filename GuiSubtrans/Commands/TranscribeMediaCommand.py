@@ -10,7 +10,6 @@ from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
@@ -36,7 +35,7 @@ class TranscribeMediaCommand(Command):
         self.output_format : str = output_format.casefold()
         self.prior_subtitles : Subtitles|None = prior_subtitles
         self.coordinator : TranscriptionCoordinator|None = None
-        self.project : SubtitleProject|None = None
+        self.subtitles : Subtitles|None = None
         self.status : TranscriptionStatus = TranscriptionStatus.IDLE
         self.error : str|None = None
         self.transcribed_lines : int = 0
@@ -54,7 +53,7 @@ class TranscribeMediaCommand(Command):
         self.mark_project_dirty = False
 
     def execute(self) -> bool:
-        """Transcribe media and retain any usable partial project."""
+        """Transcribe media and retain any usable partial result."""
         try:
             if self.aborted:
                 return False
@@ -67,7 +66,7 @@ class TranscribeMediaCommand(Command):
 
             if not self.aborted:
                 self._record_runtime_evidence()
-                self._queue_project_save()
+                self._queue_save()
 
             # An early finish ends as an orderly, unsuccessful command so the
             # queue still runs its follow-up commands (the partial results save).
@@ -112,7 +111,7 @@ class TranscribeMediaCommand(Command):
 
     def _run_transcription(self, coordinator : TranscriptionCoordinator) -> None:
         """Transcribe the media, streaming progress and segments to the UI."""
-        self.project = coordinator.CreateTranscriptionProject(
+        self.subtitles = coordinator.CreateTranscription(
             self.media_path, self.options,
             lambda done, total, span: self.progressed.emit(done, total, span),
             lambda segment: self.segmented.emit(segment),
@@ -129,10 +128,9 @@ class TranscribeMediaCommand(Command):
         self.ffmpeg_available = True
         self.torch_device = self._resolved_torch_device()
 
-    def _queue_project_save(self) -> None:
+    def _queue_save(self) -> None:
         """Queue the subtitle file write as a follow-up command."""
-        project = self.project
-        if project is None or project.subtitles is None or not self.save_transcription:
+        if self.subtitles is None or not self.save_transcription:
             return
 
         language = self.settings.get_str('language')
@@ -143,19 +141,14 @@ class TranscribeMediaCommand(Command):
         # The follow-up command performs the write; a failure there is logged
         # by the queue without discarding the transcription results.
         self.saved_path = outputpath
-        self.commands_to_queue.append(SaveSubtitleFile(outputpath, project))
+        self.commands_to_queue.append(SaveSubtitleFile(outputpath, self.subtitles))
 
     def _recover_partial_result(self, error : Exception) -> None:
         """Keep any subtitles recovered before a failure so billed work isn't lost."""
         self.error = str(error)
         self.status = TranscriptionStatus.FAILED
-
-        partial_subtitles = self.coordinator.partial_subtitles if self.coordinator else None
-        if partial_subtitles is not None:
-            self.project = SubtitleProject(persistent=False)
-            self.project.subtitles = partial_subtitles
-            self.project.projectfile = self.project.GetProjectFilepath(self.media_path)
-
+        if self.coordinator is not None:
+            self.subtitles = self.coordinator.partial_subtitles
         logging.error(_("Transcription failed: {error}").format(error=error))
 
     @staticmethod

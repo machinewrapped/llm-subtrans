@@ -1,18 +1,18 @@
 from GuiSubtrans.Command import Command
-from PySubtrans.Helpers.Localization import _
-from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Subtitles import Subtitles
+
 
 class SaveSubtitleFile(Command):
     """
-    Write a project's original subtitles to a subtitle file.
+    Write original subtitles to a subtitle file.
     """
-    def __init__(self, filepath, project : SubtitleProject):
+    def __init__(self, filepath : str, subtitles : Subtitles):
         super().__init__()
         self.filepath = filepath
-        self.project = project
+        self.subtitles = subtitles
         self.mark_project_dirty = False
         self.skip_undo = True
 
     def execute(self) -> bool:
-        self.project.SaveOriginal(self.filepath)
+        self.subtitles.SaveOriginal(self.filepath)
         return True

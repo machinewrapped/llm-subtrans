@@ -10,13 +10,12 @@ from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
 from PySubtrans.Transcription.Providers.Provider_OpenRouter import parse_transcription_payload
 
-
 class OpenRouterTranscriptionClient(TranscriptionClient):
     """
     Speech-to-text via OpenRouter's /audio/transcriptions endpoint.
 
-    Requests verbose_json with word timestamps first; providers that
-    reject structured output fall back to plain text (chunk-level lines).
+    Requests verbose_json with word timestamps. Providers that reject
+    structured output fail fast to avoid incurring a charge for untimed text.
     Diarization is a per-model provider option (see _diarize_options).
     """
     def __init__(self, settings : SettingsType):
@@ -46,7 +45,7 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
 
     @property
     def supports_timestamps(self) -> bool:
-        """Verbose timestamps are negotiated per request (with fallback)."""
+        """Verbose timestamps are requested for every transcription."""
         return True
 
     @property

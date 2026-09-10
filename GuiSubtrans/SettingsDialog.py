@@ -10,7 +10,6 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.TranslationProvider import TranslationProvider
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Helpers.Localization import LocaleDisplayItem, _, get_locale_display_items
 
@@ -281,7 +280,7 @@ class SettingsDialog(QDialog):
 
     def _get_transcription_provider_settings(self, provider : str) -> dict[str, SettingsType]:
         """Get the "<provider> Transcription" settings namespace, creating it on demand."""
-        namespace = TranscriptionCoordinator.SettingsKey(provider)
+        namespace = TranscriptionProvider.SettingsKey(provider)
         return self._get_namespaced_provider_settings(namespace)
 
     def _get_namespaced_provider_settings(self, namespace : str) -> dict[str, SettingsType]:
@@ -560,7 +559,7 @@ class SettingsDialog(QDialog):
             return
         try:
             saved = self._get_transcription_provider_settings(name)
-            resolved = TranscriptionCoordinator.ResolveProviderSettings(
+            resolved = TranscriptionProvider.ResolveProviderSettings(
                 name, SettingsType(saved), self.settings.get_dict('provider_settings'))
             self.transcription_provider = TranscriptionProvider.create_provider(name, resolved)
         except Exception as e:

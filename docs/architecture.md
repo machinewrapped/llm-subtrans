@@ -47,7 +47,7 @@ Media-to-subtitles transcription lives under `PySubtrans/Transcription/` and mir
 - `TranscriptionProvider` / `TranscriptionClient` – pluggable speech-to-text backends (`PySubtrans/Transcription/Providers/`), returning a `TranscriptionResult` per audio chunk with optional word timings or sub-segments.
 - `AudioExtractor` / `AudioChunker` – ffmpeg-backed track listing, audio reading, silence detection and chunk planning (`PlanChunksStream` yields chunks while silence detection is still running).
 - `TranscriptionLines` – `TranscriptionLineBuilder` turns a transcribed chunk into timed subtitle lines (word grouping by length, duration, punctuation, pauses and speaker; rebasing provider sub-segments; merging slivers). Pure logic with no provider or audio dependencies.
-- `TranscriptionCoordinator` – end-to-end orchestration: plans chunks, transcribes each with the client, applies the resume/abort/failure policy and assembles a `Subtitles` object. Exposes `status`, `last_error` and `partial_subtitles` for callers; `ResolveProviderSettings` merges shared credentials into the `"<name> Transcription"` settings namespace.
+- `TranscriptionCoordinator` – end-to-end orchestration: plans chunks, transcribes each with the client, applies the resume/abort/failure policy and returns a `TranscriptionOutcome` (status, subtitles, error, line count, cost). Expected failures are reported as a FAILED outcome rather than raised. Emits `TranscriptionEvents` signals (`progress`, `audio_progress`, `segment`) during the run. `TranscriptionProvider.ResolveProviderSettings` merges shared credentials into the `"<name> Transcription"` settings namespace.
 
 The CLI entry point is `scripts/transcribe.py`; the GUI runs the same coordinator through `TranscribeMediaCommand`.
 

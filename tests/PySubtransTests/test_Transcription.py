@@ -18,7 +18,7 @@ from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, AudioExtractor, AudioTrack, SilenceStream
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionOutcome, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionLines import JoinWords, TranscriptionLineBuilder
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
@@ -279,6 +279,12 @@ def _word(text : str, start : float, end : float, speaker : str|None = None) -> 
     return WordTiming(text=text, start=timedelta(seconds=start), end=timedelta(seconds=end), speaker=speaker)
 
 
+def _subtitles_of(outcome : TranscriptionOutcome) -> Subtitles:
+    """Unwrap a run outcome that is expected to carry subtitles."""
+    assert outcome.subtitles is not None, f"expected subtitles, got {outcome.status} ({outcome.error})"
+    return outcome.subtitles
+
+
 def _default_builder() -> TranscriptionLineBuilder:
     """Line builder with the coordinator's default limits."""
     return TranscriptionLineBuilder(max_line_chars=84, max_line_seconds=8.0, word_gap_split=0.5)
@@ -488,7 +494,7 @@ class TestSettingsNamespaces(LoggedTestCase):
     def test_credentials_shared_endpoints_not(self):
         """Only api_key/proxy travel across capabilities, never endpoints."""
         options = self._options()
-        resolved = TranscriptionCoordinator.ResolveProviderSettings(
+        resolved = TranscriptionProvider.ResolveProviderSettings(
             "OpenRouter", SettingsType(), options.get_dict('provider_settings'))
 
         self.assertLoggedEqual("shared key", "shared-key", resolved.get_str('api_key'))
@@ -501,7 +507,7 @@ class TestSettingsNamespaces(LoggedTestCase):
         options.provider_settings['OpenRouter Transcription'] = SettingsType({
             'model': 'openai/whisper-large-v3',
         })
-        resolved = TranscriptionCoordinator.ResolveProviderSettings(
+        resolved = TranscriptionProvider.ResolveProviderSettings(
             "OpenRouter", SettingsType(), options.get_dict('provider_settings'))
 
         self.assertLoggedEqual("own model", "openai/whisper-large-v3", resolved.get_str('model'))
@@ -511,7 +517,7 @@ class TestSettingsNamespaces(LoggedTestCase):
         """Transcription namespaces are clearly separated."""
         self.assertLoggedEqual(
             "key format", "OpenRouter Transcription",
-            TranscriptionCoordinator.SettingsKey("OpenRouter"))
+            TranscriptionProvider.SettingsKey("OpenRouter"))
 
     def test_information_composition_matrix(self):
         """Info text composes ffmpeg guidance with provider content."""
@@ -594,8 +600,10 @@ class TestSilenceGate(LoggedTestCase):
         ], audio=self._silent_wav())
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            with self.assertRaisesRegex(SubtitleError, "No timed"):
-                coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedEqual("failed status", TranscriptionStatus.FAILED, outcome.status)
+        self.assertLoggedIn("no timed subtitles", "No timed", str(outcome.error))
 
         assert provider.client is not None  # Type narrowing for PyLance
         self.assertLoggedEqual("no requests sent", 0, provider.client.calls)
@@ -616,7 +624,8 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+            subtitles = _subtitles_of(outcome)
 
         self.assertLoggedIsInstance("subtitles type", subtitles, Subtitles)
         self.assertLoggedEqual("line count", 2, subtitles.linecount)
@@ -632,8 +641,10 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         coordinator = TranscriptionCoordinator(provider, SettingsType())
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            with self.assertRaisesRegex(SubtitleError, "Fake Transcription"):
-                coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedEqual("failed status", TranscriptionStatus.FAILED, outcome.status)
+        self.assertLoggedIn("provider named", "Fake Transcription", str(outcome.error))
 
     def test_untimed_results_kept_as_scene_lines(self):
         """Paid-for flat text is kept over true chunk spans, not thrown away."""
@@ -644,22 +655,25 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+            subtitles = _subtitles_of(outcome)
 
         self.assertLoggedEqual("line count", 2, subtitles.linecount)
         assert subtitles.originals is not None  # Type narrowing for PyLance
         self.assertLoggedEqual("second span", timedelta(seconds=4), subtitles.originals[1].end)
 
-    def test_no_speech_raises(self):
-        """Media with nothing transcribable raises instead of empty project."""
+    def test_no_speech_fails(self):
+        """Media with nothing transcribable fails instead of an empty project."""
         coordinator, _unused_provider = self._coordinator(["", "   "])
         stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=2)),
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            with self.assertRaises(SubtitleError):
-                coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedEqual("failed status", TranscriptionStatus.FAILED, outcome.status)
+        self.assertLoggedIsNone("no subtitles", outcome.subtitles)
 
     def test_segment_callback_receives_each_scene(self):
         """Per-chunk callback fires with timings for live progress display."""
@@ -671,7 +685,8 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
         seen : list = []
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            coordinator.TranscribeMedia(media.name, segment_cb=seen.append)
+            coordinator.events.segment.connect(lambda sender, segment: seen.append(segment), weak=False)
+            coordinator.TranscribeMedia(media.name)
 
         self.assertLoggedEqual("callback count", 2, len(seen))
         self.assertLoggedEqual("second start", timedelta(seconds=6), seen[1].start)
@@ -686,7 +701,8 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
         seen : list = []
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            coordinator.TranscribeMedia(media.name, progress_cb=lambda done, total, span: seen.append(span))
+            coordinator.events.progress.connect(lambda sender, done, total, span: seen.append(span), weak=False)
+            coordinator.TranscribeMedia(media.name)
 
         self.assertLoggedEqual("chunk spans", ["0.0s-4.0s", "6.0s-10.0s"], seen)
 
@@ -700,7 +716,8 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+            subtitles = _subtitles_of(outcome)
 
         self.assertLoggedEqual("line count", 2, subtitles.linecount)
         assert subtitles.originals is not None  # Type narrowing for PyLance
@@ -715,17 +732,19 @@ class TestTranscriptionCoordinator(LoggedTestCase):
             AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
         ])
 
-        def abort_after_first(done : int, total : int, span : str) -> None:
+        def abort_after_first(sender, done : int, total : int, span : str) -> None:
             if done >= 1:
                 coordinator.Abort()
 
+        coordinator.events.progress.connect(abort_after_first)
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.TranscribeMedia(media.name, progress_cb=abort_after_first)
+            outcome = coordinator.TranscribeMedia(media.name)
+            subtitles = _subtitles_of(outcome)
 
         self.assertLoggedEqual("partial line count", 1, subtitles.linecount)
 
-    def test_abort_before_anything_raises(self):
-        """Cancelling with nothing transcribed still raises, not empty output."""
+    def test_abort_before_anything_fails(self):
+        """Cancelling with nothing transcribed fails rather than producing empty output."""
         coordinator, _unused_provider = self._coordinator(["first line"], [_word("w", 0.0, 1.0)])
         stub_media(self, coordinator, [
             AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4)),
@@ -733,8 +752,9 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         coordinator.Abort()
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            with self.assertRaises(SubtitleError):
-                coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+
+        self.assertLoggedEqual("failed status", TranscriptionStatus.FAILED, outcome.status)
 
     def test_audio_track_info_label(self):
         """Track descriptors render a readable label."""
@@ -770,21 +790,23 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.addCleanup(read_patcher.stop)
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+            subtitles = _subtitles_of(outcome)
 
         self.assertLoggedEqual("partial line count", 1, subtitles.linecount)
-        self.assertLoggedEqual("incomplete status", TranscriptionStatus.INCOMPLETE, coordinator.status)
+        self.assertLoggedEqual("incomplete status", TranscriptionStatus.INCOMPLETE, outcome.status)
 
     def test_two_initial_failures_abort_run(self):
         """Two failures before anything works aborts instead of grinding chunks."""
         coordinator, failing = self._failing_coordinator({1, 2}, chunks=4)
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            with self.assertRaises(SubtitleError) as raised:
-                coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
 
+        self.assertLoggedEqual("failed status", TranscriptionStatus.FAILED, outcome.status)
+        assert outcome.error is not None  # Type narrowing for PyLance
         # Note: str() prefers the wrapped error, the message carries ours
-        self.assertLoggedIn("blocked message", "consecutive", raised.exception.message)
+        self.assertLoggedIn("blocked message", "consecutive", outcome.error.message)
         self.assertLoggedEqual("stopped early", 2, failing.calls)
 
     def test_initial_failure_tolerated_when_next_succeeds(self):
@@ -792,7 +814,8 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         coordinator, failing = self._failing_coordinator({1}, chunks=3)
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+            subtitles = _subtitles_of(outcome)
 
         self.assertLoggedEqual("line count", 2, subtitles.linecount)
         self.assertLoggedEqual("all chunks attempted", 3, failing.calls)
@@ -802,11 +825,12 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         coordinator, failing = self._failing_coordinator({2}, chunks=4)
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.TranscribeMedia(media.name)
+            outcome = coordinator.TranscribeMedia(media.name)
+            subtitles = _subtitles_of(outcome)
 
         self.assertLoggedEqual("partial lines retained", 1, subtitles.linecount)
-        self.assertLoggedEqual("incomplete status", "incomplete", coordinator.status.value)
-        self.assertLoggedIsNotNone("failure retained", coordinator.last_error)
+        self.assertLoggedEqual("incomplete status", "incomplete", outcome.status.value)
+        self.assertLoggedIsNotNone("failure retained", outcome.error)
         self.assertLoggedEqual("stopped at failure", 2, failing.calls)
 
     def test_postprocesses_transcription_text(self):
@@ -817,8 +841,9 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.CreateTranscription(
+            outcome = coordinator.CreateTranscription(
                 media.name, Options({'convert_wide_dashes': True}))
+            subtitles = _subtitles_of(outcome)
 
         assert subtitles.originals is not None  # Type narrowing for PyLance
         self.assertLoggedEqual("dash normalised", "a - b", subtitles.originals[0].text)
@@ -836,10 +861,11 @@ class TestTranscriptionCoordinator(LoggedTestCase):
                 ])
 
                 with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-                    subtitles = coordinator.CreateTranscription(media.name, Options({
+                    outcome = coordinator.CreateTranscription(media.name, Options({
                         'remove_filler_words': True, 'filler_words': ['um'],
                         'postprocess_transcription': True,
                     }))
+                    subtitles = _subtitles_of(outcome)
 
                 originals = subtitles.originals or []
                 expected = ["Hello"] if texts[1] == "Um, hello" else []
@@ -857,8 +883,9 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.CreateTranscription(media.name, Options({
+            outcome = coordinator.CreateTranscription(media.name, Options({
                 'postprocess_transcription': True, 'max_line_duration': 4.0}))
+            subtitles = _subtitles_of(outcome)
 
         assert subtitles.originals is not None  # Type narrowing for PyLance
         self.assertLoggedGreater("line was split", len(subtitles.originals), 1)
@@ -876,8 +903,9 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         ])
 
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            subtitles = coordinator.CreateTranscription(media.name, Options({
+            outcome = coordinator.CreateTranscription(media.name, Options({
                 'postprocess_transcription': False}))
+            subtitles = _subtitles_of(outcome)
 
         assert subtitles.originals is not None  # Type narrowing for PyLance
         self.assertLoggedEqual("line count", 1, len(subtitles.originals))

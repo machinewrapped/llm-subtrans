@@ -18,7 +18,7 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionOutcome, TranscriptionStatus
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 
 
@@ -63,13 +63,11 @@ class TestTranscriptionDialogLifecycle(LoggedTestCase):
         super().tearDown()
 
     def _start_worker(self) -> None:
-        def create_transcription(*args, **kwargs) -> Subtitles:
+        def create_transcription(*args, **kwargs) -> TranscriptionOutcome:
             self.started.set()
             self.release.wait(3)
-            self.coordinator.status = (TranscriptionStatus.INCOMPLETE if self.coordinator.aborted
-                                       else TranscriptionStatus.COMPLETED)
-            self.coordinator.transcribed_lines = self.subtitles.linecount
-            return self.subtitles
+            status = TranscriptionStatus.INCOMPLETE if self.coordinator.aborted else TranscriptionStatus.COMPLETED
+            return TranscriptionOutcome(status, self.subtitles, transcribed_lines=self.subtitles.linecount)
 
         patcher = patch.object(self.coordinator, 'CreateTranscription', side_effect=create_transcription)
         patcher.start()

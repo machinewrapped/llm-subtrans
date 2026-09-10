@@ -120,11 +120,9 @@ class TestTranscriptionRunEvidence(LoggedTestCase):
         with patch.object(TranscriptionDialog, '_refresh_providers'):
             dialog = TranscriptionDialog(options)
         try:
-            dialog._run_started = 100.0
-            dialog._chunks_done = 1
-            dialog._chunks_total = 0
-            dialog._last_span = '0.0s-10.0s'
-            with patch('GuiSubtrans.Widgets.TranscriptionDialog.time.monotonic', return_value=160.0):
+            dialog.run_progress.started = 100.0
+            dialog.run_progress.OnProgress(1, 0, '0.0s-10.0s')
+            with patch('GuiSubtrans.Widgets.TranscriptionRunProgress.time.monotonic', return_value=160.0):
                 dialog._on_audio_progress(10.0, 100.0)
 
             self.assertLoggedIn('audio-based eta', 'about 9:00 left', dialog.status_label.text())

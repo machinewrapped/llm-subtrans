@@ -107,7 +107,7 @@ def main() -> int:
             return 1
         return 0
 
-    def progress(done : int, total : int, span : str) -> None:
+    def progress(sender, done : int, total : int, span : str) -> None:
         # Total is unknown while the chunk plan streams in (0 signals that)
         label = f"Transcribing chunk {done + 1}/{total}" if total > 0 else f"Transcribing chunk {done + 1}"
         logging.info(f"{label} [{span}]")
@@ -118,8 +118,13 @@ def main() -> int:
         options = Options()
         options['postprocess_transcription'] = args.postprocess
 
-        subtitles = coordinator.CreateTranscription(args.input, options, progress)
+        coordinator.events.progress.connect(progress)
+        outcome = coordinator.CreateTranscription(args.input, options)
+        if outcome.subtitles is None:
+            logging.error(f"Transcription failed: {outcome.error or 'no subtitles produced'}")
+            return 1
 
+        subtitles = outcome.subtitles
         outputpath = args.output or GetOutputPath(args.input, args.language, f".{args.format}")
         if not outputpath:
             logging.error("Unable to determine output path")
@@ -131,9 +136,8 @@ def main() -> int:
         subtitles.SaveOriginal(outputpath)
         logging.info(f"Saved subtitles to {outputpath} ({subtitles.linecount} lines)")
 
-        if coordinator.status == TranscriptionStatus.INCOMPLETE:
-            error = coordinator.last_error
-            logging.error(f"Transcription incomplete: {error or 'one or more chunks failed'}")
+        if outcome.status == TranscriptionStatus.INCOMPLETE:
+            logging.error(f"Transcription incomplete: {outcome.error or 'one or more chunks failed'}")
             return 1
 
     except KeyboardInterrupt:

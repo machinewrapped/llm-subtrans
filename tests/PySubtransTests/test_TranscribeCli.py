@@ -11,6 +11,7 @@ import transcribe  # type: ignore[import-not-found] - scripts dir added to sys.p
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.SubtitleError import SubtitleError
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionOutcome, TranscriptionStatus
 
 
 class TestTranscribeCliOptions(LoggedTestCase):
@@ -82,8 +83,7 @@ class TestTranscribeCliExecution(LoggedTestCase):
         """Postprocessing applies even when no project file is requested."""
         subtitles = Mock(linecount=1)
         coordinator = Mock()
-        coordinator.CreateTranscription.return_value = subtitles
-        coordinator.status = transcribe.TranscriptionStatus.COMPLETED
+        coordinator.CreateTranscription.return_value = TranscriptionOutcome(TranscriptionStatus.COMPLETED, subtitles)
         provider = Mock()
 
         with patch.object(transcribe, 'InitLogger'), \
@@ -103,8 +103,8 @@ class TestTranscribeCliExecution(LoggedTestCase):
         """An output write failure is reported as a failed CLI run."""
         subtitles = Mock(linecount=1)
         subtitles.SaveOriginal.side_effect = OSError("permission denied")
-        coordinator = Mock(status=transcribe.TranscriptionStatus.COMPLETED, last_error=None)
-        coordinator.CreateTranscription.return_value = subtitles
+        coordinator = Mock()
+        coordinator.CreateTranscription.return_value = TranscriptionOutcome(TranscriptionStatus.COMPLETED, subtitles)
 
         with patch.object(transcribe, 'InitLogger'), \
                 patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=Mock()), \
@@ -118,8 +118,8 @@ class TestTranscribeCliExecution(LoggedTestCase):
     def test_postprocess_defaults_on_for_plain_output(self):
         """Plain subtitle output retains the default cleaning option."""
         subtitles = Mock(linecount=1)
-        coordinator = Mock(status=transcribe.TranscriptionStatus.COMPLETED)
-        coordinator.CreateTranscription.return_value = subtitles
+        coordinator = Mock()
+        coordinator.CreateTranscription.return_value = TranscriptionOutcome(TranscriptionStatus.COMPLETED, subtitles)
 
         with patch.object(transcribe, 'InitLogger'), \
                 patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=Mock()), \
@@ -134,9 +134,9 @@ class TestTranscribeCliExecution(LoggedTestCase):
     def test_incomplete_run_saves_output_and_returns_nonzero(self):
         """Partial transcription output remains recoverable and is reported incomplete."""
         subtitles = Mock(linecount=1)
-        coordinator = Mock(status=transcribe.TranscriptionStatus.INCOMPLETE,
-                            last_error=SubtitleError("chunk failed"))
-        coordinator.CreateTranscription.return_value = subtitles
+        coordinator = Mock()
+        coordinator.CreateTranscription.return_value = TranscriptionOutcome(
+            TranscriptionStatus.INCOMPLETE, subtitles, error=SubtitleError("chunk failed"))
 
         with patch.object(transcribe, 'InitLogger'), \
                 patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=Mock()), \

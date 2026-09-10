@@ -16,7 +16,7 @@ class TranscriptionProvider:
     Mirrors TranslationProvider but stays a separate hierarchy on purpose:
     transcription model catalogs, options and capability flags are disjoint
     from translation ones. API keys are shared at the Options level instead
-    (see TranscriptionCoordinator.ResolveProviderSettings).
+    (see ResolveProviderSettings).
     """
     # Settings hidden from the Transcribe dialog (stable choices that belong
     # in Settings): the dialog shows the rest for per-run tweaks.
@@ -31,6 +31,40 @@ class TranscriptionProvider:
         self._available_models : list[str] = []
         self.refresh_when_changed : list[str] = []
         self.validation_message : str|None = None
+
+    @classmethod
+    def ResolveProviderSettings(cls, provider_name : str, settings : SettingsType,
+                                provider_settings : SettingsType|None = None) -> SettingsType:
+        """
+        Merge settings with shared credentials from the provider_settings dict.
+
+        Only credentials travel across capabilities (api_key, proxy): endpoint
+        conventions differ per capability (translation and transcription use
+        different base paths), so server addresses and models are never
+        shared. Transcription settings live under "<name> Transcription".
+        """
+        resolved = SettingsType(settings or {})
+        if provider_settings is not None:
+            # Transcription-specific settings fill gaps; explicit settings win.
+            own = provider_settings.get_dict(cls.SettingsKey(provider_name))
+            if own:
+                resolved = SettingsType(own | resolved)
+
+            # Only credentials travel across capabilities, never endpoints.
+            shared = provider_settings.get_dict(provider_name)
+            for key in ('api_key', 'proxy'):
+                if not resolved.get(key) and shared.get(key):
+                    resolved[key] = shared.get(key)
+
+        return resolved
+
+    @staticmethod
+    def SettingsKey(provider_name : str) -> str:
+        """
+        Settings namespace for a transcription provider, kept separate
+        from its translation counterpart (see ResolveProviderSettings).
+        """
+        return f"{provider_name} Transcription"
 
     @property
     def available_models(self) -> list[str]:

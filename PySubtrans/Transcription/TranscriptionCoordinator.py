@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import os
-from collections.abc import Callable, Generator
+from collections.abc import Generator
+from dataclasses import dataclass
 from datetime import timedelta
 from enum import Enum
 
@@ -15,25 +16,39 @@ from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioChunk, AudioChunker, AudioTrack, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
+from PySubtrans.Transcription.TranscriptionEvents import TranscriptionEvents
 from PySubtrans.Transcription.TranscriptionLines import SpanLabel, TranscriptionLineBuilder
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 
 
 class TranscriptionStatus(str, Enum):
-    """State of the most recent transcription run."""
+    """Final state of a transcription run."""
     IDLE = "idle"
     COMPLETED = "completed"
     INCOMPLETE = "incomplete"
     FAILED = "failed"
 
 
-# Signature for transcription progress callbacks: (chunks_completed, chunk_total, current_chunk_span)
-TranscriptionProgressCallback = Callable[[int, int, str], None]
-# Signature for audio progress callbacks: (audio_seconds_processed, total_audio_seconds)
-TranscriptionAudioProgressCallback = Callable[[float, float], None]
-# Signature for per-chunk callbacks: invoked with each transcribed segment
-TranscriptionSegmentCallback = Callable[[TranscriptionSegment], None]
+@dataclass
+class TranscriptionOutcome:
+    """
+    Result of one transcription run.
+
+    COMPLETED and INCOMPLETE outcomes carry subtitles (partial ones for
+    INCOMPLETE, which can be resumed by passing them back as
+    prior_subtitles). FAILED outcomes carry the error and no subtitles.
+    """
+    status : TranscriptionStatus
+    subtitles : Subtitles|None = None
+    error : SubtitleError|None = None
+    transcribed_lines : int = 0
+    total_cost : float = 0.0
+
+    @property
+    def succeeded(self) -> bool:
+        return self.status is TranscriptionStatus.COMPLETED
+
 
 # Consecutive chunk failures before an empty run is treated as blocked
 _MAX_INITIAL_FAILURES = 2
@@ -42,7 +57,7 @@ _MAX_INITIAL_FAILURES = 2
 class _TranscriptionRun:
     """
     Mutable state for one TranscribeMedia call: accumulated lines,
-    resume position and failure bookkeeping.
+    resume position, cost and failure bookkeeping.
     """
     def __init__(self, prior_subtitles : Subtitles|None):
         self.lines : list[SubtitleLine] = []
@@ -52,7 +67,8 @@ class _TranscriptionRun:
         self.chunks_done : int = 0
         self.consecutive_failures : int = 0
         self.had_failures : bool = False
-        self.incomplete_error : SubtitleError|None = None
+        self.error : SubtitleError|None = None
+        self.total_cost : float = 0.0
         self.audio_total_seconds : float = 0.0
 
         if prior_subtitles and prior_subtitles.originals:
@@ -93,6 +109,8 @@ class TranscriptionCoordinator:
     Extracts coherent audio chunks from a media file, transcribes each
     chunk with the provider client, and assembles timestamped subtitles.
     Has no GUI dependencies so CLI and library callers can use it directly.
+    Subscribe to `events` for progress and per-line notifications; each run
+    returns a TranscriptionOutcome describing what was produced.
     """
     def __init__(self, provider : TranscriptionProvider, settings : SettingsType|Options|None = None):
         self.provider : TranscriptionProvider = provider
@@ -109,14 +127,12 @@ class TranscriptionCoordinator:
         self.chunker : AudioChunker = AudioChunker(chunk_settings)
         self.extractor : AudioExtractor = self.chunker.extractor
         self.line_builder : TranscriptionLineBuilder = TranscriptionLineBuilder(
-            self.max_line_chars, self.max_line_seconds, self.word_gap_split)
+            max_line_chars=self.settings.get_int('transcription_max_chars') or 84,
+            max_line_seconds=self.settings.get_float('transcription_max_line_seconds') or 8.0,
+            word_gap_split=self.settings.get_float('transcription_gap_split') or 0.5)
+        self.events : TranscriptionEvents = TranscriptionEvents()
 
         self._active_client : TranscriptionClient|None = None
-        self.total_cost : float = 0.0
-        self.transcribed_lines : int = 0
-        self.status : TranscriptionStatus = TranscriptionStatus.IDLE
-        self.last_error : SubtitleError|None = None
-        self.partial_subtitles : Subtitles|None = None
 
     @property
     def track_index(self) -> int:
@@ -129,58 +145,9 @@ class TranscriptionCoordinator:
         return self.settings.get_str('language') or self.provider.settings.get_str('language')
 
     @property
-    def max_line_chars(self) -> int:
-        """Maximum characters per subtitle line when grouping aligned words."""
-        return self.settings.get_int('transcription_max_chars') or 84
-
-    @property
-    def max_line_seconds(self) -> float:
-        """Maximum duration per subtitle line when grouping aligned words."""
-        return self.settings.get_float('transcription_max_line_seconds') or 8.0
-
-    @property
-    def word_gap_split(self) -> float:
-        """Inter-word pause that forces a new subtitle line, in seconds."""
-        return self.settings.get_float('transcription_gap_split') or 0.5
-
-    @property
     def silence_skip_db(self) -> float:
         """Peak level below which chunks skip transcription entirely."""
         return self.settings.get_float('silence_skip_db') or -40.0
-
-    @classmethod
-    def ResolveProviderSettings(cls, provider_name : str, settings : SettingsType,
-                                provider_settings : SettingsType|None = None) -> SettingsType:
-        """
-        Merge settings with shared credentials from the provider_settings dict.
-
-        Only credentials travel across capabilities (api_key, proxy): endpoint
-        conventions differ per capability (translation and transcription use
-        different base paths), so server addresses and models are never
-        shared. Transcription settings live under "<name> Transcription".
-        """
-        resolved = SettingsType(settings or {})
-        if provider_settings is not None:
-            # Transcription-specific settings fill gaps; explicit settings win.
-            own = provider_settings.get_dict(cls.SettingsKey(provider_name))
-            if own:
-                resolved = SettingsType(own | resolved)
-
-            # Only credentials travel across capabilities, never endpoints.
-            shared = provider_settings.get_dict(provider_name)
-            for key in ('api_key', 'proxy'):
-                if not resolved.get(key) and shared.get(key):
-                    resolved[key] = shared.get(key)
-
-        return resolved
-
-    @staticmethod
-    def SettingsKey(provider_name : str) -> str:
-        """
-        Settings namespace for a transcription provider, kept separate
-        from its translation counterpart (see ResolveProviderSettings).
-        """
-        return f"{provider_name} Transcription"
 
     def CheckRequirements(self, media_path : str) -> list[AudioTrack]:
         """
@@ -195,43 +162,45 @@ class TranscriptionCoordinator:
         """
         return self.chunker.PlanChunks(media_path, self.track_index)
 
-    def TranscribeMedia(self, media_path : str, progress_cb : TranscriptionProgressCallback|None = None,
-                        segment_cb : TranscriptionSegmentCallback|None = None,
-                        audio_progress_cb : TranscriptionAudioProgressCallback|None = None,
-                        prior_subtitles : Subtitles|None = None) -> Subtitles:
+    def TranscribeMedia(self, media_path : str, prior_subtitles : Subtitles|None = None) -> TranscriptionOutcome:
         """
         Transcribe a media file into timestamped subtitles.
 
         When *prior_subtitles* is supplied (from an earlier aborted run),
         already-transcribed chunks are skipped and the new lines are appended
-        after the existing ones.
+        after the existing ones. Expected failures (missing media, an engine
+        without timings, a blocked run, no speech) are reported as a FAILED
+        outcome rather than raised.
         """
-        self._reset_state()
         if not media_path or not os.path.isfile(media_path):
-            self.status = TranscriptionStatus.FAILED
-            raise SubtitleError(_("Media file not found: {}").format(media_path))
+            return self._failed(SubtitleError(_("Media file not found: {}").format(media_path)))
 
-        client = self._start_client()
+        try:
+            client = self._start_client()
+        except SubtitleError as e:
+            return self._failed(e)
+
         run = _TranscriptionRun(prior_subtitles)
 
         def on_duration(duration : timedelta) -> None:
             run.audio_total_seconds = max(0.0, duration.total_seconds())
-            if audio_progress_cb and run.audio_total_seconds > 0.0:
-                audio_progress_cb(0.0, run.audio_total_seconds)
+            if run.audio_total_seconds > 0.0:
+                self.events.audio_progress.send(self, processed=0.0, total=run.audio_total_seconds)
 
         chunks = self.chunker.PlanChunksStream(media_path, self.track_index, duration_cb=on_duration)
         logging.info(_("Transcribing {} with {} (chunks stream in while silence detection runs)").format(
             os.path.basename(media_path), self.provider.name))
 
         try:
-            self._run_chunks(run, client, media_path, chunks, progress_cb, segment_cb, audio_progress_cb)
+            self._run_chunks(run, client, media_path, chunks)
         except SubtitleError as e:
-            # A silence-scan failure mid-run must not discard already
+            # A blocked run with nothing transcribed is a failure; a
+            # silence-scan failure mid-run must not discard already
             # transcribed (billed) chunks.
             if run.transcribed == 0:
-                raise
+                return self._failed(e)
             run.had_failures = True
-            self.last_error = e
+            run.error = e
             logging.error(str(e))
         finally:
             chunks.close()
@@ -240,18 +209,14 @@ class TranscriptionCoordinator:
         return self._finish_run(run, media_path)
 
     def CreateTranscription(self, media_path : str, options : Options|None = None,
-                            progress_cb : TranscriptionProgressCallback|None = None,
-                            segment_cb : TranscriptionSegmentCallback|None = None,
-                            audio_progress_cb : TranscriptionAudioProgressCallback|None = None,
-                            prior_subtitles : Subtitles|None = None) -> Subtitles:
-        """Transcribe media and return post-processed subtitles."""
-        subtitles = self.TranscribeMedia(media_path, progress_cb, segment_cb, audio_progress_cb,
-                                         prior_subtitles=prior_subtitles)
+                            prior_subtitles : Subtitles|None = None) -> TranscriptionOutcome:
+        """Transcribe media and return the outcome with post-processed subtitles."""
+        outcome = self.TranscribeMedia(media_path, prior_subtitles=prior_subtitles)
 
-        if options is not None and options.get_bool('postprocess_transcription', True):
-            self._process_transcription(subtitles, options)
+        if outcome.subtitles is not None and options is not None and options.get_bool('postprocess_transcription', True):
+            self._process_transcription(outcome.subtitles, options)
 
-        return subtitles
+        return outcome
 
     def Abort(self) -> None:
         """Stop transcription after the current chunk."""
@@ -259,11 +224,10 @@ class TranscriptionCoordinator:
         if self._active_client is not None:
             self._active_client.AbortTranscription()
 
-    def _reset_state(self) -> None:
-        self.status = TranscriptionStatus.IDLE
-        self.last_error = None
-        self.partial_subtitles = None
-        self.total_cost = 0.0
+    def _failed(self, error : SubtitleError) -> TranscriptionOutcome:
+        """Log and package a run that produced nothing usable."""
+        logging.error(str(error))
+        return TranscriptionOutcome(status=TranscriptionStatus.FAILED, error=error)
 
     def _start_client(self) -> TranscriptionClient:
         """
@@ -272,7 +236,7 @@ class TranscriptionCoordinator:
         client = self.provider.GetTranscriptionClient(self.settings)
         self._active_client = client
         if not client.supports_timestamps:
-            self.status = TranscriptionStatus.FAILED
+            self._active_client = None
             raise SubtitleError(_(
                 "'{}' cannot provide subtitle timings (no word or segment "
                 "timestamps). Transcription without timings has no value "
@@ -281,22 +245,18 @@ class TranscriptionCoordinator:
         return client
 
     def _run_chunks(self, run : _TranscriptionRun, client : TranscriptionClient, media_path : str,
-                    chunks : Generator[AudioChunk, None, None],
-                    progress_cb : TranscriptionProgressCallback|None,
-                    segment_cb : TranscriptionSegmentCallback|None,
-                    audio_progress_cb : TranscriptionAudioProgressCallback|None) -> None:
+                    chunks : Generator[AudioChunk, None, None]) -> None:
         """
         Transcribe each planned chunk in turn, honouring abort, resume and
         the failure policy. Partial results stay in run.lines.
         """
         def report_progress(done : int, chunk : AudioChunk) -> None:
-            if progress_cb:
-                # Total is unknown while the plan streams in (0 signals that)
-                progress_cb(done, 0, SpanLabel(chunk))
+            # Total is unknown while the plan streams in (0 signals that)
+            self.events.progress.send(self, done=done, total=0, span=SpanLabel(chunk))
 
         def report_audio(chunk : AudioChunk) -> None:
-            if audio_progress_cb and run.audio_total_seconds > 0.0:
-                audio_progress_cb(run.AudioPosition(chunk), run.audio_total_seconds)
+            if run.audio_total_seconds > 0.0:
+                self.events.audio_progress.send(self, processed=run.AudioPosition(chunk), total=run.audio_total_seconds)
 
         for done, chunk in enumerate(chunks):
             if self.aborted or client.aborted:
@@ -313,12 +273,12 @@ class TranscriptionCoordinator:
                 continue
 
             try:
-                segment, provider_responded = self._transcribe_chunk(client, media_path, chunk)
+                segment, provider_responded = self._transcribe_chunk(run, client, media_path, chunk)
             except SubtitleError as e:
                 if self._handle_chunk_failure(run, chunk, e):
                     break
             else:
-                self._accept_chunk(run, segment, provider_responded, segment_cb)
+                self._accept_chunk(run, segment, provider_responded)
             finally:
                 report_audio(chunk)
 
@@ -334,27 +294,26 @@ class TranscriptionCoordinator:
         """
         run.had_failures = True
         run.consecutive_failures += 1
-        self.last_error = error
 
         if run.transcribed > 0:
-            run.incomplete_error = SubtitleError(
+            run.error = SubtitleError(
                 _("Transcription stopped at {span}: {error}").format(span=SpanLabel(chunk), error=error),
                 error=error)
-            logging.error(str(run.incomplete_error))
+            logging.error(str(run.error))
             return True
 
         if run.consecutive_failures >= _MAX_INITIAL_FAILURES:
-            self.status = TranscriptionStatus.FAILED
             raise SubtitleError(
                 _("Transcription blocked after {count} consecutive chunk failures: {error}").format(
                     count=run.consecutive_failures, error=error),
                 error=error)
 
+        run.error = error
         logging.warning(_("Skipping chunk {}: {}").format(SpanLabel(chunk), error))
         return False
 
     def _accept_chunk(self, run : _TranscriptionRun, segment : TranscriptionSegment|None,
-                      provider_responded : bool, segment_cb : TranscriptionSegmentCallback|None) -> None:
+                      provider_responded : bool) -> None:
         """Fold a successfully processed chunk into the run."""
         run.chunks_done += 1
 
@@ -368,31 +327,26 @@ class TranscriptionCoordinator:
             return
 
         for line in self.line_builder.LinesForSegment(segment):
-            if run.AddLine(line) is not None and segment_cb:
-                segment_cb(line)
+            if run.AddLine(line) is not None:
+                self.events.segment.send(self, segment=line)
 
-    def _finish_run(self, run : _TranscriptionRun, media_path : str) -> Subtitles:
-        """Assemble the run's lines into Subtitles and record the final status."""
+    def _finish_run(self, run : _TranscriptionRun, media_path : str) -> TranscriptionOutcome:
+        """Assemble the run's lines into Subtitles and report the outcome."""
         if run.transcribed == 0:
-            self.status = TranscriptionStatus.FAILED
-            raise SubtitleError(_("No timed subtitles could be produced from {}").format(media_path))
+            return self._failed(SubtitleError(_("No timed subtitles could be produced from {}").format(media_path)))
 
-        self.transcribed_lines = run.transcribed
         logging.info(_("Transcribed {} lines from {} chunks").format(run.transcribed, run.chunks_done))
-        if self.total_cost > 0:
-            logging.info(_("Transcription cost: ${:.4f}").format(self.total_cost))
+        if run.total_cost > 0:
+            logging.info(_("Transcription cost: ${:.4f}").format(run.total_cost))
 
         subtitles = Subtitles()
         subtitles.originals = run.lines
         subtitles.sourcepath = os.path.normpath(media_path)
         subtitles.file_format = '.srt'
-        self.partial_subtitles = subtitles
 
-        if run.incomplete_error is not None:
-            self.last_error = run.incomplete_error
-        self.status = (TranscriptionStatus.INCOMPLETE if run.had_failures
-                       else TranscriptionStatus.COMPLETED)
-        return subtitles
+        status = TranscriptionStatus.INCOMPLETE if run.had_failures else TranscriptionStatus.COMPLETED
+        return TranscriptionOutcome(status=status, subtitles=subtitles, error=run.error,
+                                    transcribed_lines=run.transcribed, total_cost=run.total_cost)
 
     def _process_transcription(self, subtitles : Subtitles, options : Options) -> None:
         """
@@ -408,7 +362,7 @@ class TranscriptionCoordinator:
                  if line.text and line.text.strip()]
         subtitles.originals = lines
 
-    def _transcribe_chunk(self, client : TranscriptionClient, media_path : str,
+    def _transcribe_chunk(self, run : _TranscriptionRun, client : TranscriptionClient, media_path : str,
                           chunk : AudioChunk) -> tuple[TranscriptionSegment|None, bool]:
         """
         Read and transcribe one chunk. Returns the segment (None for silent
@@ -424,7 +378,7 @@ class TranscriptionCoordinator:
         result = client.TranscribeChunk(audio_bytes, 'wav', self.language)
 
         if result.cost:
-            self.total_cost += result.cost
+            run.total_cost += result.cost
 
         text = (result.text or '').strip()
 

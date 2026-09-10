@@ -16,7 +16,7 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionOutcome, TranscriptionStatus
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 
 
@@ -67,8 +67,8 @@ class TestTranscriptionIntegration(LoggedTestCase):
         return builder.Build()
 
     def _command(self, status : TranscriptionStatus, subtitles : Subtitles|None = None) -> tuple[TranscribeMediaCommand, Mock]:
-        coordinator = Mock(status=status, last_error=None, partial_subtitles=None, transcribed_lines=1)
-        coordinator.CreateTranscription.return_value = subtitles
+        coordinator = Mock()
+        coordinator.CreateTranscription.return_value = TranscriptionOutcome(status, subtitles, transcribed_lines=1)
         command = TranscribeMediaCommand(FakeTranscriptionProvider(), 'media.wav', SettingsType(), Options())
         return command, coordinator
 

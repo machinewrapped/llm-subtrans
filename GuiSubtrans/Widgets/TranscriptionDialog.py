@@ -1,8 +1,7 @@
 import logging
 import os
-import time
-from datetime import timedelta
-from typing import Any, Callable, cast
+from collections.abc import Callable
+from typing import Any, cast
 
 from PySide6.QtCore import QThread, QTimer, Qt, Signal, Slot
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
@@ -28,6 +27,7 @@ from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from GuiSubtrans.Widgets.OptionsWidgets import CheckboxOptionWidget, CreateOptionWidget, FloatOptionWidget, OptionWidget
 from GuiSubtrans.Widgets.TranscriptionProviderLoader import TranscriptionProviderLoader
+from GuiSubtrans.Widgets.TranscriptionRunProgress import TranscriptionRunProgress
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Time import TimedeltaToText
 from PySubtrans.Options import Options
@@ -39,38 +39,6 @@ from PySubtrans.Transcription.AudioExtractor import AudioChunker, SUPPORTED_MEDI
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
-
-
-
-
-def _format_duration(seconds : float) -> str:
-    """
-    Format an elapsed-time estimate as m:ss.
-    """
-    total = max(0, int(seconds))
-    return f"{total // 60}:{total % 60:02d}"
-
-
-def _format_timestamp(seconds : float) -> str:
-    """
-    Format an audio position using the project's standard timestamp format.
-    """
-    return TimedeltaToText(timedelta(seconds=max(0.0, seconds)), include_milliseconds=False)
-
-
-def _format_span(span : str) -> str:
-    """
-    Convert a coordinator span from raw seconds to readable timestamps.
-    """
-    start_text, separator, end_text = span.partition('-')
-    if not separator or not start_text.endswith('s') or not end_text.endswith('s'):
-        return span
-    try:
-        start = float(start_text[:-1])
-        end = float(end_text[:-1])
-    except ValueError:
-        return span
-    return f"{_format_timestamp(start)}-{_format_timestamp(end)}"
 
 
 def _widget_row(*widgets : QWidget, stretch : bool = False) -> QHBoxLayout:
@@ -112,12 +80,7 @@ class TranscriptionDialog(QDialog):
         self._provider_row_count : int = 0
         self.fields : dict[str, OptionWidget] = {}
         self._phase : str = "setup"
-        self._run_started : float = 0.0
-        self._chunks_done : int = 0
-        self._chunks_total : int = 0
-        self._audio_done_seconds : float = 0.0
-        self._audio_total_seconds : float = 0.0
-        self._last_span : str = ""
+        self.run_progress : TranscriptionRunProgress = TranscriptionRunProgress()
         self._close_requested : bool = False
         self.active_command : TranscribeMediaCommand|None = None
         self._completion_slot : Callable[[TranscribeMediaCommand], None]|None = None
@@ -134,6 +97,11 @@ class TranscriptionDialog(QDialog):
     def provider_name(self) -> str:
         """Currently selected transcription provider."""
         return str(self.provider_combo.currentText() or "")
+
+    @property
+    def _can_resume(self) -> bool:
+        """Whether partial results from an unfinished run are available."""
+        return self._resume_subtitles is not None and self._resume_subtitles.linecount > 0
 
     def _build_form(self) -> None:
         layout = QVBoxLayout(self)
@@ -213,7 +181,8 @@ class TranscriptionDialog(QDialog):
         self.resume_button = self._button(_("Resume"), self._resume_transcription)
         self.abort_button = self._button(_("Abort"), self._abort_transcription)
         self.back_button = self._button(_("Back to Settings"), self._show_setup)
-        layout.addLayout(_widget_row(self.transcribe_button, self.resume_button, self.abort_button, self.back_button))
+        # Resume is last so it always sits rightmost, whichever phase shows it
+        layout.addLayout(_widget_row(self.transcribe_button, self.abort_button, self.back_button, self.resume_button))
 
         self.button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Open | QDialogButtonBox.StandardButton.Close, self)
         self.button_box.button(QDialogButtonBox.StandardButton.Open).setText(_("Open as Project"))
@@ -236,6 +205,13 @@ class TranscriptionDialog(QDialog):
         button = QPushButton(text, self)
         button.clicked.connect(handler)
         return button
+
+    def _set_open_enabled(self, enabled : bool) -> None:
+        open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
+        if open_button is not None:
+            open_button.setEnabled(enabled)
+
+    # ---- Providers -------------------------------------------------------
 
     def _refresh_providers(self) -> None:
         """
@@ -295,7 +271,7 @@ class TranscriptionDialog(QDialog):
         if not name:
             return None
         try:
-            saved = TranscriptionCoordinator.ResolveProviderSettings(name, SettingsType(), self.global_options.get_dict('provider_settings'))
+            saved = TranscriptionProvider.ResolveProviderSettings(name, SettingsType(), self.global_options.get_dict('provider_settings'))
             return TranscriptionProvider.create_provider(name, saved)
         except Exception as e:
             logging.error(_("Unable to create transcription provider: {error}").format(error=str(e)))
@@ -318,9 +294,13 @@ class TranscriptionDialog(QDialog):
         if self.provider is None:
             self.settings_button.setVisible(False)
             return
-        for field in self.provider_fields.values():
-            self.provider.settings[field.key] = field.GetValue()
+        self._apply_provider_fields(self.provider)
         self.settings_button.setVisible(not self.provider.ValidateSettings())
+
+    def _apply_provider_fields(self, provider : TranscriptionProvider) -> None:
+        """Copy the per-run provider field values onto the provider settings."""
+        for key, field in self.provider_fields.items():
+            provider.settings[key] = field.GetValue()
 
     def _open_transcription_settings(self) -> None:
         """Edit transcription provider settings without leaving the dialog."""
@@ -372,6 +352,8 @@ class TranscriptionDialog(QDialog):
             self._rebuild_provider_form()
         self._update_settings_link()
 
+    # ---- Media -----------------------------------------------------------
+
     def _on_file_changed(self, path : str) -> None:
         self.media_path = path.strip() or None
         self.track_combo.clear()
@@ -405,6 +387,13 @@ class TranscriptionDialog(QDialog):
             self._record_ffmpeg_if_missing(e)
             self.status_label.setText(_("Unable to read media: {error}").format(error=str(e)))
 
+    def _have_valid_media(self) -> bool:
+        """Whether a readable media file is selected, reporting otherwise."""
+        if self.media_path and os.path.isfile(self.media_path):
+            return True
+        self.status_label.setText(_("Select a valid media file first."))
+        return False
+
     def _record_dependency_evidence(self, ffmpeg_available : bool|None = None, torch_device : str|None = None) -> None:
         """
         Persist dependency facts learned from real runs, never from probes:
@@ -437,22 +426,24 @@ class TranscriptionDialog(QDialog):
         except Exception:
             self._record_dependency_evidence(ffmpeg_available=False)
 
+    # ---- Running a transcription ----------------------------------------
+
     def _build_command(self) -> TranscribeMediaCommand|None:
         """Snapshot widget values for a queue-owned transcription run."""
         provider = self.provider
         if provider is None:
             self.status_label.setText(_("Transcription providers are still loading..."))
             return None
-        for key, field in self.provider_fields.items():
-            provider.settings[key] = field.GetValue()
+        if self.media_path is None:
+            return None
 
+        self._apply_provider_fields(provider)
         if not provider.ValidateSettings():
             self.status_label.setText(provider.validation_message or _("Invalid provider settings"))
             return None
 
         min_chunk_seconds = self.fields['min_chunk_seconds'].GetValue()
         max_chunk_seconds = self.fields['max_chunk_seconds'].GetValue()
-
         try:
             AudioChunker.ValidateChunkBounds(min_chunk_seconds, max_chunk_seconds)
         except SubtitleError as e:
@@ -466,8 +457,6 @@ class TranscriptionDialog(QDialog):
             'max_chunk_seconds': max_chunk_seconds,
             'transcription_align': True,
         })
-        if self.media_path is None:
-            return None
         output_format = str(self.fields['output_format'].GetValue() or '.srt').lstrip('.')
         return TranscribeMediaCommand(
             provider, self.media_path, settings, self._transcription_options(),
@@ -484,10 +473,7 @@ class TranscriptionDialog(QDialog):
         return options
 
     def _start_transcription(self) -> None:
-        if self.active_command is not None:
-            return
-        if not self.media_path or not os.path.isfile(self.media_path):
-            self.status_label.setText(_("Select a valid media file first."))
+        if self.active_command is not None or not self._have_valid_media():
             return
         command = self._build_command()
         if command is None:
@@ -495,46 +481,29 @@ class TranscriptionDialog(QDialog):
         self._resume_subtitles = None
         self.subtitles = None
         self.results_view.clear()
-        self._run_started = time.monotonic()
-        self._chunks_done = 0
-        self._chunks_total = 0
-        self._audio_done_seconds = 0.0
-        self._audio_total_seconds = 0.0
-        self._last_span = ""
-        self._pending_accept = False
-        self._close_requested = False
-        self.active_command = command
-        command.progressed.connect(self._on_progress, Qt.ConnectionType.QueuedConnection)
-        command.audioProgressed.connect(self._on_audio_progress, Qt.ConnectionType.QueuedConnection)
-        command.segmented.connect(self._on_segment, Qt.ConnectionType.QueuedConnection)
-
-        self._show_results(True)
-        self.status_label.setText(_("Transcribing..."))
-
-        # Connect before submission so even an immediate failure is observed.
-        self._completion_slot = self._defer_command_completed
-        command.commandCompleted.connect(self._completion_slot, Qt.ConnectionType.QueuedConnection)
-        self.commandRequested.emit(command)
+        self.run_progress.Reset()
+        self._launch(command, _("Transcribing..."))
 
     def _resume_transcription(self) -> None:
         """Resume a previously aborted transcription from the last completed chunk."""
         if self.active_command is not None:
             return
         resume = self._resume_subtitles
-        if (resume is None
-                or not resume.originals
-                or resume.originals[-1].end is None):
+        if resume is None or not resume.originals or resume.originals[-1].end is None:
             self.status_label.setText(_("No partial results to resume from."))
             return
-        if not self.media_path or not os.path.isfile(self.media_path):
-            self.status_label.setText(_("Select a valid media file first."))
+        if not self._have_valid_media():
             return
         command = self._build_command()
         if command is None:
             return
         command.prior_subtitles = resume
-        # Keep the existing results visible; only reset run-timing state.
-        self._run_started = time.monotonic()
+        # Keep the existing results visible; only restart the run timer.
+        self.run_progress.Restart()
+        self._launch(command, _("Resuming transcription..."))
+
+    def _launch(self, command : TranscribeMediaCommand, status : str) -> None:
+        """Observe the command, switch to the running view and submit it to the queue."""
         self._pending_accept = False
         self._close_requested = False
         self.active_command = command
@@ -543,12 +512,22 @@ class TranscriptionDialog(QDialog):
         command.segmented.connect(self._on_segment, Qt.ConnectionType.QueuedConnection)
 
         self._show_results(True)
-        self.status_label.setText(_("Resuming transcription..."))
+        self.status_label.setText(status)
 
         # Connect before submission so even an immediate failure is observed.
         self._completion_slot = self._defer_command_completed
         command.commandCompleted.connect(self._completion_slot, Qt.ConnectionType.QueuedConnection)
         self.commandRequested.emit(command)
+
+    def _release(self, command : TranscribeMediaCommand) -> None:
+        """Stop observing a finished command."""
+        command.progressed.disconnect(self._on_progress)
+        command.audioProgressed.disconnect(self._on_audio_progress)
+        command.segmented.disconnect(self._on_segment)
+        if self._completion_slot is not None:
+            command.commandCompleted.disconnect(self._completion_slot)
+            self._completion_slot = None
+        self.active_command = None
 
     def _abort_transcription(self) -> None:
         """Stop the run after its current chunk; partial results are retained."""
@@ -558,9 +537,7 @@ class TranscriptionDialog(QDialog):
 
     @Slot(int, int, str)
     def _on_progress(self, done : int, total : int, span : str) -> None:
-        self._chunks_done = done
-        self._chunks_total = total
-        self._last_span = span
+        self.run_progress.OnProgress(done, total, span)
         if total > 0:
             self.progress_bar.setRange(0, total)
             self.progress_bar.setValue(done)
@@ -572,8 +549,7 @@ class TranscriptionDialog(QDialog):
     @Slot(float, float)
     def _on_audio_progress(self, processed : float, total : float) -> None:
         """Track source-audio progress for ETA when chunk count is unknown."""
-        self._audio_done_seconds = max(0.0, processed)
-        self._audio_total_seconds = max(0.0, total)
+        self.run_progress.OnAudioProgress(processed, total)
         self._update_run_status()
 
     @Slot(object)
@@ -581,39 +557,15 @@ class TranscriptionDialog(QDialog):
         """Append each transcribed line to the results pane as it completes."""
         start = TimedeltaToText(segment.start) or ""
         end = TimedeltaToText(segment.end) or ""
-        span = f"{start} --> {end}"
         speaker = f"[{segment.speaker}] " if segment.speaker else ""
-        self.results_view.append(f"[{span}] {speaker}{segment.text}")
+        self.results_view.append(f"[{start} --> {end}] {speaker}{segment.text}")
         scrollbar = self.results_view.verticalScrollBar()
         if scrollbar is not None:
             scrollbar.setValue(scrollbar.maximum())
         self._update_run_status()
 
     def _update_run_status(self) -> None:
-        """
-        Meaningful run status: position, current span, elapsed time and
-        effective transcription speed.
-        """
-        elapsed = max(0.0, time.monotonic() - self._run_started) if self._run_started else 0.0
-        if self._chunks_total > 0:
-            status = _("Transcribing chunk {current}/{total}").format(
-                current=min(self._chunks_done + 1, self._chunks_total), total=self._chunks_total)
-        else:
-            status = _("Transcribing chunk {current}").format(current=self._chunks_done + 1)
-        if self._last_span:
-            status += f" [{_format_span(self._last_span)}"
-            if self._audio_total_seconds > 0.0:
-                status += _(" of {}").format(_format_timestamp(self._audio_total_seconds))
-            status += "]"
-        elif self._audio_total_seconds > 0.0:
-            status += _(" (source length {})").format(_format_timestamp(self._audio_total_seconds))
-        status += _(" (elapsed {})").format(_format_duration(elapsed))
-        if elapsed > 5.0 and self._audio_total_seconds > 0.0 and self._audio_done_seconds > 0.0:
-            fraction = min(1.0, self._audio_done_seconds / self._audio_total_seconds)
-            if fraction > 0.02:
-                remaining = elapsed / fraction - elapsed
-                status += _(" (about {} left)").format(_format_duration(remaining))
-        self.status_label.setText(status)
+        self.status_label.setText(self.run_progress.StatusText())
 
     @Slot(object)
     def _defer_command_completed(self, command : TranscribeMediaCommand) -> None:
@@ -626,16 +578,7 @@ class TranscriptionDialog(QDialog):
         if command is not self.active_command:
             return
         self.subtitles = command.subtitles
-
-        # Allow resuming when the run did not complete fully and has results.
-        if (command.status is not TranscriptionStatus.COMPLETED
-                or command.aborted or command.stopped_early):
-            if self.subtitles and self.subtitles.linecount > 0:
-                self._resume_subtitles = self.subtitles
-            else:
-                self._resume_subtitles = None
-        else:
-            self._resume_subtitles = None
+        self._resume_subtitles = self._resumable_results(command)
 
         if not command.aborted:
             # Extraction and inference provably ran: record what the run
@@ -644,45 +587,52 @@ class TranscriptionDialog(QDialog):
                 ffmpeg_available=command.ffmpeg_available or None,
                 torch_device=command.torch_device)
 
-        count = command.transcribed_lines
-        if command.aborted or command.stopped_early:
-            self.status_label.setText(_("Aborted - partial results ({} lines).").format(count))
-        elif command.status is TranscriptionStatus.FAILED:
-            self.status_label.setText(_("Transcription failed; partial results ({} lines) are available.").format(count)
-                                      if count else _("Transcription failed: {error}").format(error=command.error))
-        elif command.status is not TranscriptionStatus.COMPLETED:
-            self.status_label.setText(_("Transcription incomplete - partial results ({} lines).").format(count))
-        elif command.saved_path:
-            message = _("Transcribed {} lines (saving to {}).").format(count, command.saved_path)
-            self.status_label.setText(message)
-            logging.info(message)
-        else:
-            message = _("Transcribed {} lines.").format(count)
-            self.status_label.setText(message)
-            logging.info(message)
-
+        self.status_label.setText(self._completion_message(command))
         self.progress_bar.setRange(0, max(1, self.progress_bar.maximum()))
         self.progress_bar.setValue(self.progress_bar.maximum())
 
-        command.progressed.disconnect(self._on_progress)
-        command.audioProgressed.disconnect(self._on_audio_progress)
-        command.segmented.disconnect(self._on_segment)
-
-        if self._completion_slot is not None:
-            command.commandCompleted.disconnect(self._completion_slot)
-            self._completion_slot = None
-
-        self.active_command = None
+        self._release(command)
         self._show_results(False)
-        if command.status is TranscriptionStatus.COMPLETED and not command.aborted:
-            self._pending_accept = True
+
+        completed = command.status is TranscriptionStatus.COMPLETED and not command.aborted
         if self._close_requested:
             self._close_requested = False
             self._pending_accept = False
             self.reject()
-        elif self._pending_accept:
+        elif completed or self._pending_accept:
             self._pending_accept = False
             self.accept()
+
+    @staticmethod
+    def _resumable_results(command : TranscribeMediaCommand) -> Subtitles|None:
+        """Partial results a later run can pick up from, if the run stopped short."""
+        finished = (command.status is TranscriptionStatus.COMPLETED
+                    and not command.aborted and not command.stopped_early)
+        if finished or command.subtitles is None or command.subtitles.linecount == 0:
+            return None
+        return command.subtitles
+
+    @staticmethod
+    def _completion_message(command : TranscribeMediaCommand) -> str:
+        """Status line for a finished run, logging the successful cases."""
+        count = command.transcribed_lines
+        if command.aborted or command.stopped_early:
+            return _("Aborted - partial results ({} lines).").format(count)
+        if command.status is TranscriptionStatus.FAILED:
+            if count:
+                return _("Transcription failed; partial results ({} lines) are available.").format(count)
+            return _("Transcription failed: {error}").format(error=command.error)
+        if command.status is not TranscriptionStatus.COMPLETED:
+            return _("Transcription incomplete - partial results ({} lines).").format(count)
+
+        if command.saved_path:
+            message = _("Transcribed {} lines (saving to {}).").format(count, command.saved_path)
+        else:
+            message = _("Transcribed {} lines.").format(count)
+        logging.info(message)
+        return message
+
+    # ---- Dialog lifecycle ------------------------------------------------
 
     def _has_unaccepted_results(self) -> bool:
         """Whether closing the dialog now would discard transcription results."""
@@ -736,15 +686,11 @@ class TranscriptionDialog(QDialog):
         self.progress_bar.setVisible(False)
         self.transcribe_button.setVisible(True)
         self.transcribe_button.setEnabled(bool(self.media_path))
-        can_resume = (self._resume_subtitles is not None
-                      and self._resume_subtitles.linecount > 0)
-        self.resume_button.setVisible(can_resume)
-        self.resume_button.setEnabled(can_resume and bool(self.media_path))
+        self.resume_button.setVisible(self._can_resume)
+        self.resume_button.setEnabled(self._can_resume and bool(self.media_path))
         self.abort_button.setVisible(False)
         self.back_button.setVisible(False)
-        open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
-        if open_button is not None:
-            open_button.setEnabled(self.subtitles is not None)
+        self._set_open_enabled(self.subtitles is not None)
 
     def _show_results(self, running : bool) -> None:
         """
@@ -756,17 +702,13 @@ class TranscriptionDialog(QDialog):
         self.results_view.setVisible(True)
         self.progress_bar.setVisible(True)
         self.transcribe_button.setVisible(False)
-        can_resume = (not running
-                      and self._resume_subtitles is not None
-                      and self._resume_subtitles.linecount > 0)
+        can_resume = not running and self._can_resume
         self.resume_button.setVisible(can_resume)
         self.resume_button.setEnabled(can_resume)
         self.abort_button.setVisible(running)
         self.back_button.setVisible(not running)
         self.back_button.setEnabled(self.active_command is None)
-        open_button = self.button_box.button(QDialogButtonBox.StandardButton.Open)
-        if open_button is not None:
-            open_button.setEnabled(not running and self.active_command is None and self.subtitles is not None)
+        self._set_open_enabled(not running and self.active_command is None and self.subtitles is not None)
 
     def dragEnterEvent(self, event : QDragEnterEvent) -> None:
         """Accept drags that carry a single supported media file."""

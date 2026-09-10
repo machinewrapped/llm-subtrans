@@ -13,6 +13,7 @@ from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
+from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 
 
 class TranscribeMediaCommand(Command):
@@ -73,7 +74,7 @@ class TranscribeMediaCommand(Command):
             return self.status is TranscriptionStatus.COMPLETED and not self.aborted
 
         except Exception as error:
-            self._recover_partial_result(error)
+            self._record_failure(error)
             return False
 
     def on_abort(self) -> None:
@@ -111,17 +112,27 @@ class TranscribeMediaCommand(Command):
 
     def _run_transcription(self, coordinator : TranscriptionCoordinator) -> None:
         """Transcribe the media, streaming progress and segments to the UI."""
-        self.subtitles = coordinator.CreateTranscription(
-            self.media_path, self.options,
-            lambda done, total, span: self.progressed.emit(done, total, span),
-            lambda segment: self.segmented.emit(segment),
-            lambda processed, total: self.audioProgressed.emit(processed, total),
-            prior_subtitles=self.prior_subtitles)
+        coordinator.events.progress.connect(self._on_progress)
+        coordinator.events.audio_progress.connect(self._on_audio_progress)
+        coordinator.events.segment.connect(self._on_segment)
 
-        self.status = coordinator.status
-        self.transcribed_lines = coordinator.transcribed_lines
-        if coordinator.last_error is not None:
-            self.error = str(coordinator.last_error)
+        outcome = coordinator.CreateTranscription(
+            self.media_path, self.options, prior_subtitles=self.prior_subtitles)
+
+        self.subtitles = outcome.subtitles
+        self.status = outcome.status
+        self.transcribed_lines = outcome.transcribed_lines
+        if outcome.error is not None:
+            self.error = str(outcome.error)
+
+    def _on_progress(self, sender, done : int, total : int, span : str) -> None:
+        self.progressed.emit(done, total, span)
+
+    def _on_audio_progress(self, sender, processed : float, total : float) -> None:
+        self.audioProgressed.emit(processed, total)
+
+    def _on_segment(self, sender, segment : TranscriptionSegment) -> None:
+        self.segmented.emit(segment)
 
     def _record_runtime_evidence(self) -> None:
         """Record dependency facts proven by a real run for future sessions."""
@@ -143,12 +154,10 @@ class TranscribeMediaCommand(Command):
         self.saved_path = outputpath
         self.commands_to_queue.append(SaveSubtitleFile(outputpath, self.subtitles))
 
-    def _recover_partial_result(self, error : Exception) -> None:
-        """Keep any subtitles recovered before a failure so billed work isn't lost."""
+    def _record_failure(self, error : Exception) -> None:
+        """Record an unexpected failure; expected ones arrive as a FAILED outcome."""
         self.error = str(error)
         self.status = TranscriptionStatus.FAILED
-        if self.coordinator is not None:
-            self.subtitles = self.coordinator.partial_subtitles
         logging.error(_("Transcription failed: {error}").format(error=error))
 
     @staticmethod

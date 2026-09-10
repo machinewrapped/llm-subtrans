@@ -7,6 +7,7 @@ from PySubtrans.Options import Options
 from PySubtrans.Transcription.AudioExtractor import AudioChunk
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionLines import JoinWords
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionClient, FakeTranscriptionProvider, FailingTranscriptionClient, stub_media
 
@@ -64,7 +65,7 @@ class TestTranscriptionRegressions(LoggedTestCase):
 
     def test_leading_sliver_merges_into_existing_dialogue(self) -> None:
         """A mixed right-hand neighbour retains all markers without duplication."""
-        lines = self.coordinator._merge_slivers([
+        lines = self.coordinator.line_builder.MergeSlivers([
             TranscriptionSegment(timedelta(), timedelta(seconds=0.2), 'A', speaker='A'),
             TranscriptionSegment(timedelta(seconds=0.3), timedelta(seconds=1.0), '- B\n- C')])
         self.assertLoggedEqual('merged text', '- A\n- B\n- C', lines[0].text)
@@ -73,6 +74,6 @@ class TestTranscriptionRegressions(LoggedTestCase):
     def test_standalone_quote_tokens_and_cjk_punctuation(self) -> None:
         """Split quote tokens must not add spaces inside a quoted phrase."""
         self.assertLoggedEqual('quote tokens', 'He said "Hello world." Then',
-                               self.coordinator._join_words(['He', 'said', '"', 'Hello', 'world.', '"', 'Then']))
+                               JoinWords(['He', 'said', '"', 'Hello', 'world.', '"', 'Then']))
         self.assertLoggedEqual('CJK punctuation', '你好，世界',
-                               self.coordinator._join_words(['你好', '，', '世界']))
+                               JoinWords(['你好', '，', '世界']))

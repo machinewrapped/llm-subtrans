@@ -19,6 +19,7 @@ from PySubtrans.Transcription.AudioExtractor import AudioChunk, AudioChunker, Au
 from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionLines import JoinWords, TranscriptionLineBuilder
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
 
@@ -278,21 +279,25 @@ def _word(text : str, start : float, end : float, speaker : str|None = None) -> 
     return WordTiming(text=text, start=timedelta(seconds=start), end=timedelta(seconds=end), speaker=speaker)
 
 
-class TestWordGrouping(LoggedTestCase):
-    def _coordinator(self):
-        provider = FakeTranscriptionProvider()
-        return TranscriptionCoordinator(provider, SettingsType({'language': 'Chinese'}))
+def _default_builder() -> TranscriptionLineBuilder:
+    """Line builder with the coordinator's default limits."""
+    return TranscriptionLineBuilder(max_line_chars=84, max_line_seconds=8.0, word_gap_split=0.5)
 
-    def _scene_lines(self, coordinator, text : str, words : list[WordTiming], language : str|None = "Chinese"):
+
+class TestWordGrouping(LoggedTestCase):
+    def _builder(self):
+        return _default_builder()
+
+    def _scene_lines(self, builder : TranscriptionLineBuilder, text : str, words : list[WordTiming], language : str|None = "Chinese"):
         chunk = AudioChunk(start=timedelta(seconds=100), end=timedelta(seconds=160))
         segment = TranscriptionSegment(start=chunk.start, end=chunk.end, text=text, language=language, words=words)
-        return coordinator._lines_for_segment(segment)
+        return builder.LinesForSegment(segment)
 
     def test_aligned_words_group_into_true_lines(self):
         """Line boundaries and timings come from aligned words."""
         words = [_word("師傅", 0.0, 0.5), _word("來了", 0.5, 1.0),
                  _word("。", 1.0, 1.1), _word("他們", 3.0, 3.5), _word("騎馬", 3.5, 4.0)]
-        lines = self._scene_lines(self._coordinator(), "師傅來了。他們騎馬", words)
+        lines = self._scene_lines(self._builder(), "師傅來了。他們騎馬", words)
 
         self.assertLoggedEqual("line count", 2, len(lines))
         self.assertLoggedEqual("first start", timedelta(seconds=100), lines[0].start)
@@ -302,8 +307,8 @@ class TestWordGrouping(LoggedTestCase):
 
     def test_no_words_stays_scene_line(self):
         """Untimed scenes stay one honest line over the chunk span."""
-        coordinator = self._coordinator()
-        lines = self._scene_lines(coordinator, "some text", [], language="Thai")
+        builder = self._builder()
+        lines = self._scene_lines(builder, "some text", [], language="Thai")
 
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("span preserved", timedelta(seconds=160), lines[0].end)
@@ -311,8 +316,8 @@ class TestWordGrouping(LoggedTestCase):
     def test_latin_words_spaced(self):
         """Latin words join with spaces, CJK without."""
         words = [_word("Hello", 0.0, 0.5), _word("world", 0.6, 1.0)]
-        coordinator = self._coordinator()
-        lines = self._scene_lines(coordinator, "Hello world", words, language="English")
+        builder = self._builder()
+        lines = self._scene_lines(builder, "Hello world", words, language="English")
 
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("spaced text", "Hello world", lines[0].text)
@@ -321,23 +326,22 @@ class TestWordGrouping(LoggedTestCase):
         """Unicode words receive spaces while punctuation stays attached."""
         words = [_word("café", 0.0, 0.2), _word("noir", 0.2, 0.4),
                  _word(".", 0.4, 0.5), _word("следующий", 0.5, 0.7)]
-        lines = self._scene_lines(self._coordinator(), "café noir. следующий", words)
+        lines = self._scene_lines(self._builder(), "café noir. следующий", words)
 
         self.assertLoggedEqual("unicode spacing", "café noir. следующий", lines[0].text)
 
     def test_join_words_handles_quotes_apostrophes_and_hyphens(self):
         """Token joins preserve ordinary English punctuation conventions."""
-        coordinator = self._coordinator()
         self.assertLoggedEqual("quoted phrase", 'He said "Hello world." Then',
-                                coordinator._join_words(['He', 'said', '"Hello', 'world."', 'Then']))
-        self.assertLoggedEqual("apostrophe", "l'amour", coordinator._join_words(["l'", "amour"]))
-        self.assertLoggedEqual("hyphen", "well-known", coordinator._join_words(['well-', 'known']))
-        self.assertLoggedEqual("CJK punctuation", "你好，世界", coordinator._join_words(['你好', '，', '世界']))
+                                JoinWords(['He', 'said', '"Hello', 'world."', 'Then']))
+        self.assertLoggedEqual("apostrophe", "l'amour", JoinWords(["l'", "amour"]))
+        self.assertLoggedEqual("hyphen", "well-known", JoinWords(['well-', 'known']))
+        self.assertLoggedEqual("CJK punctuation", "你好，世界", JoinWords(['你好', '，', '世界']))
 
     def test_speaker_change_splits_lines(self):
         """Speaker turns break subtitle lines and label them."""
         words = [_word("yes", 0.0, 0.5, "A"), _word("no", 0.6, 1.0, "B")]
-        lines = self._scene_lines(self._coordinator(), "yes no", words)
+        lines = self._scene_lines(self._builder(), "yes no", words)
 
         self.assertLoggedEqual("line count", 2, len(lines))
         self.assertLoggedEqual("first speaker", "A", lines[0].speaker)
@@ -346,7 +350,7 @@ class TestWordGrouping(LoggedTestCase):
     def test_sliver_across_pause_stays_separate(self):
         """A short interjection after seconds of silence keeps its own line."""
         words = [_word("seat?", 0.0, 1.0), _word("So...", 11.0, 11.3)]
-        lines = self._scene_lines(self._coordinator(), "seat? So...", words)
+        lines = self._scene_lines(self._builder(), "seat? So...", words)
 
         self.assertLoggedEqual("line count", 2, len(lines))
         self.assertLoggedEqual("first end", timedelta(seconds=101), lines[0].end)
@@ -357,7 +361,7 @@ class TestWordGrouping(LoggedTestCase):
     def test_sliver_after_short_pause_merges(self):
         """A fragment hard on the heels of the previous line still folds in."""
         words = [_word("yes", 0.0, 1.0, "A"), _word("um", 1.2, 1.4, "B")]
-        lines = self._scene_lines(self._coordinator(), "yes um", words)
+        lines = self._scene_lines(self._builder(), "yes um", words)
 
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("merged span", timedelta(seconds=101.4), lines[0].end)
@@ -368,7 +372,7 @@ class TestWordGrouping(LoggedTestCase):
         words = [_word("I", 0.0, 0.1, "A"), _word("say!", 0.1, 0.2, "A"),
                  _word("Of", 0.25, 0.35, "B"), _word("course!", 0.35, 0.45, "B"),
                  _word("Indeed!", 0.5, 0.6, "C")]
-        lines = self._scene_lines(self._coordinator(), "I say! Of course! Indeed!", words)
+        lines = self._scene_lines(self._builder(), "I say! Of course! Indeed!", words)
 
         self.assertLoggedEqual("three turn count", 1, len(lines))
         self.assertLoggedEqual("three turn text", "- I say!\n- Of course!\n- Indeed!", lines[0].text)
@@ -377,7 +381,7 @@ class TestWordGrouping(LoggedTestCase):
     def test_leading_sliver_across_pause_stays_separate(self):
         """A leading fragment far from the next line is not pulled forward."""
         words = [_word("oh", 0.0, 0.2), _word("hello", 5.0, 6.0)]
-        lines = self._scene_lines(self._coordinator(), "oh hello", words)
+        lines = self._scene_lines(self._builder(), "oh hello", words)
 
         self.assertLoggedEqual("line count", 2, len(lines))
         self.assertLoggedEqual("first text", "oh", lines[0].text)
@@ -386,16 +390,15 @@ class TestWordGrouping(LoggedTestCase):
     def test_leading_sliver_after_short_pause_merges(self):
         """A leading fragment close to the next line folds forward."""
         words = [_word("oh.", 0.0, 0.2), _word("hello", 0.4, 1.4)]
-        lines = self._scene_lines(self._coordinator(), "oh. hello", words)
+        lines = self._scene_lines(self._builder(), "oh. hello", words)
 
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("merged start", timedelta(seconds=100), lines[0].start)
         self.assertLoggedEqual("merged end", timedelta(seconds=101.4), lines[0].end)
 
 class TestOverlongSpans(LoggedTestCase):
-    def _coordinator(self):
-        provider = FakeTranscriptionProvider()
-        return TranscriptionCoordinator(provider, SettingsType({'language': 'Chinese'}))
+    def _builder(self):
+        return _default_builder()
 
     def _part_segment(self, part_seconds : float) -> TranscriptionSegment:
         chunk = AudioChunk(start=timedelta(seconds=100), end=timedelta(seconds=160))
@@ -406,49 +409,71 @@ class TestOverlongSpans(LoggedTestCase):
 
     def test_long_part_flags_warning(self):
         """Untimed engine spans beyond the line cap are flagged, not split."""
-        coordinator = self._coordinator()
-        lines = coordinator._lines_for_segment(self._part_segment(20.0))
+        builder = self._builder()
+        lines = builder.LinesForSegment(self._part_segment(20.0))
 
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("span kept", timedelta(seconds=120), lines[0].end)
-        self.assertLoggedEqual("flagged", True, coordinator._warn_if_overlong(lines[0]))
+        self.assertLoggedEqual("flagged", True, builder.WarnIfOverlong(lines[0]))
 
     def test_short_part_no_warning(self):
         """Ordinary parts pass without warnings."""
-        coordinator = self._coordinator()
-        lines = coordinator._lines_for_segment(self._part_segment(3.0))
+        builder = self._builder()
+        lines = builder.LinesForSegment(self._part_segment(3.0))
 
         self.assertLoggedEqual("line count", 1, len(lines))
-        self.assertLoggedEqual("flagged", False, coordinator._warn_if_overlong(lines[0]))
+        self.assertLoggedEqual("flagged", False, builder.WarnIfOverlong(lines[0]))
 
     def test_whole_chunk_fallback_flags_warning(self):
         """A flat-text chunk span is flagged when it runs long."""
-        coordinator = self._coordinator()
+        builder = self._builder()
         segment = TranscriptionSegment(start=timedelta(seconds=100), end=timedelta(seconds=160),
                                        text="monologue", language="Chinese")
-        lines = coordinator._lines_for_segment(segment)
+        lines = builder.LinesForSegment(segment)
 
         self.assertLoggedEqual("line count", 1, len(lines))
-        self.assertLoggedEqual("flagged", True, coordinator._warn_if_overlong(lines[0]))
+        self.assertLoggedEqual("flagged", True, builder.WarnIfOverlong(lines[0]))
 
     def test_timed_line_no_warning(self):
         """Word-timed lines are already capped, so they never flag."""
-        coordinator = self._coordinator()
+        builder = self._builder()
         chunk = AudioChunk(start=timedelta(seconds=100), end=timedelta(seconds=160))
         segment = TranscriptionSegment(start=chunk.start, end=chunk.end, text="hi",
                                        language="Chinese", words=[_word("hi", 0.0, 1.0)])
-        lines = coordinator._lines_for_segment(segment)
+        lines = builder.LinesForSegment(segment)
 
         self.assertLoggedEqual("line count", 1, len(lines))
-        self.assertLoggedEqual("flagged", False, coordinator._warn_if_overlong(lines[0]))
+        self.assertLoggedEqual("flagged", False, builder.WarnIfOverlong(lines[0]))
 
     def test_boundary_not_flagged(self):
         """A line exactly at the cap is fine; only overruns flag."""
-        coordinator = self._coordinator()
+        builder = self._builder()
         line = TranscriptionSegment(start=timedelta(seconds=100), end=timedelta(seconds=108),
                                     text="exactly eight seconds")
 
-        self.assertLoggedEqual("flagged", False, coordinator._warn_if_overlong(line))
+        self.assertLoggedEqual("flagged", False, builder.WarnIfOverlong(line))
+
+
+class TestLineBuilderWiring(LoggedTestCase):
+    def test_builder_limits_come_from_settings(self):
+        """The coordinator configures its line builder from transcription settings."""
+        provider = FakeTranscriptionProvider()
+        coordinator = TranscriptionCoordinator(provider, SettingsType({
+            'transcription_max_chars': 42,
+            'transcription_max_line_seconds': 5.5,
+            'transcription_gap_split': 0.25}))
+
+        self.assertLoggedEqual("max chars", 42, coordinator.line_builder.max_line_chars)
+        self.assertLoggedEqual("max seconds", 5.5, coordinator.line_builder.max_line_seconds)
+        self.assertLoggedEqual("gap split", 0.25, coordinator.line_builder.word_gap_split)
+
+    def test_builder_defaults(self):
+        """Missing settings fall back to the documented defaults."""
+        coordinator = TranscriptionCoordinator(FakeTranscriptionProvider())
+
+        self.assertLoggedEqual("max chars", 84, coordinator.line_builder.max_line_chars)
+        self.assertLoggedEqual("max seconds", 8.0, coordinator.line_builder.max_line_seconds)
+        self.assertLoggedEqual("gap split", 0.5, coordinator.line_builder.word_gap_split)
 
 class TestSettingsNamespaces(LoggedTestCase):
     def _options(self):

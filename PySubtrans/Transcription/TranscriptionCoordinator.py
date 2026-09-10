@@ -2,12 +2,9 @@ from __future__ import annotations
 
 import logging
 import os
-import unicodedata
-from collections.abc import Callable
+from collections.abc import Callable, Generator
 from datetime import timedelta
 from enum import Enum
-
-import regex
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
@@ -17,13 +14,11 @@ from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioChunk, AudioChunker, AudioTrack, CheckFfmpegAvailable
-from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
+from PySubtrans.Transcription.TranscriptionLines import SpanLabel, TranscriptionLineBuilder
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 
-# Sentence-ending punctuation across CJK and latin scripts
-_SENTENCE_END_CHARS = frozenset('。！？!?\n…')
 
 class TranscriptionStatus(str, Enum):
     """State of the most recent transcription run."""
@@ -33,54 +28,62 @@ class TranscriptionStatus(str, Enum):
     FAILED = "failed"
 
 
-_CJK_BOUNDARY = regex.compile(r'[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\u3000-\u303f\uff00-\uffef]')
-
-
-def _needs_space(previous : str, current : str) -> bool:
-    """
-    Whether a space is needed between two adjacent word tokens.
-
-    Handles Latin scripts (space between words), CJK (no space between
-    ideographs), and punctuation (no space before closing marks or after
-    opening ones). Straight quotes use parity to distinguish open/close.
-
-    Examples: ['Hello', 'world'] -> 'Hello world'
-              ['你好', '世界']   -> '你好世界'
-              ['He', 'said', '"Hello"'] -> 'He said "Hello"'
-    """
-    if not previous or not current or previous[-1].isspace() or current[0].isspace():
-        return False
-
-    last = previous[-1]
-    first = current[0]
-    if _CJK_BOUNDARY.fullmatch(last) and _CJK_BOUNDARY.fullmatch(first):
-        return False
-
-    last_category = unicodedata.category(last)
-    first_category = unicodedata.category(first)
-    # Straight quotes need the accumulated text to distinguish opening/closing.
-    if first == '"':
-        if previous.count('"') % 2:
-            return False
-    elif first_category.startswith('P') and first_category not in ('Ps', 'Pi'):
-        return False
-
-    if last in "'-\u2019" or last_category in ('Ps', 'Pi'):
-        return False
-    if last == '"':
-        return previous.count('"') % 2 == 0
-    return True
-
-# Lines shorter than this merge into their neighbour (bounds stay truthful)
-_MIN_LINE_SECONDS = 0.4
-
 # Signature for transcription progress callbacks: (chunks_completed, chunk_total, current_chunk_span)
 TranscriptionProgressCallback = Callable[[int, int, str], None]
 # Signature for audio progress callbacks: (audio_seconds_processed, total_audio_seconds)
 TranscriptionAudioProgressCallback = Callable[[float, float], None]
-
 # Signature for per-chunk callbacks: invoked with each transcribed segment
 TranscriptionSegmentCallback = Callable[[TranscriptionSegment], None]
+
+# Consecutive chunk failures before an empty run is treated as blocked
+_MAX_INITIAL_FAILURES = 2
+
+
+class _TranscriptionRun:
+    """
+    Mutable state for one TranscribeMedia call: accumulated lines,
+    resume position and failure bookkeeping.
+    """
+    def __init__(self, prior_subtitles : Subtitles|None):
+        self.lines : list[SubtitleLine] = []
+        self.line_number : int = 0
+        self.resume_after : timedelta|None = None
+        self.transcribed : int = 0
+        self.chunks_done : int = 0
+        self.consecutive_failures : int = 0
+        self.had_failures : bool = False
+        self.incomplete_error : SubtitleError|None = None
+        self.audio_total_seconds : float = 0.0
+
+        if prior_subtitles and prior_subtitles.originals:
+            self.lines.extend(prior_subtitles.originals)
+            self.line_number = max((line.number or 0) for line in self.lines)
+            self.resume_after = prior_subtitles.originals[-1].end
+            self.transcribed = prior_subtitles.linecount
+            logging.info(_("Resuming transcription after {}").format(self.resume_after))
+
+    def AlreadyDone(self, chunk : AudioChunk) -> bool:
+        """Whether a prior run already covered this chunk."""
+        return self.resume_after is not None and chunk.end <= self.resume_after
+
+    def AddLine(self, segment : TranscriptionSegment) -> SubtitleLine|None:
+        """
+        Append a transcribed line, unless it precedes the resume point.
+        Returns the new line, or None when skipped.
+        """
+        if self.resume_after is not None and segment.start < self.resume_after:
+            return None
+
+        self.line_number += 1
+        metadata = {'speaker': segment.speaker} if segment.speaker else None
+        line = SubtitleLine.Construct(self.line_number, segment.start, segment.end, segment.text, metadata)
+        self.lines.append(line)
+        self.transcribed += 1
+        return line
+
+    def AudioPosition(self, chunk : AudioChunk) -> float:
+        """Seconds of audio processed once this chunk is done, clamped to the total."""
+        return min(self.audio_total_seconds, max(0.0, chunk.end.total_seconds()))
 
 
 class TranscriptionCoordinator:
@@ -105,6 +108,9 @@ class TranscriptionCoordinator:
         })
         self.chunker : AudioChunker = AudioChunker(chunk_settings)
         self.extractor : AudioExtractor = self.chunker.extractor
+        self.line_builder : TranscriptionLineBuilder = TranscriptionLineBuilder(
+            self.max_line_chars, self.max_line_seconds, self.word_gap_split)
+
         self._active_client : TranscriptionClient|None = None
         self.total_cost : float = 0.0
         self.transcribed_lines : int = 0
@@ -156,7 +162,7 @@ class TranscriptionCoordinator:
         resolved = SettingsType(settings or {})
         if provider_settings is not None:
             # Transcription-specific settings fill gaps; explicit settings win.
-            own = provider_settings.get_dict(f"{provider_name} Transcription")
+            own = provider_settings.get_dict(cls.SettingsKey(provider_name))
             if own:
                 resolved = SettingsType(own | resolved)
 
@@ -200,157 +206,38 @@ class TranscriptionCoordinator:
         already-transcribed chunks are skipped and the new lines are appended
         after the existing ones.
         """
-        self.status = TranscriptionStatus.IDLE
-        self.last_error = None
-        self.partial_subtitles = None
+        self._reset_state()
         if not media_path or not os.path.isfile(media_path):
             self.status = TranscriptionStatus.FAILED
             raise SubtitleError(_("Media file not found: {}").format(media_path))
 
-        client : TranscriptionClient = self.provider.GetTranscriptionClient(self.settings)
-        self._active_client = client
-        if not client.supports_timestamps:
-            self.status = TranscriptionStatus.FAILED
-            raise SubtitleError(_(
-                "'{}' cannot provide subtitle timings (no word or segment "
-                "timestamps). Transcription without timings has no value "
-                "here, so nothing was requested and no credits were spent."
-            ).format(self.provider.name))
-        audio_total_seconds = 0.0
+        client = self._start_client()
+        run = _TranscriptionRun(prior_subtitles)
 
         def on_duration(duration : timedelta) -> None:
-            nonlocal audio_total_seconds
-            audio_total_seconds = max(0.0, duration.total_seconds())
-            if audio_progress_cb and audio_total_seconds > 0.0:
-                audio_progress_cb(0.0, audio_total_seconds)
+            run.audio_total_seconds = max(0.0, duration.total_seconds())
+            if audio_progress_cb and run.audio_total_seconds > 0.0:
+                audio_progress_cb(0.0, run.audio_total_seconds)
 
-        chunks = self.chunker.PlanChunksStream(
-            media_path, self.track_index, duration_cb=on_duration)
+        chunks = self.chunker.PlanChunksStream(media_path, self.track_index, duration_cb=on_duration)
         logging.info(_("Transcribing {} with {} (chunks stream in while silence detection runs)").format(
             os.path.basename(media_path), self.provider.name))
 
-        lines : list[SubtitleLine] = []
-        line_number = 0
-        resume_after : timedelta|None = None
-        if prior_subtitles and prior_subtitles.originals:
-            lines.extend(prior_subtitles.originals)
-            line_number = max((line.number or 0) for line in lines)
-            resume_after = prior_subtitles.originals[-1].end
-            logging.info(_("Resuming transcription after {}").format(resume_after))
-
-        transcribed = prior_subtitles.linecount if prior_subtitles else 0
-        chunks_done = 0
-        consecutive_failures = 0
-        had_failures = False
-        self.total_cost = 0.0
-        incomplete_error : SubtitleError|None = None
         try:
-            for done, chunk in enumerate(chunks):
-                if self.aborted or client.aborted:
-                    # Keep everything transcribed so far: abandoning billed
-                    # work would be worse than partial results.
-                    logging.warning(_("Transcription cancelled after {done} chunks").format(done=done))
-                    had_failures = True
-                    break
-
-                if resume_after is not None and chunk.end <= resume_after:
-                    chunks_done += 1
-                    if progress_cb:
-                        progress_cb(done, 0, self._span_label(chunk))
-                    if audio_progress_cb and audio_total_seconds > 0.0:
-                        audio_progress_cb(
-                            min(audio_total_seconds, max(0.0, chunk.end.total_seconds())),
-                            audio_total_seconds)
-                    continue
-
-                if progress_cb:
-                    # Total is unknown while the plan streams in (0 signals that)
-                    progress_cb(done, 0, self._span_label(chunk))
-
-                try:
-                    segment, provider_responded = self._transcribe_chunk(client, media_path, chunk)
-                except SubtitleError as e:
-                    had_failures = True
-                    self.last_error = e
-                    consecutive_failures += 1
-                    if transcribed == 0:
-                        # Two failures before anything ever worked is a
-                        # systemic problem (credentials, model, endpoint):
-                        # fail fast with the real error instead of
-                        # grinding through every chunk.
-                        if consecutive_failures >= 2:
-                            self.status = TranscriptionStatus.FAILED
-                            raise SubtitleError(
-                                _("Transcription blocked after {count} consecutive chunk failures: {error}").format(
-                                    count=consecutive_failures, error=e),
-                                error=e)
-                        logging.warning(_("Skipping chunk {}: {}").format(self._span_label(chunk), e))
-                    else:
-                        # Once lines exist, any chunk failure creates an
-                        # unfillable gap (resume appends after the last
-                        # line, it cannot backfill).  Stop now so the
-                        # user can resume from this point.
-                        incomplete_error = SubtitleError(
-                            _("Transcription stopped at {span}: {error}").format(
-                                span=self._span_label(chunk), error=e),
-                            error=e)
-                        logging.error(str(incomplete_error))
-                        break
-                else:
-                    chunks_done += 1
-
-                    if provider_responded:
-                        # An empty provider response was successful and may
-                        # follow a transient backend failure. Silent chunks
-                        # are skipped before a request and must not reset it.
-                        consecutive_failures = 0
-
-                    if segment is not None:
-                        for line in self._lines_for_segment(segment):
-                            if resume_after is not None and line.start < resume_after:
-                                continue
-                            line_number += 1
-                            lines.append(SubtitleLine.Construct(
-                                line_number, line.start, line.end, line.text,
-                                {'speaker': line.speaker} if line.speaker else None))
-                            transcribed += 1
-                            if segment_cb:
-                                segment_cb(line)
-                finally:
-                    if audio_progress_cb and audio_total_seconds > 0.0:
-                        audio_progress_cb(
-                            min(audio_total_seconds, max(0.0, chunk.end.total_seconds())),
-                            audio_total_seconds)
+            self._run_chunks(run, client, media_path, chunks, progress_cb, segment_cb, audio_progress_cb)
         except SubtitleError as e:
             # A silence-scan failure mid-run must not discard already
             # transcribed (billed) chunks.
-            if transcribed == 0:
+            if run.transcribed == 0:
                 raise
-            had_failures = True
+            run.had_failures = True
             self.last_error = e
             logging.error(str(e))
         finally:
             chunks.close()
             self._active_client = None
 
-        if transcribed == 0:
-            self.status = TranscriptionStatus.FAILED
-            raise SubtitleError(_("No timed subtitles could be produced from {}").format(media_path))
-
-        self.transcribed_lines = transcribed
-        logging.info(_("Transcribed {} lines from {} chunks").format(transcribed, chunks_done))
-        if self.total_cost > 0:
-            logging.info(_("Transcription cost: ${:.4f}").format(self.total_cost))
-        subtitles = Subtitles()
-        subtitles.originals = lines
-        subtitles.sourcepath = os.path.normpath(media_path)
-        subtitles.file_format = '.srt'
-        self.partial_subtitles = subtitles
-        if incomplete_error is not None:
-            self.last_error = incomplete_error
-        self.status = (TranscriptionStatus.INCOMPLETE if incomplete_error is not None or had_failures
-                       else TranscriptionStatus.COMPLETED)
-        return subtitles
+        return self._finish_run(run, media_path)
 
     def CreateTranscription(self, media_path : str, options : Options|None = None,
                             progress_cb : TranscriptionProgressCallback|None = None,
@@ -372,11 +259,146 @@ class TranscriptionCoordinator:
         if self._active_client is not None:
             self._active_client.AbortTranscription()
 
+    def _reset_state(self) -> None:
+        self.status = TranscriptionStatus.IDLE
+        self.last_error = None
+        self.partial_subtitles = None
+        self.total_cost = 0.0
+
+    def _start_client(self) -> TranscriptionClient:
+        """
+        Obtain the provider client, refusing engines that cannot time their output.
+        """
+        client = self.provider.GetTranscriptionClient(self.settings)
+        self._active_client = client
+        if not client.supports_timestamps:
+            self.status = TranscriptionStatus.FAILED
+            raise SubtitleError(_(
+                "'{}' cannot provide subtitle timings (no word or segment "
+                "timestamps). Transcription without timings has no value "
+                "here, so nothing was requested and no credits were spent."
+            ).format(self.provider.name))
+        return client
+
+    def _run_chunks(self, run : _TranscriptionRun, client : TranscriptionClient, media_path : str,
+                    chunks : Generator[AudioChunk, None, None],
+                    progress_cb : TranscriptionProgressCallback|None,
+                    segment_cb : TranscriptionSegmentCallback|None,
+                    audio_progress_cb : TranscriptionAudioProgressCallback|None) -> None:
+        """
+        Transcribe each planned chunk in turn, honouring abort, resume and
+        the failure policy. Partial results stay in run.lines.
+        """
+        def report_progress(done : int, chunk : AudioChunk) -> None:
+            if progress_cb:
+                # Total is unknown while the plan streams in (0 signals that)
+                progress_cb(done, 0, SpanLabel(chunk))
+
+        def report_audio(chunk : AudioChunk) -> None:
+            if audio_progress_cb and run.audio_total_seconds > 0.0:
+                audio_progress_cb(run.AudioPosition(chunk), run.audio_total_seconds)
+
+        for done, chunk in enumerate(chunks):
+            if self.aborted or client.aborted:
+                # Keep everything transcribed so far: abandoning billed
+                # work would be worse than partial results.
+                logging.warning(_("Transcription cancelled after {done} chunks").format(done=done))
+                run.had_failures = True
+                break
+
+            report_progress(done, chunk)
+            if run.AlreadyDone(chunk):
+                run.chunks_done += 1
+                report_audio(chunk)
+                continue
+
+            try:
+                segment, provider_responded = self._transcribe_chunk(client, media_path, chunk)
+            except SubtitleError as e:
+                if self._handle_chunk_failure(run, chunk, e):
+                    break
+            else:
+                self._accept_chunk(run, segment, provider_responded, segment_cb)
+            finally:
+                report_audio(chunk)
+
+    def _handle_chunk_failure(self, run : _TranscriptionRun, chunk : AudioChunk, error : SubtitleError) -> bool:
+        """
+        Record a chunk failure and decide whether the run must stop.
+
+        Before anything has been transcribed, repeated failures indicate a
+        systemic problem (credentials, model, endpoint) and the run fails
+        fast with the real error. Once lines exist, any failure would leave
+        an unfillable gap (resume appends after the last line, it cannot
+        backfill), so the run stops there for the user to resume later.
+        """
+        run.had_failures = True
+        run.consecutive_failures += 1
+        self.last_error = error
+
+        if run.transcribed > 0:
+            run.incomplete_error = SubtitleError(
+                _("Transcription stopped at {span}: {error}").format(span=SpanLabel(chunk), error=error),
+                error=error)
+            logging.error(str(run.incomplete_error))
+            return True
+
+        if run.consecutive_failures >= _MAX_INITIAL_FAILURES:
+            self.status = TranscriptionStatus.FAILED
+            raise SubtitleError(
+                _("Transcription blocked after {count} consecutive chunk failures: {error}").format(
+                    count=run.consecutive_failures, error=error),
+                error=error)
+
+        logging.warning(_("Skipping chunk {}: {}").format(SpanLabel(chunk), error))
+        return False
+
+    def _accept_chunk(self, run : _TranscriptionRun, segment : TranscriptionSegment|None,
+                      provider_responded : bool, segment_cb : TranscriptionSegmentCallback|None) -> None:
+        """Fold a successfully processed chunk into the run."""
+        run.chunks_done += 1
+
+        if provider_responded:
+            # An empty provider response was successful and may follow a
+            # transient backend failure. Silent chunks are skipped before a
+            # request and must not reset the failure count.
+            run.consecutive_failures = 0
+
+        if segment is None:
+            return
+
+        for line in self.line_builder.LinesForSegment(segment):
+            if run.AddLine(line) is not None and segment_cb:
+                segment_cb(line)
+
+    def _finish_run(self, run : _TranscriptionRun, media_path : str) -> Subtitles:
+        """Assemble the run's lines into Subtitles and record the final status."""
+        if run.transcribed == 0:
+            self.status = TranscriptionStatus.FAILED
+            raise SubtitleError(_("No timed subtitles could be produced from {}").format(media_path))
+
+        self.transcribed_lines = run.transcribed
+        logging.info(_("Transcribed {} lines from {} chunks").format(run.transcribed, run.chunks_done))
+        if self.total_cost > 0:
+            logging.info(_("Transcription cost: ${:.4f}").format(self.total_cost))
+
+        subtitles = Subtitles()
+        subtitles.originals = run.lines
+        subtitles.sourcepath = os.path.normpath(media_path)
+        subtitles.file_format = '.srt'
+        self.partial_subtitles = subtitles
+
+        if run.incomplete_error is not None:
+            self.last_error = run.incomplete_error
+        self.status = (TranscriptionStatus.INCOMPLETE if run.had_failures
+                       else TranscriptionStatus.COMPLETED)
+        return subtitles
+
     def _process_transcription(self, subtitles : Subtitles, options : Options) -> None:
         """
         Pre- and post-process transcribed lines (dash normalization, filler
         word removal, dialog breaks, duration-based line splitting).  Works
-        on the flat originals list — no batching or scenes involved.
+        on the flat originals list, no batching or scenes involved.
         """
         if not subtitles.originals:
             return
@@ -388,12 +410,15 @@ class TranscriptionCoordinator:
 
     def _transcribe_chunk(self, client : TranscriptionClient, media_path : str,
                           chunk : AudioChunk) -> tuple[TranscriptionSegment|None, bool]:
-        # Backend and read errors propagate: the TranscribeMedia loop counts
-        # consecutive failures and aborts blocked runs instead of grinding on.
+        """
+        Read and transcribe one chunk. Returns the segment (None for silent
+        or empty chunks) and whether the provider was actually asked.
+        Backend and read errors propagate to the run loop's failure policy.
+        """
         audio_bytes = self.extractor.ReadChunkBytes(media_path, chunk.start, chunk.end, self.track_index)
 
         if self.extractor.IsSilent(audio_bytes, self.silence_skip_db):
-            logging.debug(_("Skipping silent chunk {} before requesting").format(self._span_label(chunk)))
+            logging.debug(_("Skipping silent chunk {} before requesting").format(SpanLabel(chunk)))
             return None, False
 
         result = client.TranscribeChunk(audio_bytes, 'wav', self.language)
@@ -404,167 +429,9 @@ class TranscriptionCoordinator:
         text = (result.text or '').strip()
 
         if not text:
-            logging.debug(_("Empty transcription for chunk {}").format(self._span_label(chunk)))
+            logging.debug(_("Empty transcription for chunk {}").format(SpanLabel(chunk)))
             return None, True
 
         return TranscriptionSegment(start=chunk.start, end=chunk.end, text=text,
                                     language=result.language or self.language,
                                     words=result.words, parts=result.parts), True
-
-    def _lines_for_segment(self, segment : TranscriptionSegment) -> list[TranscriptionSegment]:
-        """
-        Turn a transcribed chunk into timed subtitle lines.
-
-        Word timings group into lines; provider sub-segments without word
-        timings become rebased lines. A chunk with neither stays one line
-        over its true chunk span: coarse but honest, and the text was
-        already paid for, so it is kept rather than thrown away.
-        """
-        if segment.words:
-            lines = self._group_words(segment.words, segment)
-            return lines or [segment]
-
-        if segment.parts:
-            rebased = [self._rebase_part(part, segment) for part in segment.parts if part.text.strip()]
-            for line in rebased:
-                self._warn_if_overlong(line)
-            return rebased or [segment]
-
-        self._warn_if_overlong(segment)
-        return [segment]
-
-    def _warn_if_overlong(self, line : TranscriptionSegment) -> bool:
-        """
-        Flag engine-coarse spans no splitter can break up. Word-timed lines
-        are already capped by grouping; over-long lines can only come from
-        untimed engine segments, whose boundaries deserve a human glance.
-        Returns True when a warning was logged.
-        """
-        duration = (line.end - line.start).total_seconds()
-        if duration > self.max_line_seconds:
-            logging.warning(_("Long transcription line ({:.1f}s, no word timings to split it): '{}'").format(
-                duration, line.text[:120]))
-            return True
-        return False
-
-    def _rebase_part(self, part : TranscriptionSegment, segment : TranscriptionSegment) -> TranscriptionSegment:
-        """
-        Rebase a chunk-relative sub-segment onto absolute media time.
-        """
-        start = segment.start + part.start
-        end = segment.start + part.end
-        if end <= start:
-            end = start + timedelta(seconds=_MIN_LINE_SECONDS)
-        if end > segment.end:
-            end = segment.end
-        if part.confidence is not None and part.confidence < 0.4:
-            logging.info(_("Chunk {}: low-confidence segment ({:.0%} no-speech probability): '{}'").format(
-                self._span_label(segment), 1.0 - part.confidence, part.text[:120]))
-        return TranscriptionSegment(start=start, end=end, text=part.text.strip(),
-                                    speaker=part.speaker or segment.speaker,
-                                    language=part.language or segment.language,
-                                    confidence=part.confidence)
-
-    def _group_words(self, words : list[WordTiming], segment : TranscriptionSegment) -> list[TranscriptionSegment]:
-        """
-        Group chunk-relative word timings into subtitle lines. Every
-        boundary and timing derives from aligned words: max characters,
-        max duration, sentence punctuation and real inter-word pauses.
-        Offsets are rebased onto the chunk start for absolute timings.
-        """
-        lines : list[TranscriptionSegment] = []
-        current : list[WordTiming] = []
-
-        def flush() -> None:
-            if not current:
-                return
-            text = self._join_words([w.text for w in current])
-            start = segment.start + current[0].start
-            end = segment.start + current[-1].end
-            if end <= start:
-                end = start + timedelta(seconds=_MIN_LINE_SECONDS)
-            if end > segment.end:
-                end = segment.end
-            speaker = current[0].speaker or segment.speaker
-            lines.append(TranscriptionSegment(start=start, end=end, text=text,
-                                              speaker=speaker, language=segment.language))
-
-        def speaker_changed(word : WordTiming) -> bool:
-            if not current or word.speaker is None:
-                return False
-            first = current[0].speaker
-            return first is not None and word.speaker != first
-
-        for word in words:
-            if current:
-                previous = current[-1]
-                gap = (word.start - previous.end).total_seconds()
-                candidate = self._join_words([w.text for w in current] + [word.text])
-                line_seconds = (word.end - current[0].start).total_seconds()
-                if (len(candidate) > self.max_line_chars
-                        or line_seconds > self.max_line_seconds
-                        or gap >= self.word_gap_split
-                        or speaker_changed(word)
-                        or (previous.text and previous.text[-1] in _SENTENCE_END_CHARS)):
-                    flush()
-                    current = []
-            current.append(word)
-
-        flush()
-        return self._merge_slivers(lines)
-
-    def _join_words(self, words : list[str]) -> str:
-        """Join aligned word tokens with language-appropriate spacing."""
-        text = ""
-        for word in words:
-            if _needs_space(text, word):
-                text += " "
-            text += word
-        return text.strip()
-
-    def _merge_slivers(self, lines : list[TranscriptionSegment]) -> list[TranscriptionSegment]:
-        """Merge brief adjacent lines, preserving pauses and dialogue turns."""
-        if len(lines) < 2:
-            return lines
-
-        def close_enough(first : TranscriptionSegment, second : TranscriptionSegment) -> bool:
-            return (second.start - first.end).total_seconds() < self.word_gap_split
-
-        def is_dialogue(line : TranscriptionSegment) -> bool:
-            return line.text.startswith('- ') and '\n' in line.text
-
-        def merge_pair(first : TranscriptionSegment, second : TranscriptionSegment) -> TranscriptionSegment:
-            mixed = (is_dialogue(first) or is_dialogue(second)
-                     or (first.speaker is not None and second.speaker is not None
-                         and first.speaker != second.speaker))
-            if mixed:
-                first_text = first.text if first.text.startswith('- ') else f'- {first.text}'
-                second_text = second.text if second.text.startswith('- ') else f'- {second.text}'
-                text = f'{first_text}\n{second_text}'
-            else:
-                text = self._join_words([first.text, second.text])
-            return TranscriptionSegment(
-                start=first.start, end=max(first.end, second.end), text=text,
-                speaker=None if mixed else first.speaker or second.speaker,
-                language=first.language or second.language)
-
-        merged : list[TranscriptionSegment] = []
-        for line in lines:
-            if (merged and (line.end - line.start).total_seconds() < _MIN_LINE_SECONDS
-                    and close_enough(merged[-1], line)):
-                merged[-1] = merge_pair(merged[-1], line)
-            else:
-                merged.append(line)
-
-        if (len(merged) >= 2
-                and (merged[0].end - merged[0].start).total_seconds() < _MIN_LINE_SECONDS
-                and close_enough(merged[0], merged[1])):
-            merged[1] = merge_pair(merged[0], merged[1])
-            merged.pop(0)
-        return merged
-
-    def _span_label(self, span : AudioChunk|TranscriptionSegment) -> str:
-        start = span.start.total_seconds()
-        end = span.end.total_seconds()
-        return f"{start:.1f}s-{end:.1f}s"
-

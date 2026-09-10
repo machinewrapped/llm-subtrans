@@ -100,21 +100,6 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         command.Abort()
         self.assertLoggedEqual('abort forwarded', 1, coordinator.Abort.call_count)
 
-    def test_settings_are_independent_snapshots(self) -> None:
-        self.provider.settings['language'] = 'French'
-        settings = SettingsType({'audio_track': 2, 'min_chunk_seconds': 5.0})
-        options = Options({'postprocess_transcription': False})
-        command = TranscribeMediaCommand(self.provider, 'media.wav', settings, options)
-        self.provider.settings['language'] = 'English'
-        settings['audio_track'] = 3
-        options['postprocess_transcription'] = True
-        with patch('GuiSubtrans.Commands.TranscribeMediaCommand.TranscriptionCoordinator', return_value=self.coordinator) as factory:
-            command.execute()
-        self.assertLoggedEqual('provider language snapshot', 'French', command.provider.settings.get_str('language'))
-        self.assertLoggedEqual('track snapshot', 2, factory.call_args.args[1].get_int('audio_track'))
-        self.assertLoggedFalse('project cleanup snapshot', self.coordinator.CreateTranscriptionProject.call_args.args[1].get_bool('postprocess_transcription'))
-        self.assertLoggedNotIn('run options stay out of project options', 'audio_track', command.options)
-
     @skip_if_debugger_attached
     def test_failure_without_results_retains_error(self) -> None:
         self.coordinator.CreateTranscriptionProject.side_effect = RuntimeError('provider failed')

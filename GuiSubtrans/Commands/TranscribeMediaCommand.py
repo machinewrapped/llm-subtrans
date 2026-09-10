@@ -1,7 +1,6 @@
 import logging
 import sys
-from copy import copy, deepcopy
-from threading import RLock
+from threading import Lock
 
 from PySide6.QtCore import Signal
 
@@ -29,10 +28,9 @@ class TranscribeMediaCommand(Command):
                  save_transcription : bool = False, output_format : str = "srt",
                  prior_subtitles : Subtitles|None = None) -> None:
         super().__init__()
-        self.provider : TranscriptionProvider = copy(provider)
-        self.provider.settings = SettingsType(deepcopy(provider.settings))
+        self.provider : TranscriptionProvider = provider
         self.media_path : str = media_path
-        self.settings : SettingsType = SettingsType(deepcopy(settings))
+        self.settings : SettingsType = settings
         self.options : Options = Options(options)
         self.save_transcription : bool = save_transcription
         self.output_format : str = output_format.casefold()
@@ -45,7 +43,7 @@ class TranscribeMediaCommand(Command):
         self.stopped_early : bool = False
         self.ffmpeg_available : bool = False
         self.torch_device : str|None = None
-        self._coordinator_lock : RLock = RLock()
+        self._coordinator_lock : Lock = Lock()
         self.is_blocking = True
         self.can_undo = False
         # The result is handed over via signals, so the command never enters
@@ -149,8 +147,7 @@ class TranscribeMediaCommand(Command):
         self.error = str(error)
         self.status = TranscriptionStatus.FAILED
 
-        with self._coordinator_lock:
-            partial_subtitles = self.coordinator.partial_subtitles if self.coordinator else None
+        partial_subtitles = self.coordinator.partial_subtitles if self.coordinator else None
         if partial_subtitles is not None:
             self.project = SubtitleProject(persistent=False)
             self.project.subtitles = partial_subtitles

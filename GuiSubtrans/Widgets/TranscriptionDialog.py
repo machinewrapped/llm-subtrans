@@ -1,6 +1,7 @@
 import logging
 import os
 import time
+from datetime import timedelta
 from typing import Any, Callable, cast
 
 from PySide6.QtCore import QThread, QTimer, Qt, Signal, Slot
@@ -48,6 +49,28 @@ def _format_duration(seconds : float) -> str:
     """
     total = max(0, int(seconds))
     return f"{total // 60}:{total % 60:02d}"
+
+
+def _format_timestamp(seconds : float) -> str:
+    """
+    Format an audio position using the project's standard timestamp format.
+    """
+    return TimedeltaToText(timedelta(seconds=max(0.0, seconds)), include_milliseconds=False)
+
+
+def _format_span(span : str) -> str:
+    """
+    Convert a coordinator span from raw seconds to readable timestamps.
+    """
+    start_text, separator, end_text = span.partition('-')
+    if not separator or not start_text.endswith('s') or not end_text.endswith('s'):
+        return span
+    try:
+        start = float(start_text[:-1])
+        end = float(end_text[:-1])
+    except ValueError:
+        return span
+    return f"{_format_timestamp(start)}-{_format_timestamp(end)}"
 
 
 def _widget_row(*widgets : QWidget, stretch : bool = False) -> QHBoxLayout:
@@ -578,7 +601,12 @@ class TranscriptionDialog(QDialog):
         else:
             status = _("Transcribing chunk {current}").format(current=self._chunks_done + 1)
         if self._last_span:
-            status += f" [{self._last_span}]"
+            status += f" [{_format_span(self._last_span)}"
+            if self._audio_total_seconds > 0.0:
+                status += _(" of {}").format(_format_timestamp(self._audio_total_seconds))
+            status += "]"
+        elif self._audio_total_seconds > 0.0:
+            status += _(" (source length {})").format(_format_timestamp(self._audio_total_seconds))
         status += _(" (elapsed {})").format(_format_duration(elapsed))
         if elapsed > 5.0 and self._audio_total_seconds > 0.0 and self._audio_done_seconds > 0.0:
             fraction = min(1.0, self._audio_done_seconds / self._audio_total_seconds)

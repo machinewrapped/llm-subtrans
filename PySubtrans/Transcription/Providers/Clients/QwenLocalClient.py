@@ -173,13 +173,16 @@ else:
                                 return_time_stamps=True,
                             )
                         except ValueError:
+                            logging.warning(_("Alignment failed, timestamps will be approximate"))
                             results = model.transcribe(
                                 audio=chunk_path,
                                 language=canonical,
                                 return_time_stamps=False,
                             )
+
                 except Exception as e:
                     raise SubtitleError(_("Qwen transcription failed: {}").format(str(e)), error=e)
+
                 finally:
                     try:
                         os.remove(chunk_path)

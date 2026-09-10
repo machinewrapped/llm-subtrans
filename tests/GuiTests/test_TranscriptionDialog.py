@@ -132,6 +132,34 @@ class TestTranscriptionRunEvidence(LoggedTestCase):
             dialog.deleteLater()
             self.application.processEvents()
 
+    def test_immediate_command_completion_returns_to_done_state(self) -> None:
+        """A command finishing immediately does not leave the dialog running."""
+        options = Options()
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(options)
+        try:
+            command = TranscribeMediaCommand(FakeTranscriptionProvider(), 'media.wav', SettingsType())
+            dialog.media_path = __file__
+
+            def complete_immediately(submitted : TranscribeMediaCommand) -> None:
+                submitted.commandCompleted.emit(submitted)
+
+            dialog.commandRequested.connect(complete_immediately)
+            try:
+                with patch.object(dialog, '_build_command', return_value=command):
+                    dialog._start_transcription()
+                    for _event_pass in range(3):
+                        self.application.processEvents()
+
+                self.assertLoggedEqual('dialog phase after immediate completion', 'done', dialog._phase)
+                self.assertLoggedIsNone('immediate completion releases command', dialog.active_command)
+                self.assertLoggedFalse('abort control hidden after completion', dialog.abort_button.isVisible())
+            finally:
+                dialog.commandRequested.disconnect(complete_immediately)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
 
 class TestTranscriptionDialogLayout(LoggedTestCase):
     application : QApplication
@@ -175,6 +203,27 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             dialog._rebuild_provider_form()
             self.assertLoggedEqual('row count restored to initial', initial_row_count, dialog.form.rowCount())
             self.assertLoggedEqual('provider row count zeroed', 0, dialog._provider_row_count)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+    def test_invalid_chunk_bounds_are_rejected_before_command_creation(self) -> None:
+        """Invalid chunk bounds are reported before a worker can start."""
+        options = Options()
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(options)
+        try:
+            dialog.provider = FakeTranscriptionProvider()
+            dialog.media_path = __file__
+            dialog.fields['min_chunk_seconds'].SetValue(60.0)
+            dialog.fields['max_chunk_seconds'].SetValue(10.0)
+
+            with patch('GuiSubtrans.Widgets.TranscriptionDialog.TranscribeMediaCommand') as command_factory:
+                command = dialog._build_command()
+
+            self.assertLoggedIsNone('invalid bounds produce no command', command)
+            self.assertLoggedEqual('command construction skipped', 0, command_factory.call_count)
+            self.assertLoggedIn('validation message', 'maximum chunk length', dialog.status_label.text())
         finally:
             dialog.deleteLater()
             self.application.processEvents()

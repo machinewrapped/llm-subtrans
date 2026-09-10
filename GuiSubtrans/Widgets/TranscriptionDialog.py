@@ -3,7 +3,7 @@ import os
 import time
 from typing import Any, Callable, cast
 
-from PySide6.QtCore import QThread, Qt, Signal, Slot
+from PySide6.QtCore import QThread, QTimer, Qt, Signal, Slot
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QComboBox,
@@ -31,9 +31,10 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Time import TimedeltaToText
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
-from PySubtrans.Transcription.AudioExtractor import SUPPORTED_MEDIA_EXTENSIONS, CheckFfmpegAvailable
+from PySubtrans.Transcription.AudioExtractor import AudioChunker, SUPPORTED_MEDIA_EXTENSIONS, CheckFfmpegAvailable
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
@@ -96,6 +97,7 @@ class TranscriptionDialog(QDialog):
         self._last_span : str = ""
         self._close_requested : bool = False
         self.active_command : TranscribeMediaCommand|None = None
+        self._completion_slot : Callable[[TranscribeMediaCommand], None]|None = None
         self._pending_accept : bool = False
         self._resume_project : SubtitleProject|None = None
 
@@ -420,14 +422,25 @@ class TranscriptionDialog(QDialog):
             return None
         for key, field in self.provider_fields.items():
             provider.settings[key] = field.GetValue()
+
         if not provider.ValidateSettings():
             self.status_label.setText(provider.validation_message or _("Invalid provider settings"))
             return None
+
+        min_chunk_seconds = self.fields['min_chunk_seconds'].GetValue()
+        max_chunk_seconds = self.fields['max_chunk_seconds'].GetValue()
+
+        try:
+            AudioChunker.ValidateChunkBounds(min_chunk_seconds, max_chunk_seconds)
+        except SubtitleError as e:
+            self.status_label.setText(str(e))
+            return None
+
         settings = SettingsType({
             'audio_track': self.track_combo.currentData() or 0,
             'language': provider.settings.get_str('language'),
-            'min_chunk_seconds': self.fields['min_chunk_seconds'].GetValue(),
-            'max_chunk_seconds': self.fields['max_chunk_seconds'].GetValue(),
+            'min_chunk_seconds': min_chunk_seconds,
+            'max_chunk_seconds': max_chunk_seconds,
             'transcription_align': True,
         })
         if self.media_path is None:
@@ -471,13 +484,14 @@ class TranscriptionDialog(QDialog):
         command.progressed.connect(self._on_progress, Qt.ConnectionType.QueuedConnection)
         command.audioProgressed.connect(self._on_audio_progress, Qt.ConnectionType.QueuedConnection)
         command.segmented.connect(self._on_segment, Qt.ConnectionType.QueuedConnection)
+
         self._show_results(True)
         self.status_label.setText(_("Transcribing..."))
+
+        # Connect before submission so even an immediate failure is observed.
+        self._completion_slot = self._defer_command_completed
+        command.commandCompleted.connect(self._completion_slot, Qt.ConnectionType.QueuedConnection)
         self.commandRequested.emit(command)
-        # The completion observer is connected after submission so the queue's
-        # own completion handling (undo bookkeeping and follow-up commands)
-        # has been processed before the dialog reacts to the result.
-        command.commandCompleted.connect(self._on_command_completed, Qt.ConnectionType.QueuedConnection)
 
     def _resume_transcription(self) -> None:
         """Resume a previously aborted transcription from the last completed chunk."""
@@ -504,10 +518,14 @@ class TranscriptionDialog(QDialog):
         command.progressed.connect(self._on_progress, Qt.ConnectionType.QueuedConnection)
         command.audioProgressed.connect(self._on_audio_progress, Qt.ConnectionType.QueuedConnection)
         command.segmented.connect(self._on_segment, Qt.ConnectionType.QueuedConnection)
+
         self._show_results(True)
         self.status_label.setText(_("Resuming transcription..."))
+
+        # Connect before submission so even an immediate failure is observed.
+        self._completion_slot = self._defer_command_completed
+        command.commandCompleted.connect(self._completion_slot, Qt.ConnectionType.QueuedConnection)
         self.commandRequested.emit(command)
-        command.commandCompleted.connect(self._on_command_completed, Qt.ConnectionType.QueuedConnection)
 
     def _abort_transcription(self) -> None:
         """Stop the run after its current chunk; partial results are retained."""
@@ -570,11 +588,17 @@ class TranscriptionDialog(QDialog):
         self.status_label.setText(status)
 
     @Slot(object)
+    def _defer_command_completed(self, command : TranscribeMediaCommand) -> None:
+        """Defer dialog handling until the command queue finishes its bookkeeping."""
+        QTimer.singleShot(0, lambda command=command: self._on_command_completed(command))
+
+    @Slot(object)
     def _on_command_completed(self, command : TranscribeMediaCommand) -> None:
         """Consume the completion notification from the observed command."""
         if command is not self.active_command:
             return
         self.project = command.project
+
         # Allow resuming when the run did not complete fully and has results.
         if (command.status is not TranscriptionStatus.COMPLETED
                 or command.aborted or command.stopped_early):
@@ -584,12 +608,14 @@ class TranscriptionDialog(QDialog):
                 self._resume_project = None
         else:
             self._resume_project = None
+
         if not command.aborted:
             # Extraction and inference provably ran: record what the run
             # learned about the local runtime for future sessions.
             self._record_dependency_evidence(
                 ffmpeg_available=command.ffmpeg_available or None,
                 torch_device=command.torch_device)
+
         count = self.project.subtitles.linecount if self.project and self.project.subtitles else 0
         if command.aborted or command.stopped_early:
             self.status_label.setText(_("Aborted - partial results ({} lines).").format(count))
@@ -606,12 +632,18 @@ class TranscriptionDialog(QDialog):
             message = _("Transcribed {} lines.").format(count)
             self.status_label.setText(message)
             logging.info(message)
+
         self.progress_bar.setRange(0, max(1, self.progress_bar.maximum()))
         self.progress_bar.setValue(self.progress_bar.maximum())
+
         command.progressed.disconnect(self._on_progress)
         command.audioProgressed.disconnect(self._on_audio_progress)
         command.segmented.disconnect(self._on_segment)
-        command.commandCompleted.disconnect(self._on_command_completed)
+
+        if self._completion_slot is not None:
+            command.commandCompleted.disconnect(self._completion_slot)
+            self._completion_slot = None
+
         self.active_command = None
         self._show_results(False)
         if command.status is TranscriptionStatus.COMPLETED and not command.aborted:

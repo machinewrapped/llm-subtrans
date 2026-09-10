@@ -7,12 +7,10 @@ from typing import Any
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.Transcription.TranscriptionAligner import NormaliseAlignerLanguage
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
 from PySubtrans.Transcription.Providers.Provider_QwenLocal import (
     _ALIGNER_CHECKPOINT,
-    _QWEN_ALIGNER_LANGUAGES,
     _QWEN_CHECKPOINTS,
     parse_qwen_result,
 )
@@ -30,6 +28,19 @@ else:
     try:
         import torch
         from qwen_asr import Qwen3ASRModel      #type: ignore[import]
+        from qwen_asr.inference.utils import SUPPORTED_LANGUAGES as _QWEN_SUPPORTED_LANGUAGES  #type: ignore[import]
+
+
+        def _normalise_qwen_language(language : str|None) -> str|None:
+            """Normalise a language hint for the qwen-asr SDK, or None to auto-detect."""
+            if not language:
+                return None
+            normalised = language.strip()[:1].upper() + language.strip()[1:].lower()
+            if normalised not in _QWEN_SUPPORTED_LANGUAGES:
+                logging.warning(_("Language '{}' is not in qwen-asr's supported list, using auto-detection").format(language.strip()))
+                return None
+            return normalised
+
 
         def _mps_available() -> bool:
             """Apple Silicon GPU backend; absent on torch builds without it."""
@@ -129,7 +140,7 @@ else:
             def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
                 model = self._load_model()
                 chunk_path = self._write_chunk(audio_bytes)
-                canonical = NormaliseAlignerLanguage(language, _QWEN_ALIGNER_LANGUAGES)
+                canonical = _normalise_qwen_language(language)
                 # Qwen can detect the language and pass it to its forced aligner
                 # when no hint is supplied.  Keep the default timestamp request
                 # enabled for auto-detection; unsupported detected languages are
@@ -145,19 +156,28 @@ else:
                         )
                     except ValueError as e:
                         # The ASR model may detect a language outside the
-                        # forced aligner's coverage. Preserve the transcript
-                        # and report it without timings in that case.
+                        # forced aligner's coverage. Try English alignment
+                        # first (better than nothing), then fall back to
+                        # no timestamps if that also fails.
                         message = str(e).casefold()
                         unsupported = 'unsupported language' in message or 'language is not supported' in message
 
                         if not (want_stamps and unsupported):
                             raise
 
-                        results = model.transcribe(
-                            audio=chunk_path,
-                            language=canonical,
-                            return_time_stamps=False,
-                        )
+                        logging.warning(_("Detected language unsupported by aligner, retrying with English"))
+                        try:
+                            results = model.transcribe(
+                                audio=chunk_path,
+                                language='English',
+                                return_time_stamps=True,
+                            )
+                        except ValueError:
+                            results = model.transcribe(
+                                audio=chunk_path,
+                                language=canonical,
+                                return_time_stamps=False,
+                            )
                 except Exception as e:
                     raise SubtitleError(_("Qwen transcription failed: {}").format(str(e)), error=e)
                 finally:

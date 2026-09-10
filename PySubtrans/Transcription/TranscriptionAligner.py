@@ -41,37 +41,3 @@ class TranscriptionAligner:
         Timings are relative to the start of the chunk audio.
         """
         raise NotImplementedError
-
-
-# Canonical aligner language names to qwen-asr language arguments
-_ALIGNER_LANGUAGE_ALIASES : dict[str, str] = {
-    'chinese': 'Chinese',
-    'mandarin': 'Chinese',
-    'putonghua': 'Chinese',
-    'cantonese': 'Cantonese',
-    'yue': 'Cantonese',
-    'english': 'English',
-    'french': 'French',
-    'german': 'German',
-    'deutsch': 'German',
-    'italian': 'Italian',
-    'japanese': 'Japanese',
-    'korean': 'Korean',
-    'portuguese': 'Portuguese',
-    'russian': 'Russian',
-    'spanish': 'Spanish',
-    'espanol': 'Spanish',
-}
-
-
-def NormaliseAlignerLanguage(language : str|None, supported : list[str]) -> str|None:
-    """
-    Map a free-text language hint onto an aligner language, or None when
-    the aligner cannot handle it (caller falls back to chunk-level lines).
-    """
-    if not language:
-        return None
-
-    canonical = _ALIGNER_LANGUAGE_ALIASES.get(language.strip().casefold(), language.strip())
-    supported_cf = {s.casefold(): s for s in supported}
-    return supported_cf.get(canonical.casefold())

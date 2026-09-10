@@ -12,12 +12,6 @@ from PySubtrans.Transcription.TranscriptionAligner import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 
-# Aligner subset gating timestamp requests (11 published languages)
-_QWEN_ALIGNER_LANGUAGES : list[str] = [
-    'Chinese', 'English', 'Cantonese', 'French', 'German', 'Italian',
-    'Japanese', 'Korean', 'Portuguese', 'Russian', 'Spanish',
-]
-
 _QWEN_CHECKPOINTS : list[str] = [
     'Qwen/Qwen3-ASR-1.7B',
     'Qwen/Qwen3-ASR-0.6B',

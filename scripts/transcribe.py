@@ -9,6 +9,7 @@ check_required_imports(['PySubtrans'])
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionStatus
@@ -76,6 +77,10 @@ def main() -> int:
         logging.error(str(e))
         return 1
 
+    if not provider.ValidateSettings():
+        logging.error(provider.validation_message or "Invalid transcription provider settings")
+        return 1
+
     coordinator_settings = SettingsType({
         'audio_track': args.track,
         'language': args.language,
@@ -88,7 +93,11 @@ def main() -> int:
         coordinator_settings['max_chunk_seconds'] = args.max_chunk
     if args.rate_limit is not None:
         coordinator_settings['rate_limit'] = args.rate_limit
-    coordinator = TranscriptionCoordinator(provider, coordinator_settings)
+    try:
+        coordinator = TranscriptionCoordinator(provider, coordinator_settings)
+    except SubtitleError as e:
+        logging.error(f"Unable to initialise transcription: {e}")
+        return 1
 
     if args.list_tracks:
         try:

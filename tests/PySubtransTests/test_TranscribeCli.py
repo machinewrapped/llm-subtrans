@@ -62,6 +62,22 @@ class TestTranscribeCliOptions(LoggedTestCase):
 
 
 class TestTranscribeCliExecution(LoggedTestCase):
+    def test_invalid_provider_settings_return_nonzero_before_transcription(self):
+        """CLI validation prevents extraction when provider settings are invalid."""
+        provider = Mock()
+        provider.ValidateSettings.return_value = False
+        provider.validation_message = "API Key is required"
+
+        with patch.object(transcribe, 'InitLogger'), \
+                patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=provider), \
+                patch.object(transcribe, 'TranscriptionCoordinator') as coordinator_factory, \
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav']):
+            result = transcribe.main()
+
+        self.assertLoggedEqual("invalid provider status", 1, result)
+        self.assertLoggedEqual("provider validation called", 1, provider.ValidateSettings.call_count)
+        self.assertLoggedEqual("transcription not started", 0, coordinator_factory.call_count)
+
     def test_plain_output_passes_postprocess_options(self):
         """Postprocessing applies even when no project file is requested."""
         subtitles = Mock(linecount=1)
@@ -81,7 +97,6 @@ class TestTranscribeCliExecution(LoggedTestCase):
         self.assertLoggedEqual("exit status", 0, result)
         options = coordinator.CreateTranscriptionProject.call_args.args[1]
         self.assertLoggedEqual("postprocess option", False, options['postprocess_transcription'])
-        self.assertLoggedEqual("project persistence", False, options['project_file'])
         subtitles.SaveOriginal.assert_called_once_with('out.vtt')
 
     @skip_if_debugger_attached

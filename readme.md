@@ -104,13 +104,13 @@ LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...), whi
 Transcription requires a separate `ffmpeg`/`ffprobe` installation acessible on the system path.
 
 ### Local transcription
-- **Qwen Local**: runs the official `qwen-asr` package in-process on your local machine. A separate torch install is required to take advantage of GPU acceleration (see https://pytorch.org/get-started/locally/).
+**Qwen Local**: runs the official `qwen-asr` package in-process on your local machine. A separate torch install is required to take advantage of GPU acceleration (see https://pytorch.org/get-started/locally/).
 
 ### Cloud transcription services
-- **OpenRouter**: Provides access to many speech-to-text models, e.g. the excellent MAI Transcribe 2.
-- **Gemini**: `gemini-3.5-transcribe` with word timestamps and speaker diarization. Very good, but brutal rate limits.
-- **OpenAI**: `whisper-1` (word timestamps) and `gpt-4o-transcribe-diarize`. Experimental support.
-- **Muse**: Meta `muse-voice-transcribe-1. Slow, and only provides approximate timings.
+**OpenRouter**: Provides several speech-to-text models, e.g. the excellent MAI Transcribe 2, DeepGram and Grok.
+**Gemini**: `gemini-3.5-transcribe` with word timestamps and speaker diarization. Very good, but brutal rate limits.
+**Muse**: Meta `muse-voice-transcribe-1. Slow, and only provides approximate timings.
+**OpenAI**: `whisper-1` (word timestamps) and `gpt-4o-transcribe-diarize`. Experimental support.
 
 From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separate dialog for transcription. A successful result will be opened as a translation project upon completion.
 
@@ -243,17 +243,19 @@ If the target language is not specified the default is English.
 
 Other options that can be specified on the command line are detailed below.
 
-Transcription is a separate process. Use `--list-providers` to see available providers (default: Qwen Local):
+#### Transcription
+
+Transcription is a separate process.
 
 ```sh
-# Transcribe with the default local provider
+# Transcribe with the default provider (Qwen Local)
 python scripts/transcribe.py movie.mkv --language Chinese --format ass
 
 # Use a cloud provider
 python scripts/transcribe.py movie.mkv --provider OpenRouter --model mai/mai-transcribe-2 --apikey sk-... --language Japanese --diarize
 ```
 
-Configuration options:
+Transcription options:
 - `--provider` — transcription provider (default: `Qwen Local`; use `--list-providers` to list)
 - `--language` — spoken language hint (e.g. Chinese, English)
 - `--track` — audio track index (default: 0; use `--list-tracks` to identify audio tracks in the source)

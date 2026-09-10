@@ -148,9 +148,8 @@ echo 3 = Anthropic Claude
 echo 4 = DeepSeek
 echo 5 = Mistral
 echo 6 = Bedrock (AWS)
-echo 7 = Qwen Local (on-device transcription)
 echo a = All except Bedrock
-set /p provider_choice="Enter your choice (0/1/2/3/4/5/6/7/a): "
+set /p provider_choice="Enter your choice (0/1/2/3/4/5/6/a): "
 
 if "!provider_choice!"=="0" (
     echo No additional provider selected.
@@ -166,8 +165,6 @@ if "!provider_choice!"=="0" (
     call :install_provider "Mistral" "MISTRAL" "mistral" "mistral-subtrans" "set_default"
 ) else if "!provider_choice!"=="6" (
     call :install_bedrock
-) else if "!provider_choice!"=="7" (
-    call :install_qwen_local
 ) else if /i "!provider_choice!"=="a" (
     call :install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" ""
     call :install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
@@ -192,6 +189,19 @@ if errorlevel 1 (
 
 call envsubtrans\Scripts\activate.bat
 
+echo.
+set /p install_transcription="Install local transcription? (y/n): "
+
+if /i "!install_transcription!"=="y" (
+    call :install_qwen_local
+) else if /i "!install_transcription!"=="n" (
+    echo No local transcription selected.
+) else (
+    echo Invalid choice. Exiting installation.
+    pause
+    exit /b 1
+)
+
 REM Determine install target
 set "INSTALL_TARGET=."
 if not "!EXTRAS!"=="" (
@@ -209,8 +219,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo !EXTRAS! | findstr /i "\<transcription\>" >nul
-if not errorlevel 1 (
+if /i "!install_transcription!"=="y" (
     echo.
     echo Checking torch for Qwen Local transcription...
     .\envsubtrans\Scripts\python.exe -c "import torch" >nul 2>&1

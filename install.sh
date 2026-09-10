@@ -203,9 +203,8 @@ echo "3 = Anthropic Claude"
 echo "4 = DeepSeek"
 echo "5 = Mistral"
 echo "6 = Bedrock (AWS)"
-echo "7 = Qwen Local (on-device transcription)"
 echo "a = All except Bedrock"
-read -p "Enter your choice (0/1/2/3/4/5/6/7/a): " provider_choice
+read -p "Enter your choice (0/1/2/3/4/5/6/a): " provider_choice
 
 case $provider_choice in
     0)
@@ -229,9 +228,6 @@ case $provider_choice in
     6)
         install_bedrock
         ;;
-    7)
-        install_qwen_local
-        ;;
     a)
         install_provider "Google Gemini" "GEMINI" "gemini" "gemini-subtrans" ""
         install_provider "OpenAI" "OPENAI" "openai" "gpt-subtrans" ""
@@ -245,6 +241,21 @@ case $provider_choice in
         ;;
 esac
 
+echo
+read -p "Install local transcription? (y/n): " install_transcription
+
+case $install_transcription in
+    y|Y)
+        install_qwen_local
+        ;;
+    n|N)
+        echo "No local transcription selected."
+        ;;
+    *)
+        echo "Invalid choice. Exiting installation."
+        exit 1
+        ;;
+esac
 
 install_target="."
 if [ ${#extras[@]} -gt 0 ]; then
@@ -257,7 +268,7 @@ fi
 
 pip install --upgrade -e "$install_target"
 
-if printf '%s\n' "${extras[@]}" | grep -qx "transcription"; then
+if [ "$install_transcription" = "y" ] || [ "$install_transcription" = "Y" ]; then
     echo
     echo "Checking torch for Qwen Local transcription..."
     if ! python -c "import torch" 2>/dev/null; then

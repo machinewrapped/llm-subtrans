@@ -25,7 +25,7 @@ _loaded_models : dict[tuple[str, str, int, str], object] = {}
 
 
 if not importlib.util.find_spec("qwen_asr"):
-    logging.debug(_("qwen-asr package is not installed. Qwen Local provider will not be available"))
+    logging.debug(_("qwen-asr package is not installed. Qwen local transcription will not be available"))
 else:
     try:
         import torch

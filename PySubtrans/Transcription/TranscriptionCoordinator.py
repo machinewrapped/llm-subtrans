@@ -49,13 +49,14 @@ class TranscriptionCoordinator:
         })
         self.chunker : AudioChunker = AudioChunker(chunk_settings)
         self.extractor : AudioExtractor = self.chunker.extractor
+
         # Transcribed lines obey the same limits as loaded and translated subtitles
         self.line_builder : TranscriptionLineBuilder = TranscriptionLineBuilder(
             max_line_chars=self.settings.get_int('max_characters') or 120,
             max_line_seconds=self.settings.get_float('max_line_duration') or 4.0,
             min_split_chars=self.settings.get_int('min_split_chars') or 3)
-        self.events : TranscriptionEvents = TranscriptionEvents()
 
+        self.events : TranscriptionEvents = TranscriptionEvents()
         self._active_client : TranscriptionClient|None = None
 
     @property
@@ -101,6 +102,7 @@ class TranscriptionCoordinator:
 
         try:
             client = self._start_client()
+
         except SubtitleError as e:
             return self._failed(e)
 
@@ -117,15 +119,18 @@ class TranscriptionCoordinator:
 
         try:
             self._run_chunks(run, client, media_path, chunks)
+
         except SubtitleError as e:
             # A blocked run with nothing transcribed is a failure; a
             # silence-scan failure mid-run must not discard already
             # transcribed (billed) chunks.
             if run.transcribed == 0:
                 return self._failed(e)
+
             run.had_failures = True
             run.error = e
             logging.error(str(e))
+
         finally:
             chunks.close()
             self._active_client = None
@@ -145,6 +150,7 @@ class TranscriptionCoordinator:
     def Abort(self) -> None:
         """Stop transcription after the current chunk."""
         self.aborted = True
+
         if self._active_client is not None:
             self._active_client.AbortTranscription()
 
@@ -159,6 +165,7 @@ class TranscriptionCoordinator:
         """
         client = self.provider.GetTranscriptionClient(self.settings)
         self._active_client = client
+
         if not client.supports_timestamps:
             self._active_client = None
             raise SubtitleError(_(
@@ -166,6 +173,7 @@ class TranscriptionCoordinator:
                 "timestamps). Transcription without timings has no value "
                 "here, so nothing was requested and no credits were spent."
             ).format(self.provider.name))
+
         return client
 
     def _run_chunks(self, run : TranscriptionRun, client : TranscriptionClient, media_path : str,
@@ -191,6 +199,7 @@ class TranscriptionCoordinator:
                 break
 
             report_progress(done, chunk)
+
             if run.AlreadyDone(chunk):
                 run.chunks_done += 1
                 report_audio(chunk)
@@ -198,11 +207,14 @@ class TranscriptionCoordinator:
 
             try:
                 segment, provider_responded = self._transcribe_chunk(run, client, media_path, chunk)
+
             except SubtitleError as e:
                 if self._handle_chunk_failure(run, chunk, e):
                     break
+
             else:
                 self._accept_chunk(run, segment, provider_responded)
+
             finally:
                 report_audio(chunk)
 
@@ -260,6 +272,7 @@ class TranscriptionCoordinator:
             return self._failed(SubtitleError(_("No timed subtitles could be produced from {}").format(media_path)))
 
         logging.info(_("Transcribed {} lines from {} chunks").format(run.transcribed, run.chunks_done))
+
         if run.total_cost > 0:
             logging.info(_("Transcription cost: ${:.4f}").format(run.total_cost))
 
@@ -280,10 +293,12 @@ class TranscriptionCoordinator:
         """
         if not subtitles.originals:
             return
+
         processor = SubtitleProcessor(SettingsType(options))
         lines = processor.PreprocessSubtitles(subtitles.originals)
         lines = [line for line in processor.PostprocessSubtitles(lines)
                  if line.text and line.text.strip()]
+
         subtitles.originals = lines
 
     def _transcribe_chunk(self, run : TranscriptionRun, client : TranscriptionClient, media_path : str,
@@ -305,7 +320,6 @@ class TranscriptionCoordinator:
             run.total_cost += result.cost
 
         text = (result.text or '').strip()
-
         if not text:
             logging.debug(_("Empty transcription for chunk {}").format(SpanLabel(chunk)))
             return None, True

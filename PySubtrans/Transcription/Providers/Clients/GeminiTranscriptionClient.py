@@ -36,9 +36,6 @@ else:
             Heavy SDK imports stay inside methods so constructing the client
             never touches google-genai.
             """
-
-            # Configuration
-
             def __init__(self, settings : SettingsType):
                 super().__init__(settings)
 
@@ -70,7 +67,6 @@ else:
             def supports_diarization(self) -> bool:
                 """Speaker labels only in verbatim mode with diarization enabled."""
                 return self.diarize
-
 
             # Transcription
 
@@ -108,8 +104,6 @@ else:
                 words = parse_word_annotations(collect_word_annotations(result_interaction))
                 return TranscriptionResult(text=text, language=language, words=words)
 
-
-            # Retry and cleanup
 
             def _create_interaction(self, client : Any, chunk_path : str, language : str|None) -> tuple[Any, Any]:
                 """

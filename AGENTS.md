@@ -38,7 +38,8 @@ Before conducting exploratory searches of the code base, consult `docs/architect
 - **`# type: ignore` is forbidden** unless suppressing a known third-party library gap (e.g. missing stubs). Never use it to paper over a type mismatch in project code — fix the types instead.
   - When assigning a `dict[str, str]` to a `SettingsType` field, wrap it: `SettingsType(my_dict)` — or add a typed property/method to `Options` or the relevant class.
   - `SettingsType` has typed getters (`get_str`, `get_bool`, `get_int`, `get_dict`, etc.) — always prefer these over raw `.get()` when a specific type is expected.
-- **Whitespace**: Use blank lines to group logical operations and enhance readability
+- **Whitespace**: Use blank lines to group logical steps within a function and to set off comments. A dense block with no breaks is harder for a human to scan than one with a few well-placed gaps.
+- **Comments**: Add docstrings to explain the purpose of classes and methods, and targeted comments to explain the "why" behind the code.
 - **Docstrings**: Triple-quoted concise descriptions for classes and methods
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()

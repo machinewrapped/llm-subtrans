@@ -306,7 +306,6 @@ class SettingsDialog(QDialog):
 
         return provider_settings[namespace] # type: ignore[return-value]
 
-
     def _create_section_widget(self, section_name):
         """
         Create the form for a settings tab
@@ -400,7 +399,6 @@ class SettingsDialog(QDialog):
             item = layout.itemAt(row, QFormLayout.ItemRole.FieldRole)
             if item is not None and item.widget() == field:
                 layout.setRowVisible(row, visible)
-
 
     def _initialise_translation_provider(self):
         """
@@ -521,15 +519,19 @@ class SettingsDialog(QDialog):
         """
         if self.loader_thread is not None:
             return
+
         self.loader = TranscriptionProviderLoader()
         self.loader_thread = QThread(self)
         self.loader.moveToThread(self.loader_thread)
+
+        # Wire up the loader signals and tear the thread down once it reports back
         self.loader_thread.started.connect(self.loader.run)
         self.loader.loaded.connect(self._on_transcription_providers_loaded)
         self.loader.failed.connect(self._on_transcription_providers_failed)
         self.loader.loaded.connect(self.loader_thread.quit)
         self.loader.failed.connect(self.loader_thread.quit)
         self.loader_thread.finished.connect(self.loader.deleteLater)
+
         self.loader_thread.start()
 
     @Slot(list)
@@ -537,19 +539,26 @@ class SettingsDialog(QDialog):
         """Populate the transcription tab once module imports complete."""
         self.loader_thread = None
         self.transcription_provider_names = list(names)
+
+        # Replace the placeholder dropdown definition with the loaded provider names
         schema = self.SECTIONS[self.TRANSCRIPTION_SECTION]['transcription_provider']
         _key_type, tooltip, placeholder = ParseOptionDefinition(schema)
         self.SECTIONS[self.TRANSCRIPTION_SECTION]['transcription_provider'] = (
             list(names),
             tooltip,
             placeholder)
+
+        # Keep the saved provider if it is still available, otherwise fall back to the first
         saved = self.settings.get_str('transcription_provider')
         self.settings['transcription_provider'] = saved if saved in names else (names[0] if names else None)
+
         self._initialise_transcription_provider()
+
         section_widget = self._sections.get(self.TRANSCRIPTION_SECTION)
         if section_widget:
             section_layout = section_widget.layout()
             self._populate_form(self.TRANSCRIPTION_SECTION, section_layout)
+
             combo = self.widgets.get('transcription_provider')
             if combo is not None and hasattr(combo, 'SetValue'):
                 combo.SetValue(self.settings.get_str('transcription_provider'))
@@ -558,6 +567,7 @@ class SettingsDialog(QDialog):
     def _on_transcription_providers_failed(self, message : str) -> None:
         """Report provider loading failures instead of stalling silently."""
         self.loader_thread = None
+
         logging.error(_("Unable to load transcription providers: {error}").format(error=message))
 
     @property
@@ -579,11 +589,14 @@ class SettingsDialog(QDialog):
         name = self.settings.get_str('transcription_provider')
         if not name:
             return
+
         try:
             saved = self._get_transcription_provider_settings(name)
             resolved = TranscriptionProvider.ResolveProviderSettings(
                 name, SettingsType(saved), self.settings.get_dict('provider_settings'))
+
             self.transcription_provider = TranscriptionProvider.create_provider(name, resolved)
+
         except Exception as e:
             logging.error(f"Unable to create transcription provider '{name}': {e}")
             self.transcription_provider = None
@@ -610,8 +623,6 @@ class SettingsDialog(QDialog):
         if not self.transcription_provider:
             return
 
-        # layout.addRow(QLabel(_("Provider options")))
-
         try:
             schema = self.transcription_provider.GetOptions(self.transcription_provider.settings)
         except Exception as e:
@@ -635,6 +646,7 @@ class SettingsDialog(QDialog):
         if self.loader_thread is not None and self.loader_thread.isRunning():
             self.loader_thread.quit()
             self.loader_thread.wait(5000)
+
         super().closeEvent(event)
 
     def _on_setting_changed(self, section_name, key, value):

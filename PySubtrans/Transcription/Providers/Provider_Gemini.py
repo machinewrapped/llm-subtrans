@@ -260,5 +260,9 @@ else:
 
                 return True
 
+            def ResolveLanguageCode(self, language : str|None, display_language : str|None = None) -> str|None:
+                """Gemini needs a BCP-47 tag (cmn-Hans-CN, ja-JP), or None to auto-detect."""
+                return map_language_code(language, display_language)
+
     except ImportError as e:
         logging.debug(_("google-genai dependencies missing, Gemini transcription unavailable ({})").format(e))

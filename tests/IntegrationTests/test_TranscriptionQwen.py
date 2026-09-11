@@ -222,23 +222,31 @@ class TestQwenAlignment(LoggedTestCase):
 
     @skip_if_debugger_attached
     def test_unsupported_detected_language_falls_back_to_text(self):
-        """Unsupported forced alignment keeps the detected transcript."""
+        """Unsupported forced alignment tries English before text-only output."""
         client_type = getattr(qwen_module, 'QwenLocalClient', None)
         if client_type is None:
             self.skipTest("qwen-asr not installed")
         client = client_type(SettingsType())
         result = type("Result", (), {"text": "bonjour", "language": "Klingon", "time_stamps": None})()
         model = Mock()
-        model.transcribe.side_effect = [ValueError("Unsupported language: Klingon"), [result]]
+        model.transcribe.side_effect = [
+            ValueError("Unsupported language: Klingon"),
+            ValueError("Unsupported language: English"),
+            [result],
+        ]
         with patch.object(client, '_load_model', return_value=model), \
                 patch.object(client, '_write_chunk', return_value="chunk.wav"), \
                 patch.object(qwen_module.os, 'remove'):
             transcription = client._transcribe_chunk(b"audio", "wav", None)
 
         self.assertLoggedEqual("fallback text", "bonjour", transcription.text)
-        self.assertLoggedEqual("retry count", 2, model.transcribe.call_count)
+        self.assertLoggedEqual("retry count", 3, model.transcribe.call_count)
+        self.assertLoggedEqual("alignment retry language", "English",
+                               model.transcribe.call_args_list[1].kwargs['language'])
+        self.assertLoggedEqual("alignment retry timestamps", True,
+                               model.transcribe.call_args_list[1].kwargs['return_time_stamps'])
         self.assertLoggedEqual("fallback timestamps", False,
-                               model.transcribe.call_args.kwargs['return_time_stamps'])
+                               model.transcribe.call_args_list[2].kwargs['return_time_stamps'])
 
 
 if __name__ == '__main__':

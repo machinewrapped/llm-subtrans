@@ -16,7 +16,6 @@ from PySubtrans.Transcription.Providers.Provider_Gemini import (
     _rate_limit_delay_seconds,
     _retry_hint_seconds,
     collect_word_annotations,
-    map_language_code,
     parse_word_annotations,
 )
 
@@ -42,9 +41,6 @@ else:
 
             def __init__(self, settings : SettingsType):
                 super().__init__(settings)
-                # Resolve the hint once, up front: a bad hint fails before any audio is sent
-                self.language_code : str|None = map_language_code(
-                    self.settings.get_str('language'), self.settings.get_str('ui_language'))
 
             @property
             def api_key(self) -> str|None:
@@ -84,7 +80,7 @@ else:
                 audio_file = None
 
                 try:
-                    result_interaction, audio_file = self._create_interaction(client, chunk_path)
+                    result_interaction, audio_file = self._create_interaction(client, chunk_path, language)
                 except SubtitleError:
                     raise
                 except Exception as e:
@@ -115,7 +111,7 @@ else:
 
             # Retry and cleanup
 
-            def _create_interaction(self, client : Any, chunk_path : str) -> tuple[Any, Any]:
+            def _create_interaction(self, client : Any, chunk_path : str, language : str|None) -> tuple[Any, Any]:
                 """
                 Upload once, then retry transcription on quota responses.
 
@@ -141,7 +137,7 @@ else:
                                     "uri": audio_file.uri,
                                     "mime_type": "audio/wav",
                                 }],
-                                generation_config={"transcription_config": self._transcription_config()},
+                                generation_config={"transcription_config": self._transcription_config(language)},
                             )
                             completed = True
                             return interaction, audio_file
@@ -192,14 +188,15 @@ else:
                 except Exception as e:
                     logging.warning(_("Unable to delete uploaded audio: {}").format(str(e)))
 
-            def _transcription_config(self) -> dict:
+            def _transcription_config(self, language_code : str|None) -> dict:
+                """Request config; language_code is a BCP-47 tag resolved by the provider, or None to auto-detect."""
                 mode : dict = {"type": "verbatim", "timestamp_granularities": ["word"]}
                 if self.diarize:
                     mode["diarization_mode"] = "speaker"
 
                 config : dict = {"mode": mode}
-                if self.language_code:
-                    config["language_codes"] = [self.language_code]
+                if language_code:
+                    config["language_codes"] = [language_code]
 
                 return config
 

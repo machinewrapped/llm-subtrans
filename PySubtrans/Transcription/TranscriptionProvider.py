@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import html
 import logging
 from typing import cast
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 
 
@@ -112,13 +114,15 @@ class TranscriptionProvider:
         """
         self._available_models = []
 
-    def GetInformation(self, ffmpeg_available : bool|None = True, torch_device : str = "Unknown") -> str|None:
+    def GetInformation(self, ffmpeg_available : bool|None = True, torch_device : str = "Unknown",
+                       display_language : str|None = None) -> str|None:
         """
         Returns information about the provider settings.
 
         ffmpeg_available None means the check has not run yet; the guidance
         paragraph shows until a successful run proves ffmpeg valid. torch_device
-        "Unknown" means no Qwen transcription has completed yet.
+        "Unknown" means no Qwen transcription has completed yet. A language
+        hint the provider cannot use adds a warning paragraph.
         """
         parts : list[str] = []
         if ffmpeg_available is not True:
@@ -128,7 +132,21 @@ class TranscriptionProvider:
         info = self._get_provider_information(torch_device)
         if info:
             parts.append(info)
+        warning = self.LanguageWarning(display_language)
+        if warning:
+            parts.append(f"<p><b>{_('Warning')}:</b> {html.escape(warning)}</p>")
         return "\n".join(parts) if parts else None
+
+    def LanguageWarning(self, display_language : str|None = None) -> str|None:
+        """
+        Why the configured language hint cannot be used, or None when it
+        resolves (or is empty, meaning auto-detect).
+        """
+        try:
+            self.ResolveLanguageCode(self.settings.get_str('language'), display_language)
+        except SubtitleError as e:
+            return str(e)
+        return None
 
     def _get_provider_information(self, torch_device : str = "Unknown") -> str|None:
         """
@@ -174,6 +192,15 @@ class TranscriptionProvider:
         Validate the settings for the provider
         """
         return True
+
+    def ResolveLanguageCode(self, language : str|None, display_language : str|None = None) -> str|None:
+        """
+        Turn a user's language hint into whatever the backend expects, or
+        None for auto-detection. Called by the UI/CLI before a run starts
+        so clients only ever receive a valid value. Raises SubtitleError
+        for hints the backend cannot use.
+        """
+        return language.strip() if language and language.strip() else None
 
     def UpdateSettings(self, settings : SettingsType) -> None:
         """

@@ -82,10 +82,15 @@ def main() -> int:
         logging.error(provider.validation_message or "Invalid transcription provider settings")
         return 1
 
+    try:
+        language = provider.ResolveLanguageCode(args.language, Options().ui_language)
+    except SubtitleError as e:
+        logging.error(str(e))
+        return 1
+
     coordinator_settings = SettingsType({
         'audio_track': args.track,
-        'language': args.language,
-        'ui_language': Options().ui_language,
+        'language': language,
         'transcription_align': args.align,
     })
     # Drop unset values so provider recommendations apply

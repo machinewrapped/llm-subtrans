@@ -536,6 +536,27 @@ class TestSettingsNamespaces(LoggedTestCase):
         self.assertLoggedIn("unknown guidance", "ffmpeg", (unknown or "").casefold())
         self.assertLoggedIn("missing guidance", "ffmpeg", (missing or "").casefold())
 
+    def test_language_warning_in_information(self):
+        """A hint the provider rejects surfaces as a warning paragraph; usable hints add nothing."""
+        class PickyProvider(FakeTranscriptionProvider):
+            def ResolveLanguageCode(self, language : str|None, display_language : str|None = None) -> str|None:
+                if language and language.casefold() != 'english':
+                    raise SubtitleError(f"Unrecognised language '{language}'")
+                return 'en' if language else None
+
+        picky = PickyProvider(SettingsType({'api_key': 'k', 'language': 'Klingon'}))
+        self.assertLoggedEqual("warning text", "Unrecognised language 'Klingon'", picky.LanguageWarning())
+        self.assertLoggedIn("warning in information", "Klingon", picky.GetInformation(ffmpeg_available=True) or "")
+
+        fine = PickyProvider(SettingsType({'api_key': 'k', 'language': 'English'}))
+        self.assertLoggedIsNone("no warning", fine.LanguageWarning())
+        self.assertLoggedIsNone("no information", fine.GetInformation(ffmpeg_available=True))
+
+        lenient = FakeTranscriptionProvider(SettingsType({'api_key': 'k', 'language': 'Klingon'}))
+        self.assertLoggedIsNone("default accepts free text", lenient.LanguageWarning())
+        self.assertLoggedEqual("default trims hint", "Klingon", lenient.ResolveLanguageCode("  Klingon "))
+        self.assertLoggedIsNone("default empty hint", lenient.ResolveLanguageCode("  "))
+
     def test_resolve_torch_device_never_imports(self):
         """Device resolution reads an already-imported module only."""
         self.assertLoggedEqual("absent module", "Unknown",

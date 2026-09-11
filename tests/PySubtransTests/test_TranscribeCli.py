@@ -106,6 +106,39 @@ class TestTranscribeCliExecution(LoggedTestCase):
         self.assertLoggedEqual("provider validation called", 1, provider.ValidateSettings.call_count)
         self.assertLoggedEqual("transcription not started", 0, coordinator_factory.call_count)
 
+    def test_unresolvable_language_returns_nonzero_before_transcription(self):
+        """A language hint the provider cannot use stops the run before any audio is extracted."""
+        provider = Mock()
+        provider.ResolveLanguageCode.side_effect = SubtitleError("Unrecognised language 'Klingon'")
+
+        with patch.object(transcribe, 'InitLogger'), \
+                patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=provider), \
+                patch.object(transcribe, 'TranscriptionCoordinator') as coordinator_factory, \
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav', '--language', 'Klingon']):
+            result = transcribe.main()
+
+        self.assertLoggedEqual("unresolvable language status", 1, result)
+        self.assertLoggedEqual("transcription not started", 0, coordinator_factory.call_count)
+
+    def test_resolved_language_passes_to_coordinator(self):
+        """The coordinator receives the provider's resolved code, not the raw hint."""
+        coordinator = Mock()
+        coordinator.CreateTranscription.return_value = TranscriptionOutcome(
+            TranscriptionStatus.COMPLETED, Mock(linecount=1))
+        provider = Mock()
+        provider.ResolveLanguageCode.return_value = "cmn-Hans-CN"
+
+        with patch.object(transcribe, 'InitLogger'), \
+                patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=provider), \
+                patch.object(transcribe, 'TranscriptionCoordinator', return_value=coordinator) as coordinator_factory, \
+                patch.object(transcribe, 'GetOutputPath', return_value='out.vtt'), \
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav', '--language', 'Chinese']):
+            result = transcribe.main()
+
+        self.assertLoggedEqual("exit status", 0, result)
+        settings = coordinator_factory.call_args.args[1]
+        self.assertLoggedEqual("coordinator language", "cmn-Hans-CN", settings.get_str('language'))
+
     def test_plain_output_passes_postprocess_options(self):
         """Postprocessing applies even when no project file is requested."""
         subtitles = Mock(linecount=1)

@@ -1,3 +1,4 @@
+import html
 import logging
 import os
 from collections.abc import Callable
@@ -185,6 +186,12 @@ class TranscriptionDialog(QDialog):
         self.splitter.setStretchFactor(1, 1)
         self.splitter.setSizes([380, 520])
 
+        self.warning_label = QLabel(self)
+        self.warning_label.setWordWrap(True)
+        self.warning_label.setTextFormat(Qt.TextFormat.RichText)
+        self.warning_label.setVisible(False)
+        layout.addWidget(self.warning_label)
+
         self.status_label = QLabel(_("Select a media file to begin."), self)
         layout.addWidget(self.status_label)
 
@@ -329,6 +336,7 @@ class TranscriptionDialog(QDialog):
             self.fields['min_chunk_seconds'].SetValue(self.provider.recommended_min_chunk_seconds)
             self.fields['max_chunk_seconds'].SetValue(self.provider.recommended_max_chunk_seconds)
         self._update_settings_link()
+        self._update_language_warning()
 
     def _update_settings_link(self) -> None:
         """
@@ -340,6 +348,15 @@ class TranscriptionDialog(QDialog):
             return
         self._apply_provider_fields(self.provider)
         self.settings_button.setVisible(not self.provider.ValidateSettings())
+
+    def _update_language_warning(self) -> None:
+        """
+        Warn as soon as the language hint is committed if the provider
+        cannot use it, rather than waiting for the run to be started.
+        """
+        warning = self.provider.LanguageWarning(self.global_options.ui_language) if self.provider else None
+        self.warning_label.setText(f"<b>{_('Warning')}:</b> {html.escape(warning)}" if warning else "")
+        self.warning_label.setVisible(bool(warning))
 
     def _apply_provider_fields(self, provider : TranscriptionProvider) -> None:
         """Copy the per-run provider field values onto the provider settings."""
@@ -398,6 +415,7 @@ class TranscriptionDialog(QDialog):
             self.provider.settings[key] = self.provider_fields[key].GetValue()
             self._rebuild_provider_form()
         self._update_settings_link()
+        self._update_language_warning()
 
     # ---- Media -----------------------------------------------------------
 
@@ -496,14 +514,14 @@ class TranscriptionDialog(QDialog):
         max_chunk_seconds = self.fields['max_chunk_seconds'].GetValue()
         try:
             AudioChunker.ValidateChunkBounds(min_chunk_seconds, max_chunk_seconds)
+            language = provider.ResolveLanguageCode(provider.settings.get_str('language'), self.global_options.ui_language)
         except SubtitleError as e:
             self.status_label.setText(str(e))
             return None
 
         settings = SettingsType({
             'audio_track': self.track_combo.currentData() or 0,
-            'language': provider.settings.get_str('language'),
-            'ui_language': self.global_options.ui_language,
+            'language': language,
             'min_chunk_seconds': min_chunk_seconds,
             'max_chunk_seconds': max_chunk_seconds,
             'transcription_align': True,

@@ -452,7 +452,8 @@ class SettingsDialog(QDialog):
         """
         if section_name == self.TRANSCRIPTION_SECTION and self.transcription_provider:
             provider_info = self.transcription_provider.GetInformation(
-                ffmpeg_available=self.ffmpeg_available, torch_device=self.torch_device)
+                ffmpeg_available=self.ffmpeg_available, torch_device=self.torch_device,
+                display_language=self.settings.get_str('ui_language'))
         elif section_name == self.PROVIDER_SECTION and self.translation_provider:
             provider_info = self.translation_provider.GetInformation()
         else:
@@ -681,7 +682,8 @@ class SettingsDialog(QDialog):
             namespace = self._get_transcription_provider_settings(provider)
             namespace[key] = value
 
-            if self.transcription_provider and key in self.transcription_provider.refresh_when_changed:
+            # The language hint is validated in the provider information, so it refreshes like a key change
+            if self.transcription_provider and (key == 'language' or key in self.transcription_provider.refresh_when_changed):
                 self._refresh_transcription_provider_options()
 
         else:

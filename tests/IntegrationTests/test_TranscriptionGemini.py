@@ -85,13 +85,14 @@ class TestGeminiProvider(LoggedTestCase):
         """Verbatim requests word timings, diarization and language codes."""
         assert GeminiTranscriptionProvider is not None  # Type narrowing for PyLance
         provider = GeminiTranscriptionProvider(SettingsType({'api_key': 'k'}))
-        client = provider.GetTranscriptionClient(SettingsType({'language': 'Chinese'}))
+        client = provider.GetTranscriptionClient(SettingsType())
 
         self.assertLoggedEqual("verbatim config", {"type": "verbatim", "timestamp_granularities": ["word"],
                                                    "diarization_mode": "speaker"},
-                               client._transcription_config()["mode"])
+                               client._transcription_config("cmn-Hans-CN")["mode"])
         self.assertLoggedEqual("verbatim language", ["cmn-Hans-CN"],
-                               client._transcription_config().get("language_codes"))
+                               client._transcription_config("cmn-Hans-CN").get("language_codes"))
+        self.assertLoggedNotIn("auto-detect omits language_codes", "language_codes", client._transcription_config(None))
         self.assertLoggedEqual("diarization advertised", True, client.supports_diarization)
         self.assertLoggedEqual("timestamps advertised", True, client.supports_timestamps)
 
@@ -283,21 +284,25 @@ class TestGeminiParsing(LoggedTestCase):
         self.assertLoggedEqual("garbage", None, parse_offset("soon"))
 
     @skip_if_debugger_attached
-    def test_language_resolved_when_client_created(self):
-        """The hint is resolved once up front: no hint auto-detects, a bad hint fails before any request."""
+    def test_provider_resolves_language_code(self):
+        """The provider turns hints into BCP-47 up front; empty auto-detects, unknown hints are rejected."""
         assert GeminiTranscriptionProvider is not None  # Type narrowing for PyLance
         provider = GeminiTranscriptionProvider(SettingsType({'api_key': 'k'}))
 
-        client = provider.GetTranscriptionClient(SettingsType())
-        self.assertLoggedIsNone("no hint", client.language_code)
-        self.assertLoggedNotIn("no language_codes", "language_codes", client._transcription_config())
-
-        client = provider.GetTranscriptionClient(SettingsType({'language': 'chino', 'ui_language': 'es'}))
-        self.assertLoggedEqual("hint in ui language", "cmn-Hans-CN", client.language_code)
+        self.assertLoggedIsNone("no hint", provider.ResolveLanguageCode(None))
+        self.assertLoggedIsNone("blank hint", provider.ResolveLanguageCode("  "))
+        self.assertLoggedEqual("english name", "cmn-Hans-CN", provider.ResolveLanguageCode("Chinese"))
+        self.assertLoggedEqual("hint in ui language", "cmn-Hans-CN", provider.ResolveLanguageCode("chino", "es"))
 
         with self.assertRaises(SubtitleError) as context:
-            provider.GetTranscriptionClient(SettingsType({'language': 'Klingon'}))
+            provider.ResolveLanguageCode("Klingon")
         log_input_expected_error("Klingon", SubtitleError, context.exception)
+
+        provider.settings['language'] = 'Klingon'
+        self.assertLoggedIn("warning in information", "Klingon", provider.GetInformation() or "")
+        provider.settings['language'] = 'chino'
+        self.assertLoggedIsNone("no warning with ui language", provider.LanguageWarning("es"))
+        self.assertLoggedIsNotNone("warning without ui language", provider.LanguageWarning())
 
     @skip_if_debugger_attached
     def test_language_mapping(self):
@@ -343,7 +348,7 @@ class TestGeminiUploadCleanup(LoggedTestCase):
         backend.interactions.create.side_effect = ValueError("generation failed")
 
         with self.assertRaises(ValueError):
-            client._create_interaction(backend, "chunk.wav")
+            client._create_interaction(backend, "chunk.wav", "en")
 
         backend.files.delete.assert_called_once_with(name="uploaded-file")
 
@@ -358,7 +363,7 @@ class TestGeminiUploadCleanup(LoggedTestCase):
         backend.interactions.create.side_effect = _QuotaError("quota exceeded")
 
         with self.assertRaises(SubtitleError):
-            client._create_interaction(backend, "chunk.wav")
+            client._create_interaction(backend, "chunk.wav", "en")
 
         backend.files.delete.assert_called_once_with(name="uploaded-file")
 
@@ -377,7 +382,7 @@ class TestGeminiUploadCleanup(LoggedTestCase):
 
         with patch.object(client, '_sleep_abortable', side_effect=SubtitleError("Transcription aborted")) as sleep:
             with self.assertRaises(SubtitleError):
-                client._create_interaction(backend, "chunk.wav")
+                client._create_interaction(backend, "chunk.wav", "en")
 
         sleep.assert_called_once()
         backend.files.delete.assert_called_once_with(name="uploaded-file")

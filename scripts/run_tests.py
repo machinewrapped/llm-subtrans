@@ -264,6 +264,61 @@ def run_unit_tests(results_path: str) -> bool:
     return overall_success
 
 
+def run_integration_tests(results_path: str) -> bool:
+    """Run the integration test suite in a separate Python process.
+
+    Integration tests must run outside this process because the unit-test
+    runner installs an import guard that rejects concrete provider imports.
+    """
+    log_file = create_logfile(results_path, "integration_tests_runner.log")
+
+    start_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
+    logging.info(separator)
+    logging.info("Running integration tests at " + start_stamp)
+    logging.info(separator)
+
+    integration_script = os.path.join(base_path, "tests", "integration_tests.py")
+
+    try:
+        result = subprocess.run(
+            [sys.executable, integration_script],
+            cwd=base_path,
+            check=False
+        )
+    except (OSError, subprocess.SubprocessError) as error:
+        logging.error(f"Failed to start integration tests: {error}")
+        result = None
+
+    integration_failed = result is None or result.returncode != 0
+
+    global total_run, total_failures
+    total_run += 1
+    if integration_failed:
+        total_failures += 1
+
+    summary_lines.append(
+        format_summary_line(
+            'Integration',
+            1,
+            1 if integration_failed else 0,
+            0,
+            0,
+            not integration_failed
+        )
+    )
+
+    end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
+    logging.info(separator)
+    if integration_failed:
+        logging.error("Completed integration tests with failures at " + end_stamp)
+    else:
+        logging.info("Completed integration tests successfully at " + end_stamp)
+    logging.info(separator)
+
+    end_logfile(log_file)
+    return not integration_failed
+
+
 def run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=None):
     """
     Scans the given directory for .py files, imports them, and runs the run_tests function if it exists.
@@ -335,7 +390,12 @@ if __name__ == "__main__":
     if overall_success:
         overall_success = run_unit_tests(results_directory)
 
-    # Only run functional tests if unit tests passed
+    # Only run integration tests if unit tests passed. The integration suite
+    # runs in its own process so provider imports cannot leak into unit tests.
+    if overall_success:
+        overall_success = run_integration_tests(results_directory)
+
+    # Only run functional tests if the preceding suites passed
     if overall_success:
         func_run, func_failed = run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=test_name)
         overall_success = (func_failed == 0)

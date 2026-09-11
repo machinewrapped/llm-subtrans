@@ -52,7 +52,7 @@ Consult `docs/architecture.md` for detailed information on the project structure
 - Run GUI: `python scripts/gui-subtrans.py [--firstrun] [file.srt]`
 - Build distro: `scripts/makedistro.bat` (Windows) or `scripts/makedistro.sh` (Unix)
 - Install deps: `install.bat` (Windows) or `./install.sh`
-- Tests (if present): `python scripts/run_tests.py` or `python -m unittest ...`
+- Tests: `python scripts/run_tests.py` or `python -m unittest ...`
 
 ## Patterns to follow
 - GUI strings: use `_()`; for contextual disambiguation, use `tr(context, text)`.

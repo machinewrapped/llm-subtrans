@@ -5,7 +5,7 @@ from typing import Any
 import httpx
 
 from PySubtrans.Helpers import FormatMessages
-from PySubtrans.Helpers.Parse import ParseErrorMessageFromText
+from PySubtrans.Helpers.Parse import ParseErrorMessageFromText, TryParseNonNegative
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import SettingsType
 from PySubtrans.SubtitleError import ClientResponseError, ServerResponseError, TranslationImpossibleError, TranslationResponseError
@@ -324,6 +324,8 @@ class CustomClient(TranslationClient):
 
     def _process_streaming_chunk(self, request: TranslationRequest, chunk_data: dict[str, Any], accumulated_response: dict[str, Any]) -> None:
         """Process a single streaming chunk and update accumulated response"""
+        self._update_usage(accumulated_response, chunk_data.get('usage'))
+
         # Extract delta content
         choices = chunk_data.get('choices', [])
         if not choices:
@@ -354,15 +356,6 @@ class CustomClient(TranslationClient):
         if 'model' in chunk_data:
             accumulated_response['model'] = chunk_data['model']
 
-        if 'usage' in chunk_data:
-            usage = chunk_data['usage']
-            if isinstance(usage, dict):
-                accumulated_response['prompt_tokens'] = usage.get('prompt_tokens')
-                accumulated_response['output_tokens'] = usage.get('completion_tokens')
-                accumulated_response['total_tokens'] = usage.get('total_tokens')
-                if 'reasoning_tokens' in usage:
-                    accumulated_response['reasoning_tokens'] = usage.get('reasoning_tokens')
-
         # Handle completion
         finish_reason = choice.get('finish_reason')
         if finish_reason:
@@ -376,12 +369,7 @@ class CustomClient(TranslationClient):
         response['model'] = content.get('model')
         response['response_time'] = content.get('response_ms', 0)
 
-        usage = content.get('usage', {})
-        response['prompt_tokens'] = usage.get('prompt_tokens')
-        response['output_tokens'] = usage.get('completion_tokens')
-        response['total_tokens'] = usage.get('total_tokens')
-        if 'reasoning_tokens' in usage:
-            response['reasoning_tokens'] = usage.get('reasoning_tokens')
+        self._update_usage(response, content.get('usage'))
 
         choices = content.get('choices')
         if not choices:
@@ -409,6 +397,21 @@ class CustomClient(TranslationClient):
             raise TranslationResponseError(_("No text returned in the response"), response=result)
 
         return response
+
+    def _update_usage(self, response: dict[str, Any], usage: Any) -> None:
+        """Copy provider usage fields, including OpenRouter's reported cost."""
+        if not isinstance(usage, dict):
+            return
+
+        response['prompt_tokens'] = usage.get('prompt_tokens')
+        response['output_tokens'] = usage.get('completion_tokens')
+        response['total_tokens'] = usage.get('total_tokens')
+        if 'reasoning_tokens' in usage:
+            response['reasoning_tokens'] = usage.get('reasoning_tokens')
+
+        cost = TryParseNonNegative(usage.get('cost'))
+        if cost is not None:
+            response['cost'] = cost
 
     def _generate_request_body(self, request: TranslationRequest, temperature: float|None) -> dict[str, Any]:
         request_body = {

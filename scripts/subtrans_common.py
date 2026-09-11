@@ -8,7 +8,7 @@ from dataclasses import dataclass, field
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames, TryParseNonNegative
 from PySubtrans import SaveSettings, batch_subtitles, init_options, init_translator, preprocess_subtitles
 from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir
 from PySubtrans.Options import Options
@@ -42,11 +42,19 @@ class TokenUsage():
     """Accumulated token usage across all translated batches."""
     prompt_tokens: int = field(default=0)
     output_tokens: int = field(default=0)
+    cost: float|None = field(default=None)
 
     def Add(self, content : dict) -> None:
         """Add token counts from a translation response content dict."""
         self.prompt_tokens += content.get('prompt_tokens') or 0
         self.output_tokens += content.get('output_tokens') or 0
+
+        reported_cost = content.get('cost')
+        if isinstance(reported_cost, str):
+            reported_cost = reported_cost.removeprefix('$').strip()
+        parsed_cost = TryParseNonNegative(reported_cost)
+        if parsed_cost is not None:
+            self.cost = (self.cost or 0.0) + parsed_cost
 
     @property
     def has_data(self) -> bool:
@@ -112,7 +120,9 @@ class TranslationProgressLogger():
             if batch.translation:
                 self.token_usage.Add(batch.translation.content)
 
-        logging.info("Translated batch %s: %s%s", label, progress, token_info)
+        cost_info = f" [${batch.translation.cost:.4f}]" if batch.translation and batch.translation.cost is not None else ""
+
+        logging.info("Translated batch %s: %s%s%s", label, progress, token_info, cost_info)
 
 def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
     """ Initialise the logger with a file handler and return the path to the log file """
@@ -397,6 +407,9 @@ def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_
 
     if token_usage and token_usage.has_data:
         logging.info(f"Token usage: {token_usage.prompt_tokens} in / {token_usage.output_tokens} out ({token_usage.total_tokens} total)")
+
+    if token_usage and token_usage.cost is not None:
+        logging.info(f"Translation cost: ${token_usage.cost:.4f}")
 
 def _save_terminology_file(path : str, terminology_map : dict[str, str]) -> None:
     """Write terminology map to a key::value text file."""

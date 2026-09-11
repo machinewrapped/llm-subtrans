@@ -148,6 +148,7 @@ def _object_hook(dct):
                 'accepted_prediction_tokens' : dct.get('accepted_prediction_tokens'),
                 'rejected_prediction_tokens' : dct.get('rejected_prediction_tokens'),
                 'total_tokens' : dct.get('total_tokens'),
+                'cost' : dct.get('cost'),
                 'summary': dct.get('summary'),
                 'scene': dct.get('scene'),
                 'synopsis': dct.get('synopsis'),

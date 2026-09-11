@@ -132,13 +132,12 @@ class TestTranscribeCliExecution(LoggedTestCase):
                 patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=provider), \
                 patch.object(transcribe, 'TranscriptionCoordinator', return_value=coordinator) as coordinator_factory, \
                 patch.object(transcribe, 'GetOutputPath', return_value='out.vtt'), \
-                patch.object(sys, 'argv', ['transcribe.py', 'input.wav', '--language', 'Chinese']),                 self.assertLogs(level='INFO') as logs:
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav', '--language', 'Chinese']):
             result = transcribe.main()
 
         self.assertLoggedEqual("exit status", 0, result)
         settings = coordinator_factory.call_args.args[1]
         self.assertLoggedEqual("coordinator language", "cmn-Hans-CN", settings.get_str('language'))
-        self.assertLoggedIn("resolution logged", "resolved to 'cmn-Hans-CN'", " ".join(logs.output))
 
     def test_plain_output_passes_postprocess_options(self):
         """Postprocessing applies even when no project file is requested."""

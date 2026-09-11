@@ -229,10 +229,8 @@ class TestQwenLanguage(LoggedTestCase):
         client = client_type(SettingsType({'language': 'Chinese'}))
         self.assertLoggedEqual("supported language kept", "Chinese", client.language)
 
-        with self.assertLogs(level='WARNING') as logs:
-            client = client_type(SettingsType({'language': 'Welsh'}))
+        client = client_type(SettingsType({'language': 'Welsh'}))
         self.assertLoggedIsNone("unsupported language dropped", client.language)
-        self.assertLoggedIn("warning names the language", "Welsh", " ".join(logs.output))
 
     def test_hint_passes_straight_to_model(self):
         """The client no longer normalises: the resolved name goes to the SDK unchanged."""

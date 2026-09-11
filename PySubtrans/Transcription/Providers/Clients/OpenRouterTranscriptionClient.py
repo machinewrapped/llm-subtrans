@@ -57,11 +57,11 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
         """Speaker labels when diarization is requested on a mapped model."""
         return self.diarize
 
-    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
+    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
         # Timings are required for subtitle input, so don't fall back to plain text.
         # Retrying would also issue and bill a second provider request.
         try:
-            return self._request_verbose(audio_bytes, language)
+            return self._request_verbose(audio_bytes)
         except _StructuredOutputUnsupported as e:
             detail = str(e)[:200] if str(e) else ""
 
@@ -71,14 +71,14 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
                 "support instead of spending credits on untimed text."
             ).format(self.model, f": {detail}" if detail else ""))
 
-    def _request_verbose(self, audio_bytes : bytes, language : str|None) -> TranscriptionResult:
+    def _request_verbose(self, audio_bytes : bytes) -> TranscriptionResult:
         # Empty text is an expected outcome (music, silence, noise), not an
         # error: return it and let the coordinator skip the chunk quietly.
-        payload = self._post(audio_bytes, language)
+        payload = self._post(audio_bytes)
 
         text, detected, parts, words = parse_transcription_payload(payload)
 
-        result = TranscriptionResult(text=text, language=detected or language, parts=parts, words=words)
+        result = TranscriptionResult(text=text, language=detected or self.language, parts=parts, words=words)
         return self._attach_usage(result, payload)
 
     def _attach_usage(self, result : TranscriptionResult, payload : dict) -> TranscriptionResult:
@@ -98,7 +98,7 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
 
         return result
 
-    def _post(self, audio_bytes : bytes, language : str|None) -> dict:
+    def _post(self, audio_bytes : bytes) -> dict:
         url = f"{self.server_address}/audio/transcriptions"
         headers = {'Authorization': f"Bearer {self.api_key}"} if self.api_key else {}
         body : dict = {
@@ -108,8 +108,8 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
             'timestamp_granularities': ['word'],
         }
 
-        if language:
-            body['language'] = language
+        if self.language:
+            body['language'] = self.language
 
         options = self._diarize_options()
         if options:

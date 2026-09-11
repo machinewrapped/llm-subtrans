@@ -68,7 +68,12 @@ else:
                 if language and language not in _QWEN_SUPPORTED_LANGUAGES:
                     logging.warning(_("Language '{}' is not in qwen-asr's supported list, using auto-detection").format(language))
                     language = None
-                self.language : str|None = language
+                self._language : str|None = language
+
+            @property
+            def language(self) -> str|None:
+                """Hint validated against qwen-asr's supported list at construction, or None to auto-detect."""
+                return self._language
 
             @property
             def supports_timestamps(self) -> bool:
@@ -142,7 +147,7 @@ else:
 
             # Transcription
 
-            def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
+            def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
                 model = self._load_model()
                 # The budget is read at generation time, so a changed setting applies to a reused model
                 model.max_new_tokens = self.max_new_tokens
@@ -194,10 +199,10 @@ else:
 
                 if not results:
                     # Empty results (silence, music) are expected, not errors
-                    return TranscriptionResult(text="", language=language)
+                    return TranscriptionResult(text="", language=self.language)
 
                 text, detected, words = parse_qwen_result(results[0])
-                return TranscriptionResult(text=text, language=detected or language, words=words)
+                return TranscriptionResult(text=text, language=detected or self.language, words=words)
 
             def _load_model(self) -> Any:
                 global _loaded_key, _loaded_model

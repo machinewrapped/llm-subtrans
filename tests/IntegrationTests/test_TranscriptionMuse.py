@@ -164,7 +164,7 @@ class TestMuseTranscription(LoggedTestCase):
     def test_diarize_request_fields(self):
         """Diarize posts DIARIZATION mode with a JSON request part."""
         provider = self._provider(diarize=True)
-        client = provider.GetTranscriptionClient(SettingsType())
+        client = provider.GetTranscriptionClient(SettingsType({'language': 'en'}))
 
         with patch('httpx.Client') as mock_client:
             post = mock_client.return_value.__enter__.return_value.post
@@ -174,7 +174,7 @@ class TestMuseTranscription(LoggedTestCase):
             mock_response.text = ('{"transcript": "hi", "audioDurationMs": 2000, "turns": ['
                                   '{"speaker": "A", "transcript": "hi", "startMs": 0}]}')
             post.return_value = mock_response
-            result = client.TranscribeChunk(b"fake-audio", "wav", "en")
+            result = client.TranscribeChunk(b"fake-audio", "wav")
 
         sent = post.call_args.kwargs['files']
         request = json.loads(sent['request'][1])
@@ -187,7 +187,7 @@ class TestMuseTranscription(LoggedTestCase):
     def test_plain_request_fields(self):
         """DIARIZATION is always requested; speakers stripped unless opted in."""
         provider = self._provider(diarize=False)
-        client = provider.GetTranscriptionClient(SettingsType())
+        client = provider.GetTranscriptionClient(SettingsType({'language': ''}))
 
         with patch('httpx.Client') as mock_client:
             post = mock_client.return_value.__enter__.return_value.post
@@ -197,7 +197,7 @@ class TestMuseTranscription(LoggedTestCase):
             mock_response.text = ('{"transcript": "hi", "audioDurationMs": 2000, "turns": ['
                                   '{"speaker": "A", "transcript": "hi", "startMs": 0, "endMs": 1000}]}')
             post.return_value = mock_response
-            result = client.TranscribeChunk(b"fake-audio", "wav", None)
+            result = client.TranscribeChunk(b"fake-audio", "wav")
 
         sent = post.call_args.kwargs['files']
         request = json.loads(sent['request'][1])
@@ -217,7 +217,7 @@ class TestMuseTranscription(LoggedTestCase):
             mock_response.status_code = 401
             mock_response.text = '{"error": "unauthorized"}'
             with self.assertRaisesRegex(SubtitleError, "credential was not accepted"):
-                client.TranscribeChunk(b"fake-audio", "wav", "en")
+                client.TranscribeChunk(b"fake-audio", "wav")
 
     def test_validation_requires_key(self):
         """Missing API keys fail validation with a message."""

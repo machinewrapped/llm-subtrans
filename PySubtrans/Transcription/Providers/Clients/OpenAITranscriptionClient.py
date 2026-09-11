@@ -50,17 +50,17 @@ class OpenAITranscriptionClient(TranscriptionClient):
         """Speaker labels only from the diarize model."""
         return self.model.strip().casefold() == 'gpt-4o-transcribe-diarize'
 
-    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
+    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
         if self.supports_diarization:
-            return self._request_diarized(audio_bytes, language)
-        return self._request_verbose(audio_bytes, language)
+            return self._request_diarized(audio_bytes)
+        return self._request_verbose(audio_bytes)
 
-    def _request_verbose(self, audio_bytes : bytes, language : str|None) -> TranscriptionResult:
+    def _request_verbose(self, audio_bytes : bytes) -> TranscriptionResult:
         payload = self._post({
             'model': (None, self.model),
             'response_format': (None, 'verbose_json'),
             'timestamp_granularities[]': (None, 'word'),
-            **self._language_fields(language),
+            **self._language_fields(),
             'file': ('chunk.wav', audio_bytes, 'audio/wav'),
         })
 
@@ -69,15 +69,15 @@ class OpenAITranscriptionClient(TranscriptionClient):
         if not text:
             raise SubtitleError(_("Transcription returned no text"))
 
-        result = TranscriptionResult(text=text, language=detected or language, words=words)
+        result = TranscriptionResult(text=text, language=detected or self.language, words=words)
         return self._attach_usage(result, payload)
 
-    def _request_diarized(self, audio_bytes : bytes, language : str|None) -> TranscriptionResult:
+    def _request_diarized(self, audio_bytes : bytes) -> TranscriptionResult:
         payload = self._post({
             'model': (None, self.model),
             'response_format': (None, 'diarized_json'),
             'chunking_strategy': (None, 'auto'),
-            **self._language_fields(language),
+            **self._language_fields(),
             'file': ('chunk.wav', audio_bytes, 'audio/wav'),
         })
 
@@ -86,13 +86,13 @@ class OpenAITranscriptionClient(TranscriptionClient):
         if not text:
             raise SubtitleError(_("Transcription returned no text"))
 
-        result = TranscriptionResult(text=text, language=language, parts=parts)
+        result = TranscriptionResult(text=text, language=self.language, parts=parts)
         return self._attach_usage(result, payload)
 
-    def _language_fields(self, language : str|None) -> dict:
-        if not language:
+    def _language_fields(self) -> dict:
+        if not self.language:
             return {}
-        return {'language': (None, language)}
+        return {'language': (None, self.language)}
 
     def _attach_usage(self, result : TranscriptionResult, payload : dict) -> TranscriptionResult:
         """

@@ -48,10 +48,10 @@ class FakeTranscriptionClient(TranscriptionClient):
         """Test-controlled capability flag."""
         return self.timed
 
-    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
+    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
         self.calls += 1
         text = self.texts[(self.calls - 1) % len(self.texts)] if self.texts else ""
-        return TranscriptionResult(text=text, language=language, words=list(self.words))
+        return TranscriptionResult(text=text, language=self.language, words=list(self.words))
 
 class FailingTranscriptionClient(FakeTranscriptionClient):
     """Fake client with scripted backend failures for abort testing."""
@@ -59,11 +59,11 @@ class FailingTranscriptionClient(FakeTranscriptionClient):
         super().__init__(*args, **kwargs)
         self.fail_on : set[int] = set(fail_on or [])
 
-    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
+    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
         if self.calls + 1 in self.fail_on:
             self.calls += 1
             raise SubtitleError("simulated backend failure")
-        return super()._transcribe_chunk(audio_bytes, audio_format, language)
+        return super()._transcribe_chunk(audio_bytes, audio_format)
 
 
 
@@ -1065,7 +1065,7 @@ class TestTranscriptionRateLimit(LoggedTestCase):
         client = FakeTranscriptionClient()
 
         with patch("time.sleep") as mock_sleep:
-            result = client.TranscribeChunk(b"fake-audio", "wav", "en")
+            result = client.TranscribeChunk(b"fake-audio", "wav")
 
         self.assertLoggedEqual("transcript", "hello world", result.text)
         self.assertLoggedEqual("no pacing", 0, mock_sleep.call_count)
@@ -1077,7 +1077,7 @@ class TestTranscriptionRateLimit(LoggedTestCase):
         clock = FakeClock()
         with patch("time.monotonic", side_effect=clock.Monotonic), \
              patch("time.sleep", side_effect=clock.Sleep) as mock_sleep:
-            result = client.TranscribeChunk(b"fake-audio", "wav", "en")
+            result = client.TranscribeChunk(b"fake-audio", "wav")
 
         total_slept = sum(call.args[0] for call in mock_sleep.call_args_list)
         self.assertLoggedEqual("transcript", "hello world", result.text)
@@ -1088,7 +1088,7 @@ class TestTranscriptionRateLimit(LoggedTestCase):
         client = FakeTranscriptionClient(SettingsType({'rate_limit': 0.0}))
 
         with patch("time.sleep") as mock_sleep:
-            client.TranscribeChunk(b"fake-audio", "wav", "en")
+            client.TranscribeChunk(b"fake-audio", "wav")
 
         self.assertLoggedEqual("no pacing", 0, mock_sleep.call_count)
 

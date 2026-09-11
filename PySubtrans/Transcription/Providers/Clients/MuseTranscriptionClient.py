@@ -102,18 +102,18 @@ class MuseTranscriptionClient(TranscriptionClient):
         """Speaker labels are kept only when diarization is opted into."""
         return self.diarize
 
-    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
-        payload = self._post(audio_bytes, language)
+    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
+        payload = self._post(audio_bytes)
 
         text, parts = parse_muse_payload(payload, include_speakers=self.diarize)
 
         if not text and not parts:
             raise SubtitleError(_("Transcription returned no text"))
 
-        result = TranscriptionResult(text=text, language=language, parts=parts)
+        result = TranscriptionResult(text=text, language=self.language, parts=parts)
         return self._attach_usage(result, payload)
 
-    def _request_config(self, language : str|None) -> dict:
+    def _request_config(self) -> dict:
         """
         Request JSON part: DIARIZATION always, since PUSH_TO_TALK returns
         flat text with no turn timings to build subtitles from.
@@ -123,8 +123,8 @@ class MuseTranscriptionClient(TranscriptionClient):
             'model': self.model,
             'audioEncoding': 'WAV',
         }
-        if language:
-            config['languageBias'] = [language]
+        if self.language:
+            config['languageBias'] = [self.language]
 
         return config
 
@@ -138,11 +138,11 @@ class MuseTranscriptionClient(TranscriptionClient):
 
         return result
 
-    def _post(self, audio_bytes : bytes, language : str|None) -> dict:
+    def _post(self, audio_bytes : bytes) -> dict:
         url = f"{self.server_address}/asr/transcribe"
         headers = {'Authorization': f"Bearer {self.api_key}"} if self.api_key else {}
         fields = {
-            'request': (None, json.dumps(self._request_config(language)), 'application/json'),
+            'request': (None, json.dumps(self._request_config()), 'application/json'),
             'audio': ('chunk.wav', audio_bytes, 'audio/wav'),
         }
 

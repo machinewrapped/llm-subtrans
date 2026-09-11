@@ -45,7 +45,12 @@ class TranscriptionClient:
         """Maximum backend requests per minute (None or 0 for unlimited)."""
         return self.settings.get_float('rate_limit')
 
-    def TranscribeChunk(self, audio_bytes : bytes, audio_format : str, language : str|None = None) -> TranscriptionResult:
+    @property
+    def language(self) -> str|None:
+        """Spoken language hint resolved by the provider, or None to auto-detect."""
+        return self.settings.get_str('language') or None
+
+    def TranscribeChunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
         """
         Transcribe a single audio chunk and return its text.
         """
@@ -56,7 +61,7 @@ class TranscriptionClient:
             raise SubtitleError(_("No audio data provided for transcription"))
 
         start_time = time.monotonic()
-        result = self._transcribe_chunk(audio_bytes, audio_format, language)
+        result = self._transcribe_chunk(audio_bytes, audio_format)
 
         # If a rate limit is applied ensure a minimum duration for each request
         rate_limit = self.rate_limit
@@ -75,9 +80,9 @@ class TranscriptionClient:
         self.aborted = True
         self._abort()
 
-    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
+    def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
         """
-        Make the backend request. Must be implemented by subclasses.
+        Make the backend request using self.language as the hint. Must be implemented by subclasses.
         """
         raise NotImplementedError
 

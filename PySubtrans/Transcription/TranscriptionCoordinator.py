@@ -314,7 +314,7 @@ class TranscriptionCoordinator:
             logging.debug(_("Skipping silent chunk {} before requesting").format(SpanLabel(chunk)))
             return None, False
 
-        result = client.TranscribeChunk(audio_bytes, 'wav', self.language)
+        result = client.TranscribeChunk(audio_bytes, 'wav')
 
         if result.cost:
             run.total_cost += result.cost

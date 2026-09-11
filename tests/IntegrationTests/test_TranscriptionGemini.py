@@ -85,14 +85,15 @@ class TestGeminiProvider(LoggedTestCase):
         """Verbatim requests word timings, diarization and language codes."""
         assert GeminiTranscriptionProvider is not None  # Type narrowing for PyLance
         provider = GeminiTranscriptionProvider(SettingsType({'api_key': 'k'}))
-        client = provider.GetTranscriptionClient(SettingsType())
+        client = provider.GetTranscriptionClient(SettingsType({'language': 'cmn-Hans-CN'}))
+        auto_client = provider.GetTranscriptionClient(SettingsType({'language': ''}))
 
         self.assertLoggedEqual("verbatim config", {"type": "verbatim", "timestamp_granularities": ["word"],
                                                    "diarization_mode": "speaker"},
-                               client._transcription_config("cmn-Hans-CN")["mode"])
+                               client._transcription_config()["mode"])
         self.assertLoggedEqual("verbatim language", ["cmn-Hans-CN"],
-                               client._transcription_config("cmn-Hans-CN").get("language_codes"))
-        self.assertLoggedNotIn("auto-detect omits language_codes", "language_codes", client._transcription_config(None))
+                               client._transcription_config().get("language_codes"))
+        self.assertLoggedNotIn("auto-detect omits language_codes", "language_codes", auto_client._transcription_config())
         self.assertLoggedEqual("diarization advertised", True, client.supports_diarization)
         self.assertLoggedEqual("timestamps advertised", True, client.supports_timestamps)
 
@@ -190,7 +191,7 @@ class TestGeminiChunkRetry(LoggedTestCase):
         client = self._client(max_retries=2)
         mock_client = self._backend([_QuotaError("Please retry in 0.01s."), self._ok_interaction()])
 
-        result = client._transcribe_chunk(b"fake-audio", "wav", "en")
+        result = client._transcribe_chunk(b"fake-audio", "wav")
 
         self.assertLoggedEqual("transcript", "hello", result.text)
         self.assertLoggedEqual("single upload", 1, mock_client.files.upload.call_count)
@@ -204,7 +205,7 @@ class TestGeminiChunkRetry(LoggedTestCase):
 
         with patch("time.sleep") as mock_sleep:
             with self.assertRaises(SubtitleError) as raised:
-                client._transcribe_chunk(b"fake-audio", "wav", "en")
+                client._transcribe_chunk(b"fake-audio", "wav")
 
         # Note: str() prefers the wrapped error, the message carries ours
         self.assertLoggedIn("quota message", "quota exceeded, retry in about 11 hours",
@@ -218,7 +219,7 @@ class TestGeminiChunkRetry(LoggedTestCase):
         self._backend([_QuotaError("Please retry in 0.01s."), _QuotaError("Please retry in 0.01s.")])
 
         with self.assertRaises(SubtitleError) as raised:
-            client._transcribe_chunk(b"fake-audio", "wav", "en")
+            client._transcribe_chunk(b"fake-audio", "wav")
 
         # Note: str() prefers the wrapped error, the message carries ours
         self.assertLoggedIn("rate limit message", "rate limit still exceeded", raised.exception.message)
@@ -229,7 +230,7 @@ class TestGeminiChunkRetry(LoggedTestCase):
         mock_client = self._backend([ValueError("boom")])
 
         with self.assertRaises(SubtitleError) as raised:
-            client._transcribe_chunk(b"fake-audio", "wav", "en")
+            client._transcribe_chunk(b"fake-audio", "wav")
 
         self.assertLoggedIn("failure message", "Gemini transcription failed", raised.exception.message)
         self.assertLoggedEqual("single attempt", 1, mock_client.interactions.create.call_count)
@@ -245,7 +246,7 @@ class TestGeminiChunkRetry(LoggedTestCase):
         mock_client = self._backend(abort_then_fail)
 
         with self.assertRaises(SubtitleError) as raised:
-            client._transcribe_chunk(b"fake-audio", "wav", "en")
+            client._transcribe_chunk(b"fake-audio", "wav")
 
         self.assertLoggedIn("abort message", "borted", raised.exception.message)
         self.assertLoggedEqual("single attempt", 1, mock_client.interactions.create.call_count)
@@ -348,7 +349,7 @@ class TestGeminiUploadCleanup(LoggedTestCase):
         backend.interactions.create.side_effect = ValueError("generation failed")
 
         with self.assertRaises(ValueError):
-            client._create_interaction(backend, "chunk.wav", "en")
+            client._create_interaction(backend, "chunk.wav")
 
         backend.files.delete.assert_called_once_with(name="uploaded-file")
 
@@ -363,7 +364,7 @@ class TestGeminiUploadCleanup(LoggedTestCase):
         backend.interactions.create.side_effect = _QuotaError("quota exceeded")
 
         with self.assertRaises(SubtitleError):
-            client._create_interaction(backend, "chunk.wav", "en")
+            client._create_interaction(backend, "chunk.wav")
 
         backend.files.delete.assert_called_once_with(name="uploaded-file")
 
@@ -382,7 +383,7 @@ class TestGeminiUploadCleanup(LoggedTestCase):
 
         with patch.object(client, '_sleep_abortable', side_effect=SubtitleError("Transcription aborted")) as sleep:
             with self.assertRaises(SubtitleError):
-                client._create_interaction(backend, "chunk.wav", "en")
+                client._create_interaction(backend, "chunk.wav")
 
         sleep.assert_called_once()
         backend.files.delete.assert_called_once_with(name="uploaded-file")

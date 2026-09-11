@@ -108,7 +108,7 @@ class TestOpenAITranscription(LoggedTestCase):
             mock_response.text = ('{"text": "hi", "segments": ['
                                   '{"speaker": "A", "text": "hi", "start": 0.0, "end": 1.0}]}')
             post.return_value = mock_response
-            result = client.TranscribeChunk(b"fake-audio", "wav", "en")
+            result = client.TranscribeChunk(b"fake-audio", "wav")
 
         sent = post.call_args.kwargs['files']
         self.assertLoggedEqual("diarized format", "diarized_json", sent['response_format'][1])
@@ -129,7 +129,7 @@ class TestOpenAITranscription(LoggedTestCase):
             mock_response.text = ('{"text": "hi", "words": ['
                                   '{"word": "hi", "start": 0.0, "end": 0.5}]}')
             post.return_value = mock_response
-            result = client.TranscribeChunk(b"fake-audio", "wav", "en")
+            result = client.TranscribeChunk(b"fake-audio", "wav")
 
         sent = post.call_args.kwargs['files']
         self.assertLoggedEqual("verbose format", "verbose_json", sent['response_format'][1])

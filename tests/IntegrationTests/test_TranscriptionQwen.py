@@ -245,7 +245,7 @@ class TestQwenLanguage(LoggedTestCase):
         with patch.object(client, '_load_model', return_value=model), \
                 patch.object(client, '_write_chunk', return_value="chunk.wav"), \
                 patch.object(qwen_module.os, 'remove'):
-            client._transcribe_chunk(b"audio", "wav", "Chinese")
+            client._transcribe_chunk(b"audio", "wav")
 
         model.transcribe.assert_called_once_with(
             audio="chunk.wav", language="Chinese", return_time_stamps=True)
@@ -264,7 +264,7 @@ class TestQwenAlignment(LoggedTestCase):
         with patch.object(client, '_load_model', return_value=model), \
                 patch.object(client, '_write_chunk', return_value="chunk.wav"), \
                 patch.object(qwen_module.os, 'remove'):
-            client._transcribe_chunk(b"audio", "wav", None)
+            client._transcribe_chunk(b"audio", "wav")
 
         model.transcribe.assert_called_once_with(
             audio="chunk.wav", language=None, return_time_stamps=True)
@@ -286,7 +286,7 @@ class TestQwenAlignment(LoggedTestCase):
         with patch.object(client, '_load_model', return_value=model), \
                 patch.object(client, '_write_chunk', return_value="chunk.wav"), \
                 patch.object(qwen_module.os, 'remove'):
-            transcription = client._transcribe_chunk(b"audio", "wav", None)
+            transcription = client._transcribe_chunk(b"audio", "wav")
 
         self.assertLoggedEqual("fallback text", "bonjour", transcription.text)
         self.assertLoggedEqual("retry count", 3, model.transcribe.call_count)
@@ -325,7 +325,7 @@ class TestQwenModelCache(LoggedTestCase):
         with patch.object(client, '_load_model', return_value=model), \
                 patch.object(client, '_write_chunk', return_value="chunk.wav"), \
                 patch.object(qwen_module.os, 'remove'):
-            client._transcribe_chunk(b"audio", "wav", None)
+            client._transcribe_chunk(b"audio", "wav")
 
         self.assertLoggedEqual("budget set on model", 2048, model.max_new_tokens)
 

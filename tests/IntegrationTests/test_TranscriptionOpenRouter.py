@@ -226,7 +226,7 @@ class TestOpenRouterClient(LoggedTestCase):
             mock_response.is_error = False
             mock_response.text = ('{"text": "hi", "language": "en", "duration": 9.2,'
                                   ' "usage": {"cost": 0.000508, "seconds": 9.2}}')
-            result = client.TranscribeChunk(b"fake-audio", "wav", "en")
+            result = client.TranscribeChunk(b"fake-audio", "wav")
 
         self.assertLoggedEqual("duration", timedelta(seconds=9.2), result.duration)
         self.assertLoggedEqual("cost", 0.000508, result.cost)
@@ -266,7 +266,7 @@ class TestOpenRouterClient(LoggedTestCase):
             mock_response.is_error = False
             mock_response.text = "<!DOCTYPE html><html>Bad Gateway</html>"
             with self.assertRaisesRegex(SubtitleError, "non-JSON response"):
-                client.TranscribeChunk(b"fake-audio", "wav", "en")
+                client.TranscribeChunk(b"fake-audio", "wav")
 
     def test_empty_text_returned_not_raised(self):
         """Empty transcripts return quietly for the coordinator to skip."""
@@ -277,7 +277,7 @@ class TestOpenRouterClient(LoggedTestCase):
             mock_response.status_code = 200
             mock_response.is_error = False
             mock_response.text = '{"text": "", "usage": {"cost": 0.0001}}'
-            result = client.TranscribeChunk(b"fake-audio", "wav", "en")
+            result = client.TranscribeChunk(b"fake-audio", "wav")
 
         self.assertLoggedEqual("empty text", "", result.text)
 
@@ -293,7 +293,7 @@ class TestOpenRouterClient(LoggedTestCase):
             verbose.text = '{"error": "verbose_json not supported"}'
             post.side_effect = [verbose]
             with self.assertRaisesRegex(SubtitleError, "does not support"):
-                client.TranscribeChunk(b"fake-audio", "wav", "en")
+                client.TranscribeChunk(b"fake-audio", "wav")
 
         self.assertLoggedEqual("single request", 1, post.call_count)
 

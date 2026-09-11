@@ -49,10 +49,11 @@ class TranscriptionCoordinator:
         })
         self.chunker : AudioChunker = AudioChunker(chunk_settings)
         self.extractor : AudioExtractor = self.chunker.extractor
+        # Transcribed lines obey the same limits as loaded and translated subtitles
         self.line_builder : TranscriptionLineBuilder = TranscriptionLineBuilder(
-            max_line_chars=self.settings.get_int('transcription_max_chars') or 84,
-            max_line_seconds=self.settings.get_float('transcription_max_line_seconds') or 8.0,
-            word_gap_split=self.settings.get_float('transcription_gap_split') or 0.5)
+            max_line_chars=self.settings.get_int('max_characters') or 120,
+            max_line_seconds=self.settings.get_float('max_line_duration') or 4.0,
+            min_split_chars=self.settings.get_int('min_split_chars') or 3)
         self.events : TranscriptionEvents = TranscriptionEvents()
 
         self._active_client : TranscriptionClient|None = None

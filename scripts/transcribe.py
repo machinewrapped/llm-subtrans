@@ -91,10 +91,14 @@ def main() -> int:
     if args.language and language != args.language:
         logging.info(f"Language hint '{args.language}' resolved to '{language}' for {provider.name}")
 
+    options = Options()
     coordinator_settings = SettingsType({
         'audio_track': args.track,
         'language': language,
         'transcription_align': args.align,
+        'max_characters': options.get_int('max_characters'),
+        'max_line_duration': options.get_float('max_line_duration'),
+        'min_split_chars': options.get_int('min_split_chars'),
     })
     # Drop unset values so provider recommendations apply
     if args.min_chunk is not None:
@@ -128,7 +132,6 @@ def main() -> int:
             print(f"{label} [{span}]", flush=True)
 
     try:
-        options = Options()
         options['postprocess_transcription'] = args.postprocess
 
         coordinator.events.progress.connect(progress)

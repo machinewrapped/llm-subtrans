@@ -526,6 +526,9 @@ class TranscriptionDialog(QDialog):
             'max_chunk_seconds': max_chunk_seconds,
             'transcription_align': True,
             'ffmpeg_path': self.global_options.get_str('ffmpeg_path'),
+            'max_characters': self.global_options.get_int('max_characters'),
+            'max_line_duration': self.global_options.get_float('max_line_duration'),
+            'min_split_chars': self.global_options.get_int('min_split_chars'),
         })
         output_format = str(self.fields['output_format'].GetValue() or '.srt').lstrip('.')
         return TranscribeMediaCommand(

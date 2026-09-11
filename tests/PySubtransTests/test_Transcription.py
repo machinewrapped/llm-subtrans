@@ -289,7 +289,12 @@ def _subtitles_of(outcome : TranscriptionOutcome) -> Subtitles:
 
 def _default_builder() -> TranscriptionLineBuilder:
     """Line builder with the coordinator's default limits."""
-    return TranscriptionLineBuilder(max_line_chars=84, max_line_seconds=8.0, word_gap_split=0.5)
+    return TranscriptionLineBuilder(max_line_chars=120, max_line_seconds=4.0, min_split_chars=3)
+
+
+def _uniform_words(texts : list[str], seconds_each : float = 1.0, start : float = 0.0) -> list[WordTiming]:
+    """Contiguous words of equal duration, so only text and position distinguish boundaries."""
+    return [_word(text, start + i * seconds_each, start + (i + 1) * seconds_each) for i, text in enumerate(texts)]
 
 
 class TestWordGrouping(LoggedTestCase):
@@ -404,6 +409,125 @@ class TestWordGrouping(LoggedTestCase):
         self.assertLoggedEqual("merged start", timedelta(seconds=100), lines[0].start)
         self.assertLoggedEqual("merged end", timedelta(seconds=101.4), lines[0].end)
 
+
+class TestOverlongUtteranceSplitting(LoggedTestCase):
+    """Utterances over a limit split at their best pause instead of stranding a tail."""
+    WORDS = ["alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel"]
+
+    def _lines(self, builder : TranscriptionLineBuilder, words : list[WordTiming]):
+        chunk = AudioChunk(start=timedelta(seconds=100), end=timedelta(seconds=160))
+        text = JoinWords([w.text for w in words])
+        segment = TranscriptionSegment(start=chunk.start, end=chunk.end, text=text, language="English", words=words)
+        return builder.LinesForSegment(segment)
+
+    def test_uniform_timings_split_at_centre(self):
+        """With no pauses or punctuation the most central boundary wins, and timings come from the words."""
+        builder = TranscriptionLineBuilder(max_line_chars=200, max_line_seconds=4.0)
+        lines = self._lines(builder, _uniform_words(self.WORDS))
+
+        self.assertLoggedEqual("line count", 2, len(lines))
+        self.assertLoggedEqual("first text", "alpha bravo charlie delta", lines[0].text)
+        self.assertLoggedEqual("second text", "echo foxtrot golf hotel", lines[1].text)
+        self.assertLoggedEqual("first span", (timedelta(seconds=100), timedelta(seconds=104)), (lines[0].start, lines[0].end))
+        self.assertLoggedEqual("second span", (timedelta(seconds=104), timedelta(seconds=108)), (lines[1].start, lines[1].end))
+
+    def test_limit_never_strands_a_short_tail(self):
+        """A sentence just over the character limit splits in the middle, not before its last word."""
+        builder = TranscriptionLineBuilder(max_line_chars=40, max_line_seconds=10.0)
+        lines = self._lines(builder, _uniform_words(self.WORDS, seconds_each=0.5))
+
+        self.assertLoggedEqual("line count", 2, len(lines))
+        self.assertLoggedEqual("first text", "alpha bravo charlie delta", lines[0].text)
+        self.assertLoggedEqual("second text", "echo foxtrot golf hotel", lines[1].text)
+
+    def test_longer_pause_off_centre_wins(self):
+        """A real pause beats a zero-gap boundary at the exact midpoint."""
+        words = _uniform_words(self.WORDS[:6]) + [_word("golf", 6.3, 7.3), _word("hotel", 7.3, 8.3)]
+        builder = TranscriptionLineBuilder(max_line_chars=200, max_line_seconds=7.0)
+        lines = self._lines(builder, words)
+
+        self.assertLoggedEqual("line count", 2, len(lines))
+        self.assertLoggedEqual("first text", "alpha bravo charlie delta echo foxtrot", lines[0].text)
+        self.assertLoggedEqual("second text", "golf hotel", lines[1].text)
+        self.assertLoggedEqual("second start", timedelta(seconds=106.3), lines[1].start)
+
+    def test_edge_pause_loses_to_central_pause(self):
+        """A long pause at the very edge loses to a moderate pause near the middle."""
+        words = [_word("alpha", 0.0, 1.0), _word("bravo", 1.45, 2.45), _word("charlie", 2.45, 3.45),
+                 _word("delta", 3.45, 4.45), _word("echo", 4.65, 5.65), _word("foxtrot", 5.65, 6.65),
+                 _word("golf", 6.65, 7.65), _word("hotel", 7.65, 8.65)]
+        builder = TranscriptionLineBuilder(max_line_chars=200, max_line_seconds=7.0)
+        lines = self._lines(builder, words)
+
+        self.assertLoggedEqual("line count", 2, len(lines))
+        self.assertLoggedEqual("first text", "alpha bravo charlie delta", lines[0].text)
+        self.assertLoggedEqual("second text", "echo foxtrot golf hotel", lines[1].text)
+
+    def test_clause_punctuation_preferred(self):
+        """A comma boundary wins over a plain boundary nearer the centre."""
+        texts = ["alpha", "bravo", "charlie,", "delta", "echo", "foxtrot", "golf", "hotel"]
+        builder = TranscriptionLineBuilder(max_line_chars=200, max_line_seconds=5.0)
+        lines = self._lines(builder, _uniform_words(texts))
+
+        self.assertLoggedEqual("line count", 2, len(lines))
+        self.assertLoggedEqual("first text", "alpha bravo charlie,", lines[0].text)
+        self.assertLoggedEqual("second text", "delta echo foxtrot golf hotel", lines[1].text)
+
+    def test_short_word_boundary_avoided(self):
+        """The split moves off a short conjunction onto a neighbouring longer word."""
+        texts = ["alpha", "bravo", "charlie", "og", "echo", "foxtrot", "golf", "hotel"]
+        builder = TranscriptionLineBuilder(max_line_chars=200, max_line_seconds=5.0)
+        lines = self._lines(builder, _uniform_words(texts))
+
+        self.assertLoggedEqual("line count", 2, len(lines))
+        self.assertLoggedEqual("first text", "alpha bravo charlie", lines[0].text)
+        self.assertLoggedEqual("second text", "og echo foxtrot golf hotel", lines[1].text)
+
+    def test_recursive_split_keeps_every_piece_within_limit(self):
+        """An utterance more than twice the cap splits repeatedly with no single-word pieces."""
+        texts = self.WORDS + ["india"]
+        builder = TranscriptionLineBuilder(max_line_chars=200, max_line_seconds=4.0)
+        lines = self._lines(builder, _uniform_words(texts))
+
+        self.assertLoggedEqual("line count", 3, len(lines))
+        self.assertLoggedEqual("all text kept", " ".join(texts), " ".join(line.text for line in lines))
+        for line in lines:
+            self.assertLoggedLessEqual("piece duration", (line.end - line.start).total_seconds(), 4.0)
+            self.assertLoggedGreater("piece words", len(line.text.split()), 1)
+
+    def test_character_cap_alone_splits_at_centre(self):
+        """The character limit triggers the same balanced split as the duration limit."""
+        builder = TranscriptionLineBuilder(max_line_chars=20, max_line_seconds=10.0)
+        lines = self._lines(builder, _uniform_words(["alpha", "bravo", "charlie", "delta"], seconds_each=0.5))
+
+        self.assertLoggedEqual("line count", 2, len(lines))
+        self.assertLoggedEqual("first text", "alpha bravo", lines[0].text)
+        self.assertLoggedEqual("second text", "charlie delta", lines[1].text)
+
+    def test_min_split_chars_rejects_short_fragments(self):
+        """A boundary that would leave a fragment under min_split_chars is skipped."""
+        words = [_word("hello", 0.0, 1.0), _word("big", 1.0, 2.0), _word("wide", 2.0, 4.5), _word("world", 4.5, 8.0)]
+
+        loose = self._lines(TranscriptionLineBuilder(max_line_chars=200, max_line_seconds=7.0, min_split_chars=3), words)
+        self.assertLoggedEqual("loose first text", "hello big wide", loose[0].text)
+
+        strict = self._lines(TranscriptionLineBuilder(max_line_chars=200, max_line_seconds=7.0, min_split_chars=8), words)
+        self.assertLoggedEqual("strict line count", 2, len(strict))
+        self.assertLoggedEqual("strict first text", "hello big", strict[0].text)
+        self.assertLoggedEqual("strict second text", "wide world", strict[1].text)
+
+    def test_hard_boundaries_precede_limit_splitting(self):
+        """Sentence ends and pauses cut first; only the over-long remainder is balanced."""
+        texts = ["one!", "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf", "hotel"]
+        builder = TranscriptionLineBuilder(max_line_chars=200, max_line_seconds=4.0)
+        lines = self._lines(builder, _uniform_words(texts))
+
+        self.assertLoggedEqual("line count", 3, len(lines))
+        self.assertLoggedEqual("sentence text", "one!", lines[0].text)
+        self.assertLoggedEqual("first half", "alpha bravo charlie delta", lines[1].text)
+        self.assertLoggedEqual("second half", "echo foxtrot golf hotel", lines[2].text)
+
+
 class TestOverlongSpans(LoggedTestCase):
     def _builder(self):
         return _default_builder()
@@ -456,8 +580,8 @@ class TestOverlongSpans(LoggedTestCase):
     def test_boundary_not_flagged(self):
         """A line exactly at the cap is fine; only overruns flag."""
         builder = self._builder()
-        line = TranscriptionSegment(start=timedelta(seconds=100), end=timedelta(seconds=108),
-                                    text="exactly eight seconds")
+        line = TranscriptionSegment(start=timedelta(seconds=100), end=timedelta(seconds=104),
+                                    text="exactly four seconds")
 
         self.assertLoggedEqual("flagged", False, builder.WarnIfOverlong(line))
 
@@ -467,21 +591,21 @@ class TestLineBuilderWiring(LoggedTestCase):
         """The coordinator configures its line builder from transcription settings."""
         provider = FakeTranscriptionProvider()
         coordinator = TranscriptionCoordinator(provider, SettingsType({
-            'transcription_max_chars': 42,
-            'transcription_max_line_seconds': 5.5,
-            'transcription_gap_split': 0.25}))
+            'max_characters': 42,
+            'max_line_duration': 5.5,
+            'min_split_chars': 6}))
 
         self.assertLoggedEqual("max chars", 42, coordinator.line_builder.max_line_chars)
         self.assertLoggedEqual("max seconds", 5.5, coordinator.line_builder.max_line_seconds)
-        self.assertLoggedEqual("gap split", 0.25, coordinator.line_builder.word_gap_split)
+        self.assertLoggedEqual("min split chars", 6, coordinator.line_builder.min_split_chars)
 
     def test_builder_defaults(self):
         """Missing settings fall back to the documented defaults."""
         coordinator = TranscriptionCoordinator(FakeTranscriptionProvider())
 
-        self.assertLoggedEqual("max chars", 84, coordinator.line_builder.max_line_chars)
-        self.assertLoggedEqual("max seconds", 8.0, coordinator.line_builder.max_line_seconds)
-        self.assertLoggedEqual("gap split", 0.5, coordinator.line_builder.word_gap_split)
+        self.assertLoggedEqual("max chars", 120, coordinator.line_builder.max_line_chars)
+        self.assertLoggedEqual("max seconds", 4.0, coordinator.line_builder.max_line_seconds)
+        self.assertLoggedEqual("min split chars", 3, coordinator.line_builder.min_split_chars)
 
 class TestSettingsNamespaces(LoggedTestCase):
     def _options(self):

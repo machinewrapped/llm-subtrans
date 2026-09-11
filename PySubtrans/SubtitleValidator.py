@@ -22,7 +22,7 @@ class SubtitleValidator:
             self.errors.append(UntranslatedLinesError(f"No translation found for {len(batch.originals) - len(batch.translated)} lines", translation=batch.translation))
 
         if getattr(batch, 'validate_originals', False):
-            max_duration = self.options.get_float('transcription_max_line_seconds') or 8.0
+            max_duration = self.options.get_float('max_line_duration') or 4.0
             self.errors.extend(self.ValidateOriginals(batch.originals, max_duration))
 
         batch.errors = self.errors

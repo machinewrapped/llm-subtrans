@@ -14,8 +14,25 @@ from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 # Sentence-ending punctuation across CJK and latin scripts
 SENTENCE_END_CHARS = frozenset('。！？!?\n…')
 
+# Clause punctuation (and a period, which is not a hard boundary) that makes
+# a good place to break an over-long utterance
+CLAUSE_END_CHARS = frozenset('.,;:，、；：-–—')
+
 # Lines shorter than this merge into their neighbour (bounds stay truthful)
 MIN_LINE_SECONDS = 0.4
+
+# A pause between words at least this long always starts a new line
+PAUSE_SPLIT_SECONDS = 0.5
+
+# Split-point scoring for over-long utterances: the pause at a boundary is
+# the primary signal, weighted by how central the boundary is. The floor
+# lets zero-pause boundaries still resolve by centrality; the bonuses and
+# penalty nudge toward clause ends and away from stranding short words.
+PAUSE_SCORE_FLOOR = 0.1
+SENTENCE_END_BONUS = 0.5
+CLAUSE_END_BONUS = 0.15
+SHORT_WORD_PENALTY = 0.05
+SHORT_WORD_CHARS = 3
 
 CJK_BOUNDARY = regex.compile(r'[\p{Script=Han}\p{Script=Hiragana}\p{Script=Katakana}\u3000-\u303f\uff00-\uffef]')
 
@@ -75,15 +92,16 @@ class TranscriptionLineBuilder:
     """
     Turns transcribed chunks into timed subtitle lines.
 
-    Word timings group into lines bounded by character count, duration,
-    sentence punctuation, pauses and speaker changes. Provider sub-segments
-    without word timings become rebased lines. Brief slivers merge into
-    their neighbours. No provider or audio dependencies.
+    Word timings group into utterances at pauses, speaker changes and
+    sentence punctuation; utterances over the character or duration limit
+    are split at their best pause. Provider sub-segments without word
+    timings become rebased lines. Brief slivers merge into their
+    neighbours. No provider or audio dependencies.
     """
-    def __init__(self, max_line_chars : int, max_line_seconds : float, word_gap_split : float):
+    def __init__(self, max_line_chars : int, max_line_seconds : float, min_split_chars : int = 3):
         self.max_line_chars : int = max_line_chars
         self.max_line_seconds : float = max_line_seconds
-        self.word_gap_split : float = word_gap_split
+        self.min_split_chars : int = min_split_chars
 
     def LinesForSegment(self, segment : TranscriptionSegment) -> list[TranscriptionSegment]:
         """
@@ -140,39 +158,114 @@ class TranscriptionLineBuilder:
 
     def _group_words(self, words : list[WordTiming], segment : TranscriptionSegment) -> list[TranscriptionSegment]:
         """
-        Group chunk-relative word timings into subtitle lines. Every
-        boundary and timing derives from aligned words: max characters,
-        max duration, sentence punctuation and real inter-word pauses.
-        Offsets are rebased onto the chunk start for absolute timings.
+        Group chunk-relative word timings into subtitle lines. Words first
+        split into utterances at real pauses, speaker changes and sentence
+        punctuation; utterances that breach the character or duration
+        limit are then split at their best pause, so a limit never
+        strands a short tail. Offsets are rebased onto the chunk start.
         """
         lines : list[TranscriptionSegment] = []
+        for utterance in self._split_utterances(words):
+            for run in self._fit_utterance(utterance):
+                lines.append(self._line_from_words(run, segment))
+
+        return self.MergeSlivers(lines)
+
+    def _split_utterances(self, words : list[WordTiming]) -> list[list[WordTiming]]:
+        """Cut words at boundaries that apply regardless of line length."""
+        utterances : list[list[WordTiming]] = []
         current : list[WordTiming] = []
 
         for word in words:
-            if current and self._should_break(current, word):
-                lines.append(self._line_from_words(current, segment))
+            if current and self._is_hard_boundary(current[-1], word):
+                utterances.append(current)
                 current = []
             current.append(word)
 
         if current:
-            lines.append(self._line_from_words(current, segment))
+            utterances.append(current)
 
-        return self.MergeSlivers(lines)
+        return utterances
 
-    def _should_break(self, current : list[WordTiming], word : WordTiming) -> bool:
-        """Whether appending word to the current line would breach a line boundary."""
-        previous = current[-1]
+    @staticmethod
+    def _is_hard_boundary(previous : WordTiming, word : WordTiming) -> bool:
+        """A long pause, a speaker change or the end of a sentence always starts a new line."""
         gap = (word.start - previous.end).total_seconds()
-        candidate = JoinWords([w.text for w in current] + [word.text])
-        line_seconds = (word.end - current[0].start).total_seconds()
-        first_speaker = current[0].speaker
-        speaker_changed = (word.speaker is not None and first_speaker is not None
-                           and word.speaker != first_speaker)
-        return (len(candidate) > self.max_line_chars
-                or line_seconds > self.max_line_seconds
-                or gap >= self.word_gap_split
+        speaker_changed = (word.speaker is not None and previous.speaker is not None
+                           and word.speaker != previous.speaker)
+        return (gap >= PAUSE_SPLIT_SECONDS
                 or speaker_changed
                 or bool(previous.text and previous.text[-1] in SENTENCE_END_CHARS))
+
+    def _fits(self, words : list[WordTiming]) -> bool:
+        """Whether a run of words is within the duration and character limits."""
+        seconds = (words[-1].end - words[0].start).total_seconds()
+        return seconds <= self.max_line_seconds and len(JoinWords([w.text for w in words])) <= self.max_line_chars
+
+    def _fit_utterance(self, words : list[WordTiming]) -> list[list[WordTiming]]:
+        """Split an over-long utterance at its best pauses until every piece fits."""
+        if len(words) < 2 or self._fits(words):
+            return [words]
+
+        index = self._best_split_index(words)
+        if index is None:
+            return self._greedy_split(words)
+
+        return self._fit_utterance(words[:index]) + self._fit_utterance(words[index:])
+
+    def _best_split_index(self, words : list[WordTiming]) -> int|None:
+        """
+        Choose the boundary to split an utterance at. The pause at each
+        boundary is the primary signal, weighted by closeness to the time
+        midpoint, with bonuses for clause and sentence punctuation and a
+        penalty for stranding a short word. Both halves must reach the
+        minimum split length; None when no boundary qualifies.
+        """
+        start = words[0].start
+        half_span = (words[-1].end - start).total_seconds() / 2.0
+        best_index : int|None = None
+        best_score : float = float('-inf')
+
+        for index in range(1, len(words)):
+            head = JoinWords([w.text for w in words[:index]])
+            tail = JoinWords([w.text for w in words[index:]])
+            if len(head) < self.min_split_chars or len(tail) < self.min_split_chars:
+                continue
+
+            previous, word = words[index - 1], words[index]
+            pause = max(0.0, (word.start - previous.end).total_seconds())
+            position = (previous.end - start).total_seconds()
+            centrality = 1.0 - abs(position - half_span) / half_span if half_span > 0.0 else 1.0
+            score = (pause + PAUSE_SCORE_FLOOR) * max(0.0, centrality)
+
+            last = previous.text[-1] if previous.text else ''
+            if last in SENTENCE_END_CHARS:
+                score += SENTENCE_END_BONUS
+            elif last in CLAUSE_END_CHARS:
+                score += CLAUSE_END_BONUS
+            if sum(1 for c in previous.text if c.isalnum()) <= SHORT_WORD_CHARS:
+                score -= SHORT_WORD_PENALTY
+
+            if score > best_score:
+                best_index, best_score = index, score
+
+        return best_index
+
+    def _greedy_split(self, words : list[WordTiming]) -> list[list[WordTiming]]:
+        """Fallback when no balanced split qualifies: break where the limit is breached."""
+        pieces : list[list[WordTiming]] = []
+        current : list[WordTiming] = []
+
+        for word in words:
+            if current and not self._fits(current + [word]):
+                pieces.append(current)
+                current = []
+            current.append(word)
+
+        if current:
+            pieces.append(current)
+
+        return pieces
 
     def _line_from_words(self, words : list[WordTiming], segment : TranscriptionSegment) -> TranscriptionSegment:
         """Build one absolute-timed line from a run of chunk-relative words."""
@@ -214,7 +307,7 @@ class TranscriptionLineBuilder:
         return (line.end - line.start).total_seconds() < MIN_LINE_SECONDS
 
     def _close_enough(self, first : TranscriptionSegment, second : TranscriptionSegment) -> bool:
-        return (second.start - first.end).total_seconds() < self.word_gap_split
+        return (second.start - first.end).total_seconds() < PAUSE_SPLIT_SECONDS
 
     @staticmethod
     def _is_dialogue(line : TranscriptionSegment) -> bool:

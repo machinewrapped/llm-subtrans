@@ -23,6 +23,20 @@ class LoggerOptions():
     log_path: str
 
 
+class _HttpxRequestLogFilter(logging.Filter):
+    """Demote HTTPX's per-request status messages to DEBUG."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Keep request tracing available in debug logs without showing it normally."""
+        if record.name == 'httpx' and record.getMessage().startswith('HTTP Request:'):
+            record.levelno = logging.DEBUG
+            record.levelname = logging.getLevelName(logging.DEBUG)
+        return True
+
+
+_HTTPX_REQUEST_LOG_FILTER = _HttpxRequestLogFilter()
+
+
 @dataclass
 class TokenUsage():
     """Accumulated token usage across all translated batches."""
@@ -118,6 +132,7 @@ def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
     # set up the StreamHandler explicitly instead.
     root_logger = logging.getLogger()
     root_logger.setLevel(logging_level)
+    logging.getLogger('httpx').addFilter(_HTTPX_REQUEST_LOG_FILTER)
 
     try:
         console_handler = logging.StreamHandler()

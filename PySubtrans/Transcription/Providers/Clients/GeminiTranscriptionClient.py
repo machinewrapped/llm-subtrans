@@ -128,6 +128,7 @@ else:
 
                         try:
                             if audio_file is None:
+                                logging.info(_("Uploading audio chunk for Gemini transcription"))
                                 audio_file = client.files.upload(file=chunk_path)
 
                             interaction = client.interactions.create(

@@ -77,4 +77,4 @@ Consult `docs/architecture.md` for detailed information on the project structure
 - Keep provider-specific identifiers (API model names) un-translated in UI text.
 - Secrets are stored in a .env file - you must never read the contents of the file.
 
-If anything is unclear, open an issue or check `CLAUDE.md` for dev conventions.
+If anything is unclear, open an issue or check `AGENTS.md` for dev conventions.

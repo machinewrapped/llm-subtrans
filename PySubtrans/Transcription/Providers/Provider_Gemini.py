@@ -204,13 +204,13 @@ else:
 
             @property
             def recommended_min_chunk_seconds(self) -> float:
-                """Long chunks amortise per-request overhead, keep speaker identities stable and stay under daily request quotas."""
-                return 180.0
+                """Gemini rate limits and quotas are brutal, but it can handle long chunks."""
+                return 600.0
 
             @property
             def recommended_max_chunk_seconds(self) -> float:
                 """The Files API handles multi-minute chunks comfortably."""
-                return 600.0
+                return 1200.0
 
             def __init__(self, settings : SettingsType):
                 super().__init__(self.name, SettingsType({

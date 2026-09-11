@@ -88,6 +88,9 @@ def main() -> int:
         logging.error(str(e))
         return 1
 
+    if args.language and language != args.language:
+        logging.info(f"Language hint '{args.language}' resolved to '{language}' for {provider.name}")
+
     coordinator_settings = SettingsType({
         'audio_track': args.track,
         'language': language,

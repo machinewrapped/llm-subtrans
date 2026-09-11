@@ -49,6 +49,14 @@ class TestTranscribeCliOptions(LoggedTestCase):
         self.assertLoggedEqual("min unset", None, args.min_chunk)
         self.assertLoggedEqual("max unset", None, args.max_chunk)
 
+    def test_ffmpeg_path_is_optional(self):
+        """The CLI keeps PATH lookup unless an explicit executable is supplied."""
+        default_args = self._parse("movie.mkv")
+        explicit_args = self._parse("movie.mkv", "--ffmpeg-path", r"C:\tools\ffmpeg.exe")
+
+        self.assertLoggedEqual("ffmpeg path default", None, default_args.ffmpeg_path)
+        self.assertLoggedEqual("explicit ffmpeg path", r"C:\tools\ffmpeg.exe", explicit_args.ffmpeg_path)
+
     def test_postprocess_defaults_on(self):
         """Transcribed lines are cleaned by default."""
         args = self._parse("movie.mkv")
@@ -63,6 +71,25 @@ class TestTranscribeCliOptions(LoggedTestCase):
 
 
 class TestTranscribeCliExecution(LoggedTestCase):
+    def test_ffmpeg_path_passes_to_coordinator(self):
+        """The CLI forwards an explicit executable path to transcription."""
+        coordinator = Mock()
+        coordinator.CreateTranscription.return_value = TranscriptionOutcome(
+            TranscriptionStatus.COMPLETED, Mock(linecount=1))
+
+        with patch.object(transcribe, 'InitLogger'), \
+                patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=Mock()), \
+                patch.object(transcribe, 'TranscriptionCoordinator', return_value=coordinator) as coordinator_factory, \
+                patch.object(transcribe, 'GetOutputPath', return_value='out.vtt'), \
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav', '--ffmpeg-path', r'C:\tools\ffmpeg.exe']):
+            result = transcribe.main()
+
+        self.assertLoggedEqual("exit status", 0, result)
+        call_args = coordinator_factory.call_args
+        assert call_args is not None
+        settings = call_args.args[1]
+        self.assertLoggedEqual("coordinator ffmpeg path", r"C:\tools\ffmpeg.exe", settings.get_str('ffmpeg_path'))
+
     def test_invalid_provider_settings_return_nonzero_before_transcription(self):
         """CLI validation prevents extraction when provider settings are invalid."""
         provider = Mock()

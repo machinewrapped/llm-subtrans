@@ -3203,6 +3203,10 @@ msgstr "Primera Ejecución"
 msgid "free_plan"
 msgstr "Plan Gratuito"
 
+#: PySubtrans/Options.py:102
+msgid "ffmpeg_path"
+msgstr "Ruta de FFmpeg"
+
 #: PySubtrans/Options.py:85
 msgid "full_width_punctuation"
 msgstr "Puntuación Ancho Completo"

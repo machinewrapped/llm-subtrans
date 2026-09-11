@@ -2989,6 +2989,10 @@ msgstr ""
 msgid "free_plan"
 msgstr ""
 
+#: PySubtrans/Options.py:102
+msgid "ffmpeg_path"
+msgstr ""
+
 #: PySubtrans/Options.py:85
 msgid "full_width_punctuation"
 msgstr ""

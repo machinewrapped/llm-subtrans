@@ -123,8 +123,7 @@ class TranscriptionProvider:
         parts : list[str] = []
         if ffmpeg_available is not True:
             parts.append(_(
-                "<p>Audio extraction needs <a href=\"https://ffmpeg.org/download.html\">ffmpeg</a> "
-                "installed and on PATH.</p>"
+                "<p>Audio extraction needs <a href=\"https://ffmpeg.org/download.html\">ffmpeg</a> installed."
             ))
         info = self._get_provider_information(torch_device)
         if info:

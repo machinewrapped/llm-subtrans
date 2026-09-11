@@ -25,7 +25,13 @@ from PySide6.QtWidgets import (
 
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.SettingsDialog import SettingsDialog
-from GuiSubtrans.Widgets.OptionsWidgets import CheckboxOptionWidget, CreateOptionWidget, FloatOptionWidget, OptionWidget
+from GuiSubtrans.Widgets.OptionsWidgets import (
+    CheckboxOptionWidget,
+    CreateOptionWidget,
+    FloatOptionWidget,
+    OptionWidget,
+    ParseOptionDefinition,
+)
 from GuiSubtrans.Widgets.TranscriptionProviderLoader import TranscriptionProviderLoader
 from GuiSubtrans.Widgets.TranscriptionRunProgress import TranscriptionRunProgress
 from PySubtrans.Helpers.Localization import _
@@ -335,10 +341,16 @@ class TranscriptionDialog(QDialog):
             logging.error(_("Unable to load provider options: {error}").format(error=str(e)))
             return
 
-        for key, (key_type, tooltip) in schema.items():
+        for key, option_definition in schema.items():
             if key in self.provider.advanced_settings:
                 continue
-            field = CreateOptionWidget(key, self.provider.settings.get(key), key_type, tooltip=tooltip)
+            key_type, tooltip, placeholder = ParseOptionDefinition(option_definition)
+            field = CreateOptionWidget(
+                key,
+                self.provider.settings.get(key),
+                key_type,
+                tooltip=tooltip,
+                placeholder=placeholder)
             field.contentChanged.connect(lambda dummy=None, k=field.key: self._on_provider_field_committed(k))
             self.provider_fields[key] = field
             self.form.insertRow(self.PROVIDER_ROW_START + self._provider_row_count, field.name, field)
@@ -368,6 +380,10 @@ class TranscriptionDialog(QDialog):
         self.progress_bar.setValue(0)
         self.results_view.clear()
 
+    def _ffmpeg_settings(self) -> SettingsType:
+        """Return the global ffmpeg setting for coordinator operations."""
+        return SettingsType({'ffmpeg_path': self.global_options.get_str('ffmpeg_path')})
+
     def _browse_file(self) -> None:
         wildcards = ' '.join(f'*{ext}' for ext in SUPPORTED_MEDIA_EXTENSIONS)
         filters = f"{_('Media files')} ({wildcards});;{_('All Files')} (*)"
@@ -379,7 +395,7 @@ class TranscriptionDialog(QDialog):
         if self.provider is None or not self.media_path:
             return
         try:
-            coordinator = TranscriptionCoordinator(self.provider, SettingsType())
+            coordinator = TranscriptionCoordinator(self.provider, self._ffmpeg_settings())
             tracks = coordinator.CheckRequirements(self.media_path)
             for track in tracks:
                 self.track_combo.addItem(str(track), track.index)
@@ -424,7 +440,7 @@ class TranscriptionDialog(QDialog):
         the failure that already happened.
         """
         try:
-            CheckFfmpegAvailable()
+            CheckFfmpegAvailable(self._ffmpeg_settings())
         except Exception:
             self._record_dependency_evidence(ffmpeg_available=False)
 
@@ -458,6 +474,7 @@ class TranscriptionDialog(QDialog):
             'min_chunk_seconds': min_chunk_seconds,
             'max_chunk_seconds': max_chunk_seconds,
             'transcription_align': True,
+            'ffmpeg_path': self.global_options.get_str('ffmpeg_path'),
         })
         output_format = str(self.fields['output_format'].GetValue() or '.srt').lstrip('.')
         return TranscribeMediaCommand(

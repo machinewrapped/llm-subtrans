@@ -3,7 +3,7 @@ from PySide6.QtCore import Qt, QThread, Slot
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBox, QWidget, QFormLayout, QFrame, QLabel, QScrollArea)
 from GuiSubtrans.GuiHelpers import ClearForm, GetThemeNames
 
-from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget
+from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget, ParseOptionDefinition
 from GuiSubtrans.Widgets.TranscriptionProviderLoader import TranscriptionProviderLoader
 from PySubtrans.Helpers.InstructionsHelpers import GetInstructionsFiles, LoadInstructions
 from PySubtrans.Options import Options
@@ -20,7 +20,7 @@ class SettingsDialog(QDialog):
 
     The settings are stored in a dictionary with a section for each tab and the settings it contains as key-value pairs.
 
-    Each value is either a type indicating the type of the setting, or a tuple containing the type and a tooltip string.
+    Each value is either a type indicating the type of the setting, or a tuple containing the type, tooltip, and optional placeholder text.
 
     The PROVIDER_SECTION is special and contains the settings for the translation provider, which are loaded dynamically based on the selected provider.
 
@@ -56,6 +56,9 @@ class SettingsDialog(QDialog):
             'transcription_provider_settings': TranscriptionProvider,
             'postprocess_transcription': (bool, _("Clean transcribed lines with the same normalizations used for loaded subtitles (dashes, filler words, line breaks)")),
             'provider_info': (str, _("Information about the selected transcription provider")),
+            'ffmpeg_path': (str, _(
+                "Optional path to the ffmpeg executable. Leave blank to use ffmpeg and ffprobe from the system PATH"
+            ), _("Leave blank to use ffmpeg and ffprobe from the system PATH")),
         },
         'Processing': {
             'preprocess_subtitles': (bool, _("Preprocess subtitles when they are loaded")),
@@ -244,9 +247,9 @@ class SettingsDialog(QDialog):
                             # Skip if providers haven't loaded yet (dropdown empty)
                             if field.GetValue():
                                 self.settings[key] = field.GetValue()
-                        elif key == 'postprocess_transcription':
-                            # This is a global transcription default, rather
-                            # than an option belonging to one provider.
+                        elif self._is_root_setting(section_name, key):
+                            # Declared section settings belong to the root
+                            # settings object rather than a provider namespace.
                             self.settings[key] = field.GetValue()
                         elif key == 'provider_info':
                             # This is a read-only field, not a setting to save.
@@ -282,6 +285,11 @@ class SettingsDialog(QDialog):
         """Get the "<provider> Transcription" settings namespace, creating it on demand."""
         namespace = TranscriptionProvider.SettingsKey(provider)
         return self._get_namespaced_provider_settings(namespace)
+
+    def _is_root_setting(self, section_name : str, key : str) -> bool:
+        """Return whether a field is declared as a root setting in its section."""
+        section_options = self.SECTIONS.get(section_name, {})
+        return key in section_options and key in self.settings
 
     def _get_namespaced_provider_settings(self, namespace : str) -> dict[str, SettingsType]:
         """ Get the settings for a specific namespaced provider entry """
@@ -323,8 +331,8 @@ class SettingsDialog(QDialog):
 
         options = self.SECTIONS[section_name]
 
-        for key, key_type in options.items():
-            key_type, tooltip = key_type if isinstance(key_type, tuple) else (key_type, None)
+        for key, option_definition in options.items():
+            key_type, tooltip, placeholder = ParseOptionDefinition(option_definition)
             if key_type == TranslationProvider:
                 self._add_provider_options(section_name, layout)
             elif key_type == TranscriptionProvider:
@@ -333,7 +341,12 @@ class SettingsDialog(QDialog):
                 # This is a read-only field, not a setting to save.
                 self._add_provider_info(section_name, layout)
             elif key in self.settings:
-                field = CreateOptionWidget(key, self.settings[key], key_type, tooltip=tooltip)
+                field = CreateOptionWidget(
+                    key,
+                    self.settings[key],
+                    key_type,
+                    tooltip=tooltip,
+                    placeholder=placeholder)
                 field.contentChanged.connect(lambda setting=field: self._on_setting_changed(section_name, setting.key, setting.GetValue()))
                 layout.addRow(field.name, field)
                 self.widgets[key] = field
@@ -419,9 +432,14 @@ class SettingsDialog(QDialog):
         provider_settings = self.translation_provider.GetCombinedSettings(saved_settings)
         provider_options = self.translation_provider.GetOptions(provider_settings)
 
-        for key, key_type in provider_options.items():
-            key_type, tooltip = key_type if isinstance(key_type, tuple) else (key_type, None)
-            field = CreateOptionWidget(key, provider_settings.get(key), key_type, tooltip=tooltip)
+        for key, option_definition in provider_options.items():
+            key_type, tooltip, placeholder = ParseOptionDefinition(option_definition)
+            field = CreateOptionWidget(
+                key,
+                provider_settings.get(key),
+                key_type,
+                tooltip=tooltip,
+                placeholder=placeholder)
             field.contentChanged.connect(lambda setting=field: self._on_setting_changed(section_name, setting.key, setting.GetValue()))
             layout.addRow(field.name, field)
             self.widgets[key] = field
@@ -519,8 +537,11 @@ class SettingsDialog(QDialog):
         self.loader_thread = None
         self.transcription_provider_names = list(names)
         schema = self.SECTIONS[self.TRANSCRIPTION_SECTION]['transcription_provider']
-        tooltip = schema[1] if isinstance(schema, tuple) else None
-        self.SECTIONS[self.TRANSCRIPTION_SECTION]['transcription_provider'] = (list(names), tooltip)
+        _key_type, tooltip, placeholder = ParseOptionDefinition(schema)
+        self.SECTIONS[self.TRANSCRIPTION_SECTION]['transcription_provider'] = (
+            list(names),
+            tooltip,
+            placeholder)
         saved = self.settings.get_str('transcription_provider')
         self.settings['transcription_provider'] = saved if saved in names else (names[0] if names else None)
         self._initialise_transcription_provider()
@@ -596,9 +617,14 @@ class SettingsDialog(QDialog):
             logging.error(_("Unable to load transcription provider options: {error}").format(error=str(e)))
             return
 
-        for key, key_type in schema.items():
-            key_type, tooltip = key_type if isinstance(key_type, tuple) else (key_type, None)
-            field = CreateOptionWidget(key, self.transcription_provider.settings.get(key), key_type, tooltip=tooltip)
+        for key, option_definition in schema.items():
+            key_type, tooltip, placeholder = ParseOptionDefinition(option_definition)
+            field = CreateOptionWidget(
+                key,
+                self.transcription_provider.settings.get(key),
+                key_type,
+                tooltip=tooltip,
+                placeholder=placeholder)
             field.contentChanged.connect(lambda setting=field: self._on_setting_changed(section_name, setting.key, setting.GetValue()))
             layout.addRow(field.name, field)
             self.widgets[key] = field
@@ -641,7 +667,7 @@ class SettingsDialog(QDialog):
                 self._refresh_provider_options()
 
         elif section_name == self.TRANSCRIPTION_SECTION:
-            if key == 'postprocess_transcription':
+            if self._is_root_setting(section_name, key):
                 self.settings[key] = value
                 self._update_section_visibility()
                 self._update_setting_visibility()
@@ -677,4 +703,3 @@ class SettingsDialog(QDialog):
 
             except Exception as e:
                 logging.error(f"Unable to load instructions from {instruction_file}: {e}")
-

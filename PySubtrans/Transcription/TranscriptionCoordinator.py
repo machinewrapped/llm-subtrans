@@ -45,6 +45,7 @@ class TranscriptionCoordinator:
             'max_chunk_seconds': self.settings.get_float('max_chunk_seconds')
                 or provider.recommended_max_chunk_seconds,
             'silence_min_duration': self.settings.get_float('silence_min_duration', 1.0),
+            'ffmpeg_path': self.settings.get_str('ffmpeg_path'),
         })
         self.chunker : AudioChunker = AudioChunker(chunk_settings)
         self.extractor : AudioExtractor = self.chunker.extractor
@@ -75,7 +76,7 @@ class TranscriptionCoordinator:
         """
         Verify ffmpeg availability and return the media audio tracks.
         """
-        CheckFfmpegAvailable()
+        CheckFfmpegAvailable(self.settings)
         return self.extractor.ListAudioTracks(media_path)
 
     def PlanChunks(self, media_path : str) -> list[AudioChunk]:

@@ -3208,6 +3208,10 @@ msgstr "První spuštění"
 msgid "free_plan"
 msgstr "Bezplatný plán"
 
+#: PySubtrans/Options.py:102
+msgid "ffmpeg_path"
+msgstr "Cesta k FFmpeg"
+
 #: PySubtrans/Options.py:85
 msgid "full_width_punctuation"
 msgstr "Interpunkce plné šířky"

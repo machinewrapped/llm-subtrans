@@ -101,10 +101,12 @@ To use Bedrock, you must:
 ## Transcription
 LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...), which can then be translated with the normal workflow. This can produce better results than a text-only translation flow, with more accurate timings and speaker identification (depending on the provider).
 
-Transcription requires a separate `ffmpeg`/`ffprobe` installation acessible on the system path.
+**Note**: Transcription requires `ffmpeg`/`ffprobe` to be installed and accessible.
 
 ### Local transcription
-**Qwen Local**: runs the official `qwen-asr` package in-process on your local machine. A separate torch install is required to take advantage of GPU acceleration (see https://pytorch.org/get-started/locally/).
+**Qwen Local**: runs  `qwen-asr` in-process on your machine. 
+
+A separate torch install is required to take advantage of GPU acceleration (see https://pytorch.org/get-started/locally/).
 
 ### Cloud transcription services
 **OpenRouter**: Provides several speech-to-text models, e.g. the excellent MAI Transcribe 2, DeepGram and Grok.

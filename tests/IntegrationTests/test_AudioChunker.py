@@ -7,11 +7,12 @@ import tempfile
 import unittest
 import wave
 from datetime import timedelta
-from unittest.mock import patch
+from pathlib import Path
+from unittest.mock import Mock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.Transcription.AudioExtractor import AudioChunker
+from PySubtrans.Transcription.AudioExtractor import AudioChunker, AudioExtractor
 
 def _ffmpeg_available() -> bool:
     return bool(shutil.which('ffmpeg') and shutil.which('ffprobe'))
@@ -154,3 +155,36 @@ class TestAudioChunkerIntegration(LoggedTestCase):
         for batch_chunk, stream_chunk in zip(batch_chunks, stream_chunks):
             self.assertLoggedEqual("chunk start", batch_chunk.start, stream_chunk.start)
             self.assertLoggedEqual("chunk end", batch_chunk.end, stream_chunk.end)
+
+
+class TestAudioExtractorCommands(LoggedTestCase):
+    def test_explicit_ffmpeg_path_is_used_for_ffmpeg_and_ffprobe(self):
+        """An explicit ffmpeg path selects its paired ffprobe executable too."""
+        with tempfile.TemporaryDirectory() as directory:
+            extension = '.exe' if os.name == 'nt' else ''
+            ffmpeg_path = Path(directory) / f'ffmpeg{extension}'
+            ffprobe_path = Path(directory) / f'ffprobe{extension}'
+            ffmpeg_path.touch()
+            ffprobe_path.touch()
+            ffmpeg_path.chmod(0o755)
+            ffprobe_path.chmod(0o755)
+
+            extractor = AudioExtractor(SettingsType({'ffmpeg_path': str(ffmpeg_path)}))
+            with tempfile.NamedTemporaryFile(suffix='.mkv') as media:
+                with patch('PySubtrans.Transcription.AudioExtractor.subprocess.run',
+                           return_value=Mock(returncode=0, stdout='1.5', stderr='')) as run:
+                    duration = extractor.GetDuration(media.name)
+                    extractor.ExtractChunk(
+                        media.name, timedelta(), timedelta(seconds=1), output_path=str(Path(directory) / 'out.wav'))
+
+            commands = [call.args[0] for call in run.call_args_list]
+            self.assertLoggedEqual('duration', timedelta(seconds=1.5), duration)
+            self.assertLoggedEqual('explicit ffprobe path', str(ffprobe_path), commands[0][0])
+            self.assertLoggedEqual('explicit ffmpeg path', str(ffmpeg_path), commands[1][0])
+
+    def test_blank_ffmpeg_path_keeps_system_commands(self):
+        """A blank setting preserves the existing PATH-based commands."""
+        extractor = AudioExtractor(SettingsType({'ffmpeg_path': '  '}))
+
+        self.assertLoggedEqual('PATH ffmpeg command', 'ffmpeg', extractor.ffmpeg_path)
+        self.assertLoggedEqual('PATH ffprobe command', 'ffprobe', extractor.ffprobe_path)

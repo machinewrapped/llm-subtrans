@@ -32,6 +32,54 @@ SUPPORTED_MEDIA_EXTENSIONS = ('.mp4', '.mkv', '.m4a', '.mp3', '.wav', '.flac', '
 FFMPEG_TEXT_ENCODING = 'utf-8'
 
 
+def _configured_ffmpeg_path(settings : SettingsType|None) -> str|None:
+    """Return a normalized explicitly configured ffmpeg path, if any."""
+    if settings is None:
+        return None
+
+    configured = settings.get_str('ffmpeg_path')
+    if not configured or not configured.strip():
+        return None
+
+    return os.path.expanduser(os.path.expandvars(configured.strip()))
+
+
+def _ffprobe_command(ffmpeg_path : str, explicit_ffmpeg : bool) -> str:
+    """Choose the ffprobe paired with an explicit ffmpeg, when present."""
+    if not explicit_ffmpeg:
+        return 'ffprobe'
+
+    extension = os.path.splitext(ffmpeg_path)[1]
+    if extension.casefold() not in ('.exe', '.bat', '.cmd'):
+        extension = ''
+    candidate = os.path.join(os.path.dirname(os.path.abspath(ffmpeg_path)), f'ffprobe{extension}')
+    return candidate if os.path.isfile(candidate) else 'ffprobe'
+
+
+def CheckFfmpegAvailable(settings : SettingsType|None = None) -> None:
+    """
+    Raise if the configured ffmpeg/ffprobe pair, or the system PATH pair,
+    cannot be found.
+    """
+    ffmpeg_path = _configured_ffmpeg_path(settings)
+    if ffmpeg_path is None:
+        if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
+            raise SubtitleError(_("ffmpeg and ffprobe are required for transcription but were not found on PATH"))
+        return
+
+    if not os.path.isfile(ffmpeg_path) or (os.name != 'nt' and not os.access(ffmpeg_path, os.X_OK)):
+        raise SubtitleError(_("The configured ffmpeg executable was not found: {}").format(ffmpeg_path))
+
+    ffprobe_path = _ffprobe_command(ffmpeg_path, explicit_ffmpeg=True)
+    if ffprobe_path == 'ffprobe':
+        if not shutil.which('ffprobe'):
+            raise SubtitleError(_(
+                "ffprobe was not found alongside the configured ffmpeg executable or on PATH"
+            ))
+    elif not os.path.isfile(ffprobe_path) or (os.name != 'nt' and not os.access(ffprobe_path, os.X_OK)):
+        raise SubtitleError(_("The ffprobe executable paired with ffmpeg was not found: {}").format(ffprobe_path))
+
+
 @dataclass
 class AudioTrack:
     """
@@ -67,14 +115,6 @@ class AudioChunk:
     path : str|None = None
 
 
-def CheckFfmpegAvailable() -> None:
-    """
-    Raise if ffmpeg/ffprobe cannot be found on PATH.
-    """
-    if not shutil.which('ffmpeg') or not shutil.which('ffprobe'):
-        raise SubtitleError(_("ffmpeg and ffprobe are required for transcription but were not found on PATH"))
-
-
 class AudioExtractor:
     """
     Extracts normalized audio from media files using ffmpeg.
@@ -84,7 +124,10 @@ class AudioExtractor:
     """
     def __init__(self, settings : SettingsType|None = None):
         self.settings : SettingsType = settings or SettingsType()
-        CheckFfmpegAvailable()
+        explicit_ffmpeg = _configured_ffmpeg_path(self.settings)
+        self.ffmpeg_path : str = explicit_ffmpeg or 'ffmpeg'
+        self.ffprobe_path : str = _ffprobe_command(self.ffmpeg_path, explicit_ffmpeg is not None)
+        CheckFfmpegAvailable(self.settings)
 
     @property
     def sample_rate(self) -> int:
@@ -97,7 +140,7 @@ class AudioExtractor:
         """
         self._check_media_path(media_path)
         result = subprocess.run(
-            ['ffprobe', '-v', 'error', '-show_entries', 'format=duration',
+            [self.ffprobe_path, '-v', 'error', '-show_entries', 'format=duration',
              '-of', 'default=noprint_wrappers=1:nokey=1', media_path],
             capture_output=True, text=True, encoding=FFMPEG_TEXT_ENCODING,
             errors='replace', timeout=60
@@ -116,7 +159,7 @@ class AudioExtractor:
         """
         self._check_media_path(media_path)
         result = subprocess.run(
-            ['ffprobe', '-v', 'error', '-select_streams', 'a',
+            [self.ffprobe_path, '-v', 'error', '-select_streams', 'a',
              '-show_entries', 'stream=index,codec_name,channels:stream_tags=language',
              '-of', 'csv=p=0', media_path],
             capture_output=True, text=True, encoding=FFMPEG_TEXT_ENCODING,
@@ -154,7 +197,7 @@ class AudioExtractor:
         start_seconds = start.total_seconds()
 
         result = subprocess.run(
-            ['ffmpeg', '-y', '-v', 'error',
+            [self.ffmpeg_path, '-y', '-v', 'error',
              '-ss', str(start_seconds), '-i', media_path,
              '-t', str(duration.total_seconds()),
              '-map', f'0:a:{track_index}',
@@ -236,7 +279,7 @@ class AudioExtractor:
         logging.info(_("Analysing audio for silences in {}").format(
             os.path.basename(media_path)))
 
-        stream = SilenceStream(media_path, track_index, min_duration, noise_db)
+        stream = SilenceStream(media_path, track_index, min_duration, noise_db, ffmpeg_path=self.ffmpeg_path)
         with stream:
             yield from stream
 
@@ -261,12 +304,13 @@ class SilenceStream:
     """
     def __init__(self, media_path : str, track_index : int = 0,
                  min_duration : float = 0.8, noise_db : int = -30,
-                 timeout : float = 900.0):
+                 timeout : float = 900.0, ffmpeg_path : str = 'ffmpeg'):
         self.media_path : str = media_path
         self.track_index : int = track_index
         self.min_duration : float = min_duration
         self.noise_db : int = noise_db
         self.timeout : float = timeout
+        self.ffmpeg_path : str = ffmpeg_path
         self._events : queue.Queue[tuple[timedelta, timedelta]|None] = queue.Queue()
         self._thread : threading.Thread|None = None
         self._process : subprocess.Popen[str]|None = None
@@ -277,7 +321,7 @@ class SilenceStream:
             raise SubtitleError(_("Media file not found: {}").format(self.media_path))
 
         self._process = subprocess.Popen(
-            ['ffmpeg', '-v', 'info', '-i', self.media_path,
+            [self.ffmpeg_path, '-v', 'info', '-i', self.media_path,
              '-map', f'0:a:{self.track_index}',
              '-af', f'silencedetect=noise={self.noise_db}dB:d={self.min_duration}',
              '-f', 'null', '-'],

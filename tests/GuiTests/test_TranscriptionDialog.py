@@ -53,6 +53,42 @@ class TestTranscriptionGlobalSettings(LoggedTestCase):
             dialog.deleteLater()
             self.application.processEvents()
 
+    def test_ffmpeg_path_is_saved_as_global_option(self) -> None:
+        """The executable path is not copied into a provider namespace."""
+        options = Options()
+        with patch.object(SettingsDialog, '_refresh_transcription_providers'), \
+                patch.object(SettingsDialog, '_initialise_translation_provider'):
+            dialog = SettingsDialog(options)
+        try:
+            path = r'C:\tools\ffmpeg.exe'
+            dialog._on_setting_changed(SettingsDialog.TRANSCRIPTION_SECTION, 'ffmpeg_path', path)
+            dialog.widgets['ffmpeg_path'].SetValue(path)
+            dialog.accept()
+
+            self.assertLoggedEqual('global ffmpeg path', path, dialog.settings.get_str('ffmpeg_path'))
+            provider_settings = dialog.settings.get_dict('provider_settings')
+            transcription_settings = provider_settings.get('OpenRouter Transcription', {})
+            self.assertLoggedNotIn('ffmpeg path is not provider-specific', 'ffmpeg_path', transcription_settings)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+    def test_ffmpeg_path_placeholder_comes_from_option_definition(self) -> None:
+        """Text-field guidance is applied from the declarative option metadata."""
+        options = Options()
+        with patch.object(SettingsDialog, '_refresh_transcription_providers'), \
+                patch.object(SettingsDialog, '_initialise_translation_provider'):
+            dialog = SettingsDialog(options)
+        try:
+            option_definition = SettingsDialog.SECTIONS[SettingsDialog.TRANSCRIPTION_SECTION]['ffmpeg_path']
+            self.assertLoggedEqual(
+                'ffmpeg placeholder',
+                option_definition[2],
+                dialog.widgets['ffmpeg_path'].text_field.placeholderText())
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
 
 class TestTranscriptionRunEvidence(LoggedTestCase):
     """Run-completion evidence recording on the dialog itself."""
@@ -222,6 +258,25 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             self.assertLoggedIsNone('invalid bounds produce no command', command)
             self.assertLoggedEqual('command construction skipped', 0, command_factory.call_count)
             self.assertLoggedIn('validation message', 'maximum chunk length', dialog.status_label.text())
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+    def test_build_command_passes_global_ffmpeg_path(self) -> None:
+        """Transcription runs receive the configured executable path."""
+        path = r'C:\tools\ffmpeg.exe'
+        options = Options({'ffmpeg_path': path})
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(options)
+        try:
+            dialog.provider = FakeTranscriptionProvider()
+            dialog.media_path = __file__
+            command = dialog._build_command()
+
+            self.assertLoggedIsNotNone('command created', command)
+            if command is not None:
+                self.assertLoggedEqual('configured ffmpeg path', path,
+                                       command.settings.get_str('ffmpeg_path'))
         finally:
             dialog.deleteLater()
             self.application.processEvents()

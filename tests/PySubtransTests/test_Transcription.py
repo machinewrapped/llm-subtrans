@@ -264,12 +264,13 @@ class TestSilenceStream(LoggedTestCase):
         with tempfile.NamedTemporaryFile(suffix='.mkv') as media:
             with patch('PySubtrans.Transcription.AudioExtractor.subprocess.Popen',
                        side_effect=create_process) as popen:
-                with SilenceStream(media.name) as stream:
+                with SilenceStream(media.name, ffmpeg_path='custom-ffmpeg') as stream:
                     events = list(stream)
 
         call_args = popen.call_args
         assert call_args is not None
         process_kwargs = call_args.kwargs
+        self.assertLoggedEqual('explicit streaming ffmpeg path', 'custom-ffmpeg', call_args.args[0][0])
         self.assertLoggedEqual('ffmpeg text encoding', 'utf-8', process_kwargs['encoding'])
         self.assertLoggedEqual('ffmpeg decode error handling', 'replace', process_kwargs['errors'])
         self.assertLoggedEqual('silence event count', 1, len(events))

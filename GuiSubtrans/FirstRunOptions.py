@@ -8,7 +8,7 @@ from PySide6.QtWidgets import (
     )
 
 from GuiSubtrans.GuiHelpers import GetThemeNames
-from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget
+from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget, ParseOptionDefinition
 from PySubtrans.Options import Options
 from PySubtrans.Helpers.Localization import _, get_locale_display_items
 
@@ -48,8 +48,13 @@ class FirstRunOptions(QDialog):
         settings['ui_language'] = settings.get('ui_language') or 'en'
 
         for key, option in self.OPTIONS.items():
-            key_type, tooltip = option
-            field : OptionWidget = CreateOptionWidget(key, settings.get(key), key_type, tooltip=tooltip)
+            key_type, tooltip, placeholder = ParseOptionDefinition(option)
+            field : OptionWidget = CreateOptionWidget(
+                key,
+                settings.get(key),
+                key_type,
+                tooltip=tooltip,
+                placeholder=placeholder)
             self.form_layout.addRow(field.name, field)
             self.controls[key] = field
 

@@ -3198,6 +3198,10 @@ msgstr "Firstrun"
 msgid "free_plan"
 msgstr "Free Plan"
 
+#: PySubtrans/Options.py:102
+msgid "ffmpeg_path"
+msgstr "FFmpeg Path"
+
 #: PySubtrans/Options.py:85
 msgid "full_width_punctuation"
 msgstr "Full Width Punctuation"

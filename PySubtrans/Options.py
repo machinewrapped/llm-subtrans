@@ -99,6 +99,7 @@ default_settings = {
     'reparse' : False,
     'reload' : False,
     'last_used_path': None,
+    'ffmpeg_path': env_str('FFMPEG_PATH', ''),
     'transcription_ffmpeg_available': None,
     'transcription_torch_device': "Unknown",
     'stop_on_error' : env_bool('STOP_ON_ERROR'),

@@ -33,6 +33,8 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('--diarize', dest='diarize', action='store_true', default=None, help="Request speaker diarization (model-dependent)")
     parser.add_argument('--no-diarize', dest='diarize', action='store_false', help="Explicitly disable diarization")
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
+    parser.add_argument('--ffmpeg-path', type=str, default=None,
+                        help="Path to the ffmpeg executable (default: use ffmpeg and ffprobe from PATH)")
     parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
     parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
     parser.add_argument('--format', choices=('srt', 'ass', 'vtt'), default='vtt', help="Subtitle format for the transcribed output (default vtt; ass and vtt preserve speaker labels)")
@@ -92,6 +94,8 @@ def main() -> int:
         coordinator_settings['max_chunk_seconds'] = args.max_chunk
     if args.rate_limit is not None:
         coordinator_settings['rate_limit'] = args.rate_limit
+    if args.ffmpeg_path is not None:
+        coordinator_settings['ffmpeg_path'] = args.ffmpeg_path
     try:
         coordinator = TranscriptionCoordinator(provider, coordinator_settings)
     except SubtitleError as e:

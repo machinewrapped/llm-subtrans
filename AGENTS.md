@@ -6,10 +6,10 @@ GUI framework is PySide6, be sure to use the correct syntax (e.g. scoped enum va
 
 Secrets are stored in a .env file - the agent must NEVER read the contents of the file.
 
-If testable code was changed, ensure that unit_tests have been run. The GUI is not covered by unit tests.
+If testable code was changed, ensure that unit_tests have been run at the end of the task.
 
 ## Project structure
-Before conducting exploratory searches of the code base, consult `docs/architecture.md` for information on the project architecture, structure and components to guide the search. Ensure the document is maintained after making significant architectural changes.
+Before conducting exploratory searches of the code base, consult `docs/architecture.md` for information on the project architecture, structure and components to guide the search. Ensure the document is maintained after significant architectural changes.
 
 ## Console Output
 **IMPORTANT** Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Windows console errors

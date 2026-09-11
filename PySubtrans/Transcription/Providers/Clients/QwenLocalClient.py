@@ -1,3 +1,4 @@
+import gc
 import importlib.util
 import logging
 import os
@@ -15,11 +16,12 @@ from PySubtrans.Transcription.Providers.Provider_QwenLocal import (
     parse_qwen_result,
 )
 
-# Loaded ASR models per (checkpoint, device, generation budget, aligner):
-# loading takes seconds, and load-time settings only apply to fresh loads.
-# No eviction: entries accumulate across settings changes within a session.
-# Revisit if there are ever more than two models to choose from.
-_loaded_models : dict[tuple[str, str, int, str], object] = {}
+# A single loaded ASR model (plus aligner) is kept for the session, keyed by
+# (checkpoint, device, aligner). Loading takes seconds, but each model set is
+# several GB of device memory, so a settings change releases the old one
+# before loading its replacement rather than accumulating copies.
+_loaded_key : tuple[str, str, str]|None = None
+_loaded_model : object|None = None
 
 
 if not importlib.util.find_spec("qwen_asr"):
@@ -52,17 +54,16 @@ else:
             In-process transcription via the official qwen-asr package.
 
             Requests word timestamps when the language is aligner-supported;
-            otherwise returns flat text and the coordinator falls back to
-            chunk-level lines. Heavy imports stay inside methods so merely
-            constructing the client never touches torch.
+            otherwise returns flat text and the coordinator falls back to chunk-level lines.
+            Device resolution and model loading are deferred until the first chunk, so constructing the client is cheap.
             """
             def __init__(self, settings : SettingsType):
                 super().__init__(settings)
                 self._model : object|None = None
+                self._device : str|None = None
 
-                # The provider resolves hints to English names; qwen-asr only
-                # accepts the ones on its own list, so decide once here (not
-                # per chunk) whether to use the hint or fall back to auto-detect.
+                # The provider resolves hints to English names; qwen-asr only accepts names on its list,
+                # so decide once whether to use the hint or fall back to auto-detect.
                 language = self.settings.get_str('language')
                 if language and language not in _QWEN_SUPPORTED_LANGUAGES:
                     logging.warning(_("Language '{}' is not in qwen-asr's supported list, using auto-detection").format(language))
@@ -86,7 +87,13 @@ else:
 
             @property
             def device(self) -> str:
-                """Compute device for both models."""
+                """Compute device for both models, resolved once so availability warnings are not repeated."""
+                if self._device is None:
+                    self._device = self._select_device()
+                return self._device
+
+            def _select_device(self) -> str:
+                """Map the configured device setting onto an available torch device."""
                 configured = (self.settings.get_str('device') or 'auto').strip().casefold()
                 if configured not in ('auto', 'cuda', 'mps', 'xpu', 'cpu'):
                     logging.warning(_("Unknown device '{}', using automatic selection").format(configured))
@@ -137,11 +144,11 @@ else:
 
             def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
                 model = self._load_model()
+                # The budget is read at generation time, so a changed setting applies to a reused model
+                model.max_new_tokens = self.max_new_tokens
                 chunk_path = self._write_chunk(audio_bytes)
-                # Qwen can detect the language and pass it to its forced aligner
-                # when no hint is supplied.  Keep the default timestamp request
-                # enabled for auto-detection; unsupported detected languages are
-                # represented by the SDK without word timings.
+                # Qwen can detect the language and pass it to its forced aligner when no hint is supplied,
+                # so timestamps are requested by default even when auto-detecting.
                 want_stamps = self.settings.get_bool('transcription_align', True)
 
                 try:
@@ -152,9 +159,8 @@ else:
                             return_time_stamps=want_stamps,
                         )
                     except ValueError as e:
-                        # The ASR model may detect a language outside the
-                        # forced aligner's coverage. Try English alignment
-                        # first (better than nothing), then fall back to
+                        # The ASR model may detect a language outside the forced aligner's coverage.
+                        # Try English alignment first (better than nothing), then fall back to
                         # no timestamps if that also fails.
                         message = str(e).casefold()
                         unsupported = 'unsupported language' in message or 'language is not supported' in message
@@ -194,14 +200,18 @@ else:
                 return TranscriptionResult(text=text, language=detected or language, words=words)
 
             def _load_model(self) -> Any:
+                global _loaded_key, _loaded_model
+
                 if self._model is not None:
                     return self._model
 
-                cache_key = (self.checkpoint, self.device, self.max_new_tokens, self.aligner_checkpoint)
-                cached = _loaded_models.get(cache_key)
-                if cached is not None:
-                    self._model = cached
-                    return cached
+                cache_key = (self.checkpoint, self.device, self.aligner_checkpoint)
+                if _loaded_model is not None:
+                    if _loaded_key == cache_key:
+                        self._model = _loaded_model
+                        return _loaded_model
+
+                    self._release_loaded_model()
 
                 logging.info(_("Loading Qwen model {} on {}").format(self.checkpoint, self.device))
 
@@ -218,9 +228,25 @@ else:
                 except Exception as e:
                     raise SubtitleError(_("Unable to load Qwen model: {}").format(str(e)), error=e)
 
-                _loaded_models[cache_key] = model
+                _loaded_key = cache_key
+                _loaded_model = model
                 self._model = model
                 return model
+
+            def _release_loaded_model(self) -> None:
+                """Drop the session's cached model and return its device memory before loading another."""
+                global _loaded_key, _loaded_model
+
+                logging.info(_("Releasing previously loaded Qwen model {}").format(_loaded_key[0] if _loaded_key else ""))
+
+                _loaded_key = None
+                _loaded_model = None
+                gc.collect()
+
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+                elif _mps_available():
+                    torch.mps.empty_cache()
 
             def _write_chunk(self, audio_bytes : bytes) -> str:
                 handle, path = tempfile.mkstemp(suffix='.wav', prefix='subtrans-qwen-')

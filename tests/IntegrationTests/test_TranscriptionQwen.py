@@ -1,6 +1,7 @@
 import unittest
 from datetime import timedelta
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
@@ -295,6 +296,68 @@ class TestQwenAlignment(LoggedTestCase):
                                model.transcribe.call_args_list[1].kwargs['return_time_stamps'])
         self.assertLoggedEqual("fallback timestamps", False,
                                model.transcribe.call_args_list[2].kwargs['return_time_stamps'])
+
+
+class TestQwenModelCache(LoggedTestCase):
+    def setUp(self):
+        super().setUp()
+        client_type = getattr(qwen_module, 'QwenLocalClient', None)
+        if client_type is None:
+            self.skipTest("qwen-asr not installed")
+        self.client_type : type[Any] = client_type
+
+        self._saved_key = qwen_module._loaded_key
+        self._saved_model = qwen_module._loaded_model
+        qwen_module._loaded_key = None
+        qwen_module._loaded_model = None
+
+    def tearDown(self):
+        qwen_module._loaded_key = self._saved_key
+        qwen_module._loaded_model = self._saved_model
+        super().tearDown()
+
+    def test_generation_budget_applied_per_call(self):
+        """A changed max_new_tokens setting applies to a reused model."""
+        client = self.client_type(SettingsType({'max_new_tokens': 2048}))
+        result = type("Result", (), {"text": "hello", "language": "English", "time_stamps": None})()
+        model = Mock()
+        model.transcribe.return_value = [result]
+        with patch.object(client, '_load_model', return_value=model), \
+                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
+                patch.object(qwen_module.os, 'remove'):
+            client._transcribe_chunk(b"audio", "wav", None)
+
+        self.assertLoggedEqual("budget set on model", 2048, model.max_new_tokens)
+
+    def test_settings_change_replaces_cached_model(self):
+        """Only the most recently loaded model is retained; the previous one is released."""
+        loaded : list[Mock] = []
+
+        def fake_load(checkpoint, **kwargs):
+            model = Mock(name=checkpoint)
+            loaded.append(model)
+            return model
+
+        with patch.object(qwen_module.Qwen3ASRModel, 'from_pretrained', side_effect=fake_load) as from_pretrained, \
+                patch.object(qwen_module.torch.cuda, 'is_available', return_value=False), \
+                patch.object(qwen_module, '_mps_available', return_value=False):
+            first = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu'}))
+            first_model = first._load_model()
+            self.assertLoggedIs("first load cached", first_model, qwen_module._loaded_model)
+
+            same = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'max_new_tokens': 4096}))
+            self.assertLoggedIs("budget change reuses model", first_model, same._load_model())
+            self.assertLoggedEqual("single load so far", 1, from_pretrained.call_count)
+
+            second = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-0.6B', 'device': 'cpu'}))
+            second_model = second._load_model()
+            self.assertLoggedEqual("second load performed", 2, from_pretrained.call_count)
+            self.assertLoggedIs("latest model cached", second_model, qwen_module._loaded_model)
+            self.assertLoggedIsNot("previous model dropped", first_model, qwen_module._loaded_model)
+
+            again = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu'}))
+            again._load_model()
+            self.assertLoggedEqual("original key reloads", 3, from_pretrained.call_count)
 
 
 if __name__ == '__main__':

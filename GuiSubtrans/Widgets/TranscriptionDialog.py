@@ -1,7 +1,7 @@
 import logging
 import os
 from collections.abc import Callable
-from typing import Any, cast
+from typing import Any
 
 from PySide6.QtCore import QThread, QTimer, Qt, Signal, Slot
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
@@ -26,7 +26,6 @@ from PySide6.QtWidgets import (
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from GuiSubtrans.Widgets.OptionsWidgets import (
-    CheckboxOptionWidget,
     CreateOptionWidget,
     FloatOptionWidget,
     OptionWidget,
@@ -70,6 +69,13 @@ class TranscriptionDialog(QDialog):
     """
     PROVIDER_ROW_START : int = 3
 
+    RUN_OPTION_DEFINITIONS = {
+        'min_chunk_seconds': (float, _("Provider-recommended default;")),
+        'max_chunk_seconds': (float, _("Provider-recommended default;")),
+        'save_transcription': (bool, _("Write the transcription to a subtitle file alongside the media before translating")),
+        'postprocess_transcription': (bool, _("Apply the same post-processing used for translations (dashes, filler words, line breaks, etc.)")),
+    }
+
     commandRequested = Signal(object)
 
     def __init__(self, options : Options, parent=None):
@@ -86,6 +92,7 @@ class TranscriptionDialog(QDialog):
         self.provider_fields : dict[str, OptionWidget] = {}
         self._provider_row_count : int = 0
         self.fields : dict[str, OptionWidget] = {}
+        self._option_definitions : dict[str, Any] = {}
         self._phase : str = "setup"
         self.run_progress : TranscriptionRunProgress = TranscriptionRunProgress()
         self._close_requested : bool = False
@@ -143,29 +150,29 @@ class TranscriptionDialog(QDialog):
         self.settings_button.setVisible(False)
         self.form.addRow(_("Provider"), _widget_row(self.provider_combo, self.settings_button))
 
-        chunk_tooltip = _("Provider-recommended default; reselecting the provider restores it")
-        seconds_suffix = _(" s")
-        for key, default, limits, label in (
-                ('min_chunk_seconds', 8.0, (1.0, 600.0), _("Min chunk length")),
-                ('max_chunk_seconds', 60.0, (10.0, 1800.0), _("Max chunk length"))):
-            field = cast(FloatOptionWidget, self._add_option_field(key, default, float, tooltip=chunk_tooltip))
-            field.SetRange(*limits)
-            field.SetSuffix(seconds_suffix)
-            self.form.addRow(label, field)
+        self._option_definitions = dict(self.RUN_OPTION_DEFINITIONS)
+        self._option_definitions['output_format'] = (
+            SubtitleFormatRegistry.enumerate_formats(),
+            _("VTT and ASS preserve speaker labels; SRT has no speaker field"))
 
-        save_field = cast(CheckboxOptionWidget, self._add_option_field(
-            'save_transcription', True, bool,
-            tooltip=_("Write the transcription to a subtitle file alongside the media before translating")))
-        format_field = self._add_option_field(
-            'output_format', '.vtt', SubtitleFormatRegistry.enumerate_formats(),
-            tooltip=_("VTT and ASS preserve speaker labels; SRT has no speaker field"))
+        chunk_fields = (
+            ("min_chunk_seconds", 8.0, (1.0, 600.0), _("Min chunk length")),
+            ("max_chunk_seconds", 60.0, (10.0, 1800.0), _("Max chunk length")),
+        )
+        for key, default, limits, label in chunk_fields:
+            field = self._add_option_row(key, default, label)
+            if isinstance(field, FloatOptionWidget):
+                field.SetRange(*limits)
+                field.SetSuffix(_(" s"))
+
+        save_field = self._create_option_field('save_transcription', True)
+        format_field = self._create_option_field('output_format', '.vtt')
         save_field.contentChanged.connect(lambda: format_field.setEnabled(save_field.GetValue()))
         self.form.addRow(_("Save transcribed subtitles"), _widget_row(save_field, format_field, stretch=True))
 
-        clean_field = self._add_option_field(
-            'postprocess_transcription', self.global_options.get_bool('postprocess_transcription', True), bool,
-            tooltip=_("Apply the same post-processing used for translations (dashes, filler words, line breaks, etc.)"))
-        self.form.addRow(clean_field.name, clean_field)
+        self._add_option_row(
+            'postprocess_transcription',
+            self.global_options.get_bool('postprocess_transcription', True))
         left_layout.addStretch(1)
 
         self.results_view = QTextEdit(self.splitter)
@@ -199,12 +206,40 @@ class TranscriptionDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
         layout.addWidget(self.button_box)
 
-    def _add_option_field(self, key : str, value : Any, key_type : Any, tooltip : str|None = None) -> OptionWidget:
+    def _create_option_field(
+            self,
+            key : str,
+            value : Any,
+            option_definition : Any|None = None,
+            fields : dict[str, OptionWidget]|None = None) -> OptionWidget:
         """
-        Create an option widget, register it in self.fields and return it.
+        Create an option widget from schema metadata and register it.
+
+        Omitted metadata and registry arguments refer to this dialog's
+        transient run options. Dynamic provider fields provide both values.
         """
-        field = CreateOptionWidget(key, value, key_type, tooltip=tooltip)
-        self.fields[key] = field
+        if option_definition is None:
+            option_definition = self._option_definitions[key]
+        if fields is None:
+            fields = self.fields
+        key_type, tooltip, placeholder = ParseOptionDefinition(option_definition)
+        field = CreateOptionWidget(
+            key,
+            value,
+            key_type,
+            tooltip=tooltip,
+            placeholder=placeholder)
+        fields[key] = field
+        return field
+
+    def _add_option_row(
+            self,
+            key : str,
+            value : Any,
+            label : str|None = None) -> OptionWidget:
+        """Create, register, and add a schema-defined option row."""
+        field = self._create_option_field(key, value)
+        self.form.addRow(label or field.name, field)
         return field
 
     def _button(self, text : str, handler : Callable[..., None]) -> QPushButton:
@@ -344,15 +379,12 @@ class TranscriptionDialog(QDialog):
         for key, option_definition in schema.items():
             if key in self.provider.advanced_settings:
                 continue
-            key_type, tooltip, placeholder = ParseOptionDefinition(option_definition)
-            field = CreateOptionWidget(
+            field = self._create_option_field(
                 key,
                 self.provider.settings.get(key),
-                key_type,
-                tooltip=tooltip,
-                placeholder=placeholder)
+                option_definition=option_definition,
+                fields=self.provider_fields)
             field.contentChanged.connect(lambda dummy=None, k=field.key: self._on_provider_field_committed(k))
-            self.provider_fields[key] = field
             self.form.insertRow(self.PROVIDER_ROW_START + self._provider_row_count, field.name, field)
             self._provider_row_count += 1
 

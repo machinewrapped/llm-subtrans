@@ -85,6 +85,7 @@ def main() -> int:
     coordinator_settings = SettingsType({
         'audio_track': args.track,
         'language': args.language,
+        'ui_language': Options().ui_language,
         'transcription_align': args.align,
     })
     # Drop unset values so provider recommendations apply

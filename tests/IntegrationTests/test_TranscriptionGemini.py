@@ -5,7 +5,7 @@ from datetime import timedelta
 from unittest.mock import Mock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
-from PySubtrans.Helpers.Tests import skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
@@ -85,13 +85,13 @@ class TestGeminiProvider(LoggedTestCase):
         """Verbatim requests word timings, diarization and language codes."""
         assert GeminiTranscriptionProvider is not None  # Type narrowing for PyLance
         provider = GeminiTranscriptionProvider(SettingsType({'api_key': 'k'}))
-        client = provider.GetTranscriptionClient(SettingsType())
+        client = provider.GetTranscriptionClient(SettingsType({'language': 'Chinese'}))
 
         self.assertLoggedEqual("verbatim config", {"type": "verbatim", "timestamp_granularities": ["word"],
                                                    "diarization_mode": "speaker"},
-                               client._transcription_config("Chinese")["mode"])
+                               client._transcription_config()["mode"])
         self.assertLoggedEqual("verbatim language", ["cmn-Hans-CN"],
-                               client._transcription_config("Chinese").get("language_codes"))
+                               client._transcription_config().get("language_codes"))
         self.assertLoggedEqual("diarization advertised", True, client.supports_diarization)
         self.assertLoggedEqual("timestamps advertised", True, client.supports_timestamps)
 
@@ -282,15 +282,45 @@ class TestGeminiParsing(LoggedTestCase):
         self.assertLoggedEqual("none", None, parse_offset(None))
         self.assertLoggedEqual("garbage", None, parse_offset("soon"))
 
+    @skip_if_debugger_attached
+    def test_language_resolved_when_client_created(self):
+        """The hint is resolved once up front: no hint auto-detects, a bad hint fails before any request."""
+        assert GeminiTranscriptionProvider is not None  # Type narrowing for PyLance
+        provider = GeminiTranscriptionProvider(SettingsType({'api_key': 'k'}))
+
+        client = provider.GetTranscriptionClient(SettingsType())
+        self.assertLoggedIsNone("no hint", client.language_code)
+        self.assertLoggedNotIn("no language_codes", "language_codes", client._transcription_config())
+
+        client = provider.GetTranscriptionClient(SettingsType({'language': 'chino', 'ui_language': 'es'}))
+        self.assertLoggedEqual("hint in ui language", "cmn-Hans-CN", client.language_code)
+
+        with self.assertRaises(SubtitleError) as context:
+            provider.GetTranscriptionClient(SettingsType({'language': 'Klingon'}))
+        log_input_expected_error("Klingon", SubtitleError, context.exception)
+
+    @skip_if_debugger_attached
     def test_language_mapping(self):
         """Free-text hints map to BCP-47, codes pass through, empty auto-detects."""
 
         self.assertLoggedEqual("chinese", "cmn-Hans-CN", map_language_code("Chinese"))
+        self.assertLoggedEqual("traditional chinese", "cmn-Hant-TW", map_language_code("Traditional Chinese"))
         self.assertLoggedEqual("cantonese", "yue-Hant-HK", map_language_code("Cantonese"))
         self.assertLoggedEqual("passthrough", "en-US", map_language_code("en-US"))
+        self.assertLoggedEqual("gemini code round-trips", "cmn-Hans-CN", map_language_code("cmn-Hans-CN"))
+        self.assertLoggedEqual("bare code gains region", "ja-JP", map_language_code("ja"))
+        self.assertLoggedEqual("case and separator normalised", "pt-BR", map_language_code("pt_br"))
+        self.assertLoggedEqual("lowercase name", "en-US", map_language_code("english"))
+        self.assertLoggedEqual("name outside old table", "nl-NL", map_language_code("Dutch"))
+        self.assertLoggedEqual("no script outside chinese", "sr-RS", map_language_code("Serbian"))
         self.assertLoggedEqual("empty", None, map_language_code(""))
         self.assertLoggedEqual("none", None, map_language_code(None))
-        self.assertLoggedEqual("unknown", None, map_language_code("Klingon"))
+        self.assertLoggedEqual("native name", "ja-JP", map_language_code("\u65e5\u672c\u8a9e"))
+        self.assertLoggedEqual("display language name", "de-DE", map_language_code("alem\u00e1n", display_language="es"))
+
+        with self.assertRaises(SubtitleError) as context:
+            map_language_code("Klingon")
+        log_input_expected_error("Klingon", SubtitleError, context.exception)
 
 class TestGeminiUploadCleanup(LoggedTestCase):
     def _client(self):
@@ -313,7 +343,7 @@ class TestGeminiUploadCleanup(LoggedTestCase):
         backend.interactions.create.side_effect = ValueError("generation failed")
 
         with self.assertRaises(ValueError):
-            client._create_interaction(backend, "chunk.wav", "en")
+            client._create_interaction(backend, "chunk.wav")
 
         backend.files.delete.assert_called_once_with(name="uploaded-file")
 
@@ -328,7 +358,7 @@ class TestGeminiUploadCleanup(LoggedTestCase):
         backend.interactions.create.side_effect = _QuotaError("quota exceeded")
 
         with self.assertRaises(SubtitleError):
-            client._create_interaction(backend, "chunk.wav", "en")
+            client._create_interaction(backend, "chunk.wav")
 
         backend.files.delete.assert_called_once_with(name="uploaded-file")
 
@@ -347,7 +377,7 @@ class TestGeminiUploadCleanup(LoggedTestCase):
 
         with patch.object(client, '_sleep_abortable', side_effect=SubtitleError("Transcription aborted")) as sleep:
             with self.assertRaises(SubtitleError):
-                client._create_interaction(backend, "chunk.wav", "en")
+                client._create_interaction(backend, "chunk.wav")
 
         sleep.assert_called_once()
         backend.files.delete.assert_called_once_with(name="uploaded-file")

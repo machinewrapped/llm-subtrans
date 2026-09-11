@@ -5,6 +5,7 @@ from datetime import timedelta
 
 import regex
 
+from PySubtrans.Helpers.Languages import ResolveLanguage, ToBcp47Tag
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import TryParseFloat
 from PySubtrans.Options import env_float
@@ -90,41 +91,34 @@ def _format_retry_delay(seconds : float) -> str:
         return f"about {minutes} minute{'s' if minutes != 1 else ''}"
     return f"about {secs} second{'s' if secs != 1 else ''}"
 
-# Free-text hints to BCP-47 codes (empty/unknown hints use auto-detection)
-_GEMINI_LANGUAGE_MAP : dict[str, str] = {
-    'chinese': 'cmn-Hans-CN',
-    'mandarin': 'cmn-Hans-CN',
-    'cantonese': 'yue-Hant-HK',
-    'yue': 'yue-Hant-HK',
-    'english': 'en-US',
-    'japanese': 'ja-JP',
-    'korean': 'ko-KR',
-    'french': 'fr-FR',
-    'german': 'de-DE',
-    'spanish': 'es-ES',
-    'italian': 'it-IT',
-    'portuguese': 'pt-BR',
-    'russian': 'ru-RU',
-    'hindi': 'hi-IN',
-    'arabic': 'ar-EG',
-    'thai': 'th-TH',
-    'vietnamese': 'vi-VN',
-}
+# Gemini's language table is plain language-region BCP-47 (ja-JP, sr-RS)
+# except for Chinese, which it lists with a script subtag and under the
+# "cmn" (Mandarin) code that CLDR canonicalises to "zh".
+_GEMINI_SCRIPT_LANGUAGES = frozenset({'zh', 'yue'})
+_GEMINI_LANGUAGE_ALIASES : dict[str, str] = {'zh': 'cmn'}
 
 
-def map_language_code(language : str|None) -> str|None:
+def map_language_code(language : str|None, display_language : str|None = None) -> str|None:
     """
-    Map a free-text language hint onto a BCP-47 code, passing through
-    values that already look like codes. None enables auto-detection.
+    Map a free-text language hint (name or code) onto the BCP-47 tag
+    Gemini expects, e.g. "Chinese" -> cmn-Hans-CN, "ja" -> ja-JP.
+    Names are accepted in English, in the language itself or in
+    `display_language`. None enables auto-detection; an unrecognised
+    hint raises rather than silently auto-detecting.
     """
     if not language or not language.strip():
         return None
 
-    hint = language.strip()
-    if '-' in hint:
-        return hint
+    locale = ResolveLanguage(language, display_language)
+    if locale is None:
+        raise SubtitleError(_("Unrecognised language '{}': use a language name or BCP-47 code, or leave empty to auto-detect").format(language.strip()))
 
-    return _GEMINI_LANGUAGE_MAP.get(hint.casefold())
+    tag = ToBcp47Tag(locale, include_script=locale.language in _GEMINI_SCRIPT_LANGUAGES)
+    alias = _GEMINI_LANGUAGE_ALIASES.get(locale.language)
+    if alias:
+        tag = alias + tag[len(locale.language):]
+
+    return tag
 
 
 def parse_offset(value : object) -> float|None:
@@ -251,7 +245,7 @@ else:
                     return options
                 options.update({
                     'model': (self.available_models, _("Speech-to-text model")),
-                    'language': (str, _("Spoken language hint, e.g. Chinese or cmn-Hans-CN (optional, auto-detected when empty)")),
+                    'language': (str, _("Spoken language hint, e.g. Chinese, ja or cmn-Hans-CN (optional, auto-detected when empty)")),
                     'diarize': (bool, _("Identify speakers (up to 8, experimental past 3)")),
                     'max_retries': (int, _("Rate-limit retries per chunk before giving up")),
                     'rate_limit': (float, _("Maximum API requests per minute (0 for unlimited)")),

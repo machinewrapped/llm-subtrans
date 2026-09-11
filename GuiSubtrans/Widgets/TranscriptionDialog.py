@@ -503,6 +503,7 @@ class TranscriptionDialog(QDialog):
         settings = SettingsType({
             'audio_track': self.track_combo.currentData() or 0,
             'language': provider.settings.get_str('language'),
+            'ui_language': self.global_options.ui_language,
             'min_chunk_seconds': min_chunk_seconds,
             'max_chunk_seconds': max_chunk_seconds,
             'transcription_align': True,

@@ -4,6 +4,9 @@ import html
 import logging
 from typing import cast
 
+from babel import Locale
+
+from PySubtrans.Helpers.Languages import ResolveLanguage
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
@@ -201,6 +204,21 @@ class TranscriptionProvider:
         for hints the backend cannot use.
         """
         return language.strip() if language and language.strip() else None
+
+    def ResolveLanguageLocale(self, language : str|None, display_language : str|None = None) -> Locale|None:
+        """
+        Shared first step for providers that need a specific format:
+        a Babel locale for the hint, None for an empty hint, or a
+        SubtitleError when the hint is not a recognisable language.
+        """
+        if not language or not language.strip():
+            return None
+
+        locale = ResolveLanguage(language, display_language)
+        if locale is None:
+            raise SubtitleError(_("Unrecognised language '{}': use a language name or code, or leave empty to auto-detect").format(language.strip()))
+
+        return locale
 
     def UpdateSettings(self, settings : SettingsType) -> None:
         """

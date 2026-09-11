@@ -93,6 +93,14 @@ def ResolveLanguage(hint : str|None, display_language : str|None = None) -> Loca
         return None
 
 
+def LanguageName(locale : Locale) -> str|None:
+    """
+    English CLDR name of a locale's language ("zh_Hant_TW" -> "Chinese"),
+    for backends that take names rather than codes.
+    """
+    return Locale('en').languages.get(locale.language)
+
+
 def ToBcp47Tag(locale : Locale, include_script : bool = False) -> str:
     """
     Format a locale as a BCP-47 tag, filling in the likely region when

@@ -202,6 +202,56 @@ class TestQwenResultParsing(LoggedTestCase):
         self.assertLoggedEqual("language", None, language)
         self.assertLoggedEqual("word count", 0, len(words))
 
+class TestQwenLanguage(LoggedTestCase):
+    @skip_if_debugger_attached
+    def test_provider_resolves_english_names(self):
+        """Hints become the English names qwen-asr expects; unknown hints are rejected."""
+        if QwenLocalProvider is None:
+            self.skipTest("qwen-asr not installed")
+        provider = QwenLocalProvider(SettingsType())
+
+        self.assertLoggedIsNone("no hint", provider.ResolveLanguageCode(None))
+        self.assertLoggedEqual("english name", "Chinese", provider.ResolveLanguageCode("chinese"))
+        self.assertLoggedEqual("native name", "Chinese", provider.ResolveLanguageCode("\u4e2d\u6587"))
+        self.assertLoggedEqual("regional code", "Chinese", provider.ResolveLanguageCode("zh-TW"))
+        self.assertLoggedEqual("ui language name", "German", provider.ResolveLanguageCode("alem\u00e1n", "es"))
+
+        with self.assertRaises(SubtitleError) as context:
+            provider.ResolveLanguageCode("Klingon")
+        self.log_expected_result(SubtitleError, type(context.exception), description="unknown hint rejected")
+
+    def test_client_falls_back_to_auto_detect_outside_sdk_list(self):
+        """A resolvable language the SDK cannot handle warns once at construction and auto-detects."""
+        client_type = getattr(qwen_module, 'QwenLocalClient', None)
+        if client_type is None:
+            self.skipTest("qwen-asr not installed")
+
+        client = client_type(SettingsType({'language': 'Chinese'}))
+        self.assertLoggedEqual("supported language kept", "Chinese", client.language)
+
+        with self.assertLogs(level='WARNING') as logs:
+            client = client_type(SettingsType({'language': 'Welsh'}))
+        self.assertLoggedIsNone("unsupported language dropped", client.language)
+        self.assertLoggedIn("warning names the language", "Welsh", " ".join(logs.output))
+
+    def test_hint_passes_straight_to_model(self):
+        """The client no longer normalises: the resolved name goes to the SDK unchanged."""
+        client_type = getattr(qwen_module, 'QwenLocalClient', None)
+        if client_type is None:
+            self.skipTest("qwen-asr not installed")
+        client = client_type(SettingsType({'language': 'Chinese'}))
+        result = type("Result", (), {"text": "ni hao", "language": "Chinese", "time_stamps": None})()
+        model = Mock()
+        model.transcribe.return_value = [result]
+        with patch.object(client, '_load_model', return_value=model), \
+                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
+                patch.object(qwen_module.os, 'remove'):
+            client._transcribe_chunk(b"audio", "wav", "Chinese")
+
+        model.transcribe.assert_called_once_with(
+            audio="chunk.wav", language="Chinese", return_time_stamps=True)
+
+
 class TestQwenAlignment(LoggedTestCase):
     def test_auto_detect_requests_timestamps(self):
         """An omitted hint still enables Qwen forced alignment."""

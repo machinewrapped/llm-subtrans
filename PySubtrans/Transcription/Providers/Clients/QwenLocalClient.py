@@ -31,17 +31,6 @@ else:
         from qwen_asr.inference.utils import SUPPORTED_LANGUAGES as _QWEN_SUPPORTED_LANGUAGES  #type: ignore[import]
 
 
-        def _normalise_qwen_language(language : str|None) -> str|None:
-            """Normalise a language hint for the qwen-asr SDK, or None to auto-detect."""
-            if not language:
-                return None
-            normalised = language.strip()[:1].upper() + language.strip()[1:].lower()
-            if normalised not in _QWEN_SUPPORTED_LANGUAGES:
-                logging.warning(_("Language '{}' is not in qwen-asr's supported list, using auto-detection").format(language.strip()))
-                return None
-            return normalised
-
-
         def _mps_available() -> bool:
             """Apple Silicon GPU backend; absent on torch builds without it."""
             mps = getattr(torch.backends, 'mps', None)
@@ -70,6 +59,15 @@ else:
             def __init__(self, settings : SettingsType):
                 super().__init__(settings)
                 self._model : object|None = None
+
+                # The provider resolves hints to English names; qwen-asr only
+                # accepts the ones on its own list, so decide once here (not
+                # per chunk) whether to use the hint or fall back to auto-detect.
+                language = self.settings.get_str('language')
+                if language and language not in _QWEN_SUPPORTED_LANGUAGES:
+                    logging.warning(_("Language '{}' is not in qwen-asr's supported list, using auto-detection").format(language))
+                    language = None
+                self.language : str|None = language
 
             @property
             def supports_timestamps(self) -> bool:
@@ -140,7 +138,6 @@ else:
             def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str, language : str|None) -> TranscriptionResult:
                 model = self._load_model()
                 chunk_path = self._write_chunk(audio_bytes)
-                canonical = _normalise_qwen_language(language)
                 # Qwen can detect the language and pass it to its forced aligner
                 # when no hint is supplied.  Keep the default timestamp request
                 # enabled for auto-detection; unsupported detected languages are
@@ -151,7 +148,7 @@ else:
                     try:
                         results = model.transcribe(
                             audio=chunk_path,
-                            language=canonical,
+                            language=self.language,
                             return_time_stamps=want_stamps,
                         )
                     except ValueError as e:
@@ -176,7 +173,7 @@ else:
                             logging.warning(_("Alignment failed, timestamps will be approximate"))
                             results = model.transcribe(
                                 audio=chunk_path,
-                                language=canonical,
+                                language=self.language,
                                 return_time_stamps=False,
                             )
 

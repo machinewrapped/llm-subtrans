@@ -3,6 +3,7 @@ import logging
 import os
 from datetime import timedelta
 
+from PySubtrans.Helpers.Languages import LanguageName
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import TryParseFloat
 from PySubtrans.Options import env_float, env_int
@@ -131,6 +132,11 @@ else:
                     'max_new_tokens': (int, _("Generation budget per chunk (long chunks need headroom)")),
                     'rate_limit': (float, _("Maximum requests per minute (0 for unlimited; local inference is unmetered)")),
                 }
+
+            def ResolveLanguageCode(self, language : str|None, display_language : str|None = None) -> str|None:
+                """qwen-asr takes English language names ("Chinese", "English"), or None to auto-detect."""
+                locale = self.ResolveLanguageLocale(language, display_language)
+                return LanguageName(locale) if locale is not None else None
 
     except ImportError as e:
         logging.debug(_("qwen-asr dependencies missing, Qwen Local provider unavailable ({})").format(e))

@@ -148,12 +148,17 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
             return options
         options.update({
             'model': (self.available_models, _("Speech-to-text model")),
-            'language': (str, _("Spoken language hint, e.g. en or Chinese (optional)")),
+            'language': (str, _("Spoken language hint, e.g. Chinese or en (optional, auto-detected when empty)")),
             'diarize': (bool, _("Request speaker diarization (only supported by some models)")),
             'request_timeout': (float, _("Per-chunk request timeout in seconds")),
             'rate_limit': (float, _("Maximum API requests per minute (0 for unlimited)")),
         })
         return options
+
+    def ResolveLanguageCode(self, language : str|None, display_language : str|None = None) -> str|None:
+        """Whisper-compatible endpoints take an ISO 639-1 code ("en", "zh"), or None to auto-detect."""
+        locale = self.ResolveLanguageLocale(language, display_language)
+        return locale.language if locale is not None else None
 
     def ValidateSettings(self) -> bool:
         """Validate the settings for the provider."""

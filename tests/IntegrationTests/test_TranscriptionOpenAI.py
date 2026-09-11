@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.SettingsType import SettingsType
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.Providers.Provider_OpenAI import (
     OpenAITranscriptionProvider,
@@ -56,6 +57,22 @@ class TestOpenAIRegistered(LoggedTestCase):
 
         unknown = [key for key in provider.advanced_settings if key not in options]
         self.assertLoggedEqual("no stale advanced keys", [], unknown)
+
+    def test_language_resolves_to_iso_code(self):
+        """Whisper takes ISO 639-1 codes: names and regional tags reduce to the language."""
+        provider = OpenAITranscriptionProvider(SettingsType({'api_key': 'k'}))
+
+        self.assertLoggedIsNone("no hint", provider.ResolveLanguageCode(""))
+        self.assertLoggedEqual("english name", "zh", provider.ResolveLanguageCode("Chinese"))
+        self.assertLoggedEqual("regional tag", "en", provider.ResolveLanguageCode("en-US"))
+        self.assertLoggedEqual("native name", "ja", provider.ResolveLanguageCode("\u65e5\u672c\u8a9e"))
+
+        with self.assertRaises(SubtitleError):
+            provider.ResolveLanguageCode("Klingon")
+
+        provider.settings['language'] = 'Klingon'
+        self.assertLoggedIsNotNone("unknown hint warns", provider.LanguageWarning())
+
 
 class TestOpenAITranscription(LoggedTestCase):
     def _provider(self, model : str = "whisper-1"):

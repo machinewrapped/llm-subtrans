@@ -57,6 +57,14 @@ class TestOpenRouterRegistered(LoggedTestCase):
         for key in ('api_key', 'model', 'language', 'diarize', 'request_timeout', 'rate_limit'):
             self.assertLoggedIn(f"{key} option", key, options)
 
+    def test_language_resolves_to_iso_code(self):
+        """Whisper-compatible endpoints get ISO 639-1 codes."""
+        provider = OpenRouterTranscriptionProvider(SettingsType({'api_key': 'k'}))
+
+        self.assertLoggedEqual("english name", "zh", provider.ResolveLanguageCode("Chinese"))
+        self.assertLoggedEqual("regional tag", "pt", provider.ResolveLanguageCode("pt-BR"))
+        self.assertLoggedIsNone("no hint", provider.ResolveLanguageCode(None))
+
     def test_progressive_options_inherited_key(self):
         """Keys inherited from the environment count as set up."""
         with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'env-key'}):

@@ -9,7 +9,7 @@ from PySubtrans.Helpers.Parse import TryParseFloat
 from PySubtrans.Options import env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.Transcription.TranscriptionAligner import WordTiming
+from PySubtrans.Transcription.WordTiming import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 

@@ -5,7 +5,7 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.Options import env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
-from PySubtrans.Transcription.TranscriptionAligner import WordTiming
+from PySubtrans.Transcription.WordTiming import WordTiming
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment

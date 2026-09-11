@@ -5,7 +5,7 @@ from unittest.mock import patch
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.Transcription.AudioExtractor import AudioChunk
-from PySubtrans.Transcription.TranscriptionAligner import WordTiming
+from PySubtrans.Transcription.WordTiming import WordTiming
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionLines import JoinWords
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment

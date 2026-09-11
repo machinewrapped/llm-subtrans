@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from PySubtrans.Transcription.TranscriptionAligner import WordTiming
+from PySubtrans.Transcription.WordTiming import WordTiming
 
 
 @dataclass

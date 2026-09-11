@@ -8,7 +8,7 @@ import regex
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Transcription.AudioExtractor import AudioChunk
-from PySubtrans.Transcription.TranscriptionAligner import WordTiming
+from PySubtrans.Transcription.WordTiming import WordTiming
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 
 # Sentence-ending punctuation across CJK and latin scripts

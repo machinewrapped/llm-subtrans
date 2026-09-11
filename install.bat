@@ -195,7 +195,7 @@ set /p install_transcription="Install local transcription? (y/n): "
 if /i "!install_transcription!"=="y" (
     call :install_qwen_local
 ) else if /i "!install_transcription!"=="n" (
-    echo No local transcription selected.
+    echo No local transcription selected. Cloud transcription remains available.
 ) else (
     echo Invalid choice. Exiting installation.
     pause
@@ -224,7 +224,9 @@ if /i "!install_transcription!"=="y" (
     echo Checking torch for Qwen Local transcription...
     .\envsubtrans\Scripts\python.exe -c "import torch" >nul 2>&1
     if errorlevel 1 (
-        echo torch is not installed, so Qwen Local cannot run. Rolling back the Qwen install:
+        echo.
+        echo Local transcription is not available: PyTorch could not be imported.
+        echo Rolling back the qwen-asr package; cloud transcription remains available.
         .\envsubtrans\Scripts\python.exe -m pip uninstall -y qwen-asr >nul 2>&1
         set "NEWEXTRAS="
         for %%e in (!EXTRAS:,= !) do if /i not "%%e"=="transcription" (
@@ -232,19 +234,21 @@ if /i "!install_transcription!"=="y" (
         )
         set "EXTRAS=!NEWEXTRAS!"
         echo.
-        echo Install a GPU-enabled torch first ^(CUDA on NVIDIA, MPS on Apple
-        echo Silicon -- PyPI's default is CPU-only on most platforms^):
+        echo To enable local transcription, install the hardware-appropriate PyTorch:
         echo   https://pytorch.org/get-started/locally/
-        echo then re-run the installer and choose Qwen Local again.
-        echo The transcribe command is still installed for cloud providers.
+        echo Then re-run this installer and choose local transcription again.
     ) else (
-        .\envsubtrans\Scripts\python.exe -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() or torch.backends.mps.is_available() else 1)" >nul 2>&1
+        REM PyTorch's ROCm builds expose supported AMD GPUs through torch.cuda.
+        .\envsubtrans\Scripts\python.exe -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" >nul 2>&1
         if errorlevel 1 (
-            echo WARNING: torch has no GPU build ^(no CUDA or MPS^); Qwen Local will fall
-            echo back to slow CPU inference. For GPU transcription, install a GPU torch:
+            echo.
+            echo Local transcription was installed, but no supported GPU backend was detected.
+            echo Qwen will use the CPU and may be very slow; this installation is still usable.
+            echo For GPU acceleration, install the hardware-appropriate PyTorch build from:
             echo   https://pytorch.org/get-started/locally/
         ) else (
-            echo torch with GPU support detected - Qwen Local transcription is ready.
+            echo.
+            echo Local transcription installed successfully; a supported GPU backend was detected.
         )
     )
     echo.
@@ -321,13 +325,6 @@ echo Bedrock setup complete. Default provider set to Bedrock.
 goto :eof
 
 :install_qwen_local
-echo Qwen Local runs on-device transcription (Qwen3-ASR with word timestamps).
-echo It needs a GPU-enabled torch in the virtual environment -- PyPI's default
-echo torch is CPU-only on most platforms and will be unusably slow (CUDA on
-echo NVIDIA, MPS on Apple Silicon -- see https://pytorch.org/get-started/locally/).
-echo After installing dependencies the installer verifies torch; if it is
-echo missing, the Qwen install is rolled back so you can add torch and re-run.
-echo.
 if "!EXTRAS!"=="" (set "EXTRAS=transcription") else (set "EXTRAS=!EXTRAS!,transcription")
 goto :eof
 

@@ -296,6 +296,9 @@ class TranscriptionLineBuilder:
         """
         start = segment.start + start_offset
         end = segment.start + end_offset
+
+        if start > segment.end:
+            start = segment.end
         if end <= start:
             end = start + timedelta(seconds=MIN_LINE_SECONDS)
         if end > segment.end:

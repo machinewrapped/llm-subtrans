@@ -1,3 +1,4 @@
+import os
 import unittest
 
 from PySubtrans.Helpers import GetOutputPath
@@ -52,7 +53,6 @@ class TestGetOutputPath(LoggedTestCase):
     @staticmethod
     def _basename(path : str|None) -> str:
         """Extract just the filename for portable assertions."""
-        import os
         return os.path.basename(path) if path else ""
 
 

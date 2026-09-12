@@ -153,7 +153,10 @@ class SettingsDialog(QDialog):
         self.settings : SettingsType = options.GetSettings()
         self.widgets = {}
 
-        # Qyery available themes
+        # Instance copy so dynamic population never mutates the class schema
+        self.SECTIONS = {name: dict(section) for name, section in self.__class__.SECTIONS.items()}
+
+        # Query available themes
         self.SECTIONS['General']['theme'] = ['default'] + GetThemeNames()
 
         # Available UI languages (dynamically detected) - hack to set the current locale as selected language

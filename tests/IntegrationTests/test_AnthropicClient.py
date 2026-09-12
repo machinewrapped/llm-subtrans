@@ -40,72 +40,12 @@ def _create_test_request() -> TranslationRequest:
 class TestAnthropicClientRequestParameters(LoggedTestCase):
     """Tests for Anthropic model-specific request parameters."""
 
-    def test_opus_4_7_omits_temperature(self) -> None:
-        """Opus 4.7 request payloads omit deprecated temperature."""
-        client = AnthropicClient(_create_test_settings('claude-opus-4-7'))
-        client.client = MagicMock()
-
-        client._create_client_response(_create_test_request().prompt, 0.3)
-        kwargs = client.client.messages.create.call_args.kwargs
-
-        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
-
-    def test_older_opus_models_keep_temperature(self) -> None:
-        """Older Opus models still include temperature in request payloads."""
-        client = AnthropicClient(_create_test_settings('claude-opus-4-6'))
-        client.client = MagicMock()
-
-        client._create_client_response(_create_test_request().prompt, 0.3)
-        kwargs = client.client.messages.create.call_args.kwargs
-
-        self.assertLoggedEqual("temperature", 0.3, kwargs.get('temperature'))
-
-    def test_dated_opus_4_keeps_temperature(self) -> None:
-        """Dated Opus 4 snapshot IDs (e.g. claude-opus-4-20250514) must not drop temperature."""
-        client = AnthropicClient(_create_test_settings('claude-opus-4-20250514'))
-        client.client = MagicMock()
-
-        client._create_client_response(_create_test_request().prompt, 0.3)
-        kwargs = client.client.messages.create.call_args.kwargs
-
-        self.assertLoggedEqual("temperature", 0.3, kwargs.get('temperature'))
-
-    def test_dated_opus_4_7_omits_temperature(self) -> None:
-        """Dated Opus 4.7 snapshot IDs (e.g. claude-opus-4-7-20250514) still omit temperature."""
-        client = AnthropicClient(_create_test_settings('claude-opus-4-7-20250514'))
-        client.client = MagicMock()
-
-        client._create_client_response(_create_test_request().prompt, 0.3)
-        kwargs = client.client.messages.create.call_args.kwargs
-
-        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
-
-    def test_sonnet_5_omits_temperature(self) -> None:
-        """Sonnet 5 request payloads omit deprecated temperature."""
-        client = AnthropicClient(_create_test_settings('claude-sonnet-5'))
-        client.client = MagicMock()
-
-        client._create_client_response(_create_test_request().prompt, 0.3)
-        kwargs = client.client.messages.create.call_args.kwargs
-
-        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
-
-    def test_fable_5_omits_temperature(self) -> None:
-        """Fable 5 request payloads omit deprecated temperature."""
-        client = AnthropicClient(_create_test_settings('claude-fable-5'))
-        client.client = MagicMock()
-
-        client._create_client_response(_create_test_request().prompt, 0.3)
-        kwargs = client.client.messages.create.call_args.kwargs
-
-        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
-
     def test_sonnet_5_thinking_uses_adaptive_mode(self) -> None:
         """Sonnet 5 thinking mode uses adaptive thinking without a budget."""
         client = AnthropicClient(_create_test_settings('claude-sonnet-5', thinking=True))
         client.client = MagicMock()
 
-        client._create_client_response(_create_test_request().prompt, 0.3)
+        client._create_client_response(_create_test_request().prompt)
         kwargs = client.client.messages.create.call_args.kwargs
         thinking = kwargs.get('thinking', {})
 
@@ -117,22 +57,12 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
         client = AnthropicClient(_create_test_settings('Claude Opus 4.7', thinking=True))
         client.client = MagicMock()
 
-        client._create_client_response(_create_test_request().prompt, 0.3)
+        client._create_client_response(_create_test_request().prompt)
         kwargs = client.client.messages.create.call_args.kwargs
         thinking = kwargs.get('thinking', {})
 
         self.assertLoggedEqual("thinking type", 'adaptive', thinking.get('type'))
         self.assertLoggedNotIn("budget tokens omitted", 'budget_tokens', thinking)
-
-    def test_unrecognized_model_omits_temperature(self) -> None:
-        """Unidentifiable model names default to omitting temperature (assume it is gone)."""
-        client = AnthropicClient(_create_test_settings('some-future-model'))
-        client.client = MagicMock()
-
-        client._create_client_response(_create_test_request().prompt, 0.3)
-        kwargs = client.client.messages.create.call_args.kwargs
-
-        self.assertLoggedNotIn("temperature omitted", 'temperature', kwargs)
 
     def test_capabilities_adaptive_only_uses_adaptive_mode(self) -> None:
         """Reported adaptive-only thinking capability selects adaptive mode."""
@@ -141,7 +71,7 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
             thinking_supports_adaptive=True, thinking_supports_enabled=False))
         client.client = MagicMock()
 
-        client._create_client_response(_create_test_request().prompt, 0.3)
+        client._create_client_response(_create_test_request().prompt)
         thinking = client.client.messages.create.call_args.kwargs.get('thinking', {})
 
         self.assertLoggedEqual("thinking type", 'adaptive', thinking.get('type'))
@@ -156,7 +86,7 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
             thinking_supports_adaptive=True, thinking_supports_enabled=False))
         client.client = MagicMock()
 
-        client._create_client_response(_create_test_request().prompt, 0.3)
+        client._create_client_response(_create_test_request().prompt)
         thinking = client.client.messages.create.call_args.kwargs.get('thinking', {})
 
         self.assertLoggedEqual("thinking type", 'adaptive', thinking.get('type'))
@@ -168,7 +98,7 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
             thinking_supports_adaptive=True, thinking_supports_enabled=True))
         client.client = MagicMock()
 
-        client._create_client_response(_create_test_request().prompt, 0.3)
+        client._create_client_response(_create_test_request().prompt)
         thinking = client.client.messages.create.call_args.kwargs.get('thinking', {})
 
         self.assertLoggedEqual("thinking type", 'enabled', thinking.get('type'))
@@ -181,33 +111,7 @@ class TestAnthropicClientRequestParameters(LoggedTestCase):
             thinking_supports_adaptive=False, thinking_supports_enabled=False))
         client.client = MagicMock()
 
-        client._create_client_response(_create_test_request().prompt, 0.3)
+        client._create_client_response(_create_test_request().prompt)
         thinking = client.client.messages.create.call_args.kwargs.get('thinking')
 
         self.assertLoggedIsInstance("thinking omitted", thinking, anthropic.Omit)
-
-    def test_budget_thinking_forces_temperature_one(self) -> None:
-        """Enabled (budget) thinking overrides temperature to 1 on temperature-capable models."""
-        client = AnthropicClient(_create_test_settings('claude-opus-4-6', thinking=True))
-        client.client = MagicMock()
-
-        client._create_client_response(_create_test_request().prompt, 0.3)
-        kwargs = client.client.messages.create.call_args.kwargs
-
-        self.assertLoggedEqual("thinking type", 'enabled', kwargs.get('thinking', {}).get('type'))
-        self.assertLoggedEqual("temperature", 1, kwargs.get('temperature'))
-
-    def test_no_thinking_capability_preserves_temperature(self) -> None:
-        """A temperature-capable model that omits thinking keeps the configured temperature."""
-        # thinking is left enabled, but the model reports no thinking support, so no thinking
-        # config is sent - the temperature override must not fire.
-        client = AnthropicClient(_create_test_settings(
-            'claude-opus-4-6', thinking=True,
-            thinking_supports_adaptive=False, thinking_supports_enabled=False))
-        client.client = MagicMock()
-
-        client._create_client_response(_create_test_request().prompt, 0.3)
-        kwargs = client.client.messages.create.call_args.kwargs
-
-        self.assertLoggedIsInstance("thinking omitted", kwargs.get('thinking'), anthropic.Omit)
-        self.assertLoggedEqual("temperature", 0.3, kwargs.get('temperature'))

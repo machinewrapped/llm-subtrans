@@ -17,7 +17,8 @@ def _format_timestamp(seconds : float) -> str:
     """
     Format an audio position using the project's standard timestamp format.
     """
-    return TimedeltaToText(timedelta(seconds=max(0.0, seconds)), include_milliseconds=False)
+    timestamp = TimedeltaToText(timedelta(seconds=max(0.0, seconds)), include_milliseconds=False)
+    return timestamp if ':' in timestamp else f"0:{timestamp}"
 
 
 def _format_span(span : str) -> str:

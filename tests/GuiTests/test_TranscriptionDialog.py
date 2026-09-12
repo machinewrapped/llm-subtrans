@@ -15,12 +15,23 @@ from GuiSubtrans.Widgets.OptionsWidgets import (
     IntegerOptionWidget,
 )
 from GuiSubtrans.Widgets.TranscriptionDialog import TranscriptionDialog
+from GuiSubtrans.Widgets.TranscriptionRunProgress import _format_timestamp
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
+
+
+class TestTranscriptionRunProgressFormatting(LoggedTestCase):
+    """Verify readable timecodes used by the transcription progress display."""
+
+    def test_sub_minute_timestamps_include_minutes(self) -> None:
+        """Sub-minute timestamps use the same m:ss shape as longer timestamps."""
+        self.assertLoggedEqual('sub-minute timestamp', '0:15', _format_timestamp(15.0))
+        self.assertLoggedEqual('zero timestamp', '0:00', _format_timestamp(0.0))
+        self.assertLoggedEqual('minute timestamp', '01:05', _format_timestamp(65.0))
 
 
 class TestTranscriptionGlobalSettings(LoggedTestCase):

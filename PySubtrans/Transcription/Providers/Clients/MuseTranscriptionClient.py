@@ -9,57 +9,6 @@ from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
 
 
-def parse_muse_payload(payload : dict, chunk_seconds : float|None = None, include_speakers : bool = True) -> tuple[str, list[TranscriptionSegment]]:
-    """
-    Extract (text, parts) from a Muse Voice Transcribe response.
-
-    Pure function over the one-shot shape so it is unit-testable without
-    network access. Turns carry start and end offsets with speaker labels
-    (bare letters in DIARIZATION); a turn missing its end runs until the
-    next turn starts, the last one until the reported audio duration.
-    """
-    text = str(payload.get('transcript') or payload.get('text') or '').strip()
-
-    duration_ms = TryParseNonNegative(payload.get('audioDurationMs'))
-    audio_seconds = (duration_ms / 1000.0) if duration_ms is not None else chunk_seconds
-
-    turns = [entry for entry in payload.get('turns') or [] if isinstance(entry, dict)]
-
-    starts : list[float|None] = []
-    for entry in turns:
-        start_ms = TryParseNonNegative(entry.get('startMs'))
-        starts.append(start_ms / 1000.0 if start_ms is not None else None)
-
-    parts : list[TranscriptionSegment] = []
-    for index, entry in enumerate(turns):
-        entry_text = str(entry.get('transcript') or entry.get('text') or '').strip()
-        start = starts[index]
-
-        if not entry_text or start is None:
-            continue
-
-        end_ms = TryParseNonNegative(entry.get('endMs'))
-        end = end_ms / 1000.0 if end_ms is not None else None
-
-        if end is None:
-            end = next((s for s in starts[index + 1:] if s is not None and s > start), None)
-        if end is None:
-            end = audio_seconds
-
-        if end is None or end <= start:
-            continue
-
-        speaker = entry.get('speaker') if include_speakers else None
-        parts.append(TranscriptionSegment(
-            start=timedelta(seconds=start), end=timedelta(seconds=end),
-            text=entry_text,
-            speaker=str(speaker) if speaker is not None else None))
-
-    parts.sort(key=lambda part: part.start)
-
-    return text, parts
-
-
 class MuseTranscriptionClient(TranscriptionClient):
     """
     Speech-to-text via the Muse Voice Transcribe one-shot endpoint.
@@ -173,3 +122,56 @@ class MuseTranscriptionClient(TranscriptionClient):
         if hint is None:
             return detail
         return f"{hint}: {detail}"
+
+
+def parse_muse_payload(payload : dict, chunk_seconds : float|None = None, include_speakers : bool = True) -> tuple[str, list[TranscriptionSegment]]:
+    """
+    Extract (text, parts) from a Muse Voice Transcribe response.
+
+    Pure function over the one-shot shape so it is unit-testable without
+    network access. Turns carry start and end offsets with speaker labels
+    (bare letters in DIARIZATION); a turn missing its end runs until the
+    next turn starts, the last one until the reported audio duration.
+    """
+    text = str(payload.get('transcript') or payload.get('text') or '').strip()
+
+    duration_ms = TryParseNonNegative(payload.get('audioDurationMs'))
+    audio_seconds = (duration_ms / 1000.0) if duration_ms is not None else chunk_seconds
+
+    turns = [entry for entry in payload.get('turns') or [] if isinstance(entry, dict)]
+
+    starts : list[float|None] = []
+    for entry in turns:
+        start_ms = TryParseNonNegative(entry.get('startMs'))
+        starts.append(start_ms / 1000.0 if start_ms is not None else None)
+
+    parts : list[TranscriptionSegment] = []
+    for index, entry in enumerate(turns):
+        entry_text = str(entry.get('transcript') or entry.get('text') or '').strip()
+        start = starts[index]
+
+        if not entry_text or start is None:
+            continue
+
+        end_ms = TryParseNonNegative(entry.get('endMs'))
+        end = end_ms / 1000.0 if end_ms is not None else None
+
+        if end is None:
+            end = next((s for s in starts[index + 1:] if s is not None and s > start), None)
+        if end is None:
+            end = audio_seconds
+
+        if end is None or end <= start:
+            continue
+
+        speaker = entry.get('speaker') if include_speakers else None
+        parts.append(TranscriptionSegment(
+            start=timedelta(seconds=start), end=timedelta(seconds=end),
+            text=entry_text,
+            speaker=str(speaker) if speaker is not None else None))
+
+    parts.sort(key=lambda part: part.start)
+
+    return text, parts
+
+

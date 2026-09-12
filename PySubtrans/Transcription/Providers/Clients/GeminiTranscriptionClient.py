@@ -76,77 +76,61 @@ else:
                 audio_file = None
 
                 try:
-                    result_interaction, audio_file = self._create_interaction(client, chunk_path)
+                    logging.info(_("Uploading audio chunk for Gemini transcription"))
+                    audio_file = client.files.upload(file=chunk_path)
+
+                    result_interaction = self._create_interaction(client, audio_file)
+
+                    text = str(getattr(result_interaction, 'output_text', '') or '').strip()
+                    if not text:
+                        raise SubtitleError(_("Transcription returned no text"))
+
+                    words = parse_word_annotations(collect_word_annotations(result_interaction))
+                    return TranscriptionResult(text=text, language=self.language, words=words)
                 except SubtitleError:
                     raise
                 except Exception as e:
                     raise SubtitleError(_("Gemini transcription failed: {}").format(str(e)), error=e)
                 finally:
+                    self._delete_uploaded_audio(client, audio_file)
+
                     try:
                         os.remove(chunk_path)
                     except OSError:
                         pass
 
-                    if audio_file is not None:
-                        file_name = getattr(audio_file, 'name', None)
-                        if file_name:
-                            try:
-                                client.files.delete(name=file_name)
-                            except Exception as e:
-                                logging.warning(_("Unable to delete uploaded audio: {}").format(str(e)))
-                        else:
-                            logging.debug(_("Uploaded audio has no name; leaving it to expire"))
-
-                text = str(getattr(result_interaction, 'output_text', '') or '').strip()
-                if not text:
-                    raise SubtitleError(_("Transcription returned no text"))
-
-                words = parse_word_annotations(collect_word_annotations(result_interaction))
-                return TranscriptionResult(text=text, language=self.language, words=words)
-
-
-            def _create_interaction(self, client : Any, chunk_path : str) -> tuple[Any, Any]:
+            def _create_interaction(self, client : Any, audio_file : Any) -> Any:
                 """
-                Upload once, then retry transcription on quota responses.
+                Retry transcription on quota responses.
 
-                Reuses the uploaded file across attempts (quota applies to
-                generation, not storage) and honours the server's retry hint.
+                Reuses the already-uploaded file across attempts (quota applies
+                to generation, not storage) and honours the server's retry hint.
+                The caller owns the file lifecycle (upload and delete).
                 """
-                audio_file = None
-                completed = False
                 retry_limit = max(0, self.max_retries)
-                try:
-                    for attempt in range(retry_limit + 1):
-                        if self.aborted:
-                            raise SubtitleError(_("Transcription aborted"))
 
-                        try:
-                            if audio_file is None:
-                                logging.info(_("Uploading audio chunk for Gemini transcription"))
-                                audio_file = client.files.upload(file=chunk_path)
+                for attempt in range(retry_limit + 1):
+                    if self.aborted:
+                        raise SubtitleError(_("Transcription aborted"))
 
-                            interaction = client.interactions.create(
-                                model=self.model,
-                                input=[{
-                                    "type": "audio",
-                                    "uri": audio_file.uri,
-                                    "mime_type": "audio/wav",
-                                }],
-                                generation_config={"transcription_config": self._transcription_config()},
-                            )
-                            completed = True
-                            return interaction, audio_file
-                        except Exception as error:
-                            delay = self._rate_limit_retry_delay(error, attempt, retry_limit)
-                            if delay is None:
-                                raise
+                    try:
+                        return client.interactions.create(
+                            model=self.model,
+                            input=[{
+                                "type": "audio",
+                                "uri": audio_file.uri,
+                                "mime_type": "audio/wav",
+                            }],
+                            generation_config={"transcription_config": self._transcription_config()},
+                        )
+                    except Exception as error:
+                        delay = self._rate_limit_retry_delay(error, attempt, retry_limit)
+                        if delay is None:
+                            raise
 
-                            logging.warning(_("Gemini rate limit hit (attempt {}/{}), retrying in {:.0f}s").format(
-                                attempt + 1, retry_limit + 1, delay))
-                            self._sleep_abortable(delay)
-                finally:
-                    if not completed:
-                        self._delete_uploaded_audio(client, audio_file)
+                        logging.warning(_("Gemini rate limit hit (attempt {}/{}), retrying in {:.0f}s").format(
+                            attempt + 1, retry_limit + 1, delay))
+                        self._sleep_abortable(delay)
 
                 raise SubtitleError(_("Gemini transcription failed"))
 
@@ -170,7 +154,7 @@ else:
                 return _rate_limit_delay_seconds(error, attempt)
 
             def _delete_uploaded_audio(self, client : Any, audio_file : Any) -> None:
-                """Delete an uploaded chunk when interaction creation cannot finish."""
+                """Best-effort cleanup of the uploaded audio file from the Files API."""
                 if audio_file is None:
                     return
                 file_name = getattr(audio_file, 'name', None)

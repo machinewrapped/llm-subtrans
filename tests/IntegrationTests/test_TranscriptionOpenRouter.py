@@ -9,10 +9,10 @@ from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.Providers.Clients.OpenRouterTranscriptionClient import (
     OpenRouterTranscriptionClient,
+    parse_transcription_payload,
 )
 from PySubtrans.Transcription.Providers.Provider_OpenRouter import (
     OpenRouterTranscriptionProvider,
-    parse_transcription_payload,
 )
 
 

@@ -21,7 +21,7 @@ class MainToolbar(QToolBar):
     Main toolbar for the application
     """
     _action_groups = [
-        ["Load Subtitles", "Save Project"],
+        ["Load Subtitles", "Transcribe Audio", "Save Project"],
         ["Start Translating", "Start Translating Fast", "Stop Translating"],
         ["Undo", "Redo"],
         ["Settings"],
@@ -35,6 +35,7 @@ class MainToolbar(QToolBar):
             'tooltip': _('Load project/translation (Hold shift to reload subtitles)'), 
             'shift_tooltip': _('Load project/translation (reload subtitles)')
         },
+        'Transcribe Audio': { 'tooltip': _('Transcribe audio/video to subtitles') },
         'Save Project':
         {
             'tooltip': _('Save project/translation (Hold shift to save as...)'), 
@@ -88,6 +89,7 @@ class MainToolbar(QToolBar):
         """
         self.UpdateBusyStatus()
         self.UpdateSaveButton()
+        self.UpdateTranscribeButton()
         self.UpdateTranslateButtons()
         self.UpdateTooltips()
 
@@ -124,6 +126,7 @@ class MainToolbar(QToolBar):
         action_handler : ProjectActions = self.gui.GetActionHandler()
         self.DefineAction('Quit', action_handler.exitProgram, self._icon_file('quit'), 'Ctrl+W')
         self.DefineAction('Load Subtitles', action_handler.LoadProject, self._icon_file('load_subtitles'), 'Ctrl+O')
+        self.DefineAction('Transcribe Audio', action_handler.TranscribeMedia, self._icon_file('transcribe_audio'), 'Ctrl+R')
         self.DefineAction('Save Project', action_handler.SaveProject, self._icon_file('save_project'), 'Ctrl+S')
         self.DefineAction('Settings', action_handler.showSettings, self._icon_file('settings'), 'Ctrl+?')
         self.DefineAction('Start Translating', action_handler.StartTranslating, self._icon_file('start_translating'), 'Ctrl+T')
@@ -237,20 +240,20 @@ class MainToolbar(QToolBar):
 
         if not datamodel or not datamodel.is_project_initialised:
             self.DisableActions([ "Save Project", "Start Translating", "Start Translating Fast", "Stop Translating", "Undo", "Redo" ])
-            self.EnableActions([ "Load Subtitles" ])
+            self.EnableActions([ "Load Subtitles", "Transcribe Audio" ])
             return
 
         # Enable or disable toolbar commands  depending on whether any translations are ongoing
         command_queue : CommandQueue = self.gui.GetCommandQueue()
         if command_queue.Contains(type_list = [TranslateSceneCommand, StartTranslationCommand]):
-            self.DisableActions([ "Load Subtitles", "Save Project", "Start Translating", "Start Translating Fast", "Undo", "Redo"])
+            self.DisableActions([ "Load Subtitles", "Transcribe Audio", "Save Project", "Start Translating", "Start Translating Fast", "Undo", "Redo"])
             self.EnableActions([ "Stop Translating" ])
             return
 
         self.DisableActions(["Stop Translating"])
 
         no_blocking_commands = not command_queue.has_blocking_commands
-        self.SetActionsEnabled([ "Load Subtitles", "Save Project", "Start Translating" ], no_blocking_commands)
+        self.SetActionsEnabled([ "Load Subtitles", "Transcribe Audio", "Save Project", "Start Translating" ], no_blocking_commands)
         self.SetActionsEnabled([ "Start Translating Fast" ], no_blocking_commands and datamodel.allow_multithreaded_translation)
         self.SetActionsEnabled([ "Undo" ], no_blocking_commands and command_queue.can_undo)
         self.SetActionsEnabled([ "Redo" ], no_blocking_commands and command_queue.can_redo)
@@ -269,6 +272,14 @@ class MainToolbar(QToolBar):
 
         if datamodel and datamodel.project and not datamodel.project.needs_writing:
             self.SetActionsEnabled(["Save Project"], False)
+
+    def UpdateTranscribeButton(self):
+        """
+        Update the transcribe button to disable it while other commands are queued or running
+        """
+        command_queue : CommandQueue = self.gui.GetCommandQueue()
+        if command_queue.has_commands:
+            self.SetActionsEnabled([ "Transcribe Audio" ], False)
 
     def UpdateTranslateButtons(self):
         """
@@ -349,24 +360,26 @@ def _create_disabled_icon(svg_path : str) -> QIcon:
         with open(svg_path, 'r', encoding='utf-8') as f:
             svg_content = f.read()
         
-        # Replace colors for disabled look
+        # Keep disabled outlines visible on both light and #808080 dark toolbars.
         disabled_svg = svg_content.replace('fill="#fff"', 'fill="#D0D0D0"')
         disabled_svg = disabled_svg.replace('fill="white"', 'fill="#D0D0D0"')
-        disabled_svg = disabled_svg.replace('stroke="#000"', 'stroke="#808080"')
-        disabled_svg = disabled_svg.replace('stroke="black"', 'stroke="#808080"')
+        disabled_svg = disabled_svg.replace('stroke="#000"', 'stroke="#484848"')
+        disabled_svg = disabled_svg.replace('stroke="black"', 'stroke="#484848"')
         disabled_svg = disabled_svg.replace('fill="black"', 'fill="#606060"')
         
         # Create QIcon from modified SVG
         svg_bytes = QByteArray(disabled_svg.encode('utf-8'))
         svg_renderer = QSvgRenderer(svg_bytes)
-        pixmap = QPixmap(24, 24)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        svg_renderer.render(painter)
-        painter.end()
-        
         disabled_icon = QIcon()
-        disabled_icon.addPixmap(pixmap)
+        # Supply crisp raster sizes and explicit modes to avoid a second style effect.
+        for size in (16, 20, 24, 32, 40, 48, 64, 96, 128):
+            pixmap = QPixmap(size, size)
+            pixmap.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(pixmap)
+            svg_renderer.render(painter)
+            painter.end()
+            disabled_icon.addPixmap(pixmap, QIcon.Mode.Normal)
+            disabled_icon.addPixmap(pixmap, QIcon.Mode.Disabled)
         return disabled_icon
         
     except Exception as e:

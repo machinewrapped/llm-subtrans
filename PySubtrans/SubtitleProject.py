@@ -34,6 +34,7 @@ class SubtitleProject:
         'instructions': None,
         'retry_instructions': None,
         'terminology_instructions': None,
+        'speaker_instructions': None,
         'build_terminology_map': None,
         'movie_name': None,
         'description': None,

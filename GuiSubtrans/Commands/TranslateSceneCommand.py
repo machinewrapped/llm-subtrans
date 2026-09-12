@@ -1,3 +1,5 @@
+import logging
+
 from GuiSubtrans.Command import Command, CommandError
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
@@ -5,11 +7,10 @@ from PySubtrans.Helpers import FormatErrorMessages
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import TranslationAbortedError, TranslationImpossibleError
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationEvents import TerminologyUpdate
 from PySubtrans.Helpers.Localization import _
-
-import logging
 
 #############################################################
 
@@ -61,10 +62,12 @@ class TranslateSceneCommand(Command):
         self.translator.events.batch_translated.connect(self._on_batch_translated)
         self.translator.events.batch_updated.connect(self._on_batch_updated)
         self.translator.events.terminology_updated.connect(self._on_terminology_updated)
+        self.translator.events.translation_cost.connect(project.subtitles.RecordTranslationCost, weak=False)
         self.translator.events.error.connect(self._on_error)
         self.translator.events.warning.connect(self._on_warning)
         self.translator.events.info.connect(self._on_info)
 
+        scene : SubtitleScene|None = None
         try:
             scene = project.subtitles.GetScene(self.scene_number)
             scene.errors = []
@@ -105,6 +108,7 @@ class TranslateSceneCommand(Command):
                 self.translator.events.batch_translated.disconnect(self._on_batch_translated)
                 self.translator.events.batch_updated.disconnect(self._on_batch_updated)
                 self.translator.events.terminology_updated.disconnect(self._on_terminology_updated)
+                self.translator.events.translation_cost.disconnect(project.subtitles.RecordTranslationCost)
                 self.translator.events.error.disconnect(self._on_error)
                 self.translator.events.warning.disconnect(self._on_warning)
                 self.translator.events.info.disconnect(self._on_info)

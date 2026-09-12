@@ -49,6 +49,7 @@ class ProjectActions(QObject):
     showAboutDialog = Signal()
     loadProject = Signal(str, bool)
     saveProject = Signal(str)
+    transcribeMedia = Signal()
     exitProgram = Signal()
 
     def __init__(self, command_queue : CommandQueue, datamodel : ProjectDataModel|None = None, mainwindow : QMainWindow|None = None):
@@ -135,6 +136,12 @@ class ProjectActions(QObject):
 
         if filepath:
             self.loadProject.emit(filepath, shift_pressed)
+
+    def TranscribeMedia(self):
+        """
+        Open the transcription dialog for a new media file
+        """
+        self.transcribeMedia.emit()
 
     def SaveProject(self):
         """

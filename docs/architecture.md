@@ -42,6 +42,15 @@ Subtitle files are processed through a pluggable system:
 - `SubtitleFormatRegistry` loads handlers from `PySubtrans/Formats/` and maps file extensions to the appropriate handler based on priority.
 - `SubtitleProject` uses the registry to detect formats from filenames and can convert subtitles when the output extension differs from the source.
 
+### Transcription Pipeline
+Media-to-subtitles transcription lives under `PySubtrans/Transcription/` and mirrors the translation provider split:
+- `TranscriptionProvider` / `TranscriptionClient` – pluggable speech-to-text backends (`PySubtrans/Transcription/Providers/`), returning a `TranscriptionResult` per audio chunk with optional word timings or sub-segments.
+- `AudioExtractor` / `AudioChunker` – ffmpeg-backed track listing, audio reading, silence detection and chunk planning (`PlanChunksStream` yields chunks while silence detection is still running).
+- `TranscriptionLines` – `TranscriptionLineBuilder` turns a transcribed chunk into timed subtitle lines. Words are cut into utterances at pauses, speaker changes and sentence punctuation; utterances exceeding the `max_characters` / `max_line_duration` options are split at their best pause (pause length weighted by centrality, with clause-punctuation bonuses and `min_split_chars` guarding fragments) rather than stranding a short tail. Also rebases provider sub-segments and merges slivers. Pure logic with no provider or audio dependencies.
+- `TranscriptionCoordinator` – end-to-end orchestration: plans chunks, transcribes each with the client, applies the resume/abort/failure policy and returns a `TranscriptionOutcome` (status, subtitles, error, line count, cost). Expected failures are reported as a FAILED outcome rather than raised. Emits `TranscriptionEvents` signals (`progress`, `audio_progress`, `segment`) during the run. `TranscriptionProvider.ResolveProviderSettings` merges shared credentials into the `"<name> Transcription"` settings namespace.
+
+The CLI entry point is `scripts/transcribe.py`; the GUI runs the same coordinator through `TranscribeMediaCommand`.
+
 ### GuiSubtrans (User Interface)
 PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, and user interactions.
 
@@ -268,6 +277,7 @@ The specific format for translation requests can vary by provider and responses 
 
 - **New file formats** → `PySubtrans/Formats/` (add file handler, extend `SubtitleFileHandler`, add import to `__init__.py`)
 - **Translation providers** → `PySubtrans/Providers/` (subclass `TranslationProvider` and `TranslationClient`, add import to `__init__.py`)
+- **Transcription providers** → `PySubtrans/Transcription/Providers/` (subclass `TranscriptionProvider` and `TranscriptionClient`)
 - **GUI features** → `GuiSubtrans/Widgets/` (new views/dialogs), `GuiSubtrans/Commands/` (new operations)
 - **Settings** → update `Options` schema, add to `SettingsDialog.SECTIONS`
 - **Background operations** → implement `Command` pattern in `GuiSubtrans/Commands/` for thread safety and undo support

@@ -63,6 +63,7 @@ class Subtitles:
         self.metadata : dict[str, Any] = {}
         self.file_format : str|None = None
         self.terminology_map : dict[str, str] = {}
+        self.translation_cost : float|None = None
 
         self.settings : SettingsType = SettingsType(deepcopy(settings)) if settings else SettingsType()
 
@@ -146,6 +147,18 @@ class Subtitles:
         if self.translated:
             with self.lock:
                 return next((line for line in self.translated if line.number == line_number), None)
+
+    def AddTranslationCost(self, cost : float|None) -> None:
+        """Add a provider-reported cost to the cumulative project total."""
+        if cost is None:
+            return
+
+        with self.lock:
+            self.translation_cost = (self.translation_cost or 0.0) + max(0.0, float(cost))
+
+    def RecordTranslationCost(self, _sender: object, cost: float|None) -> None:
+        """Record a cost emitted by a translation event source."""
+        self.AddTranslationCost(cost)
 
     def GetBatchContainingLine(self, line_number: int) -> SubtitleBatch|None:
         """

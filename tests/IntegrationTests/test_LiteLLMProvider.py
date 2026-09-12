@@ -22,12 +22,6 @@ else:
 class TestLiteLLMProvider(LoggedTestCase):
     """Tests for the LiteLLM provider and client."""
 
-    def test_provider_registered(self):
-        """LiteLLMProvider should be discoverable via TranslationProvider.get_providers()"""
-        assert TranslationProvider is not None
-        providers = TranslationProvider.get_providers()
-        self.assertLoggedIn("LiteLLM in providers", "LiteLLM", providers)
-
     def test_provider_creates_client(self):
         """LiteLLMProvider.GetTranslationClient should return a LiteLLMClient"""
         assert LiteLLMProvider is not None
@@ -41,6 +35,12 @@ class TestLiteLLMProvider(LoggedTestCase):
         client = provider.GetTranslationClient(settings)
         self.assertLoggedIsInstance("client type", client, LiteLLMClient)
 
+    def test_provider_registered(self):
+        """LiteLLMProvider should be discoverable via TranslationProvider.get_providers()"""
+        assert TranslationProvider is not None
+        providers = TranslationProvider.get_providers()
+        self.assertLoggedIn("LiteLLM in providers", "LiteLLM", providers)
+
     def test_provider_available_models_returns_empty(self):
         """LiteLLMProvider model list should be empty since input is free-text"""
         assert LiteLLMProvider is not None
@@ -50,5 +50,3 @@ class TestLiteLLMProvider(LoggedTestCase):
         self.assertLoggedEqual("model list empty", [], models)
 
 
-if __name__ == '__main__':
-    unittest.main()

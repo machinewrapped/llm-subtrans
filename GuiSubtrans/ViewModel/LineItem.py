@@ -101,6 +101,17 @@ class LineItem(QStandardItem):
         return style
 
     @property
+    def speaker(self) -> str|None:
+        if 'speaker' not in self.line_model:
+            return None
+
+        speaker = self.line_model['speaker']
+        if speaker is not None and not isinstance(speaker, str):
+            raise ViewModelError(f"Model field 'speaker' is not a string: {self.line_model}")
+
+        return speaker or None
+
+    @property
     def line_text(self) -> str:
         if 'text' not in self.line_model:
             raise ViewModelError(f"Line model does not contain a valid 'text' field: {self.line_model}")

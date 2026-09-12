@@ -98,6 +98,24 @@ To use Bedrock, you must:
   1. Create an **IAM user** or **role** with appropriate permissions (e.g., `bedrock:InvokeModel`, `bedrock:ListFoundationModels`).
   2. Ensure the model you wish to use is accessible in your selected AWS region and [enabled for the IAM user](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html).
 
+## Transcription
+LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...), which can then be translated with the normal workflow. This can produce better results than a text-only translation flow, with more accurate timings and speaker identification (depending on the provider).
+
+**Note**: Transcription requires `ffmpeg`/`ffprobe` to be installed and accessible.
+
+### Local transcription
+**Qwen Local**: runs  `qwen-asr` in-process on your machine. 
+
+A separate torch install is required to take advantage of GPU acceleration (see https://pytorch.org/get-started/locally/).
+
+### Cloud transcription services
+**OpenRouter**: Provides several speech-to-text models, e.g. the excellent MAI Transcribe 2, DeepGram and Grok.
+**Gemini**: `gemini-3.5-transcribe` with word timestamps and speaker diarization. Very good, but brutal rate limits.
+**Muse**: Meta `muse-voice-transcribe-1. Slow, and only provides approximate timings.
+**OpenAI**: `whisper-1` (word timestamps) and `gpt-4o-transcribe-diarize`. Experimental support.
+
+From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separate dialog for transcription. A successful result will be opened as a translation project upon completion.
+
 ## Installing from source
 If you want to use the command line tools or modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.
 
@@ -171,6 +189,14 @@ During the installing process, you can choose to input an API key for each selec
     pip install -e ".[gui,openai,gemini,claude,mistral,bedrock]"   # Full install with optional providers (delete to taste)
     ```
 
+    For local transcription support, **first** install a hardware-appropriate Torch version from https://pytorch.org/get-started/locally/, **then** add the extra:
+
+    ```sh
+    pip install -e ".[qwen-asr]"
+    ```
+
+    This avoids pip defaulting to a CPU-only torch install.
+
 ## Usage
 The program works by dividing the subtitles up into batches and sending each one to the translation service in turn. 
 
@@ -188,7 +214,6 @@ See the project wiki for further details on how to use the program.
 ### Command Line
 LLM-Subtrans can be used as a console command or shell script. The install scripts create a cmd or sh file in the project root for each provider, which will take care of activating the virtual environment and calling the corresponding translation script.
 
-The most basic usage is:
 ```sh
 # Use OpenRouter with automatic model selection
 llm-subtrans --auto -l <language> <path_to_subtitle_file>
@@ -219,6 +244,30 @@ The output format is inferred from file extensions. To convert between formats, 
 If the target language is not specified the default is English.
 
 Other options that can be specified on the command line are detailed below.
+
+#### Transcription
+
+Transcription is a separate process.
+
+```sh
+# Transcribe with the default provider (Qwen Local)
+python scripts/transcribe.py movie.mkv --language Chinese --format ass
+
+# Use a cloud provider
+python scripts/transcribe.py movie.mkv --provider OpenRouter --model mai/mai-transcribe-2 --apikey sk-... --language Japanese --diarize
+```
+
+Transcription options:
+- `--provider` — transcription provider (default: `Qwen Local`; use `--list-providers` to list)
+- `--language` — spoken language hint (e.g. Chinese, English)
+- `--track` — audio track index (default: 0; use `--list-tracks` to identify audio tracks in the source)
+- `--diarize` / `--no-diarize` — request speaker diarization (model-dependent)
+- `--align` / `--no-align` — word-level timestamps (default: on)
+- `--format` — output format: `srt`, `ass`, or `vtt` (default: `vtt`; `ass`/`vtt` preserve speaker labels)
+- `-o` / `--output` — output file path (defaults to alongside the media file)
+- `-s` / `--server` — server address for the provider
+- `-k` / `--apikey` — API key for cloud providers
+- `-m` / `--model` — model name
 
 ## Project File
 

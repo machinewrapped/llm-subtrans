@@ -6,21 +6,27 @@ GUI framework is PySide6, be sure to use the correct syntax (e.g. scoped enum va
 
 Secrets are stored in a .env file - the agent must NEVER read the contents of the file.
 
-Always run the unit_tests at the end of a task to validate any changes to the code.
+If testable code was changed, ensure that unit_tests have been run at the end of the task.
+
+## Project structure
+Before conducting exploratory searches of the code base, consult `docs/architecture.md` for information on the project architecture, structure and components to guide the search. Ensure the document is maintained after significant architectural changes.
 
 ## Console Output
-**IMPORTANT** Avoid Unicode characters (✓ ✗) in log messages as these trigger Windows console errors
+**IMPORTANT** Avoid Unicode characters (✓ ✗) in print/log messages as these trigger Windows console errors
 
 ## Commands
-- Always activate the virtual environment first (e.g. `./envsubtrans/bin/activate`)
-- Run all unit tests: `python tests/unit_tests.py` 
-- Run single test: `python -m unittest PySubtrans.UnitTests.test_MODULE` or `python -m unittest GuiSubtrans.UnitTests.test_MODULE`
+- **IMPORTANT**: Always use the virtual environment Python: `./envsubtrans/Scripts/python.exe` (Windows) or `./envsubtrans/bin/python` (Linux/Mac)
+- Run all unit tests: `./envsubtrans/Scripts/python.exe tests/unit_tests.py`
+- Run single test: `./envsubtrans/Scripts/python.exe -m unittest PySubtrans.UnitTests.test_MODULE` or `./envsubtrans/Scripts/python.exe -m unittest GuiSubtrans.UnitTests.test_MODULE`
+- Run full test suite: `./envsubtrans/Scripts/python.exe scripts/run_tests.py`
 - Build distribution: `./scripts/makedistro.sh` (Linux/Mac) or `scripts\makedistro.bat` (Windows)
+- Create virtual environment, install dependencies and configure project: `./install.sh` (Linux/Mac) or `install.bat` (Windows)
 
 ## Code Style
-**🚨 CRITICAL RULE: NEVER add imports in the middle of functions or methods - ALL imports MUST be at the top of the file.**
+**🚨 CRITICAL RULE: NEVER add imports in the middle of functions or methods - imports MUST be at the top of the file.**
 
 - **Naming**: PascalCase for classes and methods, snake_case for variables
+  - NEVER use bare `_` as a throwaway variable (e.g. `filepath, _ = ...`) - `_()` is the localization function and the assignment shadows it, causing UnboundLocalError. Use `_selected_filter`, `_dummy`, etc. instead
 - **Imports**: Standard lib → third-party → local, alphabetical within groups
 - **Class structure**: Docstring → constants → init → properties → public methods → private methods
 - **Type Hints**: Use type hints for parameters, return values, and class variables
@@ -29,11 +35,16 @@ Always run the unit_tests at the end of a task to validate any changes to the co
   - Examples: 
     `def func(self, param : str) -> str|None:` ✅ 
     `def func(self, param: str) -> str | None:` ❌
+- **`# type: ignore` is forbidden** unless suppressing a known third-party library gap (e.g. missing stubs). Never use it to paper over a type mismatch in project code — fix the types instead.
+  - When assigning a `dict[str, str]` to a `SettingsType` field, wrap it: `SettingsType(my_dict)` — or add a typed property/method to `Options` or the relevant class.
+  - `SettingsType` has typed getters (`get_str`, `get_bool`, `get_int`, `get_dict`, etc.) — always prefer these over raw `.get()` when a specific type is expected.
+- **Whitespace**: Use blank lines to group logical steps within a function and to set off comments. A dense block with no breaks is harder for a human to scan than one with a few well-placed gaps.
+- **Comments**: Add docstrings to explain the purpose of classes and methods, and targeted comments to explain the "why" behind the code.
 - **Docstrings**: Triple-quoted concise descriptions for classes and methods
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()
 - **Threading safety**: Use locks (RLock/QRecursiveMutex) for thread-safe operations
-  **Regular Expressions**: The project uses the `regex` module for regular expression handling, rather than the standard `re`.
+- **Regular Expressions**: The project uses the `regex` module for regular expression handling, rather than the standard `re`.
 - **Unit Tests**: Extend `LoggedTestCase` from `PySubtrans.Helpers.TestCases` and use `assertLogged*` methods for automatic logging and assertions.
   - **Key Principles**:
     - Prefer `assertLogged*` helper methods over manual logging + standard assertions
@@ -50,6 +61,4 @@ Always run the unit_tests at the end of a task to validate any changes to the co
   - **Exception Tests**: Guard with `skip_if_debugger_attached` decorator for debugging compatibility
     - Use `log_input_expected_error(input, ExpectedException, actual_exception)` for exception logging
   - **None Safety**: Use `.get(key, default)` with appropriate default values to avoid Pylance warnings, or assert then test for None values.
-
-## Information
-Consult `docs/architecture.md` for detailed information on the project architecture and components.
+  - **Optional Dependencies**: Test modules must not have top-level imports of optional packages. Guard them with `importlib.util.find_spec` and skip the class with `@unittest.skipUnless`, mirroring the pattern used in the corresponding provider.

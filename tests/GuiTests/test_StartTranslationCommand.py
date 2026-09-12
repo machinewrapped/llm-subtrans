@@ -5,6 +5,7 @@ from PySubtrans.Helpers.Tests import log_info, log_test_name
 
 from GuiSubtrans.Command import Command
 from GuiSubtrans.Commands.SaveTranslationFile import SaveTranslationFile
+from GuiSubtrans.Commands.LogTranslationCostCommand import LogTranslationCostCommand
 from GuiSubtrans.Commands.StartTranslationCommand import StartTranslationCommand
 from GuiSubtrans.Commands.TranslateSceneCommand import TranslateSceneCommand
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
@@ -29,7 +30,7 @@ test_cases = [
                         1 : {}
                     }
                 },
-                "expected_commands_to_queue" : [ TranslateSceneCommand ],
+                "expected_commands_to_queue" : [ TranslateSceneCommand, LogTranslationCostCommand ],
                 "expected_translations" : [ (1, None, None) ],
                 "expected_translated_batches": [ (1,1) ],
                 "expected_untranslated_batches": [ (2,1), (3,1), (4,1) ]
@@ -44,7 +45,7 @@ test_cases = [
                         2 : {}
                     }
                 },
-                "expected_commands_to_queue" : [ TranslateSceneCommand, SaveTranslationFile ],
+                "expected_commands_to_queue" : [ TranslateSceneCommand, SaveTranslationFile, LogTranslationCostCommand ],
                 "expected_translations" : [ (2, None, None) ],
                 "expected_translated_batches": [ (1,1), (2,1) ],
                 "expected_untranslated_batches": [ (3,1), (4,1) ]
@@ -75,7 +76,7 @@ test_cases = [
                         3 : { 'batches': [1] }
                     }
                 },
-                "expected_commands_to_queue" : [ TranslateSceneCommand ],
+                "expected_commands_to_queue" : [ TranslateSceneCommand, LogTranslationCostCommand ],
                 "expected_translations" : [ (3, [1], None) ],
                 "expected_translated_batches": [ (1,1), (2,1), (3,1) ],
                 "expected_untranslated_batches": [ (4,1) ]
@@ -87,7 +88,7 @@ test_cases = [
                     "resume" : True,
                     "autosave" : True,
                 },
-                "expected_commands_to_queue" : [ TranslateSceneCommand, SaveTranslationFile ],
+                "expected_commands_to_queue" : [ TranslateSceneCommand, SaveTranslationFile, LogTranslationCostCommand ],
                 "expected_translations" : [ (4, None, None) ],
                 "expected_translated_batches": [ (1,1), (2,1), (3,1), (4,1) ],
                 "expected_untranslated_batches": []

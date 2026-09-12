@@ -283,6 +283,7 @@ def init_translator(
     # Subscribe to events (see TranslationEvents for full list):
     #   batch_translated, scene_translated, batch_updated, preprocessed
     #   terminology_updated  -- fired after each batch when build_terminology_map=True
+    #   translation_cost     -- fired after each provider response reports a cost
     #   error, warning, info
     """
     options = Options(settings)

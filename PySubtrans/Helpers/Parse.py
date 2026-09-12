@@ -72,6 +72,36 @@ def FormatKeyValuePairs(pairs : dict, separator : str = KEY_VALUE_SEPARATOR) -> 
         return ""
     return '\n'.join(f"{str(k)}{separator}{str(v)}" for k, v in pairs.items())
 
+_float_pattern = regex.compile(r'^[+-]?(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?$')
+
+
+def TryParseFloat(value : Any) -> float|None:
+    """
+    Parse a number without raising: returns None for missing, blank or
+    non-numeric values. Providers see partial and sloppy payloads routinely,
+    so validation-by-exception trips break-on-raised debuggers on every run.
+    """
+    if value is None or isinstance(value, bool):
+        return None
+    if isinstance(value, (int, float)):
+        return float(value)
+    text = str(value).strip()
+    if not _float_pattern.match(text):
+        return None
+    return float(text)
+
+
+def TryParseNonNegative(value : Any) -> float|None:
+    """
+    Parse a non-negative float from a payload value, clamping to zero.
+
+    Returns None for missing/blank/non-numeric values, otherwise
+    ``max(0.0, parsed)``. Used for durations, offsets, and costs in
+    transcription payloads where negative values are meaningless.
+    """
+    parsed = TryParseFloat(value)
+    return max(0.0, parsed) if parsed is not None else None
+
 def ParseNames(name_list : str|list|None|Any) -> list[str]:
     """
     Parse a list of names from a string or list of strings

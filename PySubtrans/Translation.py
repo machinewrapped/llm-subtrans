@@ -1,4 +1,5 @@
 import logging
+from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.Helpers.Text import ExtractTag, ExtractTagDict, ExtractTagList
 from PySubtrans.Substitutions import Substitutions
 
@@ -36,7 +37,8 @@ def ExtractTagDictSafely(tag : str, text : str) -> tuple[str, dict[str,str]]:
 class Translation:
     def __init__(self, content : dict):
         self.content : dict = content or {}
-        translation_text : str = content.get('text', '')
+        self._cost : float|None = self._extract_cost()
+        translation_text : str = self.content.get('text', '')
         self._text, context = self.ParseTranslation(translation_text)
         self.content.update(context)
 
@@ -79,6 +81,11 @@ class Translation:
     @property
     def response_time(self) -> float|str|None:
         return self.content.get('response_time')
+
+    @property
+    def cost(self) -> float|None:
+        """Return the provider-reported cost for this translation response."""
+        return self._cost
 
     @property
     def reached_token_limit(self) -> bool:
@@ -130,6 +137,20 @@ class Translation:
             return f"{metadata_text}\n\n{self.text}" if include_text else metadata_text
         else:
             return self.text if include_text and self.text else "No metadata available"
+
+    def _extract_cost(self) -> float|None:
+        """Parse provider-reported cost and format it for metadata display."""
+        raw = self.content.get('cost')
+
+        if isinstance(raw, str):
+            raw = raw.removeprefix('$').strip()
+
+        cost = TryParseNonNegative(raw)
+
+        if cost is not None:
+            self.content['cost'] = f"${cost:.4f}"
+
+        return cost
 
     def ParseTranslation(self, text : str) -> tuple[str, dict[str, str|list[str]|dict[str,str]|None]]:
         """

@@ -55,6 +55,26 @@ class SubtitleBuilder:
         })
         self._batcher : SubtitleBatcher = SubtitleBatcher(batch_settings)
 
+    def AddExistingScenes(self, scenes : list[SubtitleScene]) -> 'SubtitleBuilder':
+        """
+        Seed the builder with already-finalized scenes (e.g. from a prior run).
+
+        The scenes are appended as-is (no re-batching). The internal line
+        counter advances past the highest existing line number so that
+        subsequent BuildLine calls continue the sequence without collisions.
+
+        Returns self for method chaining.
+        """
+        self._finalize_current_scene()
+        for scene in scenes:
+            self._scenes.append(scene)
+            originals = scene.originals
+            if originals:
+                highest = max(line.number for line in originals)
+                if highest > self._current_line_number:
+                    self._current_line_number = highest
+        return self
+
     def AddScene(self, summary : str|None = None) -> 'SubtitleBuilder':
         """
         Add a new scene. Lines added after this will be automatically organized into batches.

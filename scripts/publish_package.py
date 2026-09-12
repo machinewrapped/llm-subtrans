@@ -285,6 +285,10 @@ def Main() -> None:
         print("Build cancelled")
         return
 
+    for suite in ('unit_tests.py', 'integration_tests.py'):
+        subprocess.run([sys.executable, str(project_root / 'tests' / suite)],
+                       cwd=project_root, check=True)
+
     CleanBuildArtifacts(package_dir)
 
     try:

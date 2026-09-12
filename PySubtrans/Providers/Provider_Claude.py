@@ -43,7 +43,6 @@ else:
                     "thinking": settings.get_bool('thinking', False),
                     "max_tokens": settings.get_int('max_tokens') or env_int('CLAUDE_MAX_TOKENS', 4096),
                     "max_thinking_tokens": settings.get_int('max_thinking_tokens') or env_int('CLAUDE_MAX_THINKING_TOKENS', 1024),
-                    'temperature': settings.get_float('temperature', env_float('CLAUDE_TEMPERATURE', 0.0)),
                     'rate_limit': settings.get_float('rate_limit', env_float('CLAUDE_RATE_LIMIT', 10.0)),
                     'proxy': settings.get_str('proxy') or os.getenv('CLAUDE_PROXY'),
                 }))
@@ -118,7 +117,6 @@ else:
                     options.update({
                         'model': (self.available_models, _("The model to use for translations")),
                         'stream_responses': (bool, _("Stream translations in realtime as they are generated")),
-                        'temperature': (float, _("The temperature to use for translations (default 0.0)")),
                         'rate_limit': (float, _("The rate limit to use for translations (default 60.0)")),
                         'max_tokens': (int, _("The maximum number of tokens to use for translations")),
                         'thinking': (bool, _("Enable thinking mode for translations")),

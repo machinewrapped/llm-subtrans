@@ -4,6 +4,7 @@ from typing import Any
 
 import regex
 from PySubtrans.Helpers.Localization import LocaleDisplayItem
+from PySubtrans.Helpers.Text import SanitiseForFilename
 from PySubtrans.SubtitleError import SubtitleError
 
 def GetValueName(value : Any) -> str:
@@ -78,11 +79,13 @@ def GetOutputPath(filepath : str|None, language : str|None = None, format_extens
     directory = os.path.dirname(filepath)
     basename, current_extension = os.path.splitext(os.path.basename(filepath))
 
-    # Add language suffix
+    # Add language suffix (sanitised for use in filenames)
     if language:
-        language_suffix = f".{language.lower()}"
-        if not basename.endswith(language_suffix):
-            basename = basename + language_suffix
+        sanitised = SanitiseForFilename(language)
+        if sanitised:
+            language_suffix = f".{sanitised}"
+            if not basename.endswith(language_suffix):
+                basename = basename + language_suffix
 
     # Determine extension
     if not format_extension:

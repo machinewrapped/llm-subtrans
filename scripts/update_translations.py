@@ -33,9 +33,9 @@ try:
 except ImportError:
     print("Warning: python-dotenv not available; environment variables from .env file will not be loaded.")
 
-# Model to use for auto-translation
-free_translation_model = os.getenv('FREE_TRANSLATION_MODEL', 'openai/gpt-oss-120b:free')               # Free but may be rate-limited or disappear
-paid_translation_model = os.getenv('PAID_TRANSLATION_MODEL', 'google/gemini-3.1-flash-lite-preview')              # Fast and reliable but not free
+# Model to use for auto-translation - let OpenRouter choose
+free_translation_model = os.getenv('FREE_TRANSLATION_MODEL', 'openrouter/free')
+paid_translation_model = os.getenv('PAID_TRANSLATION_MODEL', 'openrouter/auto')
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -53,6 +53,9 @@ except Exception:
 LOCALES_DIR = os.path.join(base_path, 'locales')
 POT_PATH = os.path.join(LOCALES_DIR, 'gui-subtrans.pot')
 
+# Maximum number of strings to send in a single translation API request
+TRANSLATION_BATCH_SIZE = 50
+
 
 def get_locale_english_name(lang: str) -> str:
     """Get the English display name for a language code."""
@@ -65,37 +68,16 @@ def get_locale_english_name(lang: str) -> str:
         return lang
 
 
-def auto_translate_strings(untranslated: dict[str,str], target_language: str, paid: bool = False) -> dict[str,str]:
-    """Call OpenRouter API to translate untranslated strings."""
-    api_key = os.getenv('OPENROUTER_API_KEY')
-    if not api_key:
-        print("Warning: OPENROUTER_API_KEY not found in environment variables", file=sys.stderr)
-        return {}
-    
-    if not untranslated:
-        return {}
-    
-    language_name = get_locale_english_name(target_language)
-    
-    # Prepare request
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/machinewrapped/llm-subtrans',
-        'X-Title': 'LLM-Subtrans'
-    }
-    
-    # Create the prompt
+def _translate_batch(batch: dict[str,str], target_language: str, language_name: str, headers: dict[str,str], model: str) -> dict[str,str]:
+    """Translate a single batch of strings via the OpenRouter API."""
     prompt = '\n'.join([
         f"Populate translations in {language_name} for these UI strings and messages.",
         "String formatting tags in curly braces must be preserved.",
         "Settings keys such as `api_key` or `server_address` should be given human-readable translations like `API Key` and `Server Address`.",
         "Return only a valid JSON dictionary with the same keys with the translations as values:\n\n",
-        json.dumps(untranslated, ensure_ascii=False, indent=2)
+        json.dumps(batch, ensure_ascii=False, indent=2)
     ])
 
-    model = paid_translation_model if paid else free_translation_model
-    
     request_body = {
         'model': model,
         'messages': [
@@ -106,57 +88,103 @@ def auto_translate_strings(untranslated: dict[str,str], target_language: str, pa
         ],
         'temperature': 0.3
     }
-    
+
     try:
-        print(f"Calling OpenRouter API to translate {len(untranslated)} strings to {language_name}...")
-        
+        print(f"  Calling OpenRouter API to translate {len(batch)} strings to {language_name}...")
+
         with httpx.Client(timeout=300) as client:
             response = client.post(
                 'https://openrouter.ai/api/v1/chat/completions',
                 headers=headers,
                 json=request_body
             )
-            
+
             if response.is_error:
                 print(f"OpenRouter API error: {response.status_code} - {response.text}")
                 return {}
-            
+
             result = response.json()
-            
+
             if 'choices' not in result or not result['choices']:
                 print("No choices returned from OpenRouter API")
                 return {}
-            
+
             content = result['choices'][0]['message']['content']
-            
+
+            if not content:
+                print("Empty response content from OpenRouter API")
+                return {}
+
             # Extract JSON from response (model might add prologue/epilogue)
             try:
-                # Try to find JSON in the response
                 json_start = content.find('{')
                 json_end = content.rfind('}') + 1
-                
+
                 if json_start != -1 and json_end > json_start:
                     json_content = content[json_start:json_end]
                     translations = json.loads(json_content)
-                    
+
                     if isinstance(translations, dict):
-                        # Filter out empty translations
                         valid_translations = {k: v for k, v in translations.items() if v and v.strip()}
-                        print(f"Successfully translated {len(valid_translations)} strings")
+                        print(f"  Successfully translated {len(valid_translations)} strings")
                         return valid_translations
-                    
+
             except json.JSONDecodeError as e:
                 print(f"Failed to parse JSON from OpenRouter response: {e}")
                 print(f"Response content: {content[:500]}...")
-            
+
             return {}
-            
+
     except httpx.RequestError as e:
         print(f"Request error calling OpenRouter API: {e}")
         return {}
     except Exception as e:
         print(f"Unexpected error calling OpenRouter API: {e}")
         return {}
+
+
+def auto_translate_strings(untranslated: dict[str,str], target_language: str, paid: bool = False) -> dict[str,str]:
+    """Call OpenRouter API to translate untranslated strings, batching large requests."""
+    api_key = os.getenv('OPENROUTER_API_KEY')
+    if not api_key:
+        print("Warning: OPENROUTER_API_KEY not found in environment variables", file=sys.stderr)
+        return {}
+
+    if not untranslated:
+        return {}
+
+    language_name = get_locale_english_name(target_language)
+    model = paid_translation_model if paid else free_translation_model
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://github.com/machinewrapped/llm-subtrans',
+        'X-Title': 'LLM-Subtrans'
+    }
+
+    # Split into batches to avoid exceeding token limits
+    items = list(untranslated.items())
+    all_translations: dict[str,str] = {}
+    num_batches = (len(items) + TRANSLATION_BATCH_SIZE - 1) // TRANSLATION_BATCH_SIZE
+
+    for batch_idx in range(num_batches):
+        start = batch_idx * TRANSLATION_BATCH_SIZE
+        end = start + TRANSLATION_BATCH_SIZE
+        batch = dict(items[start:end])
+
+        if num_batches > 1:
+            print(f"Batch {batch_idx + 1}/{num_batches} ({len(batch)} strings)")
+
+        batch_result = _translate_batch(batch, target_language, language_name, headers, model)
+        all_translations.update(batch_result)
+
+        # Rate-limit pause between batches (not after the last one)
+        if batch_idx < num_batches - 1:
+            time.sleep(3)
+
+    print(f"Translated {len(all_translations)}/{len(untranslated)} strings total for {language_name}")
+    return all_translations
 
 
 def get_plural_forms(lang: str) -> str|None:

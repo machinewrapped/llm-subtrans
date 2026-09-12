@@ -59,12 +59,26 @@ default_retry_instructions = linesep.join([
 	"Do NOT merge lines together in the translation, it leads to incorrect timings and confusion for the reader."
     ])
 
+default_speaker_instructions = linesep.join([
+    "Some subtitles carry a Speaker> line with a rough indication of who is speaking, e.g.",
+    "#200",
+    "Speaker> 1",
+    "Original>",
+    "...",
+    "",
+    "These labels are only locally coherent: the same label usually means the same voice",
+    "within a section of dialogue, but labels may restart between sections, so treat",
+    "them as indicative, not authoritative. Use them as a weak hint for pronouns and register.",
+    "Do not repeat the Speaker> line in your response and do not translate the speaker name.",
+    ])
+
 class Instructions:
     def __init__(self, settings : dict) -> None:
         self.prompt : str|None = None
         self.instructions : str|None = None
         self.retry_instructions : str|None = None
         self.terminology_instructions : str|None = None
+        self.speaker_instructions : str|None = None
         self.instruction_file : str|None = None
         self.target_language : str|None = None
         self.task_type : str|None = DEFAULT_TASK_TYPE
@@ -77,6 +91,7 @@ class Instructions:
             'instructions': self.instructions,
             'retry_instructions': self.retry_instructions,
             'terminology_instructions': self.terminology_instructions,
+            'speaker_instructions': self.speaker_instructions,
             'instruction_file': self.instruction_file,
             'task_type' : self.task_type
         }
@@ -91,6 +106,7 @@ class Instructions:
         self.instructions = settings.get('instructions') or default_instructions
         self.retry_instructions = settings.get('retry_instructions') or default_retry_instructions
         self.terminology_instructions = settings.get('terminology_instructions') or default_terminology_instructions
+        self.speaker_instructions = settings.get('speaker_instructions') or default_speaker_instructions
         self.instruction_file = settings.get('instruction_file')
         self.target_language = None
         self.task_type = settings.get('task_type') or DEFAULT_TASK_TYPE

@@ -1,0 +1,168 @@
+import logging
+import sys
+from threading import Lock
+
+from PySide6.QtCore import Signal
+
+from GuiSubtrans.Command import Command
+from GuiSubtrans.Commands.SaveSubtitleFile import SaveSubtitleFile
+from PySubtrans.Helpers import GetOutputPath
+from PySubtrans.Helpers.Localization import _
+from PySubtrans.Options import Options
+from PySubtrans.SettingsType import SettingsType
+from PySubtrans.Subtitles import Subtitles
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
+from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
+from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
+
+
+class TranscribeMediaCommand(Command):
+    """Run a media transcription as a project-opening command."""
+
+    progressed = Signal(int, int, str)
+    audioProgressed = Signal(float, float)
+    segmented = Signal(object)
+
+    def __init__(self, provider : TranscriptionProvider, media_path : str,
+                 settings : SettingsType, options : Options|None = None,
+                 save_transcription : bool = False, output_format : str = "srt",
+                 prior_subtitles : Subtitles|None = None) -> None:
+        super().__init__()
+        self.provider : TranscriptionProvider = provider
+        self.media_path : str = media_path
+        self.settings : SettingsType = settings
+        self.options : Options = Options(options)
+        self.save_transcription : bool = save_transcription
+        self.output_format : str = output_format.casefold()
+        self.prior_subtitles : Subtitles|None = prior_subtitles
+        self.coordinator : TranscriptionCoordinator|None = None
+        self.subtitles : Subtitles|None = None
+        self.status : TranscriptionStatus = TranscriptionStatus.IDLE
+        self.error : str|None = None
+        self.transcribed_lines : int = 0
+        self.saved_path : str|None = None
+        self.stopped_early : bool = False
+        self.ffmpeg_available : bool = False
+        self.torch_device : str|None = None
+        self._coordinator_lock : Lock = Lock()
+        self.is_blocking = True
+        self.can_undo = False
+        # The result is handed over via signals, so the command never enters
+        # the undo stack; on success the previous project's undo history is
+        # cleared because the project boundary was crossed.
+        self.skip_undo = True
+        self.mark_project_dirty = False
+
+    def execute(self) -> bool:
+        """Transcribe media and retain any usable partial result."""
+        try:
+            if self.aborted:
+                return False
+
+            coordinator = self._create_coordinator()
+            if coordinator is None:
+                return False
+
+            self._run_transcription(coordinator)
+
+            if not self.aborted:
+                self._record_runtime_evidence()
+                self._queue_save()
+
+            # An early finish ends as an orderly, unsuccessful command so the
+            # queue still runs its follow-up commands (the partial results save).
+            return self.status is TranscriptionStatus.COMPLETED and not self.aborted
+
+        except Exception as error:
+            self._record_failure(error)
+            return False
+
+    def on_abort(self) -> None:
+        """Forward cancellation, including cancellation during setup."""
+        with self._coordinator_lock:
+            coordinator = self.coordinator
+        if coordinator is not None:
+            coordinator.Abort()
+
+    def FinishEarly(self) -> None:
+        """
+        Request an early finish: stop transcription without cancelling the
+        command, so its follow-up commands (the partial results save) still
+        run. The result is retained but not treated as a completed run.
+        """
+        self.stopped_early = True
+        with self._coordinator_lock:
+            coordinator = self.coordinator
+        if coordinator is not None:
+            coordinator.Abort()
+
+    def _create_coordinator(self) -> TranscriptionCoordinator|None:
+        """Create the coordinator, honouring cancellation during setup."""
+        coordinator = TranscriptionCoordinator(self.provider, self.settings)
+
+        with self._coordinator_lock:
+            self.coordinator = coordinator
+            stop_requested = self.aborted or self.stopped_early
+
+        if stop_requested:
+            coordinator.Abort()
+            return None
+
+        return coordinator
+
+    def _run_transcription(self, coordinator : TranscriptionCoordinator) -> None:
+        """Transcribe the media, streaming progress and segments to the UI."""
+        coordinator.events.progress.connect(self._on_progress)
+        coordinator.events.audio_progress.connect(self._on_audio_progress)
+        coordinator.events.segment.connect(self._on_segment)
+
+        outcome = coordinator.CreateTranscription(
+            self.media_path, self.options, prior_subtitles=self.prior_subtitles)
+
+        self.subtitles = outcome.subtitles
+        self.status = outcome.status
+        self.transcribed_lines = outcome.transcribed_lines
+        if outcome.error is not None:
+            self.error = str(outcome.error)
+
+    def _on_progress(self, sender, done : int, total : int, span : str) -> None:
+        self.progressed.emit(done, total, span)
+
+    def _on_audio_progress(self, sender, processed : float, total : float) -> None:
+        self.audioProgressed.emit(processed, total)
+
+    def _on_segment(self, sender, segment : TranscriptionSegment) -> None:
+        self.segmented.emit(segment)
+
+    def _record_runtime_evidence(self) -> None:
+        """Record dependency facts proven by a real run for future sessions."""
+        self.ffmpeg_available = True
+        self.torch_device = self._resolved_torch_device()
+
+    def _queue_save(self) -> None:
+        """Queue the subtitle file write as a follow-up command."""
+        if self.subtitles is None or not self.save_transcription:
+            return
+
+        language = self.settings.get_str('language')
+        outputpath = GetOutputPath(self.media_path, language, f".{self.output_format}")
+        if not outputpath:
+            return
+
+        # The follow-up command performs the write; a failure there is logged
+        # by the queue without discarding the transcription results.
+        self.saved_path = outputpath
+        self.commands_to_queue.append(SaveSubtitleFile(outputpath, self.subtitles))
+
+    def _record_failure(self, error : Exception) -> None:
+        """Record an unexpected failure; expected ones arrive as a FAILED outcome."""
+        self.error = str(error)
+        self.status = TranscriptionStatus.FAILED
+        logging.error(_("Transcription failed: {error}").format(error=error))
+
+    @staticmethod
+    def _resolved_torch_device() -> str|None:
+        """Read already-loaded torch state without importing torch."""
+        device = TranscriptionProvider.ResolveTorchDevice(sys.modules.get('torch'))
+        return None if device == "Unknown" else device

@@ -2,8 +2,63 @@ import unittest
 from enum import Enum
 
 from PySubtrans.Helpers import GetValueName, GetValueFromName
-from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseDelayFromHeader, ParseKeyValuePairs, ParseNames
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseDelayFromHeader, ParseKeyValuePairs, ParseNames, TryParseFloat, TryParseNonNegative
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+
+
+class TestTryParseFloat(LoggedTestCase):
+    def test_valid_numbers(self):
+        """Numbers, numeric strings and exponents parse without raising."""
+        cases = [
+            (5, 5.0),
+            (2.5, 2.5),
+            ("3.25", 3.25),
+            ("  7  ", 7.0),
+            ("-1.5", -1.5),
+            ("1e3", 1000.0),
+            (True, None),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"float from {value!r}", expected, TryParseFloat(value),
+                                       input_value=value)
+
+    def test_invalid_numbers(self):
+        """Missing and sloppy values return None instead of raising."""
+        for value in (None, "", "   ", "soon", "12x", "nan-ish", object()):
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"float from {value!r}", None, TryParseFloat(value),
+                                       input_value=value)
+
+
+class TestTryParseNonNegative(LoggedTestCase):
+    def test_positive_values(self):
+        """Positive numbers pass through unchanged."""
+        cases = [
+            (5, 5.0),
+            (2.5, 2.5),
+            ("3.25", 3.25),
+            ("  7  ", 7.0),
+            ("1e3", 1000.0),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"non-negative from {value!r}", expected,
+                                       TryParseNonNegative(value), input_value=value)
+
+    def test_negative_values_clamped(self):
+        """Negative numbers are clamped to zero."""
+        for value in (-1.5, "-3", -0.001):
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"clamped from {value!r}", 0.0,
+                                       TryParseNonNegative(value), input_value=value)
+
+    def test_invalid_values(self):
+        """Missing and non-numeric values return None."""
+        for value in (None, "", "   ", "soon", True, object()):
+            with self.subTest(value=value):
+                self.assertLoggedEqual(f"non-negative from {value!r}", None,
+                                       TryParseNonNegative(value), input_value=value)
 
 
 class TestParseDelayFromHeader(LoggedTestCase):

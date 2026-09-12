@@ -2,8 +2,6 @@ import importlib.util
 import logging
 import os
 
-import httpx
-
 from PySubtrans.Options import SettingsType, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 
@@ -141,7 +139,7 @@ else:
                         return []
 
                     proxy_url = self.settings.get_str('proxy')
-                    http_client = httpx.Client(proxy=proxy_url) if proxy_url else None
+                    http_client = openai.DefaultHttpxClient(proxy=proxy_url) if proxy_url else None
                     client = openai.OpenAI(
                         api_key=self.api_key,
                         base_url=self.api_base or None,

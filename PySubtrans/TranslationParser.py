@@ -15,6 +15,15 @@ from PySubtrans.Translation import Translation
 
 default_pattern = (
     r"#(?P<number>\d+)"
+    r"(?:[\s\r\n]+[Ss]peaker>[^\n]*)?"
+    r"(?:[\s\r\n]+Original>[\s\r\n]+(?P<original>[\s\S]*?))?"
+    r"[\s\r\n]+Translation>"
+    r"(?:[\s\r\n]?(?P<body>[\s\S]*?))?"
+    r"(?=\n#\d|\Z)"
+)
+
+previous_default_pattern = (
+    r"#(?P<number>\d+)"
     r"(?:[\s\r\n]+Original>[\s\r\n]+(?P<original>[\s\S]*?))?"
     r"[\s\r\n]+Translation>"
     r"(?:[\s\r\n]?(?P<body>[\s\S]*?))?"
@@ -22,6 +31,7 @@ default_pattern = (
 )
 
 fallback_patterns = [
+    previous_default_pattern,
     r"#(?P<number>\d+)(?:[\s\r\n]+Original>[\s\r\n]+(?P<original>[\s\S]*?))?[\s\r\n]*(?:Translation>(?:[\s\r\n]+(?P<body>[\s\S]*?))?(?:(?=\n{2,})|\Z))",
     r"#(?P<number>\d+)(?:[\s\r\n]+Original[>:][\s\r\n]+(?P<original>[\s\S]*?))?[\s\r\n]*(?:Translation[>:](?:[\s\r\n]+(?P<body>[\s\S]*?))?(?:(?=\n{2,})|\Z))",
     r"#(?P<number>\d+)(?:[\s\r\n]+Original[>:][\s\r\n]+(?P<original>[\s\S]*?))?[\s\r\n]*Translation[>:][\s\r\n]+(?P<body>[\s\S]*?)(?=(?:\n{2,}#)|\Z)",
@@ -29,6 +39,23 @@ fallback_patterns = [
     r"#(?P<number>\d+)[\s\r\n]+Translation[>:][\s\r\n]+(?P<body>[\s\S]*?)(?=(?:\n{2,}#)|\Z)",
     r"#(?P<number>\d+)(?:[\s\r\n]+(?P<body>[\s\S]*?))?(?:(?=\n{2,})|\Z)"  # Just the number and translation
     ]
+
+# Leading Speaker> lines models sometimes echo back despite instructions
+_speaker_prefix_pattern = regex.compile(r'^\s*Speaker>[^\n]*\n?', regex.IGNORECASE)
+
+
+def _strip_speaker_prefix(text : str|None) -> str|None:
+    """
+    Remove an echoed Speaker> context line from parsed originals and
+    translations so it never leaks into subtitles or fuzzy matching.
+    """
+    if not text:
+        return text
+
+    stripped = _speaker_prefix_pattern.sub('', text, count=1)
+    if stripped != text:
+        logging.debug(f"Stripped echoed speaker line from translation")
+    return stripped
 
 class TranslationParser:
     """
@@ -67,7 +94,7 @@ class TranslationParser:
         if not self.text:
             raise TranslationError("No translated text provided", translation=translation)
 
-        matches : list[dict[str,str]] = []
+        matches : list[dict[str,str|None]] = []
 
         for template in self.regex_patterns:
             matches = self.FindMatches(f"{self.text}\n\n", template)
@@ -100,16 +127,16 @@ class TranslationParser:
 
         return self.translated
 
-    def FindMatches(self, text, template) -> list[dict[str,str]]:
+    def FindMatches(self, text, template) -> list[dict[str,str|None]]:
         """
         re.findall has some very unhelpful behaviour, so we use finditer instead.
         """
         return [{
-            'body': match.group('body'),
+            'body': _strip_speaker_prefix(match.group('body')),
             'number': match.groupdict().get('number'),
             'start': match.groupdict().get('start'),
             'end': match.groupdict().get('end'),
-            'original': match.groupdict().get('original')
+            'original': _strip_speaker_prefix(match.groupdict().get('original'))
             } for match in template.finditer(text)]
 
     def MatchTranslations(self, originals : list[SubtitleLine]) -> tuple[list[SubtitleLine], list[SubtitleLine]]:

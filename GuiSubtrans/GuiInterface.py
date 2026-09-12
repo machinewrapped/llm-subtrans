@@ -23,10 +23,12 @@ from GuiSubtrans.NewProjectSettings import NewProjectSettings
 from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.SettingsDialog import SettingsDialog
+from GuiSubtrans.Widgets.TranscriptionDialog import TranscriptionDialog
 from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import ProviderConfigurationError, SubtitleError
+from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.VersionCheck import CheckIfUpdateAvailable, CheckIfUpdateCheckIsRequired
 from PySubtrans.version import __version__
@@ -80,6 +82,7 @@ class GuiInterface(QObject):
         self.action_handler.saveSettings.connect(self.SaveSettings)
         self.action_handler.loadProject.connect(self.LoadProject)
         self.action_handler.saveProject.connect(self.SaveProject)
+        self.action_handler.transcribeMedia.connect(self.ShowTranscriptionDialog)
         self.action_handler.showAboutDialog.connect(self.ShowAboutDialog)
         self.action_handler.exitProgram.connect(self._exit_program)
 
@@ -302,6 +305,46 @@ class GuiInterface(QObject):
         except Exception as e:
             logging.error(f"Error initialising project settings: {str(e)}")
 
+    def ShowTranscriptionDialog(self) -> None:
+        """
+        Open the app-modal transcription dialog. On accept, load the
+        transcribed project exactly like a freshly loaded subtitle file.
+        """
+        if self.command_queue.has_commands:
+            logging.warning(_("Cannot start transcription while another command is queued"))
+            return
+        dialog = TranscriptionDialog(self.global_options, parent=self.GetMainWindow())
+        dialog.commandRequested.connect(self.QueueCommand)
+        try:
+            if dialog.exec() != QDialog.DialogCode.Accepted:
+                return
+
+            if dialog.subtitles is None or dialog.subtitles.linecount == 0:
+                logging.error(_("Transcription produced no subtitles"))
+                return
+
+            project = SubtitleProject(persistent=self.global_options.use_project_file)
+            project.subtitles = dialog.subtitles
+            if dialog.media_path:
+                project.projectfile = project.GetProjectFilepath(dialog.media_path)
+
+            datamodel = ProjectDataModel(project, self.global_options)
+            if datamodel.is_project_initialised:
+                datamodel.CreateViewModel()
+
+            # Partial runs do not clear history when the command finishes;
+            # opening their results must still cross the project boundary.
+            self.command_queue.ClearUndoStack()
+            self.SetDataModel(datamodel)
+            if dialog.media_path:
+                self._update_last_used_path(dialog.media_path)
+            # Like a freshly loaded SRT, the transcription needs the
+            # project settings review (which handles batching).
+            if datamodel.is_project_valid:
+                self.ShowNewProjectSettings(datamodel)
+        finally:
+            dialog.deleteLater()
+
     def ShowAboutDialog(self) -> None:
         """
         Show the about dialog
@@ -353,8 +396,8 @@ class GuiInterface(QObject):
 
                 command.ClearModelUpdates()
 
-            elif command.datamodel and command.datamodel != self.datamodel:
-                # Shouldn't need to do a full model rebuild often?
+            elif command.datamodel and command.datamodel is not self.datamodel:
+                # The command produced a data model that is not the current one
                 self.SetDataModel(command.datamodel)
 
             elif command.datamodel is None:
@@ -373,7 +416,9 @@ class GuiInterface(QObject):
         """
         if self.datamodel:
             with QMutexLocker(self.datamodel.mutex):
-                if self.datamodel.autosave_enabled and self.datamodel.project and self.datamodel.project.needs_writing:
+                project = self.datamodel.project
+                if (self.datamodel.autosave_enabled and project and project.needs_writing
+                        and (project.use_project_file or project.any_translated)):
                     self.SaveProject()
 
     def _on_project_loaded(self, command : LoadSubtitleFile):

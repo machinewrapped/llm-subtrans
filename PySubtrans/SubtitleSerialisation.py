@@ -1,6 +1,7 @@
 import json
 
 from PySubtrans.Helpers.Color import Color
+from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleBatch import SubtitleBatch
@@ -47,6 +48,7 @@ class SubtitleEncoder(json.JSONEncoder):
                 "settings": getattr(obj, 'settings', {}),
                 "metadata": getattr(obj, 'metadata', {}),
                 "terminology_map": obj.terminology_map,
+                "translation_cost": getattr(obj, 'translation_cost', None),
                 "format": obj.file_format,
                 "scenes": obj.scenes,
             }
@@ -69,6 +71,7 @@ class SubtitleEncoder(json.JSONEncoder):
                 "size": obj.size,
                 "all_translated": obj.all_translated,
                 "errors": obj.errors if obj.errors else None,
+                "validate_originals": getattr(obj, 'validate_originals', False) or None,
                 "summary": getattr(obj, 'summary'),
                 "originals": obj._originals,
                 "translated": obj._translated,
@@ -124,6 +127,7 @@ def _object_hook(dct):
             obj.settings = SettingsType(dct.get('settings', dct.get('context', {})))
             obj.metadata = dct.get('metadata', {})
             obj.file_format = dct.get('format', '.srt')
+            obj.translation_cost = TryParseNonNegative(dct.get('translation_cost'))
             terminology = dct.get('terminology_map', {})
             obj.terminology_map = {str(k): str(v) for k, v in terminology.items()} if isinstance(terminology, dict) else {}
             obj.scenes = dct.get('scenes', [])
@@ -147,6 +151,7 @@ def _object_hook(dct):
                 'accepted_prediction_tokens' : dct.get('accepted_prediction_tokens'),
                 'rejected_prediction_tokens' : dct.get('rejected_prediction_tokens'),
                 'total_tokens' : dct.get('total_tokens'),
+                'cost' : dct.get('cost'),
                 'summary': dct.get('summary'),
                 'scene': dct.get('scene'),
                 'synopsis': dct.get('synopsis'),

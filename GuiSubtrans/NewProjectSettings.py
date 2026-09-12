@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QThread, Signal, Slot, QRecursiveMutex, QMutexLoc
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QDialogButtonBox, QFormLayout, QFrame, QLabel)
 
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
-from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, DropdownOptionWidget, OptionWidget
+from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, DropdownOptionWidget, OptionWidget, ParseOptionDefinition
 
 from PySubtrans.Helpers.InstructionsHelpers import GetInstructionsFiles, LoadInstructions
 from PySubtrans.SettingsType import SettingsType
@@ -74,9 +74,14 @@ class NewProjectSettings(QDialog):
         self.form_layout.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.ExpandingFieldsGrow)
 
         for key, setting in self.OPTIONS.items():
-            key_type, tooltip = setting
+            key_type, tooltip, placeholder = ParseOptionDefinition(setting)
             try:
-                field = CreateOptionWidget(key, self.settings[key], key_type, tooltip=tooltip)
+                field = CreateOptionWidget(
+                    key,
+                    self.settings[key],
+                    key_type,
+                    tooltip=tooltip,
+                    placeholder=placeholder)
                 field.contentChanged.connect(lambda setting=field: self._on_setting_changed(setting.key, setting.GetValue()), type=Qt.ConnectionType.QueuedConnection)
                 self.form_layout.addRow(field.name, field)
                 self.fields[key] = field
@@ -119,6 +124,7 @@ class NewProjectSettings(QDialog):
                     self.settings['instructions'] = instructions.instructions
                     self.settings['retry_instructions'] = instructions.retry_instructions
                     self.settings['terminology_instructions'] = instructions.terminology_instructions
+                    self.settings['speaker_instructions'] = instructions.speaker_instructions
                     self.settings['task_type'] = instructions.task_type
                     if instructions.target_language:
                         self.settings['target_language'] = instructions.target_language

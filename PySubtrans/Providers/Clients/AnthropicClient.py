@@ -88,8 +88,6 @@ class AnthropicClient(TranslationClient):
         prompt: TranslationPrompt = request.prompt
         logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
 
-        temperature = temperature or self.temperature
-
         if prompt.system_prompt is None:
             raise TranslationError(_("System prompt is required"))
 
@@ -99,7 +97,7 @@ class AnthropicClient(TranslationClient):
         if not isinstance(prompt.content, list):
             raise TranslationError(_("Content must be a list of messages"))
 
-        response = self._send_messages(request, temperature)
+        response = self._send_messages(request)
 
         translation = Translation(response) if response else None
 
@@ -112,14 +110,14 @@ class AnthropicClient(TranslationClient):
 
         return translation
 
-    def _send_messages(self, request: TranslationRequest, temperature: float) -> dict[str, Any]|None:
+    def _send_messages(self, request: TranslationRequest) -> dict[str, Any]|None:
         """
         Make a request to the LLM to provide a translation
         """
         if not self.client:
             raise TranslationImpossibleError(_("Client is not initialized"))
 
-        api_response = self._get_client_response(request, temperature)
+        api_response = self._get_client_response(request)
 
         if self.aborted or not api_response:
             return None
@@ -147,7 +145,7 @@ class AnthropicClient(TranslationClient):
 
         return result
 
-    def _get_client_response(self, request: TranslationRequest, temperature: float):
+    def _get_client_response(self, request: TranslationRequest):
         """
         Handle both streaming and non-streaming API calls with retry logic
         """
@@ -164,9 +162,9 @@ class AnthropicClient(TranslationClient):
                     raise TranslationError(_("System prompt is required"))
 
                 if request.is_streaming and self.enable_streaming:
-                    return self._stream_client_response(prompt, request, temperature)
+                    return self._stream_client_response(prompt, request)
 
-                return self._create_client_response(prompt, temperature)
+                return self._create_client_response(prompt)
 
             except (anthropic.APITimeoutError, anthropic.RateLimitError) as e:
                 if retry < self.max_retries and not self.aborted:
@@ -199,20 +197,9 @@ class AnthropicClient(TranslationClient):
 
         return str(e)
 
-    def _stream_client_response(self, prompt : TranslationPrompt, request : TranslationRequest, temperature : float):
-        """Stream an Anthropic response with model-specific parameters."""
+    def _stream_client_response(self, prompt : TranslationPrompt, request : TranslationRequest):
+        """Stream an Anthropic response."""
         thinking = self.thinking
-        if self._supports_temperature_parameter():
-            with self._get_client().messages.stream(
-                model=self._get_model_param(),
-                thinking=thinking,
-                messages=self._get_message_params(prompt),
-                system=self._get_system_prompt(prompt),
-                temperature=self._resolve_temperature(temperature, thinking),
-                max_tokens=self.max_tokens
-            ) as stream:
-                return self._consume_stream(stream, request)
-
         with self._get_client().messages.stream(
             model=self._get_model_param(),
             thinking=thinking,
@@ -222,19 +209,9 @@ class AnthropicClient(TranslationClient):
         ) as stream:
             return self._consume_stream(stream, request)
 
-    def _create_client_response(self, prompt : TranslationPrompt, temperature : float):
-        """Create an Anthropic response with model-specific parameters."""
+    def _create_client_response(self, prompt : TranslationPrompt):
+        """Create an Anthropic response."""
         thinking = self.thinking
-        if self._supports_temperature_parameter():
-            return self._get_client().messages.create(
-                model=self._get_model_param(),
-                thinking=thinking,
-                messages=self._get_message_params(prompt),
-                system=self._get_system_prompt(prompt),
-                temperature=self._resolve_temperature(temperature, thinking),
-                max_tokens=self.max_tokens
-            )
-
         return self._get_client().messages.create(
             model=self._get_model_param(),
             thinking=thinking,
@@ -308,20 +285,6 @@ class AnthropicClient(TranslationClient):
 
         return major, minor
 
-    def _supports_temperature_parameter(self) -> bool:
-        """
-        Return True when the selected model accepts the temperature parameter.
-
-        Claude models from 4.7 onward reject temperature. Models we cannot identify are
-        assumed not to support it, as Anthropic has removed it going forward.
-        """
-        version = self._parse_claude_version()
-        if version is None:
-            return False
-
-        major, minor = version
-        return major < 4 or (major == 4 and minor < 7)
-
     def _use_adaptive_thinking(self) -> bool|None:
         """
         Decide the thinking configuration for the selected model.
@@ -345,15 +308,3 @@ class AnthropicClient(TranslationClient):
             return None
 
         return bool(adaptive) and not bool(enabled)
-
-    @staticmethod
-    def _resolve_temperature(temperature : float, thinking : ThinkingConfigParam|anthropic.Omit) -> float:
-        """
-        Enabled (budget) thinking requires temperature to be 1; otherwise use the requested
-        value. Keyed on the thinking config actually being sent, not the raw thinking setting,
-        so a model that omits thinking still honours the configured temperature.
-        """
-        if isinstance(thinking, dict) and thinking.get('type') == 'enabled':
-            return 1
-
-        return temperature

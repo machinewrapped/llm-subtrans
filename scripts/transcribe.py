@@ -1,0 +1,171 @@
+import logging
+import sys
+
+from argparse import ArgumentParser
+
+from check_imports import check_required_imports
+check_required_imports(['PySubtrans'])
+
+from PySubtrans.Helpers import GetOutputPath
+from PySubtrans.Options import Options
+from PySubtrans.SettingsType import SettingsType
+from PySubtrans.SubtitleError import SubtitleError
+from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
+from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
+from scripts.subtrans_common import InitLogger
+
+
+def CreateTranscribeParser() -> ArgumentParser:
+    """
+    Command line arguments for media transcription.
+    """
+    parser = ArgumentParser(description="Transcribe audio/video to subtitles using a transcription provider")
+    parser.add_argument('input', nargs='?', help="Path to media file (mp4, mkv, m4a, mp3, wav, ...)")
+    parser.add_argument('-o', '--output', help="Output subtitle file path (SRT); defaults alongside the media file")
+    parser.add_argument('--list-tracks', action='store_true', help="List audio tracks in the media file and exit")
+    parser.add_argument('--list-providers', action='store_true', help="List available transcription providers and exit")
+    parser.add_argument('--provider', type=str, default="Qwen Local", help="Transcription provider to use")
+    parser.add_argument('-s', '--server', type=str, default=None, help="Server address (provider-specific, e.g. http://127.0.0.1:8888/v1)")
+    parser.add_argument('-k', '--apikey', type=str, default=None, help="API key (provider-specific)")
+    parser.add_argument('-m', '--model', type=str, default=None, help="Transcription model (e.g. qwen3-asr-1.7b)")
+    parser.add_argument('--language', type=str, default=None, help="Spoken language hint (e.g. Chinese, English)")
+    parser.add_argument('--diarize', dest='diarize', action='store_true', default=None, help="Request speaker diarization (model-dependent)")
+    parser.add_argument('--no-diarize', dest='diarize', action='store_false', help="Explicitly disable diarization")
+    parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
+    parser.add_argument('--ffmpeg-path', type=str, default=None,
+                        help="Path to the ffmpeg executable (default: use ffmpeg and ffprobe from PATH)")
+    parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
+    parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
+    parser.add_argument('--format', choices=('srt', 'ass', 'vtt'), default='vtt', help="Subtitle format for the transcribed output (default vtt; ass and vtt preserve speaker labels)")
+    parser.add_argument('--rate-limit', type=float, default=None, help="Maximum backend requests per minute (0 for unlimited)")
+    parser.add_argument('--align', action='store_true', default=True, help="Request word timestamps for timed lines (default on)")
+    parser.add_argument('--no-align', dest='align', action='store_false', help="Disable word timestamps (chunk-level lines)")
+    parser.add_argument('--postprocess', action='store_true', default=True, help="Clean transcribed lines with subtitle normalizations (default on)")
+    parser.add_argument('--no-postprocess', dest='postprocess', action='store_false', help="Keep raw transcription text")
+    parser.add_argument('--debug', action='store_true', help="Run with DEBUG log level")
+    parser.add_argument('--verbose', action='store_true', help="Log each transcribed chunk")
+    return parser
+
+
+def main() -> int:
+    """Transcribe a media file to subtitles."""
+    parser = CreateTranscribeParser()
+    args = parser.parse_args()
+    InitLogger("transcribe", args.debug)
+
+    if args.list_providers:
+        for name in sorted(TranscriptionProvider.get_providers()):
+            print(name)
+        return 0
+
+    if not args.input:
+        parser.error("the following arguments are required: input")
+
+    provider_settings = SettingsType({
+        'api_key': args.apikey,
+        'server_address': args.server,
+        'model': args.model,
+        'language': args.language,
+        'diarize': args.diarize,
+    })
+    # Drop unset values so provider environment defaults apply
+    provider_settings = SettingsType({k: v for k, v in provider_settings.items() if v is not None})
+
+    try:
+        provider = TranscriptionProvider.create_provider(args.provider, provider_settings)
+    except ValueError as e:
+        logging.error(str(e))
+        return 1
+
+    if not provider.ValidateSettings():
+        logging.error(provider.validation_message or "Invalid transcription provider settings")
+        return 1
+
+    try:
+        language = provider.ResolveLanguageCode(args.language, Options().ui_language)
+    except SubtitleError as e:
+        logging.error(str(e))
+        return 1
+
+    if args.language and language != args.language:
+        logging.info(f"Language hint '{args.language}' resolved to '{language}' for {provider.name}")
+
+    options = Options()
+    coordinator_settings = SettingsType({
+        'audio_track': args.track,
+        'language': language,
+        'transcription_align': args.align,
+        'max_characters': options.get_int('max_characters'),
+        'max_line_duration': options.get_float('max_line_duration'),
+        'min_split_chars': options.get_int('min_split_chars'),
+    })
+    # Drop unset values so provider recommendations apply
+    if args.min_chunk is not None:
+        coordinator_settings['min_chunk_seconds'] = args.min_chunk
+    if args.max_chunk is not None:
+        coordinator_settings['max_chunk_seconds'] = args.max_chunk
+    if args.rate_limit is not None:
+        coordinator_settings['rate_limit'] = args.rate_limit
+    if args.ffmpeg_path is not None:
+        coordinator_settings['ffmpeg_path'] = args.ffmpeg_path
+    try:
+        coordinator = TranscriptionCoordinator(provider, coordinator_settings)
+    except SubtitleError as e:
+        logging.error(f"Unable to initialise transcription: {e}")
+        return 1
+
+    if args.list_tracks:
+        try:
+            for track in coordinator.CheckRequirements(args.input):
+                print(track)
+        except Exception as e:
+            logging.error(f"Unable to list tracks: {e}")
+            return 1
+        return 0
+
+    def progress(sender, done : int, total : int, span : str) -> None:
+        # Total is unknown while the chunk plan streams in (0 signals that)
+        label = f"Transcribing chunk {done + 1}/{total}" if total > 0 else f"Transcribing chunk {done + 1}"
+        logging.info(f"{label} [{span}]")
+        if args.verbose:
+            print(f"{label} [{span}]", flush=True)
+
+    try:
+        options['postprocess_transcription'] = args.postprocess
+
+        coordinator.events.progress.connect(progress)
+        outcome = coordinator.CreateTranscription(args.input, options)
+        if outcome.subtitles is None:
+            logging.error(f"Transcription failed: {outcome.error or 'no subtitles produced'}")
+            return 1
+
+        subtitles = outcome.subtitles
+        outputpath = args.output or GetOutputPath(args.input, args.language, f".{args.format}")
+        if not outputpath:
+            logging.error("Unable to determine output path")
+            return 1
+
+        subtitles.outputpath = outputpath
+        # Call the lower-level writer so an unwritable destination reaches the
+        # CLI error handler instead of being logged as a false success.
+        subtitles.SaveOriginal(outputpath)
+        logging.info(f"Saved subtitles to {outputpath} ({subtitles.linecount} lines)")
+
+        if outcome.status == TranscriptionStatus.INCOMPLETE:
+            logging.error(f"Transcription incomplete: {outcome.error or 'one or more chunks failed'}")
+            return 1
+
+    except KeyboardInterrupt:
+        logging.warning("Transcription interrupted")
+        coordinator.Abort()
+        return 130
+    except Exception as e:
+        logging.error(f"Error during transcription: {e}")
+        return 1
+
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

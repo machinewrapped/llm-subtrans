@@ -104,6 +104,9 @@ class TranslationClient:
         # Perform the translation
         translation = self._request_translation(request, temperature)
 
+        if translation and translation.cost is not None and self.events:
+            self.events.translation_cost.send(self, cost=translation.cost)
+
         if self.aborted or translation is None:
             return None
 

@@ -48,6 +48,7 @@ def env_str(key : str, default : str|None = None) -> str|None:
 default_settings = {
     'version': __version__,
     'provider': env_str('PROVIDER', None),
+    'transcription_provider': env_str('TRANSCRIPTION_PROVIDER', "OpenRouter"),
     'provider_settings': SettingsType({}),
     'prompt': env_str('PROMPT', default_user_prompt),
     'instruction_file': env_str('INSTRUCTION_FILE', None),
@@ -65,6 +66,7 @@ default_settings = {
     'prevent_overlapping_times': env_bool('PREVENT_OVERLAPPING_TIMES', False),
     'extend_short_subtitles': env_bool('EXTEND_SHORT_SUBTITLES', False),
     'postprocess_translation': env_bool('POSTPROCESS_TRANSLATION', False),
+    'postprocess_transcription': env_bool('POSTPROCESS_TRANSCRIPTION', True),
     'preprocess_subtitles': env_bool('PREPROCESS_SUBTITLES', False),
     'save_preprocessed_subtitles': env_bool('SAVE_PREPROCESSED_SUBTITLES', False),
     'break_long_lines': env_bool('BREAK_LONG_LINES', True),
@@ -97,6 +99,9 @@ default_settings = {
     'reparse' : False,
     'reload' : False,
     'last_used_path': None,
+    'ffmpeg_path': env_str('FFMPEG_PATH', ''),
+    'transcription_ffmpeg_available': None,
+    'transcription_torch_device': "Unknown",
     'stop_on_error' : env_bool('STOP_ON_ERROR'),
     'write_backup' : env_bool('WRITE_BACKUP_FILE', True),
     'theme' : env_str('THEME', 'default'),
@@ -296,6 +301,8 @@ class Options(SettingsType):
             self['retry_instructions'] = instructions.retry_instructions
         if instructions.terminology_instructions:
             self['terminology_instructions'] = instructions.terminology_instructions
+        if instructions.speaker_instructions:
+            self['speaker_instructions'] = instructions.speaker_instructions
         if instructions.target_language:
             self['target_language'] = instructions.target_language
         if instructions.task_type:

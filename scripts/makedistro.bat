@@ -15,6 +15,12 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 
+.\envsubtrans\scripts\python.exe tests/integration_tests.py
+if %errorlevel% neq 0 (
+    echo Integration tests failed. Exiting...
+    exit /b %errorlevel%
+)
+
 .\envsubtrans\scripts\pyinstaller --noconfirm ^
     --additional-hooks-dir="hooks" ^
     --add-data "theme/*;theme/" ^

@@ -89,6 +89,7 @@ class WidgetBody(QLabel):
         self.setWordWrap(True)
 
 class LineItemView(QWidget):
+
     def __init__(self, line : LineItem, parent=None):
         super().__init__(parent)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
@@ -112,16 +113,13 @@ class LineItemHeader(QFrame):
 
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        leftLabel = QLabel(f"[{str(line.number)}] {str(line.start)} --> {str(line.end)}")
+        leftLabel = QLabel(FormatLineHeader(line))
         leftLabel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         leftLabel.setObjectName("line-header-left")
 
-        rightLabel = QLabel(_("Gap: {gap}, Length: {duration}").format(gap=str(line.gap), duration=str(line.duration)) if line.gap else _("Length: {duration}").format(duration=str(line.duration)))
+        rightLabel = QLabel(FormatLineMeta(line))
         rightLabel.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         rightLabel.setObjectName("line-header-right")
-
-        if line.style:
-            rightLabel.setText(rightLabel.text() + f", Style: {line.style}")
 
         layout.addWidget(leftLabel)
         layout.addWidget(rightLabel)
@@ -134,6 +132,28 @@ class LineItemBody(QLabel):
         self.setAlignment(Qt.AlignmentFlag.AlignTop)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.setWordWrap(True)
+
+def FormatLineHeader(line : LineItem) -> str:
+    """
+    Header text for a subtitle row (line number and timecodes).
+    Pure function so the format is unit-testable without a display.
+    """
+    return f"[{str(line.number)}] {str(line.start)} --> {str(line.end)}"
+
+def FormatLineMeta(line : LineItem) -> str:
+    """
+    Right-hand header text: gap/length plus style and speaker annotations.
+    Pure function so the format is unit-testable without a display.
+    """
+    if line.gap:
+        meta = _("Gap: {gap}, Length: {duration}").format(gap=str(line.gap), duration=str(line.duration))
+    else:
+        meta = _("Length: {duration}").format(duration=str(line.duration))
+    if line.style:
+        meta += _(", Style: {style}").format(style=line.style)
+    if line.speaker:
+        meta += _(", Speaker: {speaker}").format(speaker=line.speaker)
+    return meta
 
 class OptionsGrid(QGridLayout):
     """

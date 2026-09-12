@@ -36,6 +36,10 @@ mistral = ["mistralai"]
 bedrock = ["boto3"]
 litellm = ["litellm>=1.84.0,<1.87.0"]
 
+# `pip install -e ".[qwen-asr]"` for local Qwen transcription. Install a
+# CUDA-enabled torch from https://pytorch.org/get-started/locally/ FIRST
+qwen-asr = ["qwen-asr"]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["PySubtrans*", "GuiSubtrans*", "scripts*"]
@@ -47,6 +51,7 @@ pythonVersion = "3.10"
 typeCheckingMode = "basic"
 venvPath = "."
 venv = "envsubtrans"
+useLibraryCodeForTypes = false
 
 # Stricter checking
 reportMissingImports = "error"

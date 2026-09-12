@@ -5,7 +5,6 @@ from typing import Any
 
 from json import JSONDecodeError
 import openai   # type: ignore
-import httpx
 
 from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Helpers.Localization import _
@@ -176,16 +175,16 @@ class OpenAIClient(TranslationClient):
             ))
 
     def _create_client(self) -> None:
-        http_client: httpx.Client|None = None
+        http_client = None
 
         proxy = self.settings.get_str( 'proxy')
         if proxy:
-            http_client = httpx.Client(proxy=proxy)
+            http_client = openai.DefaultHttpxClient(proxy=proxy)
 
         elif self.settings.get_bool( 'use_httpx'):
             if self.api_base is None:
                 raise TranslationImpossibleError(_("API base must be set when using httpx"))
 
-            http_client = httpx.Client(base_url=self.api_base, follow_redirects=True)
+            http_client = openai.DefaultHttpxClient(base_url=self.api_base, follow_redirects=True)
 
         self.client = openai.OpenAI(api_key=openai.api_key, base_url=self.api_base or None, http_client=http_client)

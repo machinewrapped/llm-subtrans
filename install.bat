@@ -91,7 +91,7 @@ if exist "envsubtrans" (
 )
 
 set "EXTRAS="
-set "SCRIPTS=llm-subtrans batch-translate"
+set "SCRIPTS=llm-subtrans batch-translate transcribe"
 
 echo Select installation type:
 echo 1 = Install with GUI
@@ -189,6 +189,19 @@ if errorlevel 1 (
 
 call envsubtrans\Scripts\activate.bat
 
+echo.
+set /p install_transcription="Install local transcription? (y/n): "
+
+if /i "!install_transcription!"=="y" (
+    call :install_qwen_local
+) else if /i "!install_transcription!"=="n" (
+    echo No local transcription selected. Cloud transcription remains available.
+) else (
+    echo Invalid choice. Exiting installation.
+    pause
+    exit /b 1
+)
+
 REM Determine install target
 set "INSTALL_TARGET=."
 if not "!EXTRAS!"=="" (
@@ -204,6 +217,41 @@ if errorlevel 1 (
     echo Failed to install required modules.
     pause
     exit /b 1
+)
+
+if /i "!install_transcription!"=="y" (
+    echo.
+    echo Checking torch for Qwen Local transcription...
+    .\envsubtrans\Scripts\python.exe -c "import torch" >nul 2>&1
+    if errorlevel 1 (
+        echo.
+        echo Local transcription is not available: PyTorch could not be imported.
+        echo Rolling back the qwen-asr package; cloud transcription remains available.
+        .\envsubtrans\Scripts\python.exe -m pip uninstall -y qwen-asr >nul 2>&1
+        set "NEWEXTRAS="
+        for %%e in (!EXTRAS:,= !) do if /i not "%%e"=="qwen-asr" (
+            if "!NEWEXTRAS!"=="" (set "NEWEXTRAS=%%e") else (set "NEWEXTRAS=!NEWEXTRAS!,%%e")
+        )
+        set "EXTRAS=!NEWEXTRAS!"
+        echo.
+        echo To enable local transcription, install the hardware-appropriate PyTorch:
+        echo   https://pytorch.org/get-started/locally/
+        echo Then re-run this installer and choose local transcription again.
+    ) else (
+        REM PyTorch's ROCm builds expose supported AMD GPUs through torch.cuda.
+        .\envsubtrans\Scripts\python.exe -c "import torch,sys; sys.exit(0 if torch.cuda.is_available() else 1)" >nul 2>&1
+        if errorlevel 1 (
+            echo.
+            echo Local transcription was installed, but no supported GPU backend was detected.
+            echo Qwen will use the CPU and may be very slow; this installation is still usable.
+            echo For GPU acceleration, install the hardware-appropriate PyTorch build from:
+            echo   https://pytorch.org/get-started/locally/
+        ) else (
+            echo.
+            echo Local transcription installed successfully; a supported GPU backend was detected.
+        )
+    )
+    echo.
 )
 
 REM Generate command scripts
@@ -274,6 +322,10 @@ if "!EXTRAS!"=="" (set "EXTRAS=bedrock") else (set "EXTRAS=!EXTRAS!,bedrock")
 set "SCRIPTS=!SCRIPTS! bedrock-subtrans"
 
 echo Bedrock setup complete. Default provider set to Bedrock.
+goto :eof
+
+:install_qwen_local
+if "!EXTRAS!"=="" (set "EXTRAS=qwen-asr") else (set "EXTRAS=!EXTRAS!,qwen-asr")
 goto :eof
 
 :setup_complete

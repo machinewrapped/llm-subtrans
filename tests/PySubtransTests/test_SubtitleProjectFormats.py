@@ -11,11 +11,13 @@ from PySubtrans.Helpers.Color import Color
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleData import SubtitleData
 from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleFileHandler import SubtitleFileHandler
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
+from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleSerialisation import SubtitleEncoder, SubtitleDecoder
 from PySubtrans.Subtitles import SaveSettings, Subtitles
@@ -560,6 +562,28 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
             project2.subtitles.file_format,
         )
         self.assertLoggedEqual("content preserved", 1, project2.subtitles.linecount)
+
+
+    def test_validate_originals_flag_round_trips(self):
+        """Transcription batches keep their revalidation tag through project files."""
+        line = SubtitleLine({'number': 1, 'start': '00:00:00,000', 'end': '00:00:01,000', 'text': 'hi'})
+        batch = SubtitleBatch({'originals': [line], 'translated': []})
+        batch.validate_originals = True
+
+        data = json.dumps(batch, cls=SubtitleEncoder)
+        self.assertLoggedIn("flag serialised", '"validate_originals": true', data)
+
+        loaded = json.loads(data, cls=SubtitleDecoder)
+        self.assertLoggedEqual("flag restored", True, loaded.validate_originals)
+
+    def test_validate_originals_defaults_false(self):
+        """Batches without the tag skip source validation after reload."""
+        batch = SubtitleBatch({'originals': [], 'translated': []})
+
+        data = json.dumps(batch, cls=SubtitleEncoder)
+        loaded = json.loads(data, cls=SubtitleDecoder)
+
+        self.assertLoggedEqual("flag defaults false", False, loaded.validate_originals)
 
 
 if __name__ == "__main__":

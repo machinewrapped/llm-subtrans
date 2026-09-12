@@ -163,15 +163,19 @@ class TestCustomClientErrorHandling(LoggedTestCase):
 class TestCustomClientProcessApiResponse(LoggedTestCase):
     """Tests for _process_api_response handling of reasoning fields."""
 
-    def _make_api_response_body(self, content : str, message_extra : dict[str, Any]|None = None) -> str:
+    def _make_api_response_body(self, content : str, message_extra : dict[str, Any]|None = None,
+                                usage_extra : dict[str, Any]|None = None) -> str:
         """Build a minimal /v1/chat/completions response body."""
         message = {'role': 'assistant', 'content': content}
         if message_extra:
             message.update(message_extra)
+        usage = {'prompt_tokens': 10, 'completion_tokens': 20, 'total_tokens': 30}
+        if usage_extra:
+            usage.update(usage_extra)
         return json.dumps({
             'model': 'test-model',
             'choices': [{'message': message, 'finish_reason': 'stop'}],
-            'usage': {'prompt_tokens': 10, 'completion_tokens': 20, 'total_tokens': 30},
+            'usage': usage,
         })
 
     def test_standard_content_is_returned(self) -> None:
@@ -189,6 +193,22 @@ class TestCustomClientProcessApiResponse(LoggedTestCase):
         if result:
             self.assertLoggedEqual("text", 'Hello world', result.get('text'))
             self.assertLoggedEqual("reasoning not set", None, result.get('reasoning'))
+
+    def test_reported_cost_is_captured(self) -> None:
+        """Provider-reported usage cost is preserved in the translation response."""
+        client = CustomClient(_create_test_settings())
+        mock_resp = _mock_response(200, self._make_api_response_body(
+            'Hello world', usage_extra={'cost': 0.012345}))
+
+        mock_httpx_client = MagicMock()
+        mock_httpx_client.post.return_value = mock_resp
+
+        with patch('httpx.Client', return_value=mock_httpx_client):
+            result = client._make_request(_create_test_request(), temperature=0.0)
+
+        self.assertLoggedIsNotNone("result", result)
+        if result:
+            self.assertLoggedEqual("reported cost", 0.012345, result.get('cost'))
 
     def test_reasoning_content_field_is_captured(self) -> None:
         """OpenAI-style reasoning_content field is captured into response['reasoning']."""
@@ -309,4 +329,23 @@ class TestCustomClientStreamingChunk(LoggedTestCase):
 
         self.assertLoggedEqual("text falls back to reasoning", 'The translation.', accumulated.get('text'))
         self.assertLoggedEqual("reasoning preserved", 'The translation.', accumulated.get('reasoning'))
+
+    def test_streaming_usage_only_chunk_cost_is_captured(self) -> None:
+        """A final usage-only SSE chunk still contributes OpenRouter's cost."""
+        client = CustomClient(_create_test_settings(streaming=True))
+        request = _create_test_request(streaming=True)
+        accumulated : dict[str, Any] = {}
+
+        client._process_streaming_chunk(request, self._make_chunk(content='Translated.'), accumulated)
+        client._process_streaming_chunk(request, {
+            'choices': [],
+            'usage': {
+                'prompt_tokens': 11,
+                'completion_tokens': 22,
+                'total_tokens': 33,
+                'cost': 0.0042,
+            },
+        }, accumulated)
+
+        self.assertLoggedEqual("streaming reported cost", 0.0042, accumulated.get('cost'))
 

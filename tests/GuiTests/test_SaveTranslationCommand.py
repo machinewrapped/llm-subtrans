@@ -1,11 +1,14 @@
 import os
 import tempfile
 from datetime import timedelta
+from unittest.mock import MagicMock, patch
 
+from GuiSubtrans.Command import CommandError
 from GuiSubtrans.Commands.SaveTranslationFile import SaveTranslationFile
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleEditor import SubtitleEditor
@@ -44,3 +47,51 @@ class SaveTranslationCommandTests(LoggedTestCase):
         output_data = SrtFileHandler().load_file(output_path)
         self.assertLoggedEqual("duration extended from GUI options", timedelta(seconds=2), output_data.lines[0].end)
         self.assertLoggedNotIn("save option not stored in project settings", 'extend_short_subtitles', subtitles.settings)
+
+    @skip_if_debugger_attached
+    def test_SaveTranslationFile_rejects_invalid_extension_before_lock(self) -> None:
+        """Reject invalid save paths before entering the locked project save."""
+        for filepath in ("translation.subtrans", "translation.unknown", "translation", None):
+            with self.subTest(filepath=filepath):
+                project = SubtitleProject()
+                command = SaveTranslationFile(project, filepath)
+                with patch.object(project, 'lock', MagicMock()) as lock:
+                    with self.assertRaises(CommandError) as raised:
+                        command.execute()
+                    self.assertLoggedEqual("project lock never acquired", 0, lock.__enter__.call_count)
+                log_input_expected_error(filepath, CommandError, raised.exception)
+                self.assertLoggedEqual("error identifies save command", command, raised.exception.command)
+
+    def test_SaveTranslationFile_accepts_uppercase_extension(self) -> None:
+        """Recognized extensions remain case insensitive."""
+        subtitles = (SubtitleBuilder(max_batch_size=1)
+            .AddLines([
+                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghij"),
+            ])
+            .Build())
+        with SubtitleEditor(subtitles) as editor:
+            editor.DuplicateOriginalsAsTranslations()
+
+        project = SubtitleProject()
+        project.subtitles = subtitles
+        command = SaveTranslationFile(project, "translation.SRT")
+        with patch.object(project, 'SaveTranslation') as save:
+            self.assertLoggedEqual("save succeeded", True, command.execute())
+            save.assert_called_once_with("translation.SRT")
+
+    def test_SaveTranslationFile_skips_untranslated_project(self) -> None:
+        """Saving before translation is a quiet no-op, not a repeated error."""
+        subtitles = (SubtitleBuilder(max_batch_size=1)
+            .AddLines([
+                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghij"),
+            ])
+            .Build())
+
+        project = SubtitleProject()
+        project.subtitles = subtitles
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output_path = os.path.join(tmpdir, "translation.srt")
+            command = SaveTranslationFile(project, output_path)
+            self.assertLoggedEqual("save skipped", True, command.execute())
+            self.assertLoggedEqual("no file created", False, os.path.exists(output_path))

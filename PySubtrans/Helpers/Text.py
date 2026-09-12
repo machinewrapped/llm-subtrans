@@ -13,6 +13,19 @@ emdash = "—"
 
 standard_filler_words = "um,umm,uh,uhh,er,err,ah,ahh,oh,eh,hm,hmm,hmmm,huh,ha,mmm,ow,oww"
 
+_non_word_pattern = regex.compile(r'[^\w\s-]')
+_whitespace_run_pattern = regex.compile(r'\s+')
+
+def SanitiseForFilename(text : str) -> str:
+    """
+    Sanitise a string for use as a filename component.
+
+    Strips non-word characters (preserving Unicode letters, digits, underscores
+    and hyphens), collapses whitespace runs to hyphens, and lowercases.
+    """
+    sanitised = _non_word_pattern.sub('', text).strip().lower()
+    return _whitespace_run_pattern.sub('-', sanitised)
+
 whitespace_and_punctuation_pattern = regex.compile(r'[\p{P}\p{Z}\p{C}]')
 
 whitespace_pattern = regex.compile(r'\s+')

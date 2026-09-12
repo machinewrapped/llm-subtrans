@@ -107,7 +107,7 @@ function install_qwen_local() {
     echo "missing, the Qwen install is rolled back so you can add torch and re-run."
     echo
 
-    extras+=("transcription")
+    extras+=("qwen-asr")
 }
 
 if [ ! -d "scripts" ]; then
@@ -276,7 +276,7 @@ if [ "$install_transcription" = "y" ] || [ "$install_transcription" = "Y" ]; the
         pip uninstall -y qwen-asr 2>/dev/null || true
         filtered_extras=()
         for extra in "${extras[@]}"; do
-            [ "$extra" != "transcription" ] && filtered_extras+=("$extra")
+            [ "$extra" != "qwen-asr" ] && filtered_extras+=("$extra")
         done
         extras=("${filtered_extras[@]}")
         echo

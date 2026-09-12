@@ -192,7 +192,7 @@ During the installing process, you can choose to input an API key for each selec
     For local transcription support, **first** install a hardware-appropriate Torch version from https://pytorch.org/get-started/locally/, **then** add the extra:
 
     ```sh
-    pip install -e ".[transcription]"
+    pip install -e ".[qwen-asr]"
     ```
 
     This avoids pip defaulting to a CPU-only torch install.

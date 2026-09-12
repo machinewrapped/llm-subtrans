@@ -229,7 +229,7 @@ if /i "!install_transcription!"=="y" (
         echo Rolling back the qwen-asr package; cloud transcription remains available.
         .\envsubtrans\Scripts\python.exe -m pip uninstall -y qwen-asr >nul 2>&1
         set "NEWEXTRAS="
-        for %%e in (!EXTRAS:,= !) do if /i not "%%e"=="transcription" (
+        for %%e in (!EXTRAS:,= !) do if /i not "%%e"=="qwen-asr" (
             if "!NEWEXTRAS!"=="" (set "NEWEXTRAS=%%e") else (set "NEWEXTRAS=!NEWEXTRAS!,%%e")
         )
         set "EXTRAS=!NEWEXTRAS!"
@@ -325,7 +325,7 @@ echo Bedrock setup complete. Default provider set to Bedrock.
 goto :eof
 
 :install_qwen_local
-if "!EXTRAS!"=="" (set "EXTRAS=transcription") else (set "EXTRAS=!EXTRAS!,transcription")
+if "!EXTRAS!"=="" (set "EXTRAS=qwen-asr") else (set "EXTRAS=!EXTRAS!,qwen-asr")
 goto :eof
 
 :setup_complete

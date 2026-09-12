@@ -55,31 +55,26 @@ else:
     try:
         class QwenLocalProvider(TranscriptionProvider):
             """
-            Local transcription via the official qwen-asr package (optional).
+            Local transcription via the qwen-asr package (optional).
 
-            Only registered when qwen-asr is installed; see the
-            `transcription` packaging extra (torch with CUDA comes from
-            pytorch.org separately).
+            Requires a GPU-enabled torch install (CUDA on NVIDIA, MPS on Apple Silicon).
             """
             name = "Qwen Local"
 
             information = _("""
-            <p>Transcribe locally with the official qwen-asr package (Qwen3-ASR).</p>
-            <p>Requires the <tt>transcription</tt> extra and a GPU-enabled torch install (CUDA on NVIDIA, MPS on Apple Silicon). No API key needed.</p>
-            <p>A discrete GPU is much faster than CPU inference.</p>
+            <p>Transcribe audio on your local machine with Qwen3-ASR.</p>
             """)
 
             def _get_provider_information(self, torch_device : str = "Unknown") -> str|None:
                 """Append torch install guidance until a run records a device."""
                 base = super()._get_provider_information(torch_device)
-                if torch_device != "Unknown":
-                    if "cpu" in torch_device.casefold():
-                        note = _("<p>Running on CPU: transcription will work but is much slower than on a CUDA GPU.</p>")
-                        return f"{base}\n{note}" if base else note
-                    return base
-                note = _("<p>Needs a working torch install "
-                         "(<a href=\"https://pytorch.org/get-started/locally/\">pytorch.org</a>); "
-                         "checked after your first local transcription.</p>")
+                if torch_device == "Unknown":
+                    note = _("<p>Needs a working torch install (<a href=\"https://pytorch.org/get-started/locally/\">pytorch.org</a>); ")
+                elif "cpu" in torch_device.casefold():
+                    note = _("<p>Running on CPU: transcription will work but much slower than on a GPU.</p>")
+                else:
+                    note = None
+
                 return f"{base}\n{note}" if base else note
 
             # Device and budgets rarely change per job; model and language do

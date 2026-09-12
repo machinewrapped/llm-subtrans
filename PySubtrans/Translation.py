@@ -37,7 +37,7 @@ def ExtractTagDictSafely(tag : str, text : str) -> tuple[str, dict[str,str]]:
 class Translation:
     def __init__(self, content : dict):
         self.content : dict = content or {}
-        self._format_cost_metadata()
+        self._cost : float|None = self._extract_cost()
         translation_text : str = self.content.get('text', '')
         self._text, context = self.ParseTranslation(translation_text)
         self.content.update(context)
@@ -85,10 +85,7 @@ class Translation:
     @property
     def cost(self) -> float|None:
         """Return the provider-reported cost for this translation response."""
-        cost = self.content.get('cost')
-        if isinstance(cost, str):
-            cost = cost.removeprefix('$').strip()
-        return TryParseNonNegative(cost)
+        return self._cost
 
     @property
     def reached_token_limit(self) -> bool:
@@ -141,11 +138,19 @@ class Translation:
         else:
             return self.text if include_text and self.text else "No metadata available"
 
-    def _format_cost_metadata(self) -> None:
-        """Store provider-reported cost in the display format used by metadata."""
-        cost = TryParseNonNegative(self.content.get('cost'))
+    def _extract_cost(self) -> float|None:
+        """Parse provider-reported cost and format it for metadata display."""
+        raw = self.content.get('cost')
+
+        if isinstance(raw, str):
+            raw = raw.removeprefix('$').strip()
+
+        cost = TryParseNonNegative(raw)
+
         if cost is not None:
             self.content['cost'] = f"${cost:.4f}"
+
+        return cost
 
     def ParseTranslation(self, text : str) -> tuple[str, dict[str, str|list[str]|dict[str,str]|None]]:
         """

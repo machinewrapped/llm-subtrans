@@ -7,9 +7,11 @@ from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
+from PySubtrans.Transcription.Providers.Clients.OpenAITranscriptionClient import (
+    parse_diarized_payload,
+)
 from PySubtrans.Transcription.Providers.Provider_OpenAI import (
     OpenAITranscriptionProvider,
-    parse_diarized_payload,
 )
 
 

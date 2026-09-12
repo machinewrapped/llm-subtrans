@@ -9,14 +9,16 @@ from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
-from PySubtrans.Transcription.Providers.Provider_Gemini import (
+from PySubtrans.Transcription.Providers.Clients.GeminiTranscriptionClient import (
+    _format_retry_delay,
     _is_rate_limit_error,
     _rate_limit_delay_seconds,
     _retry_hint_seconds,
-    _format_retry_delay,
-    map_language_code,
     parse_offset,
     parse_word_annotations,
+)
+from PySubtrans.Transcription.Providers.Provider_Gemini import (
+    map_language_code,
 )
 import PySubtrans.Transcription.Providers.Provider_Gemini as _gemini_module
 import PySubtrans.Transcription.Providers.Clients.GeminiTranscriptionClient as _gemini_client_module
@@ -336,57 +338,50 @@ class TestGeminiUploadCleanup(LoggedTestCase):
         return client_type(SettingsType({'api_key': 'key', 'max_retries': 0}))
 
     @skip_if_debugger_attached
-    def test_upload_deleted_when_generation_fails(self):
-        """A failed interaction does not leave uploaded audio behind."""
+    def test_non_rate_limit_error_propagates(self):
+        """Non-rate-limit errors propagate without retry."""
         client_type = getattr(_gemini_client_module, 'GeminiTranscriptionClient', None)
         if client_type is None:
             self.skipTest("google-genai not installed")
         client = client_type(SettingsType({'api_key': 'key', 'max_retries': 1}))
         backend = Mock()
         uploaded = Mock(uri="uri")
-        uploaded.name = "uploaded-file"
-        backend.files.upload.return_value = uploaded
         backend.interactions.create.side_effect = ValueError("generation failed")
 
         with self.assertRaises(ValueError):
-            client._create_interaction(backend, "chunk.wav")
+            client._create_interaction(backend, uploaded)
 
-        backend.files.delete.assert_called_once_with(name="uploaded-file")
+        self.assertLoggedEqual("single attempt", 1, backend.interactions.create.call_count)
 
     @skip_if_debugger_attached
-    def test_upload_deleted_when_retry_exhausts(self):
-        """A quota retry exhaustion cleans up the reused upload."""
+    def test_quota_exhaustion_raises(self):
+        """Persistent quota errors raise after max_retries."""
         client = self._client()
         backend = Mock()
         uploaded = Mock(uri="uri")
-        uploaded.name = "uploaded-file"
-        backend.files.upload.return_value = uploaded
         backend.interactions.create.side_effect = _QuotaError("quota exceeded")
 
         with self.assertRaises(SubtitleError):
-            client._create_interaction(backend, "chunk.wav")
+            client._create_interaction(backend, uploaded)
 
-        backend.files.delete.assert_called_once_with(name="uploaded-file")
+        self.assertLoggedEqual("single attempt", 1, backend.interactions.create.call_count)
 
     @skip_if_debugger_attached
-    def test_upload_deleted_when_backoff_aborts(self):
-        """Aborting during quota backoff deletes the retained upload."""
+    def test_abort_during_backoff_raises(self):
+        """Aborting during quota backoff raises without additional retries."""
         client_type = getattr(_gemini_client_module, 'GeminiTranscriptionClient', None)
         if client_type is None:
             self.skipTest("google-genai not installed")
         client = client_type(SettingsType({'api_key': 'key', 'max_retries': 1}))
         backend = Mock()
         uploaded = Mock(uri="uri")
-        uploaded.name = "uploaded-file"
-        backend.files.upload.return_value = uploaded
         backend.interactions.create.side_effect = _QuotaError("Please retry in 30s")
 
         with patch.object(client, '_sleep_abortable', side_effect=SubtitleError("Transcription aborted")) as sleep:
             with self.assertRaises(SubtitleError):
-                client._create_interaction(backend, "chunk.wav")
+                client._create_interaction(backend, uploaded)
 
         sleep.assert_called_once()
-        backend.files.delete.assert_called_once_with(name="uploaded-file")
 
 
 if __name__ == '__main__':

@@ -30,6 +30,7 @@ class FakeTranslationCommandTranslator:
         for batch in scene.batches:
             if selected_batches is None or batch.number in selected_batches:
                 batch.translation = Translation({'text': 'translated text', 'cost': 0.0123})
+                self.events.translation_cost.send(self, cost=0.0123)
 
     def StopTranslating(self) -> None:
         self.aborted = True
@@ -38,7 +39,7 @@ class FakeTranslationCommandTranslator:
 class TestTranslateSceneCommand(LoggedTestCase):
     """Verify that GUI translation commands report provider costs."""
 
-    def test_completed_command_logs_selected_batch_cost(self) -> None:
+    def test_completed_command_records_selected_batch_cost(self) -> None:
         line = SubtitleLine.Construct(1, timedelta(), timedelta(seconds=1), 'source text')
         first_batch = SubtitleBatch({'scene': 1, 'batch': 1, 'originals': [line]})
         second_batch = SubtitleBatch({'scene': 1, 'batch': 2, 'originals': [line.Construct(2, line.start, line.end, 'other source')]})
@@ -55,15 +56,11 @@ class TestTranslateSceneCommand(LoggedTestCase):
 
         command = TranslateSceneCommand(1, batch_numbers=[1], datamodel=datamodel)
         with patch('GuiSubtrans.Commands.TranslateSceneCommand.SubtitleTranslator', FakeTranslationCommandTranslator), \
-                self.assertLogs(level=logging.INFO) as captured:
+                self.assertLogs(level=logging.INFO):
             result = command.execute()
 
         self.assertLoggedTrue('translation command succeeds', result)
-        self.assertLoggedEqual('selected batch cost', 0.0123, command.translation_cost)
-        self.assertLoggedTrue(
-            'GUI translation cost log',
-            any('Translation cost for scene 1: $0.0123' in message for message in captured.output),
-        )
+        self.assertLoggedEqual('selected batch cost', 0.0123, subtitles.translation_cost)
 
 
 if __name__ == '__main__':

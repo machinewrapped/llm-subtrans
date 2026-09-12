@@ -181,6 +181,7 @@ provider = init_translation_provider("Custom Server", options)
 - `batch_updated`: Emitted during streaming responses for partial updates
 - `scene_translated`: Emitted when an entire scene is translated
 - `preprocessed`: Emitted when subtitle preprocessing completes
+- `translation_cost`: Emitted when a provider response reports a translation cost
 
 **Logging Hooks:**
 - `error`: Critical errors that stop translation

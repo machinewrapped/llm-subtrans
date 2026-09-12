@@ -1,6 +1,7 @@
 import json
 
 from PySubtrans.Helpers.Color import Color
+from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleBatch import SubtitleBatch
@@ -47,6 +48,7 @@ class SubtitleEncoder(json.JSONEncoder):
                 "settings": getattr(obj, 'settings', {}),
                 "metadata": getattr(obj, 'metadata', {}),
                 "terminology_map": obj.terminology_map,
+                "translation_cost": getattr(obj, 'translation_cost', None),
                 "format": obj.file_format,
                 "scenes": obj.scenes,
             }
@@ -125,6 +127,7 @@ def _object_hook(dct):
             obj.settings = SettingsType(dct.get('settings', dct.get('context', {})))
             obj.metadata = dct.get('metadata', {})
             obj.file_format = dct.get('format', '.srt')
+            obj.translation_cost = TryParseNonNegative(dct.get('translation_cost'))
             terminology = dct.get('terminology_map', {})
             obj.terminology_map = {str(k): str(v) for k, v in terminology.items()} if isinstance(terminology, dict) else {}
             obj.scenes = dct.get('scenes', [])

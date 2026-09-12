@@ -43,6 +43,9 @@ class TranslationEvents:
             Emitted after a batch when the model returns a <terminology> block.
             See TerminologyUpdate for the payload fields.
 
+        translation_cost(sender, cost):
+            Emitted after a provider response reports a translation cost.
+
         preprocessed(sender, scenes):
             Emitted after subtitles are batched and pre-processed (GuiSubtrans only)
 
@@ -60,6 +63,7 @@ class TranslationEvents:
     batch_updated: Signal
     scene_translated: Signal
     terminology_updated: Signal
+    translation_cost: Signal
     error: Signal
     warning: Signal
     info: Signal
@@ -70,6 +74,7 @@ class TranslationEvents:
         self.batch_updated = Signal("translation-batch-updated")
         self.scene_translated = Signal("translation-scene-translated")
         self.terminology_updated = Signal("translation-terminology-updated")
+        self.translation_cost = Signal("translation-cost")
 
         # Signals for logging translation events
         self.error = Signal("translation-error")

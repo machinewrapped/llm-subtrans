@@ -1,6 +1,7 @@
 import logging
 
 from GuiSubtrans.Command import Command, CommandError
+from GuiSubtrans.Commands.LogTranslationCostCommand import LogTranslationCostCommand
 from GuiSubtrans.Commands.SaveProjectFile import SaveProjectFile
 from GuiSubtrans.Commands.SaveTranslationFile import SaveTranslationFile
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
@@ -36,6 +37,7 @@ class StartTranslationCommand(Command):
         logging.info(_("{starting} {threaded} translation").format(starting=starting, threaded=threaded))
 
         previous_command : Command = self
+        translation_commands : list[TranslateSceneCommand] = []
 
         # Save the project first if it needs updating
         if project.needs_writing:
@@ -59,6 +61,7 @@ class StartTranslationCommand(Command):
                 batch_numbers = [ batch.number for batch in batches ]
 
             command = TranslateSceneCommand(scene.number, batch_numbers, line_numbers, resume=self.resume, datamodel=self.datamodel)
+            translation_commands.append(command)
 
             if self.multithreaded:
                 # Queue the commands in parallel
@@ -73,5 +76,12 @@ class StartTranslationCommand(Command):
                         command.commands_to_queue.append(SaveProjectFile(project=project))
                     else:
                         command.commands_to_queue.append(SaveTranslationFile(project=project))
+
+        if translation_commands:
+            cost_command = LogTranslationCostCommand(datamodel=self.datamodel)
+            if self.multithreaded:
+                self.commands_to_queue.append(cost_command)
+            else:
+                previous_command.commands_to_queue.append(cost_command)
 
         return True

@@ -10,7 +10,6 @@ from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationEvents import TerminologyUpdate
-from PySubtrans.Translation import Translation
 from PySubtrans.Helpers.Localization import _
 
 #############################################################
@@ -33,7 +32,6 @@ class TranslateSceneCommand(Command):
         self.line_numbers : list[int]|None = line_numbers
         self.can_undo = False
         self.processed_lines : set[tuple[int, int, int]] = set()  # Track (scene, batch, line) to avoid redundant updates
-        self.translation_cost : float|None = None
 
     def execute(self) -> bool:
         if self.batch_numbers:
@@ -64,6 +62,7 @@ class TranslateSceneCommand(Command):
         self.translator.events.batch_translated.connect(self._on_batch_translated)
         self.translator.events.batch_updated.connect(self._on_batch_updated)
         self.translator.events.terminology_updated.connect(self._on_terminology_updated)
+        self.translator.events.translation_cost.connect(project.subtitles.RecordTranslationCost, weak=False)
         self.translator.events.error.connect(self._on_error)
         self.translator.events.warning.connect(self._on_warning)
         self.translator.events.info.connect(self._on_info)
@@ -106,40 +105,15 @@ class TranslateSceneCommand(Command):
 
         finally:
             if self.translator:
-                self.translation_cost = self._get_translation_cost(scene)
-                if self.translation_cost is not None:
-                    logging.info(_("Translation cost for scene {scene}: ${cost:.4f}").format(
-                        scene=self.scene_number,
-                        cost=self.translation_cost
-                    ))
-
                 self.translator.events.batch_translated.disconnect(self._on_batch_translated)
                 self.translator.events.batch_updated.disconnect(self._on_batch_updated)
                 self.translator.events.terminology_updated.disconnect(self._on_terminology_updated)
+                self.translator.events.translation_cost.disconnect(project.subtitles.RecordTranslationCost)
                 self.translator.events.error.disconnect(self._on_error)
                 self.translator.events.warning.disconnect(self._on_warning)
                 self.translator.events.info.disconnect(self._on_info)
 
         return True
-
-    def _get_translation_cost(self, scene : SubtitleScene|None) -> float|None:
-        """Return the reported cost for the batches handled by this command."""
-        if scene is None:
-            return None
-
-        selected_batches = set(self.batch_numbers) if self.batch_numbers else None
-        costs : list[float] = []
-
-        for batch in scene.batches:
-            if selected_batches is not None and batch.number not in selected_batches:
-                continue
-
-            if not isinstance(batch.translation, Translation) or batch.translation.cost is None:
-                continue
-
-            costs.append(batch.translation.cost)
-
-        return sum(costs) if costs else None
 
     def on_abort(self):
         if self.translator:

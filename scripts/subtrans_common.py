@@ -49,7 +49,9 @@ class TokenUsage():
         self.prompt_tokens += content.get('prompt_tokens') or 0
         self.output_tokens += content.get('output_tokens') or 0
 
-        reported_cost = content.get('cost')
+    def AddCost(self, cost : float|str|None) -> None:
+        """Add a provider-reported response cost."""
+        reported_cost = cost
         if isinstance(reported_cost, str):
             reported_cost = reported_cost.removeprefix('$').strip()
         parsed_cost = TryParseNonNegative(reported_cost)
@@ -94,10 +96,12 @@ class TranslationProgressLogger():
         self.token_usage = TokenUsage()
         translator.events.preprocessed.connect(self._on_preprocessed)
         translator.events.batch_translated.connect(self._on_batch_translated)
+        translator.events.translation_cost.connect(self._on_translation_cost)
 
     def _detach(self, translator : SubtitleTranslator) -> None:
         translator.events.preprocessed.disconnect(self._on_preprocessed)
         translator.events.batch_translated.disconnect(self._on_batch_translated)
+        translator.events.translation_cost.disconnect(self._on_translation_cost)
 
     def _on_preprocessed(self, _sender, scenes : list) -> None:
         self._total_lines = sum(scene.linecount for scene in scenes)
@@ -123,6 +127,10 @@ class TranslationProgressLogger():
         cost_info = f" [${batch.translation.cost:.4f}]" if batch.translation and batch.translation.cost is not None else ""
 
         logging.info("Translated batch %s: %s%s%s", label, progress, token_info, cost_info)
+
+    def _on_translation_cost(self, _sender, cost : float|None) -> None:
+        """Accumulate every billed response, including retries and split requests."""
+        self.token_usage.AddCost(cost)
 
 def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
     """ Initialise the logger with a file handler and return the path to the log file """

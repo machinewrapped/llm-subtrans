@@ -97,6 +97,28 @@ class TestOpenAITranscription(LoggedTestCase):
         self.assertLoggedEqual("first speaker", "A", parts[0].speaker)
         self.assertLoggedEqual("second start", timedelta(seconds=2.0), parts[1].start)
 
+    def test_empty_success_is_returned_for_both_timed_modes(self):
+        """Music and noise are successful empty results in both OpenAI modes."""
+        for model, response_text in (
+                ("whisper-1", '{"text": ""}'),
+                ("gpt-4o-transcribe-diarize", '{"text": "", "segments": []}')):
+            with self.subTest(model=model):
+                provider = self._provider(model)
+                client = provider.GetTranscriptionClient(SettingsType())
+
+                with patch('httpx.Client') as mock_client:
+                    post = mock_client.return_value.__enter__.return_value.post
+                    mock_response = Mock()
+                    mock_response.is_error = False
+                    mock_response.status_code = 200
+                    mock_response.text = response_text
+                    post.return_value = mock_response
+                    result = client.TranscribeChunk(b"fake-audio", "wav")
+
+                self.assertLoggedEqual("empty text", "", result.text)
+                self.assertLoggedEqual("no words", [], result.words)
+                self.assertLoggedEqual("no parts", [], result.parts)
+
     def test_diarized_request_fields(self):
         """Diarize model posts diarized_json with auto chunking."""
         provider = self._provider("gpt-4o-transcribe-diarize")

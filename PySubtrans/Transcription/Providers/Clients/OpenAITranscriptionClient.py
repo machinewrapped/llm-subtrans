@@ -1,9 +1,7 @@
 from datetime import timedelta
 
-from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
 from PySubtrans.Transcription.WordTiming import WordTiming
@@ -63,9 +61,6 @@ class OpenAITranscriptionClient(TranscriptionClient):
 
         text, detected, words = parse_verbose_payload(payload)
 
-        if not text:
-            raise SubtitleError(_("Transcription returned no text"))
-
         result = TranscriptionResult(text=text, language=detected or self.language, words=words)
         return self._attach_usage(result, payload)
 
@@ -79,9 +74,6 @@ class OpenAITranscriptionClient(TranscriptionClient):
         })
 
         text, parts = parse_diarized_payload(payload)
-
-        if not text:
-            raise SubtitleError(_("Transcription returned no text"))
 
         result = TranscriptionResult(text=text, language=self.language, parts=parts)
         return self._attach_usage(result, payload)

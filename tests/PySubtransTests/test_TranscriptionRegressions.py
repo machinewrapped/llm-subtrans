@@ -50,6 +50,20 @@ class TestTranscriptionRegressions(LoggedTestCase):
         self.assertLoggedTrue('provider response recorded', provider_responded)
         self.assertLoggedEqual('billed usage retained', 0.125, run.total_cost)
 
+    def test_empty_provider_chunk_does_not_stop_following_speech(self) -> None:
+        """Successful empty chunks do not trigger the coordinator failure policy."""
+        client = FakeTranscriptionClient(texts=['', 'speech', ''])
+        stub_media(self, self.coordinator, [
+            AudioChunk(timedelta(seconds=index * 2), timedelta(seconds=(index + 1) * 2))
+            for index in range(3)])
+
+        with patch.object(self.provider, 'GetTranscriptionClient', return_value=client):
+            outcome = self.coordinator.CreateTranscription('readme.md', Options())
+
+        self.assertLoggedEqual('speech survives empty chunks', 1, _subtitles_of(outcome).linecount)
+        self.assertLoggedEqual('run completed', TranscriptionStatus.COMPLETED, outcome.status)
+        self.assertLoggedEqual('all chunks attempted', 3, client.calls)
+
     def test_dialogue_survives_postprocessing(self) -> None:
         """Post-processing preserves merged turns and clears attribution."""
         self.provider.words = [

@@ -205,9 +205,6 @@ else:
                     result_interaction = self._create_interaction(client, audio_file)
 
                     text = str(getattr(result_interaction, 'output_text', '') or '').strip()
-                    if not text:
-                        raise SubtitleError(_("Transcription returned no text"))
-
                     words = parse_word_annotations(collect_word_annotations(result_interaction))
                     return TranscriptionResult(text=text, language=self.language, words=words)
                 except SubtitleError:

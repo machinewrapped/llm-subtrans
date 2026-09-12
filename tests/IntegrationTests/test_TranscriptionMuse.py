@@ -161,6 +161,24 @@ class TestMuseTranscription(LoggedTestCase):
         self.assertLoggedEqual("text", "ok", text)
         self.assertLoggedEqual("part count", 0, len(parts))
 
+    def test_empty_success_is_returned(self):
+        """Music and noise are successful empty responses, not chunk failures."""
+        provider = self._provider()
+        client = provider.GetTranscriptionClient(SettingsType())
+
+        with patch('httpx.Client') as mock_client:
+            post = mock_client.return_value.__enter__.return_value.post
+            mock_response = Mock()
+            mock_response.is_error = False
+            mock_response.status_code = 200
+            mock_response.text = '{"transcript": "", "audioDurationMs": 2000, "turns": []}'
+            post.return_value = mock_response
+            result = client.TranscribeChunk(b"fake-audio", "wav")
+
+        self.assertLoggedEqual("empty text", "", result.text)
+        self.assertLoggedEqual("no parts", [], result.parts)
+        self.assertLoggedEqual("duration retained", timedelta(seconds=2), result.duration)
+
     def test_diarize_request_fields(self):
         """Diarize posts DIARIZATION mode with a JSON request part."""
         provider = self._provider(diarize=True)

@@ -56,9 +56,6 @@ class MuseTranscriptionClient(TranscriptionClient):
 
         text, parts = parse_muse_payload(payload, include_speakers=self.diarize)
 
-        if not text and not parts:
-            raise SubtitleError(_("Transcription returned no text"))
-
         result = TranscriptionResult(text=text, language=self.language, parts=parts)
         return self._attach_usage(result, payload)
 

@@ -200,6 +200,17 @@ class TestGeminiChunkRetry(LoggedTestCase):
         self.assertLoggedEqual("two attempts", 2, mock_client.interactions.create.call_count)
         mock_client.files.delete.assert_called_once_with(name='file-name')
 
+    def test_empty_success_is_returned(self):
+        """Music and noise are successful empty interactions, not failures."""
+        client = self._client(max_retries=0)
+        mock_client = self._backend([self._ok_interaction("")])
+
+        result = client._transcribe_chunk(b"fake-audio", "wav")
+
+        self.assertLoggedEqual("empty text", "", result.text)
+        self.assertLoggedEqual("no words", [], result.words)
+        mock_client.files.delete.assert_called_once_with(name='file-name')
+
     def test_daily_quota_fails_fast(self):
         """Hour-long quota hints fail immediately instead of sleeping it out."""
         client = self._client(max_retries=5)

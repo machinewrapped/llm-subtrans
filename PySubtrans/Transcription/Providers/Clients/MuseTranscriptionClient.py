@@ -95,7 +95,7 @@ class MuseTranscriptionClient(TranscriptionClient):
             'audio': ('chunk.wav', audio_bytes, 'audio/wav'),
         }
 
-        response = self._PostRequest(url, headers=headers, files=fields)
+        response = self._PostRequestWithRetry(url, headers=headers, files=fields)
 
         # Intercept before the generic handler to provide Muse-specific
         # status-code hints from the cookbook.

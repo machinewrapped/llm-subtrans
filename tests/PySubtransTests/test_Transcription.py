@@ -8,6 +8,8 @@ import wave
 from datetime import timedelta
 from unittest.mock import patch
 
+import httpx
+
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.Options import Options
@@ -1091,6 +1093,130 @@ class TestTranscriptionRateLimit(LoggedTestCase):
             client.TranscribeChunk(b"fake-audio", "wav")
 
         self.assertLoggedEqual("no pacing", 0, mock_sleep.call_count)
+
+
+class TestTranscriptionRetry(LoggedTestCase):
+    """Verify base-class 429 retry in _PostRequestWithRetry / _PostJson."""
+
+    def _make_response(self, status_code : int, body : str = '{}',
+                       headers : dict|None = None) -> httpx.Response:
+        """Build a minimal httpx.Response with the given status and body."""
+        response = httpx.Response(status_code, text=body,
+                                  headers=headers or {})
+        return response
+
+    def test_no_retry_on_success(self):
+        """A 200 response is returned immediately without retry."""
+        client = FakeTranscriptionClient()
+        ok = self._make_response(200, '{"text": "hello"}')
+
+        with patch.object(client, '_PostRequest', return_value=ok) as mock_post:
+            result = client._PostJson("http://test/api")
+
+        self.assertLoggedEqual("single request", 1, mock_post.call_count)
+        self.assertLoggedEqual("payload text", "hello", result.get("text"))
+
+    def test_retry_on_429_then_success(self):
+        """A 429 followed by a 200 retries once and succeeds."""
+        client = FakeTranscriptionClient()
+        rate_limited = self._make_response(429, '{"error": "rate limited"}')
+        ok = self._make_response(200, '{"text": "hello"}')
+
+        clock = FakeClock()
+        with patch.object(client, '_PostRequest', side_effect=[rate_limited, ok]) as mock_post, \
+             patch("time.monotonic", side_effect=clock.Monotonic), \
+             patch("time.sleep", side_effect=clock.Sleep):
+            result = client._PostJson("http://test/api")
+
+        self.assertLoggedEqual("two requests", 2, mock_post.call_count)
+        self.assertLoggedEqual("payload text", "hello", result.get("text"))
+
+    def test_retry_respects_retry_after_header(self):
+        """The Retry-After header controls the backoff delay."""
+        client = FakeTranscriptionClient()
+        rate_limited = self._make_response(429, '{"error": "rate limited"}',
+                                           headers={'retry-after': '10'})
+        ok = self._make_response(200, '{"text": "ok"}')
+
+        clock = FakeClock()
+        with patch.object(client, '_PostRequest', side_effect=[rate_limited, ok]), \
+             patch("time.monotonic", side_effect=clock.Monotonic), \
+             patch("time.sleep", side_effect=clock.Sleep) as mock_sleep:
+            client._PostJson("http://test/api")
+
+        total_slept = sum(call.args[0] for call in mock_sleep.call_args_list)
+        self.assertLoggedGreaterEqual("slept at least 10s", total_slept, 10.0)
+
+    def test_gives_up_when_retries_exhausted(self):
+        """Persistent 429 responses raise after exhausting retries."""
+        client = FakeTranscriptionClient()
+        rate_limited = self._make_response(429, '{"error": "rate limited"}')
+
+        clock = FakeClock()
+        with patch.object(client, '_PostRequest', return_value=rate_limited), \
+             patch("time.monotonic", side_effect=clock.Monotonic), \
+             patch("time.sleep", side_effect=clock.Sleep):
+            with self.assertRaises(SubtitleError):
+                client._PostJson("http://test/api")
+
+    def test_gives_up_on_excessive_retry_after(self):
+        """A Retry-After exceeding _GIVE_UP_SECONDS stops retrying immediately."""
+        client = FakeTranscriptionClient()
+        rate_limited = self._make_response(429, '{"error": "quota exceeded"}',
+                                           headers={'retry-after': '600'})
+
+        with patch.object(client, '_PostRequest', return_value=rate_limited) as mock_post:
+            with self.assertRaises(SubtitleError):
+                client._PostJson("http://test/api")
+
+        self.assertLoggedEqual("single request (no retry)", 1, mock_post.call_count)
+
+    def test_abort_during_retry_backoff(self):
+        """An abort during retry sleep raises SubtitleError."""
+        client = FakeTranscriptionClient()
+        rate_limited = self._make_response(429, '{"error": "rate limited"}',
+                                           headers={'retry-after': '30'})
+
+        def abort_on_sleep(seconds : float) -> None:
+            client.aborted = True
+            raise SubtitleError("Transcription aborted")
+
+        with patch.object(client, '_PostRequest', return_value=rate_limited), \
+             patch("time.monotonic", return_value=0.0), \
+             patch("time.sleep", side_effect=abort_on_sleep):
+            with self.assertRaises(SubtitleError):
+                client._PostJson("http://test/api")
+
+    def test_no_retry_on_non_429_error(self):
+        """A 500 error is not retried, just raised immediately."""
+        client = FakeTranscriptionClient()
+        error = self._make_response(500, '{"error": "internal"}')
+
+        with patch.object(client, '_PostRequest', return_value=error) as mock_post:
+            with self.assertRaises(SubtitleError):
+                client._PostJson("http://test/api")
+
+        self.assertLoggedEqual("single request", 1, mock_post.call_count)
+
+    def test_subclass_can_override_retry_delay(self):
+        """Subclasses can provide custom delay logic via _RetryDelayFromResponse."""
+        client = FakeTranscriptionClient()
+
+        # Override to always return a fixed 2-second delay
+        client._RetryDelayFromResponse = lambda response, attempt: 2.0 if attempt < 1 else None
+
+        rate_limited = self._make_response(429, '{"error": "rate limited"}')
+        ok = self._make_response(200, '{"text": "ok"}')
+
+        clock = FakeClock()
+        with patch.object(client, '_PostRequest', side_effect=[rate_limited, ok]), \
+             patch("time.monotonic", side_effect=clock.Monotonic), \
+             patch("time.sleep", side_effect=clock.Sleep) as mock_sleep:
+            result = client._PostJson("http://test/api")
+
+        total_slept = sum(call.args[0] for call in mock_sleep.call_args_list)
+        self.assertLoggedEqual("payload text", "ok", result.get("text"))
+        self.assertLoggedGreaterEqual("custom delay respected", total_slept, 2.0)
 
 
 class TestTranscriptionSave(LoggedTestCase):

@@ -7,6 +7,7 @@ import time
 import httpx
 
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import ParseDelayFromHeader
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
@@ -21,6 +22,10 @@ class TranscriptionClient:
     the subtitle timings. Engines that return richer data can populate the
     optional fields of TranscriptionResult in future.
     """
+    _MAX_RETRIES : int = 3
+    _BACKOFF_BASE : float = 5.0
+    _GIVE_UP_SECONDS : float = 300.0
+
     def __init__(self, settings : SettingsType):
         self.settings : SettingsType = SettingsType(settings)
         self.aborted : bool = False
@@ -94,6 +99,58 @@ class TranscriptionClient:
                 raise SubtitleError(_("Transcription aborted"))
             time.sleep(min(0.5, deadline - time.monotonic()))
 
+    def _PostRequestWithRetry(self, url : str, *, headers : dict|None = None,
+                              json_body : dict|None = None,
+                              files : dict|None = None) -> httpx.Response:
+        """
+        POST with automatic retry on HTTP 429 (rate-limited).
+
+        Retries up to ``_MAX_RETRIES`` times with delays computed by
+        ``_RetryDelayFromResponse``, which subclasses can override to
+        parse provider-specific headers.  Returns the final response
+        (success or the last 429 if retries are exhausted).
+        """
+        response = self._PostRequest(url, headers=headers, json_body=json_body, files=files)
+
+        for attempt in range(self._MAX_RETRIES):
+            if response.status_code != 429:
+                return response
+
+            delay = self._RetryDelayFromResponse(response, attempt)
+            if delay is None:
+                return response
+
+            logging.warning(_("Rate limited (attempt {}/{}), retrying in {:.0f}s...").format(
+                attempt + 1, self._MAX_RETRIES + 1, delay))
+            self._sleep_abortable(delay)
+
+            response = self._PostRequest(url, headers=headers, json_body=json_body, files=files)
+
+        return response
+
+    def _RetryDelayFromResponse(self, response : httpx.Response, attempt : int) -> float|None:
+        """
+        Compute a retry delay from a 429 response, or None to give up.
+
+        Checks ``Retry-After`` and ``x-ratelimit-reset-requests`` headers,
+        falling back to exponential backoff.  Returns None when the server
+        requests a delay longer than ``_GIVE_UP_SECONDS`` (a quota-level
+        block rather than a transient burst limit).
+
+        Subclasses may override this to parse additional provider-specific
+        rate-limit headers.
+        """
+        retry_after = (response.headers.get('retry-after')
+                       or response.headers.get('x-ratelimit-reset-requests'))
+
+        if retry_after:
+            delay = ParseDelayFromHeader(retry_after)
+            if delay > self._GIVE_UP_SECONDS:
+                return None
+            return max(1.0, delay)
+
+        return self._BACKOFF_BASE * 2.0 ** attempt
+
     def _PostJson(self, url : str, *, headers : dict|None = None,
                   json_body : dict|None = None, files : dict|None = None) -> dict:
         """
@@ -107,7 +164,7 @@ class TranscriptionClient:
         Callers supply either ``json_body`` (sent as ``json=``) or ``files``
         (sent as ``files=``), never both.
         """
-        response = self._PostRequest(url, headers=headers, json_body=json_body, files=files)
+        response = self._PostRequestWithRetry(url, headers=headers, json_body=json_body, files=files)
         return self._ParseJsonResponse(url, response)
 
     def _PostRequest(self, url : str, *, headers : dict|None = None,

@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-09-18 18:03+0000\n"
+"POT-Creation-Date: 2026-09-18 23:18+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "MIME-Version: 1.0\n"
@@ -109,7 +109,7 @@ msgstr ""
 msgid "<p>Torch is configured but has not been verified by a transcription yet.</p>"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:62
+#: PySubtrans/Providers/Provider_DeepSeek.py:61
 msgid "A DeepSeek API key is required to use this provider (https://platform.deepseek.com/api_keys)"
 msgstr ""
 
@@ -129,7 +129,7 @@ msgstr ""
 msgid "A Mistral API key is required to use this provider (https://console.mistral.ai/api-keys/)"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Requesty.py:113
+#: PySubtrans/Providers/Provider_Requesty.py:111
 msgid "A Requesty API key is required to use this provider (https://app.requesty.ai/api-keys)"
 msgstr ""
 
@@ -137,27 +137,27 @@ msgstr ""
 msgid "A different external Torch installation was already selected. Restart the application after changing Torch installation settings."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:219
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:258
 msgid "A new Python virtual environment will be created here."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:566 GuiSubtrans/Widgets/TorchSetupDialog.py:580
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:653 GuiSubtrans/Widgets/TorchSetupDialog.py:667
 msgid "ABI compatibility check passed."
 msgstr ""
 
-#: GuiSubtrans/NewProjectSettings.py:32 PySubtrans/Providers/Provider_DeepSeek.py:70 PySubtrans/Providers/Provider_OpenAI.py:112 PySubtrans/Providers/Provider_OpenRouter.py:140 PySubtrans/Providers/Provider_Requesty.py:135
+#: GuiSubtrans/NewProjectSettings.py:32 PySubtrans/Providers/Provider_DeepSeek.py:69 PySubtrans/Providers/Provider_OpenAI.py:112 PySubtrans/Providers/Provider_OpenRouter.py:139 PySubtrans/Providers/Provider_Requesty.py:133
 msgid "AI model to use as the translator"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:72
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:79
 msgid "AMD"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:73
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:80
 msgid "AMD selected"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Azure.py:94 PySubtrans/Providers/Provider_DeepSeek.py:128 PySubtrans/Providers/Provider_Gemini.py:130 PySubtrans/Providers/Provider_Mistral.py:142 PySubtrans/Providers/Provider_OpenAI.py:196 PySubtrans/Providers/Provider_OpenRouter.py:197 PySubtrans/Providers/Provider_Requesty.py:192 PySubtrans/Transcription/Providers/Provider_Gemini.py:125 PySubtrans/Transcription/Providers/Provider_Muse.py:88 PySubtrans/Transcription/Providers/Provider_OpenAI.py:91 PySubtrans/Transcription/Providers/Provider_OpenRouter.py:109
+#: PySubtrans/Providers/Provider_Azure.py:94 PySubtrans/Providers/Provider_DeepSeek.py:130 PySubtrans/Providers/Provider_Gemini.py:130 PySubtrans/Providers/Provider_Mistral.py:142 PySubtrans/Providers/Provider_OpenAI.py:196 PySubtrans/Providers/Provider_OpenRouter.py:196 PySubtrans/Providers/Provider_Requesty.py:190 PySubtrans/Transcription/Providers/Provider_Gemini.py:125 PySubtrans/Transcription/Providers/Provider_Muse.py:88 PySubtrans/Transcription/Providers/Provider_OpenAI.py:91 PySubtrans/Transcription/Providers/Provider_OpenRouter.py:109
 msgid "API Key is required"
 msgstr ""
 
@@ -229,7 +229,7 @@ msgstr ""
 msgid "About GUI-Subtrans"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:58
+#: GuiSubtrans/MainToolbar.py:59
 msgid "About this program"
 msgstr ""
 
@@ -301,7 +301,7 @@ msgstr ""
 msgid "Amount of random variance to add to translations"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:74 PySubtrans/Providers/Provider_Gemini.py:87 PySubtrans/Providers/Provider_Mistral.py:76 PySubtrans/Providers/Provider_OpenAI.py:124 PySubtrans/Providers/Provider_OpenRouter.py:152 PySubtrans/Providers/Provider_Requesty.py:147
+#: PySubtrans/Providers/Provider_DeepSeek.py:73 PySubtrans/Providers/Provider_Gemini.py:87 PySubtrans/Providers/Provider_Mistral.py:76 PySubtrans/Providers/Provider_OpenAI.py:124 PySubtrans/Providers/Provider_OpenRouter.py:151 PySubtrans/Providers/Provider_Requesty.py:145
 msgid "Amount of random variance to add to translations. Generally speaking, none is best"
 msgstr ""
 
@@ -341,7 +341,7 @@ msgstr ""
 msgid "An OpenRouter API key (shared with translation)"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenRouter.py:115
+#: PySubtrans/Providers/Provider_OpenRouter.py:114
 msgid "An OpenRouter API key is required to use this provider (https://openrouter.ai/keys)"
 msgstr ""
 
@@ -401,7 +401,7 @@ msgstr ""
 msgid "Avoid creating a new batch smaller than this"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:154
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:178
 msgid "Back"
 msgstr ""
 
@@ -421,7 +421,7 @@ msgstr ""
 msgid "Batch {num}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:221 GuiSubtrans/Widgets/TranscriptionDialog.py:149
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:216 GuiSubtrans/Widgets/TorchSetupDialog.py:260 GuiSubtrans/Widgets/TranscriptionDialog.py:149
 msgid "Browse..."
 msgstr ""
 
@@ -437,7 +437,7 @@ msgstr ""
 msgid "CPU inference is disabled. Enable 'allow_cpu_fallback' in Qwen Local advanced settings to give consent for this emergency fallback."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:90
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:97
 msgid "CPU selected -- transcription will work but will be significantly slower than with a GPU"
 msgstr ""
 
@@ -489,7 +489,7 @@ msgstr ""
 msgid "Cannot redo the last command"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenRouter.py:175 PySubtrans/Providers/Provider_Requesty.py:170
+#: PySubtrans/Providers/Provider_OpenRouter.py:174 PySubtrans/Providers/Provider_Requesty.py:168
 msgid "Cannot retrieve model list, check API key"
 msgstr ""
 
@@ -513,11 +513,11 @@ msgstr ""
 msgid "Cannot undo the last command"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:78 PySubtrans/Providers/Provider_Mistral.py:81 PySubtrans/Providers/Provider_OpenAI.py:127
+#: PySubtrans/Providers/Provider_DeepSeek.py:77 PySubtrans/Providers/Provider_Mistral.py:81 PySubtrans/Providers/Provider_OpenAI.py:127
 msgid "Check API key and base URL and try again"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenRouter.py:146 PySubtrans/Providers/Provider_Requesty.py:141
+#: PySubtrans/Providers/Provider_OpenRouter.py:145 PySubtrans/Providers/Provider_Requesty.py:139
 msgid "Check API key and try again"
 msgstr ""
 
@@ -529,19 +529,19 @@ msgstr ""
 msgid "CheckProviderSettings: {error}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:211
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:250
 msgid "Choose a folder for the new environment. Hardware detection selects the Torch build automatically."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:439
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:493
 msgid "Choose an installation folder before continuing."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:333
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:375
 msgid "Choose installation options"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:174
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:198
 msgid "Choose one option, then click Continue. You will not need to complete both."
 msgstr ""
 
@@ -553,7 +553,7 @@ msgstr ""
 msgid "Clean transcribed lines with the same normalizations used for loaded subtitles (dashes, filler words, line breaks)"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:195 PySubtrans/Providers/Clients/CustomClient.py:226
+#: PySubtrans/Providers/Clients/CustomClient.py:202 PySubtrans/Providers/Clients/CustomClient.py:233
 msgid "Client error: {status_code} {text}"
 msgstr ""
 
@@ -609,7 +609,7 @@ msgstr ""
 msgid "Context"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:155
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:179
 msgid "Continue"
 msgstr ""
 
@@ -629,7 +629,7 @@ msgstr ""
 msgid "Could not detect subtitle format for file: {}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:188
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:225
 msgid "Create a new environment and install Torch"
 msgstr ""
 
@@ -637,7 +637,7 @@ msgstr ""
 msgid "Create a project file to allow resuming or revising translation"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:454
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:508
 msgid "Creating virtual environment at {path}..."
 msgstr ""
 
@@ -681,7 +681,7 @@ msgstr ""
 msgid "Detailed instructions for the translator"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:231
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:270
 msgid "Detected hardware"
 msgstr ""
 
@@ -749,7 +749,7 @@ msgstr ""
 msgid "Enable reasoning capabilities for more complex translations (increases cost)"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:71
+#: PySubtrans/Providers/Provider_DeepSeek.py:70
 msgid "Enable streaming responses for real-time translation updates"
 msgstr ""
 
@@ -789,7 +789,7 @@ msgstr ""
 msgid "Error executing {type}: {str}"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:102 PySubtrans/Providers/Provider_OpenRouter.py:238 PySubtrans/Providers/Provider_Requesty.py:234
+#: PySubtrans/Providers/Provider_DeepSeek.py:104 PySubtrans/Providers/Provider_OpenRouter.py:240 PySubtrans/Providers/Provider_Requesty.py:235
 msgid "Error fetching models: {status} {text}"
 msgstr ""
 
@@ -833,11 +833,11 @@ msgstr ""
 msgid "Error undoing the last command: {error}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:519
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:606
 msgid "Error: Torch installation failed (exit code {code}). Check the output above for details."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:483
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:570
 msgid "Error: Virtual environment creation failed (exit code {code})."
 msgstr ""
 
@@ -857,7 +857,7 @@ msgstr ""
 msgid "Errors: {errors}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:268 GuiSubtrans/Widgets/TorchSetupDialog.py:394
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:307 GuiSubtrans/Widgets/TorchSetupDialog.py:440
 msgid "Estimated disk usage: {size}"
 msgstr ""
 
@@ -865,7 +865,7 @@ msgstr ""
 msgid "Executing LoadSubtitleFile {file}"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:32
+#: GuiSubtrans/MainToolbar.py:33
 msgid "Exit Program"
 msgstr ""
 
@@ -889,11 +889,11 @@ msgstr ""
 msgid "Failed to communicate with provider after {max_retries} retries"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:171
+#: PySubtrans/Providers/Clients/CustomClient.py:178
 msgid "Failed to communicate with server after {max_retries} retries"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:145
+#: PySubtrans/Providers/Clients/CustomClient.py:152
 msgid "Failed to connect to server at {server_address}{endpoint}"
 msgstr ""
 
@@ -905,7 +905,7 @@ msgstr ""
 msgid "Failed to detect subtitle format: {}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:265
+#: PySubtrans/Providers/Clients/CustomClient.py:272
 msgid "Failed to establish streaming connection: {error}"
 msgstr ""
 
@@ -989,7 +989,7 @@ msgstr ""
 msgid "Format cannot be deduced from filename or extension '{name}'. Available formats: {formats}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:405
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:451
 msgid "Found an existing Torch installation at: {path}"
 msgstr ""
 
@@ -1005,11 +1005,11 @@ msgstr ""
 msgid "Found {} audio track(s)."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:245
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:284
 msgid "GPU acceleration is strongly recommended. See <a href=\"https://pytorch.org/get-started/locally/\">pytorch.org</a> for hardware-specific instructions."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:253
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:292
 msgid "GPU detection was inconclusive. Choose the closest option:"
 msgstr ""
 
@@ -1173,43 +1173,39 @@ msgstr ""
 msgid "Information about the selected transcription provider"
 msgstr ""
 
-#: GuiSubtrans/SettingsDialog.py:101
-msgid "Initialise the active and previously configured translation provider libraries after startup to make switching providers faster"
-msgstr ""
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:321 GuiSubtrans/Widgets/TorchSetupDialog.py:378
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:360 GuiSubtrans/Widgets/TorchSetupDialog.py:424
 msgid "Install CPU-only Torch"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:273
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:312
 msgid "Install CPU-only Torch anyway (transcription will be slower)"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:321 GuiSubtrans/Widgets/TorchSetupDialog.py:378
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:360 GuiSubtrans/Widgets/TorchSetupDialog.py:424
 msgid "Install Torch"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:186
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:223
 msgid "Install automatically"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:434
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:488
 msgid "Install or update the GPU driver, then run setup again, or select Install CPU-only Torch anyway."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:67
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:74
 msgid "Install the latest NVIDIA driver for this GPU from nvidia.com, restart the computer, and choose Set up Torch again."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:526
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:613
 msgid "Installation finished. Verifying the Torch environment..."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:213
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:252
 msgid "Installation folder"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:491
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:578
 msgid "Installing Torch (this may take several minutes)..."
 msgstr ""
 
@@ -1237,11 +1233,11 @@ msgstr ""
 msgid "Instructions: {text}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:81
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:88
 msgid "Intel"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:82
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:89
 msgid "Intel selected"
 msgstr ""
 
@@ -1357,11 +1353,15 @@ msgstr ""
 msgid "Load Instructions"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:35
-msgid "Load project/translation (Hold shift to reload subtitles)"
+#: GuiSubtrans/SettingsDialog.py:101
+msgid "Load previously used translation providers after startup to make switching providers faster"
 msgstr ""
 
 #: GuiSubtrans/MainToolbar.py:36
+msgid "Load project/translation (Hold shift to reload subtitles)"
+msgstr ""
+
+#: GuiSubtrans/MainToolbar.py:37
 msgid "Load project/translation (reload subtitles)"
 msgstr ""
 
@@ -1381,7 +1381,11 @@ msgstr ""
 msgid "Loading transcription providers..."
 msgstr ""
 
-#: scripts/gui-subtrans.py:152
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:209
+msgid "Locate an existing installation manually"
+msgstr ""
+
+#: scripts/gui-subtrans.py:167
 msgid "Logging to {path}"
 msgstr ""
 
@@ -1401,7 +1405,7 @@ msgstr ""
 msgid "Made substitutions in output:\n{replaced}"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:62
+#: GuiSubtrans/MainToolbar.py:63
 msgid "Main Toolbar"
 msgstr ""
 
@@ -1421,7 +1425,7 @@ msgstr ""
 msgid "Maximum API requests per minute (0 for unlimited)"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:75 PySubtrans/Providers/Provider_Gemini.py:88 PySubtrans/Providers/Provider_Mistral.py:77 PySubtrans/Providers/Provider_OpenRouter.py:153 PySubtrans/Providers/Provider_Requesty.py:148
+#: PySubtrans/Providers/Provider_DeepSeek.py:74 PySubtrans/Providers/Provider_Gemini.py:88 PySubtrans/Providers/Provider_Mistral.py:77 PySubtrans/Providers/Provider_OpenRouter.py:152 PySubtrans/Providers/Provider_Requesty.py:146
 msgid "Maximum API requests per minute."
 msgstr ""
 
@@ -1445,7 +1449,7 @@ msgstr ""
 msgid "Maximum number of output tokens to return in the response"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:73 PySubtrans/Providers/Provider_OpenRouter.py:151 PySubtrans/Providers/Provider_Requesty.py:146
+#: PySubtrans/Providers/Provider_DeepSeek.py:72 PySubtrans/Providers/Provider_OpenRouter.py:150 PySubtrans/Providers/Provider_Requesty.py:144
 msgid "Maximum number of output tokens to return in the response."
 msgstr ""
 
@@ -1565,7 +1569,7 @@ msgstr ""
 msgid "Model ID must be provided as an argument"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenRouter.py:131 PySubtrans/Providers/Provider_Requesty.py:126
+#: PySubtrans/Providers/Provider_OpenRouter.py:130 PySubtrans/Providers/Provider_Requesty.py:124
 msgid "Model family/provider to choose from"
 msgstr ""
 
@@ -1577,11 +1581,11 @@ msgstr ""
 msgid "Movie Name"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:63
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:70
 msgid "NVIDIA"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:64
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:71
 msgid "NVIDIA selected -- install the NVIDIA driver before setting up Torch"
 msgstr ""
 
@@ -1589,15 +1593,15 @@ msgstr ""
 msgid "Names"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:151
+#: PySubtrans/Providers/Clients/CustomClient.py:158
 msgid "Network error communicating with server: {error}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:89
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:96
 msgid "No GPU / CPU only"
 msgstr ""
 
-#: PySubtrans/Transcription/TranscriptionClient.py:75
+#: PySubtrans/Transcription/TranscriptionClient.py:77
 msgid "No audio data provided for transcription"
 msgstr ""
 
@@ -1609,7 +1613,7 @@ msgstr ""
 msgid "No batches found for lines to merge"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/AzureOpenAIClient.py:115 PySubtrans/Providers/Clients/ChatGPTClient.py:58 PySubtrans/Providers/Clients/ChatGPTClient.py:74 PySubtrans/Providers/Clients/CustomClient.py:376 PySubtrans/Providers/Clients/LiteLLMClient.py:144 PySubtrans/Providers/Clients/MistralClient.py:109 PySubtrans/Providers/Clients/MistralClient.py:125
+#: PySubtrans/Providers/Clients/AzureOpenAIClient.py:115 PySubtrans/Providers/Clients/ChatGPTClient.py:58 PySubtrans/Providers/Clients/ChatGPTClient.py:74 PySubtrans/Providers/Clients/CustomClient.py:383 PySubtrans/Providers/Clients/LiteLLMClient.py:144 PySubtrans/Providers/Clients/MistralClient.py:109 PySubtrans/Providers/Clients/MistralClient.py:125
 msgid "No choices returned in the response"
 msgstr ""
 
@@ -1629,7 +1633,7 @@ msgstr ""
 msgid "No deletions to undo"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:412
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:458
 msgid "No existing Torch installation found on this system."
 msgstr ""
 
@@ -1673,7 +1677,7 @@ msgstr ""
 msgid "No model specified for LiteLLM"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenRouter.py:142 PySubtrans/Providers/Provider_OpenRouter.py:144 PySubtrans/Providers/Provider_Requesty.py:137 PySubtrans/Providers/Provider_Requesty.py:139
+#: PySubtrans/Providers/Provider_OpenRouter.py:141 PySubtrans/Providers/Provider_OpenRouter.py:143 PySubtrans/Providers/Provider_Requesty.py:135 PySubtrans/Providers/Provider_Requesty.py:137
 msgid "No models available"
 msgstr ""
 
@@ -1769,7 +1773,7 @@ msgstr ""
 msgid "No text content found in response"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:397
+#: PySubtrans/Providers/Clients/CustomClient.py:404
 msgid "No text returned in the response"
 msgstr ""
 
@@ -1841,7 +1845,7 @@ msgstr ""
 msgid "Nothing selected to translate"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:316
+#: GuiSubtrans/MainToolbar.py:315
 msgid "Nothing to redo"
 msgstr ""
 
@@ -1853,7 +1857,7 @@ msgstr ""
 msgid "Nothing to translate"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:310
+#: GuiSubtrans/MainToolbar.py:309
 msgid "Nothing to undo"
 msgstr ""
 
@@ -1869,7 +1873,7 @@ msgstr ""
 msgid "OK"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenRouter.py:124
+#: PySubtrans/Providers/Provider_OpenRouter.py:123
 msgid "Only show models from the translation category"
 msgstr ""
 
@@ -1925,6 +1929,10 @@ msgstr ""
 msgid "Output subtitle format"
 msgstr ""
 
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:213
+msgid "Path to a Python virtual environment containing torch"
+msgstr ""
+
 #: PySubtrans/Providers/Provider_Custom.py:113
 msgid "Penalise token repetition — values > 1.0 reduce repetitive output (0.0 to disable)"
 msgstr ""
@@ -1977,7 +1985,7 @@ msgstr ""
 msgid "Preparing Torch runtime..."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:293
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:332
 msgid "Preparing installation..."
 msgstr ""
 
@@ -2089,15 +2097,15 @@ msgstr ""
 msgid "Provider-recommended default;"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:77
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:84
 msgid "PyTorch GPU support for AMD requires Linux with ROCm."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:85
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:92
 msgid "PyTorch XPU support requires the Intel oneAPI toolkit (intel.com/oneapi)."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:450
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:504
 msgid "Python 3.10 or newer is required. Install Python, then try again."
 msgstr ""
 
@@ -2133,7 +2141,7 @@ msgstr ""
 msgid "Rate limit hit, retrying in {retry_seconds} seconds..."
 msgstr ""
 
-#: PySubtrans/Transcription/TranscriptionClient.py:132
+#: PySubtrans/Transcription/TranscriptionClient.py:134
 msgid "Rate limited (attempt {}/{}), retrying in {:.0f}s..."
 msgstr ""
 
@@ -2157,11 +2165,11 @@ msgstr ""
 msgid "Reasoning"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:57
+#: GuiSubtrans/MainToolbar.py:58
 msgid "Redo last undone action"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:314
+#: GuiSubtrans/MainToolbar.py:313
 msgid "Redo {command}"
 msgstr ""
 
@@ -2201,7 +2209,7 @@ msgstr ""
 msgid "Request speaker diarization (only supported by some models)"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:157
+#: PySubtrans/Providers/Clients/CustomClient.py:164
 msgid "Request to server timed out: {error}"
 msgstr ""
 
@@ -2217,7 +2225,7 @@ msgstr ""
 msgid "Response"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:550
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:637
 msgid "Restart Required"
 msgstr ""
 
@@ -2261,11 +2269,11 @@ msgstr ""
 msgid "Retry passed validation"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:176
+#: PySubtrans/Providers/Clients/CustomClient.py:183
 msgid "Retrying in {sleep_time} seconds..."
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:72 PySubtrans/Providers/Provider_OpenRouter.py:154 PySubtrans/Providers/Provider_Requesty.py:149
+#: PySubtrans/Providers/Provider_DeepSeek.py:71 PySubtrans/Providers/Provider_OpenRouter.py:153 PySubtrans/Providers/Provider_Requesty.py:147
 msgid "Reuse connection for multiple requests (otherwise a new connection is established for each)"
 msgstr ""
 
@@ -2289,11 +2297,11 @@ msgstr ""
 msgid "Save preprocessed subtitles to a separate file"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:41
+#: GuiSubtrans/MainToolbar.py:42
 msgid "Save project/translation (Hold shift to save as...)"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:42
+#: GuiSubtrans/MainToolbar.py:43
 msgid "Save project/translation as..."
 msgstr ""
 
@@ -2337,7 +2345,7 @@ msgstr ""
 msgid "Scene {scene}, batch {batch}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:181
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:205
 msgid "Searching for an existing Torch installation..."
 msgstr ""
 
@@ -2353,7 +2361,7 @@ msgstr ""
 msgid "Select Media File"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:425
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:471 GuiSubtrans/Widgets/TorchSetupDialog.py:479
 msgid "Select Torch Installation Directory"
 msgstr ""
 
@@ -2377,15 +2385,15 @@ msgstr ""
 msgid "Selection {task_type}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:119
+#: PySubtrans/Providers/Clients/CustomClient.py:126
 msgid "Server address or endpoint is not set"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:199 PySubtrans/Providers/Clients/CustomClient.py:230
+#: PySubtrans/Providers/Clients/CustomClient.py:206 PySubtrans/Providers/Clients/CustomClient.py:237
 msgid "Server error: {status_code} {text}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:128
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:152
 msgid "Set up Torch for Local Transcription"
 msgstr ""
 
@@ -2397,7 +2405,7 @@ msgstr ""
 msgid "Setting output path to {}"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:44
+#: GuiSubtrans/MainToolbar.py:45
 msgid "Settings"
 msgstr ""
 
@@ -2485,19 +2493,19 @@ msgstr ""
 msgid "Spoken language hint, e.g. english (optional, auto-detected when empty)"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:47
+#: GuiSubtrans/MainToolbar.py:48
 msgid "Start Translating (hold shift to retranslate)"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:48
+#: GuiSubtrans/MainToolbar.py:49
 msgid "Start retranslating"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:53
+#: GuiSubtrans/MainToolbar.py:54
 msgid "Start retranslating on multiple threads"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:52
+#: GuiSubtrans/MainToolbar.py:53
 msgid "Start translating on multiple threads (fast but unsafe)"
 msgstr ""
 
@@ -2505,31 +2513,31 @@ msgstr ""
 msgid "Starting"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:485
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:572
 msgid "Step 1 could not be completed. Check the log and try again."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:444
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:498
 msgid "Step 1 of 2: Creating the private Python environment..."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:171
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:195
 msgid "Step 1 of 3 - Choose how to provide Torch"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:521
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:608
 msgid "Step 2 could not be completed. Check the log and try again."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:490
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:577
 msgid "Step 2 of 2: Installing the Torch build for your hardware..."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:208
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:247
 msgid "Step 2 of 3 - Choose the installation options"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:290
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:329
 msgid "Step 3 of 3 - Installing Torch"
 msgstr ""
 
@@ -2537,11 +2545,11 @@ msgstr ""
 msgid "Stop translating if an error is encountered"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:55
+#: GuiSubtrans/MainToolbar.py:56
 msgid "Stop translation"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Claude.py:120 PySubtrans/Providers/Provider_Gemini.py:85 PySubtrans/Providers/Provider_OpenAI.py:122 PySubtrans/Providers/Provider_OpenRouter.py:150 PySubtrans/Providers/Provider_Requesty.py:145
+#: PySubtrans/Providers/Provider_Claude.py:120 PySubtrans/Providers/Provider_Gemini.py:85 PySubtrans/Providers/Provider_OpenAI.py:122 PySubtrans/Providers/Provider_OpenRouter.py:149 PySubtrans/Providers/Provider_Requesty.py:143
 msgid "Stream translations in realtime as they are generated"
 msgstr ""
 
@@ -2549,7 +2557,7 @@ msgstr ""
 msgid "Streaming ended with an error but OpenAI returned a response: {error}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:252
+#: PySubtrans/Providers/Clients/CustomClient.py:259
 msgid "Streaming error: {error}"
 msgstr ""
 
@@ -2669,7 +2677,7 @@ msgstr ""
 msgid "The address of the server"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:63
+#: PySubtrans/Providers/Provider_DeepSeek.py:62
 msgid "The base URL to use for requests (default is https://api.deepseek.com)"
 msgstr ""
 
@@ -2697,7 +2705,7 @@ msgstr ""
 msgid "The default language to translate the subtitles to"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:542
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:629
 msgid "The directory may still be valid. You can accept it or try installing again."
 msgstr ""
 
@@ -2721,7 +2729,7 @@ msgstr ""
 msgid "The ffprobe executable paired with ffmpeg was not found: {}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:584
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:671
 msgid "The installation may not work with this application."
 msgstr ""
 
@@ -2761,7 +2769,7 @@ msgstr ""
 msgid "The model to use for translations"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:191
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:228
 msgid "The next page will ask where to create it and show the detected hardware."
 msgstr ""
 
@@ -2813,11 +2821,11 @@ msgstr ""
 msgid "Torch compatibility metadata schema is unsupported: {}"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:551
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:638
 msgid "Torch environment selected at:\n{path}\n\nThe application needs to be restarted for the change to take effect."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:525
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:612
 msgid "Torch installed successfully."
 msgstr ""
 
@@ -2833,7 +2841,7 @@ msgstr ""
 msgid "Transcribe Media"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:38
+#: GuiSubtrans/MainToolbar.py:39
 msgid "Transcribe audio/video to subtitles"
 msgstr ""
 
@@ -2873,7 +2881,7 @@ msgstr ""
 msgid "Transcription Settings"
 msgstr ""
 
-#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:119 PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:145 PySubtrans/Transcription/TranscriptionClient.py:72 PySubtrans/Transcription/TranscriptionClient.py:108
+#: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:119 PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:145 PySubtrans/Transcription/TranscriptionClient.py:74 PySubtrans/Transcription/TranscriptionClient.py:110
 msgid "Transcription aborted"
 msgstr ""
 
@@ -2885,7 +2893,7 @@ msgstr ""
 msgid "Transcription cost: ${:.4f}"
 msgstr ""
 
-#: PySubtrans/Transcription/TranscriptionClient.py:216
+#: PySubtrans/Transcription/TranscriptionClient.py:221
 msgid "Transcription failed ({}): non-JSON response: {}"
 msgstr ""
 
@@ -2921,11 +2929,11 @@ msgstr ""
 msgid "Transcription providers are still loading..."
 msgstr ""
 
-#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:100 PySubtrans/Transcription/TranscriptionClient.py:211
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:100 PySubtrans/Transcription/TranscriptionClient.py:216
 msgid "Transcription request failed: POST {} returned {}: {}"
 msgstr ""
 
-#: PySubtrans/Transcription/TranscriptionClient.py:194
+#: PySubtrans/Transcription/TranscriptionClient.py:199
 msgid "Transcription request failed: {}"
 msgstr ""
 
@@ -2973,7 +2981,7 @@ msgstr ""
 msgid "Translating with model {model}, Using API Base: {api_base}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:30
+#: PySubtrans/Providers/Clients/CustomClient.py:34
 msgid "Translating with server at {server_address}{endpoint}"
 msgstr ""
 
@@ -3017,7 +3025,7 @@ msgstr ""
 msgid "Truncating batch to remain within max_lines"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenRouter.py:142 PySubtrans/Providers/Provider_OpenRouter.py:144 PySubtrans/Providers/Provider_Requesty.py:137 PySubtrans/Providers/Provider_Requesty.py:139
+#: PySubtrans/Providers/Provider_OpenRouter.py:141 PySubtrans/Providers/Provider_OpenRouter.py:143 PySubtrans/Providers/Provider_Requesty.py:135 PySubtrans/Providers/Provider_Requesty.py:137
 msgid "Try a different model family or change filter settings"
 msgstr ""
 
@@ -3121,11 +3129,11 @@ msgstr ""
 msgid "Unable to parse media duration"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:111 PySubtrans/Providers/Provider_OpenRouter.py:274 PySubtrans/Providers/Provider_Requesty.py:266
+#: PySubtrans/Providers/Provider_DeepSeek.py:113 PySubtrans/Providers/Provider_OpenRouter.py:276 PySubtrans/Providers/Provider_Requesty.py:267
 msgid "Unable to parse server response as JSON: {response_text}"
 msgstr ""
 
-#: PySubtrans/Transcription/TranscriptionClient.py:222
+#: PySubtrans/Transcription/TranscriptionClient.py:227
 msgid "Unable to parse transcription response"
 msgstr ""
 
@@ -3165,11 +3173,11 @@ msgstr ""
 msgid "Unable to retrieve available AI models: {error}"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:115 PySubtrans/Providers/Provider_OpenRouter.py:278 PySubtrans/Providers/Provider_Requesty.py:270
+#: PySubtrans/Providers/Provider_DeepSeek.py:117 PySubtrans/Providers/Provider_OpenRouter.py:280 PySubtrans/Providers/Provider_Requesty.py:271
 msgid "Unable to retrieve available models: {error}"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:112 PySubtrans/Providers/Provider_OpenAI.py:127 PySubtrans/Providers/Provider_Requesty.py:141
+#: PySubtrans/Providers/Provider_OpenAI.py:112 PySubtrans/Providers/Provider_OpenAI.py:127 PySubtrans/Providers/Provider_Requesty.py:139
 msgid "Unable to retrieve models"
 msgstr ""
 
@@ -3201,11 +3209,11 @@ msgstr ""
 msgid "Unable to update settings: {error}"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:56
+#: GuiSubtrans/MainToolbar.py:57
 msgid "Undo last action"
 msgstr ""
 
-#: GuiSubtrans/MainToolbar.py:308
+#: GuiSubtrans/MainToolbar.py:307
 msgid "Undo {command}"
 msgstr ""
 
@@ -3221,7 +3229,7 @@ msgstr ""
 msgid "Unexpected error communicating with OpenAI"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:165
+#: PySubtrans/Providers/Clients/CustomClient.py:172
 msgid "Unexpected error communicating with server"
 msgstr ""
 
@@ -3237,7 +3245,7 @@ msgstr ""
 msgid "Unexpected response type: {response_type}"
 msgstr ""
 
-#: PySubtrans/Transcription/TranscriptionClient.py:225
+#: PySubtrans/Transcription/TranscriptionClient.py:230
 msgid "Unexpected transcription response shape"
 msgstr ""
 
@@ -3277,15 +3285,15 @@ msgstr ""
 msgid "Uploading audio chunk for Gemini transcription"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:225
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:264
 msgid "Use a new or empty folder; existing files will not be overwritten."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:176
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:200
 msgid "Use an existing installation"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:330
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:369
 msgid "Use existing installation"
 msgstr ""
 
@@ -3293,11 +3301,11 @@ msgstr ""
 msgid "Use parallel threads for translation requests (may be faster but may not work with the server)"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenRouter.py:116 PySubtrans/Providers/Provider_Requesty.py:114
+#: PySubtrans/Providers/Provider_OpenRouter.py:115 PySubtrans/Providers/Provider_Requesty.py:112
 msgid "Use the default model and hide advanced model options"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:178
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:202
 msgid "Use the detected Torch environment"
 msgstr ""
 
@@ -3305,15 +3313,19 @@ msgstr ""
 msgid "Use the httpx library for requests. May help if you receive a 307 redirect error with a custom api_base"
 msgstr ""
 
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:372
+msgid "Use this installation"
+msgstr ""
+
 #: GuiSubtrans/ViewModel/BatchItem.py:252
 msgid "User Prompt:\n {text}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:38
+#: PySubtrans/Providers/Clients/CustomClient.py:42
 msgid "Using model: {model}"
 msgstr ""
 
-#: PySubtrans/Providers/Clients/CustomClient.py:35 PySubtrans/Providers/Clients/GeminiClient.py:141
+#: PySubtrans/Providers/Clients/CustomClient.py:39 PySubtrans/Providers/Clients/GeminiClient.py:141
 msgid "Using proxy: {proxy}"
 msgstr ""
 
@@ -3321,7 +3333,7 @@ msgstr ""
 msgid "VTT and ASS preserve speaker labels; SRT has no speaker field"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:539
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:626
 msgid "Validated Torch installation at {path}."
 msgstr ""
 
@@ -3333,7 +3345,7 @@ msgstr ""
 msgid "Validator: Maximum number of newlines to allow in a single translated line"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:489
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:576
 msgid "Virtual environment created successfully."
 msgstr ""
 
@@ -3341,19 +3353,19 @@ msgstr ""
 msgid "Warning"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:541
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:628
 msgid "Warning: could not detect a torch package in {path}."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:576
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:663
 msgid "Warning: could not probe the venv's Python interpreter."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:571
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:658
 msgid "Warning: no Python interpreter found in the selected environment."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:583
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:670
 msgid "Warning: {error}"
 msgstr ""
 
@@ -3457,7 +3469,7 @@ msgstr ""
 msgid "diarize"
 msgstr ""
 
-#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:108 PySubtrans/Transcription/TranscriptionClient.py:210
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:108 PySubtrans/Transcription/TranscriptionClient.py:215
 msgid "empty response body"
 msgstr ""
 
@@ -3625,7 +3637,7 @@ msgstr ""
 msgid "multithreaded"
 msgstr ""
 
-#: PySubtrans/Transcription/TranscriptionClient.py:208
+#: PySubtrans/Transcription/TranscriptionClient.py:213
 msgid "non-JSON response (check the Server address): {}"
 msgstr ""
 
@@ -3921,18 +3933,18 @@ msgstr ""
 msgid "{} lines were invalid and were not written to the output file"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:56
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:63
 msgid "~3.5 GB"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:57
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:64
 msgid "~350 MB"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:58
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:65
 msgid "~450 MB"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:55
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:62
 msgid "~5 GB"
 msgstr ""

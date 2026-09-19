@@ -67,6 +67,15 @@ def FindTorchSitePackages(root : Path) -> Path|None:
     for candidate in CandidateSitePackagesPaths(root):
         if candidate.is_dir() and (candidate / "torch").is_dir():
             return candidate.resolve()
+
+    # A venv may have been created by a different Python minor version than the
+    # running interpreter, so its versioned POSIX layout is not in the candidate
+    # list. Detect it anyway so callers can report compatibility rather than
+    # claiming Torch is absent.
+    for candidate in sorted(root.glob("lib/python*/site-packages")):
+        if (candidate / "torch").is_dir():
+            return candidate.resolve()
+
     return None
 
 
@@ -158,13 +167,13 @@ def ReadCompatibilityMetadata(
     return loaded
 
 
-def CheckCompatibility(
-    actual : dict[str, object],
-    expected : dict[str, object],
-    *,
-    error_type : type[Exception] = RuntimeError,
-) -> None:
-    """Compare two compatibility dicts and raise *error_type* on mismatch."""
+def CompareCompatibility(actual : dict[str, object], expected : dict[str, object]) -> list[str]:
+    """Return the human-readable differences between two compatibility dicts.
+
+    An empty list means the two describe the same Python ABI, platform, and
+    pointer width.  Callers that must reject can raise on a non-empty result;
+    callers that only warn can surface the details to the user.
+    """
     mismatches : list[str] = []
 
     for key in (*_COMPATIBILITY_FIELDS, "pointer_bits"):
@@ -178,6 +187,18 @@ def CheckCompatibility(
 
         if not matches:
             mismatches.append(f"{key}: external={observed!r}, frozen={required!r}")
+
+    return mismatches
+
+
+def CheckCompatibility(
+    actual : dict[str, object],
+    expected : dict[str, object],
+    *,
+    error_type : type[Exception] = RuntimeError,
+) -> None:
+    """Compare two compatibility dicts and raise *error_type* on mismatch."""
+    mismatches = CompareCompatibility(actual, expected)
 
     if mismatches:
         raise error_type(

@@ -1,5 +1,5 @@
-import subprocess
-import sys
+import tempfile
+from pathlib import Path
 from unittest.mock import patch
 
 from tests.GuiTestSupport import ConfigureOffscreenPlatform
@@ -8,7 +8,7 @@ ConfigureOffscreenPlatform()
 
 from PySide6.QtWidgets import QApplication
 
-from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog, _python_meets_minimum
+from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Transcription.Torch.Hardware import (
     DetectHardware,
@@ -66,6 +66,16 @@ class TestTorchSetupSelection(LoggedTestCase):
         existing = QApplication.instance()
         cls.application = existing if isinstance(existing, QApplication) else QApplication([])
 
+    def _new_dialog(self) -> TorchSetupDialog:
+        """Create a dialog with existing-installation detection disabled."""
+        with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindExistingTorch', return_value=None):
+            return TorchSetupDialog()
+
+    def _dispose(self, dialog : TorchSetupDialog) -> None:
+        """Release a dialog after a test."""
+        dialog.deleteLater()
+        self.application.processEvents()
+
     def test_cpu_fallback_requires_explicit_confirmation(self) -> None:
         """A detected GPU without a driver cannot silently install CPU Torch."""
         hardware = HardwareDetection(
@@ -75,9 +85,8 @@ class TestTorchSetupSelection(LoggedTestCase):
             'Install the latest NVIDIA driver, restart, and try again.',
             hardware_detected=True,
         )
-        with patch('GuiSubtrans.Widgets.TorchSetupDialog.DetectHardware', return_value=hardware), \
-                patch('GuiSubtrans.Widgets.TorchSetupDialog._find_existing_torch', return_value=None):
-            dialog = TorchSetupDialog()
+        with patch('GuiSubtrans.Widgets.TorchSetupDialog.DetectHardware', return_value=hardware):
+            dialog = self._new_dialog()
 
         try:
             dialog._show_page(1)
@@ -88,13 +97,11 @@ class TestTorchSetupSelection(LoggedTestCase):
                 dialog._cpu_fallback_checkbox.setChecked(True)
                 self.assertLoggedTrue('CPU install enabled after confirmation', dialog._next_button.isEnabled())
         finally:
-            dialog.deleteLater()
-            self.application.processEvents()
+            self._dispose(dialog)
 
     def test_manual_path_enables_continue_and_is_used_directly(self) -> None:
         """Selecting the manual-locate option validates the typed path without an install step."""
-        with patch('GuiSubtrans.Widgets.TorchSetupDialog._find_existing_torch', return_value=None):
-            dialog = TorchSetupDialog()
+        dialog = self._new_dialog()
 
         try:
             dialog._manual_radio.setChecked(True)
@@ -109,20 +116,90 @@ class TestTorchSetupSelection(LoggedTestCase):
 
             mock_validate.assert_called_once_with('/some/torch/env')
         finally:
-            dialog.deleteLater()
-            self.application.processEvents()
+            self._dispose(dialog)
 
-    def test_python_meets_minimum_accepts_current_interpreter(self) -> None:
-        """The running interpreter (>=3.10, per project requirements) passes the floor check."""
-        self.assertLoggedTrue('current interpreter satisfies torch minimum', _python_meets_minimum(sys.executable))
+    def test_validate_rejects_environment_without_torch(self) -> None:
+        """A selected path with no discoverable Torch package is not accepted."""
+        dialog = self._new_dialog()
 
-    def test_python_meets_minimum_rejects_old_version(self) -> None:
-        """An interpreter reporting a version below 3.10 is rejected."""
-        fake_result = subprocess.CompletedProcess(args=[], returncode=0, stdout='3.9\n')
-        with patch('GuiSubtrans.Widgets.TorchSetupDialog.subprocess.run', return_value=fake_result):
-            self.assertLoggedFalse('Python 3.9 does not satisfy the torch minimum', _python_meets_minimum('fake-python'))
+        try:
+            with tempfile.TemporaryDirectory() as directory, \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information') as information:
+                accepted = dialog._validate_and_accept(directory)
 
-    def test_python_meets_minimum_rejects_missing_interpreter(self) -> None:
-        """A candidate that cannot be executed is rejected rather than raising."""
-        with patch('GuiSubtrans.Widgets.TorchSetupDialog.subprocess.run', side_effect=OSError('not found')):
-            self.assertLoggedFalse('missing interpreter is rejected', _python_meets_minimum('does-not-exist'))
+            self.assertLoggedFalse('environment without Torch is rejected', accepted)
+            self.assertLoggedEqual('user is warned', 1, warning.call_count)
+            self.assertLoggedEqual('dialog is not accepted', 0, information.call_count)
+        finally:
+            self._dispose(dialog)
+
+    def test_validate_warns_but_accepts_on_abi_mismatch(self) -> None:
+        """A mismatched interpreter produces a strong warning, not a blocker."""
+        dialog = self._new_dialog()
+
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'torch').mkdir()
+                frozen = {
+                    'python_implementation': 'cpython', 'python_abi': 'cpython-312',
+                    'python_version': '3.12', 'os': 'Windows', 'architecture': 'AMD64', 'pointer_bits': 64,
+                }
+                actual = dict(frozen)
+                actual['python_abi'] = 'cpython-313'
+                actual['python_version'] = '3.13'
+
+                with patch('GuiSubtrans.Widgets.TorchSetupDialog.ExpectedCompatibility', return_value=frozen), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=root / 'python.exe'), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.ProbeVenvCompatibility', return_value=actual), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information') as information:
+                    accepted = dialog._validate_and_accept(directory)
+
+            self.assertLoggedTrue('mismatched environment is still accepted', accepted)
+            self.assertLoggedEqual('user is warned about compatibility', 1, warning.call_count)
+            self.assertLoggedEqual('restart prompt shown', 1, information.call_count)
+        finally:
+            self._dispose(dialog)
+
+    def test_validate_warns_on_mismatch_in_source_run(self) -> None:
+        """A source run warns about a mismatched manually selected environment."""
+        dialog = self._new_dialog()
+
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'torch').mkdir()
+
+                with patch('GuiSubtrans.Widgets.TorchSetupDialog.ExpectedCompatibility', return_value={'python_abi': 'cpython-312', 'python_version': '3.12'}), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=root / 'python.exe'), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.ProbeVenvCompatibility', return_value={'python_abi': 'cpython-313', 'python_version': '3.13'}), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information'):
+                    accepted = dialog._validate_and_accept(directory)
+
+            self.assertLoggedTrue('mismatched source environment is still accepted', accepted)
+            self.assertLoggedEqual('user is warned', 1, warning.call_count)
+        finally:
+            self._dispose(dialog)
+
+    def test_validate_skips_probe_when_source_path_has_no_interpreter(self) -> None:
+        """A source path without a discoverable interpreter does not warn spuriously."""
+        dialog = self._new_dialog()
+
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'torch').mkdir()
+
+                with patch('GuiSubtrans.Widgets.TorchSetupDialog.ExpectedCompatibility', return_value={'python_abi': 'cpython-313'}), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=None), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information'):
+                    accepted = dialog._validate_and_accept(directory)
+
+            self.assertLoggedTrue('environment without interpreter is accepted in source mode', accepted)
+            self.assertLoggedEqual('no spurious warning', 0, warning.call_count)
+        finally:
+            self._dispose(dialog)

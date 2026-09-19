@@ -2,13 +2,10 @@
 
 from __future__ import annotations
 
-import glob
-import importlib.util
 import logging
 import os
-import shutil
-import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 from PySide6.QtCore import QProcess
@@ -35,28 +32,25 @@ from PySide6.QtWidgets import (
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Resources import GetAppDir
+from PySubtrans.Transcription.Torch.Discovery import (
+    DEFAULT_TORCH_DIR_NAME,
+    ExpectedCompatibility,
+    FindCompatiblePython,
+    FindExistingTorch,
+)
 from PySubtrans.Transcription.Torch.Hardware import (
     CPU_INDEX_URL,
     DetectHardware,
     HardwareDetection,
-    ROCM_INDEX_URL,  # pyright: ignore[reportUnusedImport] — used on line 74; false positive on Windows
+    ROCM_INDEX_URL,  # pyright: ignore[reportUnusedImport] — only reached on Linux; false positive on Windows
 )
 from PySubtrans.Transcription.Torch.Validation import (
-    CheckCompatibility,
-    FindCompatibilityMetadata,
+    CompareCompatibility,
     FindVenvPython,
     HasTorchPackage,
     ProbeVenvCompatibility,
-    ReadCompatibilityMetadata,
 )
 
-
-_DEFAULT_TORCH_DIR_NAME = 'torch-env'
-
-# Matches torch's own Requires-Python floor; an older interpreter can create
-# a venv without error but pip install torch will then fail inside it.
-_MIN_PYTHON_VERSION = (3, 10)
-_PYTHON_PROBE_TIMEOUT_SECONDS = 5
 
 # Approximate total disk usage (venv + torch + dependencies) by build variant.
 _ESTIMATED_SIZE_CUDA = _("~5 GB")
@@ -100,48 +94,6 @@ _GPU_VENDOR_OPTIONS : dict[str, HardwareDetection] = {
         estimated_size=_ESTIMATED_SIZE_CPU,
     ),
 }
-
-
-def _find_existing_torch() -> str|None:
-    """Try to locate an existing torch installation.
-
-    Checks the default install location next to the application first,
-    then falls back to scanning sys.path.  Returns the directory path
-    if found, or None.
-    """
-    # Check the default install path beside the application
-    default_path = os.path.join(GetAppDir(), _DEFAULT_TORCH_DIR_NAME)
-    if HasTorchPackage(Path(default_path)):
-        return default_path
-
-    # Fall back to whatever is already on sys.path
-    spec = importlib.util.find_spec('torch')
-    if spec and spec.origin:
-        torch_path = Path(spec.origin).parent
-        # Walk up to find the site-packages directory
-        for parent in [torch_path.parent, torch_path.parent.parent]:
-            if parent.name == 'site-packages':
-                return str(parent.parent)
-        return str(torch_path.parent)
-
-    return None
-
-
-def _python_meets_minimum(python : str) -> bool:
-    """Check that a candidate interpreter is new enough to install torch."""
-    try:
-        result = subprocess.run(
-            [python, '-c', 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")'],
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=_PYTHON_PROBE_TIMEOUT_SECONDS,
-        )
-        major, minor = (int(part) for part in result.stdout.strip().split('.'))
-        return (major, minor) >= _MIN_PYTHON_VERSION
-    except (subprocess.SubprocessError, OSError, ValueError) as e:
-        logging.debug("Failed to probe candidate Python at %s: %s", python, e)
-        return False
 
 
 class TorchSetupDialog(QDialog):
@@ -252,7 +204,7 @@ class TorchSetupDialog(QDialog):
         directory_group = QGroupBox(_("Installation folder"), page)
         directory_layout = QVBoxLayout(directory_group)
         dir_row = QHBoxLayout()
-        default_path = current_path or os.path.join(GetAppDir(), _DEFAULT_TORCH_DIR_NAME)
+        default_path = current_path or os.path.join(GetAppDir(), DEFAULT_TORCH_DIR_NAME)
         self._dir_field = QLineEdit(default_path, directory_group)
         self._dir_field.setCursorPosition(0)
         self._dir_field.setToolTip(_("A new Python virtual environment will be created here."))
@@ -445,7 +397,7 @@ class TorchSetupDialog(QDialog):
 
     def _scan_for_existing_torch(self) -> None:
         """Look for a torch installation already on the system."""
-        existing = _find_existing_torch()
+        existing = FindExistingTorch()
         if existing:
             self._existing_label.setText(
                 _("Found an existing Torch installation at: {path}").format(path=existing)
@@ -458,12 +410,6 @@ class TorchSetupDialog(QDialog):
             self._existing_label.setText(_("No existing Torch installation found on this system."))
             self._existing_path = None
             self._existing_radio.setEnabled(False)
-
-    def _on_use_existing(self) -> None:
-        """Select and continue with the detected existing installation."""
-        if self._existing_path:
-            self._existing_radio.setChecked(True)
-            self._on_next()
 
     def _on_browse(self) -> None:
         """Open a directory picker."""
@@ -499,7 +445,7 @@ class TorchSetupDialog(QDialog):
         self._log_output.clear()
 
         # Find a Python interpreter to create the venv with
-        python = self._find_python()
+        python = FindCompatiblePython()
         if not python:
             self._install_error_label.setText(_("Python 3.10 or newer is required. Install Python, then try again."))
             return False
@@ -509,60 +455,17 @@ class TorchSetupDialog(QDialog):
         self._run_step_create_venv(python, target_dir)
         return True
 
-    def _find_python(self) -> str|None:
-        """Locate a Python interpreter new enough to install torch (>=3.10)."""
-        # Prefer the running interpreter if it's not frozen; the project's
-        # own minimum supported version already satisfies torch's floor.
-        if not getattr(sys, 'frozen', False):
-            return sys.executable
-
-        for candidate in self._candidate_pythons():
-            if _python_meets_minimum(candidate):
-                return candidate
-
-        return None
-
-    def _candidate_pythons(self) -> list[str]:
-        """Interpreters to try, most specific first.
-
-        A frozen GUI app's PATH (especially on macOS when launched other
-        than from a shell) often only exposes the OS's own bundled Python,
-        which is commonly too old for torch -- so versioned names and a few
-        well-known install locations are checked as well as bare 'python3'.
-        """
-        names = ['python3.13', 'python3.12', 'python3.11', 'python3.10', 'python3', 'python']
-        candidates = [found for name in names if (found := shutil.which(name))]
-
-        if sys.platform == 'darwin':
-            for pattern in (
-                '/opt/homebrew/opt/python@3.*/bin/python3.*',
-                '/usr/local/opt/python@3.*/bin/python3.*',
-                '/Library/Frameworks/Python.framework/Versions/3.*/bin/python3.*',
-            ):
-                candidates.extend(sorted(glob.glob(pattern), reverse=True))
-        elif sys.platform == 'win32':
-            py_launcher = shutil.which('py')
-            if py_launcher:
-                candidates.insert(0, py_launcher)
-
-        # Preserve first-seen order; the same real path can surface twice
-        # (e.g. a versioned PATH hit and a glob match resolving to the same file).
-        seen : set[str] = set()
-        unique_candidates = []
-        for candidate in candidates:
-            resolved = str(Path(candidate).resolve())
-            if resolved not in seen:
-                seen.add(resolved)
-                unique_candidates.append(candidate)
-        return unique_candidates
-
-    def _run_step_create_venv(self, python : str, target_dir : str) -> None:
-        """Step 1: Create a venv at the target directory."""
+    def _start_process(self, program : str, arguments : list[str], on_finished : Callable[[int, QProcess.ExitStatus], None]) -> None:
+        """Run an installer subprocess with merged output and a completion handler."""
         self._process = QProcess(self)
         self._process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
         self._process.readyReadStandardOutput.connect(self._on_process_output)
-        self._process.finished.connect(self._on_venv_created)
-        self._process.start(python, ['-m', 'venv', target_dir])
+        self._process.finished.connect(on_finished)
+        self._process.start(program, arguments)
+
+    def _run_step_create_venv(self, python : str, target_dir : str) -> None:
+        """Step 1: Create a venv at the target directory."""
+        self._start_process(python, ['-m', 'venv', target_dir], self._on_venv_created)
 
     def _on_venv_created(self, exit_code : int, exit_status : QProcess.ExitStatus) -> None:
         """After venv creation, install torch."""
@@ -580,25 +483,14 @@ class TorchSetupDialog(QDialog):
 
     def _run_step_install_torch(self) -> None:
         """Step 2: Install torch into the venv via pip."""
-        target_dir = self._target_dir
-
-        # Determine pip path
-        if sys.platform == 'win32':
-            pip = os.path.join(target_dir, 'Scripts', 'pip')
-        else:
-            pip = os.path.join(target_dir, 'bin', 'pip')
+        scripts_dir = 'Scripts' if sys.platform == 'win32' else 'bin'
+        pip = os.path.join(self._target_dir, scripts_dir, 'pip')
 
         args = ['install', 'torch']
-
-        # Add index URL from hardware detection
         if self._hardware and self._hardware.index_url:
             args.extend(['--index-url', self._hardware.index_url])
 
-        self._process = QProcess(self)
-        self._process.setProcessChannelMode(QProcess.ProcessChannelMode.MergedChannels)
-        self._process.readyReadStandardOutput.connect(self._on_process_output)
-        self._process.finished.connect(self._on_torch_installed)
-        self._process.start(pip, args)
+        self._start_process(pip, args, self._on_torch_installed)
 
     def _on_torch_installed(self, exit_code : int, exit_status : QProcess.ExitStatus) -> None:
         """After torch install, validate the result."""
@@ -611,24 +503,35 @@ class TorchSetupDialog(QDialog):
 
         self._log(_("Torch installed successfully."))
         self._step_status_label.setText(_("Installation finished. Verifying the Torch environment..."))
-        self._validate_and_accept(self._target_dir)
+        if not self._validate_and_accept(self._target_dir):
+            self._installation_failed = True
+            self._step_status_label.setText(_("Torch could not be validated. Check the log and try again."))
+            self._show_page(2)
 
-    def _validate_and_accept(self, directory : str) -> None:
+    def _validate_and_accept(self, directory : str) -> bool:
         """Validate that the directory contains a usable torch installation.
 
-        Checks for the torch package, then validates ABI compatibility against
-        the frozen build's metadata (when present).  Incompatibilities are
-        surfaced here rather than deferring to a crash after restart.
+        A missing Torch package is a hard error, since accepting it would only
+        fail on restart.  An interpreter mismatch is a strong warning instead:
+        the environment may still work, and if it does not the user needs to
+        know what to change.  Returns whether the environment was accepted.
         """
         root = Path(directory).expanduser()
 
-        if HasTorchPackage(root):
-            self._log(_("Validated Torch installation at {path}.").format(path=directory))
-        else:
-            self._log(_("Warning: could not detect a torch package in {path}.").format(path=directory))
-            self._log(_("The directory may still be valid. You can accept it or try installing again."))
+        if not HasTorchPackage(root):
+            QMessageBox.warning(
+                self,
+                _("Torch Not Found"),
+                _("No Torch package could be found in:\n{path}\n\n"
+                  "Select a virtual environment that contains Torch, or use the automatic install.").format(path=directory),
+            )
+            return False
 
-        self._check_venv_abi_compatibility(root)
+        self._log(_("Validated Torch installation at {path}.").format(path=directory))
+
+        warning = self._compatibility_warning(root)
+        if warning:
+            QMessageBox.warning(self, _("Torch Compatibility Warning"), warning)
 
         self.chosen_path = directory
 
@@ -639,36 +542,39 @@ class TorchSetupDialog(QDialog):
               "The application needs to be restarted for the change to take effect.").format(path=directory),
         )
         self.accept()
+        return True
 
-    def _check_venv_abi_compatibility(self, root : Path) -> None:
-        """Probe the selected venv's interpreter against the frozen build's ABI metadata."""
-        metadata_path = FindCompatibilityMetadata()
-        if metadata_path is None:
-            return
-
+    def _compatibility_warning(self, root : Path) -> str|None:
+        """Describe why the selected venv may be incompatible, or None if it matches."""
         try:
-            metadata = ReadCompatibilityMetadata(metadata_path)
-            compatibility = metadata["compatibility"]
-            if not isinstance(compatibility, dict):
-                self._log(_("ABI compatibility check passed."))
-                return
-
-            venv_python = FindVenvPython(root)
-            if venv_python is None:
-                self._log(_("Warning: no Python interpreter found in the selected environment."))
-                return
-
-            actual = ProbeVenvCompatibility(venv_python)
-            if actual is None:
-                self._log(_("Warning: could not probe the venv's Python interpreter."))
-                return
-
-            CheckCompatibility(actual, compatibility)
-            self._log(_("ABI compatibility check passed."))
-
+            compatibility = ExpectedCompatibility()
         except (ValueError, RuntimeError) as error:
-            self._log(_("Warning: {error}").format(error=error))
-            self._log(_("The installation may not work with this application."))
+            return _("The compatibility information for this build could not be read: {error}").format(error=error)
+
+        if compatibility is None:
+            return None
+
+        venv_python = FindVenvPython(root)
+        if venv_python is None:
+            # Packaged builds expect a complete venv; a source run may point at
+            # a bare site-packages directory with no interpreter to probe.
+            if getattr(sys, 'frozen', False):
+                return _("The selected environment has no Python interpreter, so its compatibility could not be verified.")
+            return None
+
+        actual = ProbeVenvCompatibility(venv_python)
+        if actual is None:
+            return _("The selected environment's Python interpreter could not be checked.")
+
+        mismatches = CompareCompatibility(actual, compatibility)
+        if not mismatches:
+            self._log(_("ABI compatibility check passed."))
+            return None
+
+        return _("The selected Torch environment may be incompatible with this application:\n{details}\n\n"
+                 "Torch is loaded into this application, so its Python ABI, OS, architecture and pointer width "
+                 "should match the build. If Torch fails to load, install a matching environment.").format(
+                     details="\n".join(mismatches))
 
     def reject(self) -> None:
         """Stop an active installer before closing the dialog."""

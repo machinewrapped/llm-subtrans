@@ -14,6 +14,7 @@ from unittest.mock import patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
+from PySubtrans.Transcription.Torch.Validation import CompareCompatibility, FindTorchSitePackages
 from scripts import prepare_external_torch
 
 
@@ -52,6 +53,44 @@ class TestPrepareExternalTorch(LoggedTestCase):
             external_json = json.loads((output_directory / prepare_external_torch.METADATA_FILENAME).read_text(encoding="utf-8"))
             frozen_json = json.loads(frozen_metadata.read_text(encoding="utf-8"))
             self.assertLoggedEqual("external metadata", external_json, frozen_json)
+
+    def test_compare_compatibility_reports_differing_fields(self) -> None:
+        """Compatibility comparison reports each field that does not match."""
+        expected = {
+            'python_implementation': 'cpython', 'python_abi': 'cpython-312',
+            'python_version': '3.12', 'os': 'Windows', 'architecture': 'AMD64', 'pointer_bits': 64,
+        }
+        actual = dict(expected)
+        actual['python_abi'] = 'cpython-313'
+        actual['architecture'] = 'arm64'
+
+        mismatches = CompareCompatibility(actual, expected)
+
+        self.assertLoggedEqual('two fields differ', 2, len(mismatches))
+        self.assertLoggedTrue('ABI difference reported', any('python_abi' in mismatch for mismatch in mismatches))
+        self.assertLoggedTrue('architecture difference reported', any('architecture' in mismatch for mismatch in mismatches))
+
+    def test_compare_compatibility_accepts_equivalent_architectures(self) -> None:
+        """Architecture aliases do not count as a mismatch."""
+        expected = {
+            'python_implementation': 'cpython', 'python_abi': 'cpython-312',
+            'python_version': '3.12', 'os': 'Windows', 'architecture': 'x86_64', 'pointer_bits': 64,
+        }
+        actual = dict(expected)
+        actual['architecture'] = 'AMD64'
+
+        self.assertLoggedEqual('aliases match', [], CompareCompatibility(actual, expected))
+
+    def test_find_torch_site_packages_recognises_other_python_version(self) -> None:
+        """A venv built by another Python minor version is still detected."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            site_packages = root / 'lib' / 'python3.9' / 'site-packages'
+            (site_packages / 'torch').mkdir(parents=True)
+
+            found = FindTorchSitePackages(root)
+
+            self.assertLoggedEqual('versioned POSIX layout detected', site_packages.resolve(), found)
 
     def test_metadata_only_does_not_create_an_external_torch_payload(self):
         """Build metadata mode never copies Torch back into the frozen deliverable."""

@@ -10,19 +10,20 @@ Both external setup modes require `--frozen-metadata` pointing to the frozen app
 
 ## Torch Subpackage (`PySubtrans/Transcription/Torch/`)
 
-Three modules that handle external Torch installations live in their own subpackage. None import Torch or Qt — only stdlib and `PySubtrans.Helpers`.
+Four modules that handle external Torch installations live in their own subpackage. None import Torch or Qt — only stdlib and `PySubtrans.Helpers`.
 
 | Module | Responsibility |
 |--------|----------------|
 | `Hardware.py` | GPU detection (NVIDIA/AMD/Intel/Apple Silicon), CUDA driver version matching, PyTorch index URL selection |
-| `Validation.py` | ABI compatibility metadata — stamping, reading, and checking frozen-build compatibility |
+| `Validation.py` | ABI compatibility metadata — stamping, reading, comparing and checking frozen-build compatibility |
+| `Discovery.py` | Locates existing Torch installations and candidate Python interpreters, preferring one matching the expected compatibility |
 | `Runtime.py` | Loads an external Torch venv at runtime (`sys.path` + DLL registration), validates compatibility first |
 
 Consumers:
 
 | Consumer | Imports from |
 |----------|-------------|
-| `TorchSetupDialog.py` (GUI wizard) | `Hardware` (detection, index URLs), `Validation` (ABI checking) |
+| `TorchSetupDialog.py` (GUI wizard) | `Hardware` (detection, index URLs), `Validation` (ABI checking), `Discovery` (interpreter and existing-install discovery) |
 | `prepare_external_torch.py` (build tool) | `Validation` (metadata stamping and venv probing) |
 | `install_torch.py` (installer) | `Hardware` (detection for pre-install torch variant selection) |
 | `Provider_QwenLocal.py` / `QwenLocalClient.py` | `Runtime` (config option sentinel, runtime loader) |
@@ -33,7 +34,7 @@ Key `Validation` functions:
 - **`candidate_site_packages_paths()` / `find_torch_site_packages()`** — canonical site-packages resolution for all layout variants
 - **`build_current_compatibility()`** — builds the 6-field compatibility dict from the running interpreter
 - **`find_compatibility_metadata()`** — locates the metadata file via `GetResourcePath`
-- **`read_compatibility_metadata()` / `check_compatibility()`** — reads and validates metadata, with an `error_type` parameter so each consumer raises its own exception type
+- **`read_compatibility_metadata()` / `check_compatibility()` / `compare_compatibility()`** — reads and validates metadata, with an `error_type` parameter so each consumer raises its own exception type; `compare_compatibility()` returns the mismatches so the GUI wizard can warn without blocking
 
 Key `Hardware` functions:
 - **`DetectHardware()`** — main entry point: returns a `HardwareDetection` with description, index URL, and GPU flag

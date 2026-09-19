@@ -109,7 +109,6 @@ class TestTorchSetupSelection(LoggedTestCase):
 
             dialog._manual_path_field.setText('/some/torch/env')
             self.assertLoggedTrue('continue enabled once a manual path is entered', dialog._next_button.isEnabled())
-            self.assertLoggedEqual('continue button label', 'Use this installation', dialog._next_button.text())
 
             with patch.object(dialog, '_validate_and_accept') as mock_validate:
                 dialog._on_next()

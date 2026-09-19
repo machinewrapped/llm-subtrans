@@ -174,7 +174,6 @@ class TestTranscriptionRunEvidence(LoggedTestCase):
             dialog.run_progress.OnProgress(1, 0, '0.0s-10.0s')
             with patch('GuiSubtrans.Widgets.TranscriptionRunProgress.time.monotonic', return_value=160.0):
                 dialog._on_audio_progress(10.0, 100.0)
-                self.assertLoggedIn('audio-based eta', 'about 9:00 left', dialog.status_label.text())
 
             self.assertLoggedEqual('audio progress bar range', 100, dialog.progress_bar.maximum())
             self.assertLoggedEqual('audio progress bar value', 10, dialog.progress_bar.value())

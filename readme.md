@@ -102,9 +102,11 @@ From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separ
 * **OpenAI**: `whisper-1` (word timestamps) and `gpt-4o-transcribe-diarize`. Experimental support.
 
 ### Local transcription
-**Qwen Local** runs Qwen3-ASR on your computer without sending audio to a transcription service.
+**Qwen Local** runs Qwen3-ASR on your computer without sending audio to a transcription service. This is a beta feature.
 
 It requires a separate [PyTorch](https://pytorch.org/get-started/locally/); install suitable for your hardware. The first run downloads about 6 GB of model weights. For packaged builds, use **Set up Torch...** in Qwen Local's settings. For source installs the install script will manage the dependencies.
+
+For source installs, `qwen-asr`'s own dependencies (numpy, scipy, librosa) currently require **Python 3.12+**, higher than the 3.10+ needed for the rest of the project.
 
 ## Installing from source
 If you want to use the command line tools or modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.

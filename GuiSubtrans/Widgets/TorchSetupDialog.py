@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import glob
 import importlib.util
 import logging
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 
@@ -50,6 +52,11 @@ from PySubtrans.Transcription.Torch.Validation import (
 
 
 _DEFAULT_TORCH_DIR_NAME = 'torch-env'
+
+# Matches torch's own Requires-Python floor; an older interpreter can create
+# a venv without error but pip install torch will then fail inside it.
+_MIN_PYTHON_VERSION = (3, 10)
+_PYTHON_PROBE_TIMEOUT_SECONDS = 5
 
 # Approximate total disk usage (venv + torch + dependencies) by build variant.
 _ESTIMATED_SIZE_CUDA = _("~5 GB")
@@ -120,6 +127,23 @@ def _find_existing_torch() -> str|None:
     return None
 
 
+def _python_meets_minimum(python : str) -> bool:
+    """Check that a candidate interpreter is new enough to install torch."""
+    try:
+        result = subprocess.run(
+            [python, '-c', 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")'],
+            capture_output=True,
+            text=True,
+            check=True,
+            timeout=_PYTHON_PROBE_TIMEOUT_SECONDS,
+        )
+        major, minor = (int(part) for part in result.stdout.strip().split('.'))
+        return (major, minor) >= _MIN_PYTHON_VERSION
+    except (subprocess.SubprocessError, OSError, ValueError) as e:
+        logging.debug("Failed to probe candidate Python at %s: %s", python, e)
+        return False
+
+
 class TorchSetupDialog(QDialog):
     """Step-by-step dialog that helps users choose and install a Torch environment."""
 
@@ -181,6 +205,19 @@ class TorchSetupDialog(QDialog):
         self._existing_label = QLabel(_("Searching for an existing Torch installation..."), self._existing_group)
         self._existing_label.setWordWrap(True)
         existing_layout.addWidget(self._existing_label)
+
+        self._manual_radio = QRadioButton(_("Locate an existing installation manually"), self._existing_group)
+        existing_layout.addWidget(self._manual_radio)
+        manual_row = QHBoxLayout()
+        self._manual_path_field = QLineEdit(self._existing_group)
+        self._manual_path_field.setPlaceholderText(_("Path to a Python virtual environment containing torch"))
+        self._manual_path_field.textChanged.connect(self._on_choice_changed)
+        manual_row.addWidget(self._manual_path_field)
+        manual_browse_button = QPushButton(_("Browse..."), self._existing_group)
+        manual_browse_button.clicked.connect(self._on_manual_browse)
+        manual_row.addWidget(manual_browse_button)
+        existing_layout.addLayout(manual_row)
+
         page_layout.addWidget(self._existing_group)
 
         install_group = QGroupBox(_("Install automatically"), page)
@@ -195,8 +232,10 @@ class TorchSetupDialog(QDialog):
         self._choice_button_group = QButtonGroup(self)
         self._choice_button_group.setExclusive(True)
         self._choice_button_group.addButton(self._existing_radio)
+        self._choice_button_group.addButton(self._manual_radio)
         self._choice_button_group.addButton(self._automatic_radio)
         self._existing_radio.toggled.connect(self._on_choice_changed)
+        self._manual_radio.toggled.connect(self._on_choice_changed)
         self._automatic_radio.toggled.connect(self._on_choice_changed)
         self._page_stack.addWidget(page)
 
@@ -329,6 +368,9 @@ class TorchSetupDialog(QDialog):
         if self._existing_radio.isChecked():
             self._next_button.setText(_("Use existing installation"))
             self._next_button.setEnabled(bool(self._existing_path))
+        elif self._manual_radio.isChecked():
+            self._next_button.setText(_("Use this installation"))
+            self._next_button.setEnabled(bool(self._manual_path_field.text().strip()))
         else:
             self._next_button.setText(_("Choose installation options"))
             self._next_button.setEnabled(True)
@@ -339,6 +381,10 @@ class TorchSetupDialog(QDialog):
             if self._existing_radio.isChecked():
                 if self._existing_path:
                     self._validate_and_accept(self._existing_path)
+            elif self._manual_radio.isChecked():
+                manual_path = self._manual_path_field.text().strip()
+                if manual_path:
+                    self._validate_and_accept(manual_path)
             else:
                 self._show_page(1)
             return
@@ -427,6 +473,14 @@ class TorchSetupDialog(QDialog):
         if directory:
             self._dir_field.setText(directory)
 
+    def _on_manual_browse(self) -> None:
+        """Open a directory picker for manually locating an existing installation."""
+        directory = QFileDialog.getExistingDirectory(
+            self, _("Select Torch Installation Directory"), self._manual_path_field.text()
+        )
+        if directory:
+            self._manual_path_field.setText(directory)
+
     def _on_install(self) -> bool:
         """Start the automatic installation and return whether it was started."""
         if not self._can_start_install():
@@ -456,18 +510,51 @@ class TorchSetupDialog(QDialog):
         return True
 
     def _find_python(self) -> str|None:
-        """Locate a usable Python interpreter."""
-        # Prefer the running interpreter if it's not frozen
+        """Locate a Python interpreter new enough to install torch (>=3.10)."""
+        # Prefer the running interpreter if it's not frozen; the project's
+        # own minimum supported version already satisfies torch's floor.
         if not getattr(sys, 'frozen', False):
             return sys.executable
 
-        # Fall back to PATH
-        for name in ('python3', 'python'):
-            found = shutil.which(name)
-            if found:
-                return found
+        for candidate in self._candidate_pythons():
+            if _python_meets_minimum(candidate):
+                return candidate
 
         return None
+
+    def _candidate_pythons(self) -> list[str]:
+        """Interpreters to try, most specific first.
+
+        A frozen GUI app's PATH (especially on macOS when launched other
+        than from a shell) often only exposes the OS's own bundled Python,
+        which is commonly too old for torch -- so versioned names and a few
+        well-known install locations are checked as well as bare 'python3'.
+        """
+        names = ['python3.13', 'python3.12', 'python3.11', 'python3.10', 'python3', 'python']
+        candidates = [found for name in names if (found := shutil.which(name))]
+
+        if sys.platform == 'darwin':
+            for pattern in (
+                '/opt/homebrew/opt/python@3.*/bin/python3.*',
+                '/usr/local/opt/python@3.*/bin/python3.*',
+                '/Library/Frameworks/Python.framework/Versions/3.*/bin/python3.*',
+            ):
+                candidates.extend(sorted(glob.glob(pattern), reverse=True))
+        elif sys.platform == 'win32':
+            py_launcher = shutil.which('py')
+            if py_launcher:
+                candidates.insert(0, py_launcher)
+
+        # Preserve first-seen order; the same real path can surface twice
+        # (e.g. a versioned PATH hit and a glob match resolving to the same file).
+        seen : set[str] = set()
+        unique_candidates = []
+        for candidate in candidates:
+            resolved = str(Path(candidate).resolve())
+            if resolved not in seen:
+                seen.add(resolved)
+                unique_candidates.append(candidate)
+        return unique_candidates
 
     def _run_step_create_venv(self, python : str, target_dir : str) -> None:
         """Step 1: Create a venv at the target directory."""

@@ -1,3 +1,5 @@
+import subprocess
+import sys
 from unittest.mock import patch
 
 from tests.GuiTestSupport import ConfigureOffscreenPlatform
@@ -6,7 +8,7 @@ ConfigureOffscreenPlatform()
 
 from PySide6.QtWidgets import QApplication
 
-from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog
+from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog, _python_meets_minimum
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Transcription.Torch.Hardware import (
     DetectHardware,
@@ -88,3 +90,39 @@ class TestTorchSetupSelection(LoggedTestCase):
         finally:
             dialog.deleteLater()
             self.application.processEvents()
+
+    def test_manual_path_enables_continue_and_is_used_directly(self) -> None:
+        """Selecting the manual-locate option validates the typed path without an install step."""
+        with patch('GuiSubtrans.Widgets.TorchSetupDialog._find_existing_torch', return_value=None):
+            dialog = TorchSetupDialog()
+
+        try:
+            dialog._manual_radio.setChecked(True)
+            self.assertLoggedFalse('continue disabled with empty manual path', dialog._next_button.isEnabled())
+
+            dialog._manual_path_field.setText('/some/torch/env')
+            self.assertLoggedTrue('continue enabled once a manual path is entered', dialog._next_button.isEnabled())
+            self.assertLoggedEqual('continue button label', 'Use this installation', dialog._next_button.text())
+
+            with patch.object(dialog, '_validate_and_accept') as mock_validate:
+                dialog._on_next()
+
+            mock_validate.assert_called_once_with('/some/torch/env')
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+    def test_python_meets_minimum_accepts_current_interpreter(self) -> None:
+        """The running interpreter (>=3.10, per project requirements) passes the floor check."""
+        self.assertLoggedTrue('current interpreter satisfies torch minimum', _python_meets_minimum(sys.executable))
+
+    def test_python_meets_minimum_rejects_old_version(self) -> None:
+        """An interpreter reporting a version below 3.10 is rejected."""
+        fake_result = subprocess.CompletedProcess(args=[], returncode=0, stdout='3.9\n')
+        with patch('GuiSubtrans.Widgets.TorchSetupDialog.subprocess.run', return_value=fake_result):
+            self.assertLoggedFalse('Python 3.9 does not satisfy the torch minimum', _python_meets_minimum('fake-python'))
+
+    def test_python_meets_minimum_rejects_missing_interpreter(self) -> None:
+        """A candidate that cannot be executed is rejected rather than raising."""
+        with patch('GuiSubtrans.Widgets.TorchSetupDialog.subprocess.run', side_effect=OSError('not found')):
+            self.assertLoggedFalse('missing interpreter is rejected', _python_meets_minimum('does-not-exist'))

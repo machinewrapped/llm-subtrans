@@ -78,6 +78,10 @@ class MainToolbar(QToolBar):
         application : QCoreApplication|None = QApplication.instance()
         if application:
             application.installEventFilter(self)
+            # Uninstall before the app tears down its windows, otherwise a queued
+            # event can reach eventFilter() after GetMainWindow()'s C++ object is
+            # already deleted, raising a shiboken RuntimeError during shutdown.
+            application.aboutToQuit.connect(lambda: application.removeEventFilter(self))
 
         self.DefineActions()
         self.AddActionGroups()

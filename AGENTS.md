@@ -9,8 +9,8 @@ Secrets are stored in a .env file - the agent must NEVER read the contents of th
 If testable code covered by unit tests was changed, ensure that unit_tests has been run before wrapping up a task.
 
 ## Commits
-- NEVER use `--no-verify` to bypass the pre-commit hook. The hook runs pyright type checking and errors must be fixed before committing.
-- If pyright is not installed, install it with `pip install pyright` in the virtual environment before committing.
+- NEVER push commits without approval from the user
+- NEVER use `--no-verify` to bypass the pre-commit hook. The hook runs pyright type checking and errors must be fixed before committing. If pyright is not installed, install it with `pip install pyright` before committing.
 
 ## Project structure
 Before conducting exploratory searches of the code base, consult `docs/architecture.md` for information on the project architecture, structure and components to guide the search. Ensure the document is maintained after significant architectural changes.
@@ -27,7 +27,7 @@ Before conducting exploratory searches of the code base, consult `docs/architect
 - Create virtual environment, install dependencies and configure project: `./install.sh` (Linux/Mac) or `install.bat` (Windows)
 
 ## Code Style
-**🚨 CRITICAL RULE: NEVER add imports in the middle of functions or methods - imports MUST be at the top of the file.**
+**🚨 CRITICAL RULE: NEVER add imports in the middle of functions or methods - imports MUST be at the top of the file. Exceptions may be made for lazy-loading expensive SDKs but must first be justified, approved and documented.**
 
 - **Naming**: PascalCase for classes and methods, snake_case for variables
   - NEVER use bare `_` as a throwaway variable (e.g. `filepath, _ = ...`) - `_()` is the localization function and the assignment shadows it, causing UnboundLocalError. Use `_selected_filter`, `_dummy`, etc. instead
@@ -47,6 +47,7 @@ Before conducting exploratory searches of the code base, consult `docs/architect
 - **Docstrings**: Triple-quoted concise descriptions for classes and methods
 - **Error handling**: Custom exceptions, specific except blocks, input validation, logging.warning/error
   - User-facing error messages should be localizable, using _()
+- **Eceptions**: Never use exceptions for expected cases or standard control flow, only for genuine error states.
 - **Threading safety**: Use locks (RLock/QRecursiveMutex) for thread-safe operations
 - **Regular Expressions**: The project uses the `regex` module for regular expression handling, rather than the standard `re`.
 - **Unit Tests**: Extend `LoggedTestCase` from `PySubtrans.Helpers.TestCases` and use `assertLogged*` methods for automatic logging and assertions.

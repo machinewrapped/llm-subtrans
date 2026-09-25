@@ -10,6 +10,8 @@ from types import ModuleType
 
 import unittest
 
+import regex
+
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, base_path)
 
@@ -25,8 +27,12 @@ summary_lines = [
     "Test Summary:"
 ]
 
+# Emitted by tests/integration_tests.py once per suite
+suite_result_pattern = regex.compile(r"SUITE RESULT: (?P<label>[^|]+?) \| (?P<counts>.*)")
+suite_count_pattern = regex.compile(r"(\w+)=(\d+)")
+
 def format_summary_line(label: str, run: int, failures: int, errors: int, skipped: int, ok: bool) -> str:
-    return f"  {label:<12} | run: {run:>3} | failures: {failures:>3} | errors: {errors:>3} | skipped: {skipped:>3} | status={'OK ' if ok else 'FAIL'}"
+    return f"  {label:<16} | run: {run:>3} | failures: {failures:>3} | errors: {errors:>3} | skipped: {skipped:>3} | status={'OK ' if ok else 'FAIL'}"
 
 logging.getLogger().setLevel(logging.INFO)
 console_handler = logging.StreamHandler(sys.stdout)
@@ -281,33 +287,49 @@ def run_integration_tests(results_path: str) -> bool:
 
     integration_script = os.path.join(base_path, "tests", "integration_tests.py")
 
+    # Stream the output through, collecting the result reported for each suite
+    suite_results : list[tuple[str, dict[str, int]]] = []
     try:
-        result = subprocess.run(
+        with subprocess.Popen(
             [sys.executable, integration_script],
             cwd=base_path,
-            check=False
-        )
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            errors="replace"
+        ) as process:
+            assert process.stdout is not None
+            for line in process.stdout:
+                sys.stdout.write(line)
+                match = suite_result_pattern.fullmatch(line.rstrip())
+                if match:
+                    counts = {name: int(count) for name, count in suite_count_pattern.findall(match['counts'])}
+                    suite_results.append((match['label'], counts))
+
+        integration_failed = process.returncode != 0
     except (OSError, subprocess.SubprocessError) as error:
         logging.error(f"Failed to start integration tests: {error}")
-        result = None
+        integration_failed = True
 
-    integration_failed = result is None or result.returncode != 0
+    global total_run, total_failures, total_errors, total_skipped
 
-    global total_run, total_failures
-    total_run += 1
-    if integration_failed:
-        total_failures += 1
+    # No results means the process failed before completing a suite
+    if not suite_results:
+        total_run += 1
+        total_failures += 1 if integration_failed else 0
+        summary_lines.append(format_summary_line('Integration', 1, int(integration_failed), 0, 0, not integration_failed))
 
-    summary_lines.append(
-        format_summary_line(
-            'Integration',
-            1,
-            1 if integration_failed else 0,
-            0,
-            0,
-            not integration_failed
-        )
-    )
+    for label, counts in suite_results:
+        if not counts:
+            summary_lines.append(f"  {label:<16} | SKIPPED")
+            continue
+
+        failures, errors = counts.get('failures', 0), counts.get('errors', 0)
+        total_run += counts.get('run', 0)
+        total_failures += failures
+        total_errors += errors
+        total_skipped += counts.get('skipped', 0)
+        summary_lines.append(format_summary_line(label, counts.get('run', 0), failures, errors, counts.get('skipped', 0), failures == 0 and errors == 0))
 
     end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
     logging.info(separator)

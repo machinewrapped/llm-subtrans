@@ -23,11 +23,19 @@ def _discover(directory : str) -> unittest.TestSuite:
         str(_root / 'tests' / directory), pattern='test_*.py', top_level_dir=str(_root))
 
 
+def _report_suite(label : str, counts : str) -> None:
+    """Print a machine-readable suite result for scripts/run_tests.py to collect."""
+    print(f"SUITE RESULT: {label} | {counts}", flush=True)
+
+
 def _run(suite : unittest.TestSuite, label : str) -> bool:
     result = unittest.TextTestRunner(verbosity=1).run(suite)
 
     # Distinguish environmental failures before they are read as regressions
     ReportBlockedTempFailures(label, result)
+
+    _report_suite(label, f"run={result.testsRun} failures={len(result.failures)} "
+                         f"errors={len(result.errors)} skipped={len(result.skipped)}")
 
     return result.wasSuccessful()
 
@@ -62,9 +70,10 @@ def Main() -> int:
     # ImportGuard, scoped to the exact call site that needs it.
     ConfigureOffscreenPlatform()
     if _gui_dependencies_available():
-        gui_ok = _run(_discover('GuiIntegrationTests'), 'GUI integration')
+        gui_ok = _run(_discover('GuiIntegrationTests'), 'GUI Integration')
     else:
         print('Skipping GUI integration tests: PySide6 dependencies are unavailable.', file=sys.stderr)
+        _report_suite('GUI Integration', 'skipped')
         gui_ok = True
 
     return 0 if non_gui_ok and gui_ok else 1

@@ -12,7 +12,6 @@ from types import ModuleType
 import unittest
 
 import regex
-from pysubs2.warnings import SubtitleAttributeWarning
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, base_path)
@@ -380,9 +379,10 @@ def run_functional_tests(tests_directory, subtitles_directory, results_directory
         if hasattr(module, 'run_tests'):
             test_files_run += 1
             try:
-                # Real-world test files contain fields pysubs2 can't parse and replaces with defaults
+                # Real-world test files contain fields pysubs2 can't parse and replaces with defaults.
+                # Filter by origin rather than class, since pysubs2.warnings only exists in newer releases.
                 with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", SubtitleAttributeWarning)
+                    warnings.filterwarnings("ignore", category=UserWarning, module=r"pysubs2\.formats\.substation")
                     module.run_tests(subtitles_directory, results_directory)
             except Exception as e:
                 logging.error(f"Error running tests in {filename}: {e}")

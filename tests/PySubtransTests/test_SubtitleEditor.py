@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 import unittest
@@ -969,8 +970,9 @@ class SubtitleEditorTests(SubtitleTestCase):
         batch.translation = Translation({'text': "Response 1"})
         unchanged_batch.translation = Translation({'text': "Response 2"})
 
-        with SubtitleEditor(subtitles) as editor:
-            editor.Sanitise()
+        with self.assertLogs(level=logging.WARNING):
+            with SubtitleEditor(subtitles) as editor:
+                editor.Sanitise()
 
         self.assertLoggedIsNone("renumbered batch response cleared", subtitles.scenes[0].batches[0].translation)
         self.assertLoggedIsNotNone("unchanged batch response kept", subtitles.scenes[1].batches[0].translation)
@@ -997,8 +999,9 @@ class SubtitleEditorTests(SubtitleTestCase):
         translated_line.text = "Translated"
         second_batch.translated = [translated_line]
 
-        with SubtitleEditor(subtitles) as editor:
-            editor.Sanitise()
+        with self.assertLogs(level=logging.WARNING):
+            with SubtitleEditor(subtitles) as editor:
+                editor.Sanitise()
 
         translated = second_batch.translated
         self.assertLoggedEqual("translated line count", 1, len(translated))

@@ -1,3 +1,4 @@
+import logging
 import os
 import tempfile
 import unittest
@@ -701,7 +702,8 @@ Modified subtitle line 2
         project.SaveProjectFile(self.test_project_file)
 
         new_project = SubtitleProject()
-        new_project.ReadProjectFile(self.test_project_file)
+        with self.assertLogs(level=logging.WARNING):
+            new_project.ReadProjectFile(self.test_project_file)
 
         line_numbers = [line.number for line in new_project.subtitles.originals or []]
         expected_numbers = list(range(1, len(line_numbers) + 1))

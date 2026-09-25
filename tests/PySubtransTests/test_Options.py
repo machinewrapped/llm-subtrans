@@ -555,19 +555,19 @@ class TestOptions(LoggedTestCase):
         self.assertEqual(options.get('version'), default_settings['version'])
 
     def test_version_update_converts_seconds_per_character(self):
-        """seconds_per_character becomes a reading time multiplier"""
+        """seconds_per_character becomes a reading speed in words per minute"""
         options = Options({
-            'seconds_per_character': 0.125,
+            'seconds_per_character': 0.1,
             'version': 'v1.7.0'
         })
 
         options._update_version()
 
         self.assertLoggedNotIn("old setting removed", 'seconds_per_character', options)
-        self.assertLoggedEqual("reading_time_multiplier", 1.5, options.get_float('reading_time_multiplier'), input_value=0.125)
+        self.assertLoggedEqual("words_per_minute", 150, options.get_int('words_per_minute'), input_value=0.1)
 
     def test_version_update_keeps_zero_seconds_per_character(self):
-        """Zero seconds_per_character, meaning no reading time, stays zero"""
+        """Zero seconds_per_character, meaning no reading time, becomes zero words per minute"""
         options = Options({
             'seconds_per_character': 0.0,
             'version': 'v1.7.0'
@@ -575,7 +575,7 @@ class TestOptions(LoggedTestCase):
 
         options._update_version()
 
-        self.assertLoggedEqual("reading_time_multiplier", 0.0, options.get_float('reading_time_multiplier'), input_value=0.0)
+        self.assertLoggedEqual("words_per_minute", 0, options.get_int('words_per_minute'), input_value=0.0)
 
     @patch('json.load')
     @patch('builtins.open', new_callable=mock_open)
@@ -590,7 +590,7 @@ class TestOptions(LoggedTestCase):
 
         self.assertLoggedTrue("settings loaded", result)
         self.assertLoggedNotIn("old setting removed", 'seconds_per_character', options)
-        self.assertLoggedEqual("reading_time_multiplier", 3.0, options.get_float('reading_time_multiplier'), input_value=0.25)
+        self.assertLoggedEqual("words_per_minute", 60, options.get_int('words_per_minute'), input_value=0.25)
 
 
 class TestSettingsType(LoggedTestCase):

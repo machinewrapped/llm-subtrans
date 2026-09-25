@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Helpers.FillerWords import standard_filler_words
-from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
+from PySubtrans.Helpers.Speech import NOMINAL_WORDS_PER_MINUTE, EstimateSpeechSeconds
 from PySubtrans.Helpers.LineBreaks import split_sequences
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_info
@@ -338,18 +338,30 @@ class SubtitleTimingTests(LoggedTestCase):
         expected_end = timedelta(seconds=1) + timedelta(seconds=EstimateSpeechSeconds("好好好abc"))
         self.assertLoggedEqual("duration from visible text only", expected_end, result[0].end)
 
-    def test_ExtendShortSubtitles_scales_reading_time(self):
+    def test_ExtendShortSubtitles_scales_with_words_per_minute(self):
         text = "The quick brown fox jumps"
         line = SubtitleLine(f"1\n00:00:01,000 --> 00:00:01,100\n{text}")
+        words_per_minute = NOMINAL_WORDS_PER_MINUTE // 2
         save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.0,
-            'reading_time_multiplier': 2.0,
+            'words_per_minute': words_per_minute,
         }))
 
         result = Subtitles()._extend_short_subtitles([line], save_settings)
 
         expected_end = timedelta(seconds=1) + timedelta(seconds=2.0 * EstimateSpeechSeconds(text))
-        self.assertLoggedEqual("scaled speech duration", expected_end, result[0].end)
+        self.assertLoggedEqual("half speed doubles duration", expected_end, result[0].end, input_value=words_per_minute)
+
+    def test_ExtendShortSubtitles_zero_words_per_minute_applies_minimum_only(self):
+        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\nThe quick brown fox jumps over the lazy dog")
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.8,
+            'words_per_minute': 0,
+        }))
+
+        result = Subtitles()._extend_short_subtitles([line], save_settings)
+
+        self.assertLoggedEqual("minimum duration only", timedelta(seconds=1.8), result[0].end)
 
     def test_ExtendShortSubtitles_preserves_existing_overlap(self):
         source = [

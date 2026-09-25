@@ -10,7 +10,7 @@ from typing import Any
 import regex
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
+from PySubtrans.Helpers.Speech import EstimateReadingSeconds
 from PySubtrans.Options import Options
 
 from PySubtrans.SettingsType import SettingsType
@@ -44,10 +44,7 @@ class SaveSettings:
             settings.get_timedelta('min_line_duration', timedelta(seconds=0.8)),
             timedelta(),
         )
-        self.reading_time_multiplier : float = max(
-            settings.get_float('reading_time_multiplier', 1.0) or 0.0,
-            0.0,
-        )
+        self.words_per_minute : int = max(settings.get_int('words_per_minute', 180) or 0, 0)
         self.min_gap : timedelta = max(
             settings.get_timedelta('min_gap', timedelta(seconds=0.05)),
             timedelta(),
@@ -386,7 +383,8 @@ class Subtitles:
     def _extend_short_subtitles(self, lines : list[SubtitleLine], save_settings : SaveSettings) -> list[SubtitleLine]:
         """
         Extend output subtitle durations without changing the stored lines.
-        Reading time is the estimated time to say the visible text, allowing for its script.
+        Reading time is estimated from the visible text at words_per_minute, allowing for its script.
+        A words_per_minute of 0 applies only min_line_duration.
         """
         adjusted : list[SubtitleLine] = [line.copy() for line in lines]
 
@@ -394,10 +392,13 @@ class Subtitles:
             if not line.text:
                 continue
 
-            visible_text = FORMATTING_TAG_PATTERN.sub('', line.text)
-            reading_seconds = EstimateSpeechSeconds(visible_text) * save_settings.reading_time_multiplier
-            reading_duration = timedelta(seconds=reading_seconds)
-            target_end = line.start + max(save_settings.min_line_duration, reading_duration)
+            target_duration = save_settings.min_line_duration
+            if save_settings.words_per_minute > 0:
+                visible_text = FORMATTING_TAG_PATTERN.sub('', line.text)
+                reading_duration = timedelta(seconds=EstimateReadingSeconds(visible_text, save_settings.words_per_minute))
+                target_duration = max(target_duration, reading_duration)
+
+            target_end = line.start + target_duration
 
             if index + 1 < len(adjusted):
                 latest_end = adjusted[index + 1].start - save_settings.min_gap

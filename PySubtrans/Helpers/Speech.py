@@ -23,6 +23,10 @@ SYLLABIC_SECONDS_PER_CHAR = 0.2
 OTHER_SECONDS_PER_CHAR = 0.07
 MIN_SPEECH_SECONDS = 0.3
 
+# The words per minute these rates correspond to.
+# English words average about 4.7 letters, and Chinese words 1.5 to 2 characters, both about 180 wpm.
+NOMINAL_WORDS_PER_MINUTE = 180
+
 
 class SentenceEnds(Enum):
     """
@@ -51,6 +55,14 @@ def EstimateSpeechSeconds(text : str) -> float:
     syllabic = len(SYLLABIC_CHAR.findall(text))
     other = sum(1 for char in text if char.isalnum()) - syllabic
     return max(MIN_SPEECH_SECONDS, syllabic * SYLLABIC_SECONDS_PER_CHAR + other * OTHER_SECONDS_PER_CHAR)
+
+
+def EstimateReadingSeconds(text : str, words_per_minute : int) -> float:
+    """
+    How long text takes to read at a speed in words per minute.
+    Other scripts are scaled to match, since speaking rates are per character.
+    """
+    return EstimateSpeechSeconds(text) * NOMINAL_WORDS_PER_MINUTE / words_per_minute
 
 
 def IsSentenceEnd(text : str, index : int, ends : SentenceEnds = SentenceEnds.STRONG) -> bool:

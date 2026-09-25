@@ -7,7 +7,7 @@ from GuiSubtrans.Command import CommandError
 from GuiSubtrans.Commands.SaveTranslationFile import SaveTranslationFile
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
-from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
+from PySubtrans.Helpers.Speech import EstimateReadingSeconds
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
 from PySubtrans.Options import Options
@@ -33,7 +33,7 @@ class SaveTranslationCommandTests(LoggedTestCase):
         datamodel.UpdateSettings(Options({
             'extend_short_subtitles': True,
             'min_line_duration': 0.8,
-            'reading_time_multiplier': 2.0,
+            'words_per_minute': 90,
             'min_gap': 0.05,
         }))
 
@@ -46,7 +46,7 @@ class SaveTranslationCommandTests(LoggedTestCase):
         command.execute()
 
         output_data = SrtFileHandler().load_file(output_path)
-        expected_end = timedelta(seconds=1) + timedelta(seconds=2.0 * EstimateSpeechSeconds("abcdefghij"))
+        expected_end = timedelta(seconds=1) + timedelta(seconds=EstimateReadingSeconds("abcdefghij", 90))
         self.assertLoggedEqual("duration extended from GUI options", expected_end, output_data.lines[0].end)
         self.assertLoggedNotIn("save option not stored in project settings", 'extend_short_subtitles', subtitles.settings)
 

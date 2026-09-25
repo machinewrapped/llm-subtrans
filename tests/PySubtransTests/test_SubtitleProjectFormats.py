@@ -8,6 +8,7 @@ from typing import TextIO
 from PySubtrans.Formats.SSAFileHandler import SSAFileHandler
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.Helpers.Color import Color
+from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
@@ -148,7 +149,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         save_settings = SaveSettings(SettingsType({
             'extend_short_subtitles': True,
             'min_line_duration': 0.8,
-            'seconds_per_character': 0.1,
+            'reading_time_multiplier': 2.0,
             'min_gap': 0.05,
         }))
 
@@ -162,7 +163,8 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         subtitles.SaveTranslation(output_path, save_settings=save_settings)
         output_data = SrtFileHandler().load_file(output_path)
 
-        self.assertLoggedEqual("dynamic output duration", timedelta(seconds=2), output_data.lines[0].end)
+        expected_end = timedelta(seconds=1) + timedelta(seconds=2.0 * EstimateSpeechSeconds("abcdefghij"))
+        self.assertLoggedEqual("dynamic output duration", expected_end, output_data.lines[0].end)
         self.assertLoggedEqual(
             "stored translation unchanged",
             timedelta(seconds=1.1),

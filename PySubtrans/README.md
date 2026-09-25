@@ -202,7 +202,7 @@ The Options class provides a wide range of options to configure the translation 
 
 `postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines. The post-processor can perform a range of operations, each of which is enabled by another setting, e.g. `break_dialog_on_one_line`, `normalise_dialog_tags`, `whitespaces_to_newline`, `remove_filler_words`.
 
-`extend_short_subtitles`: Extends short subtitles when the translated file is saved, without changing the timestamps stored in the project. The target display time is the greater of `min_line_duration` and the visible character count multiplied by `seconds_per_character`. Extensions are capped at the next subtitle's start time minus `min_gap`. Pass `SaveSettings(options)` when saving translations directly with a `Subtitles` instance.
+`extend_short_subtitles`: Extends short subtitles when the translated file is saved, without changing the timestamps stored in the project. The target display time is the greater of `min_line_duration` and the estimated time to speak the visible text, which allows for the script (syllabic CJK characters take longer per character than alphabetic text). Scale the estimate with `reading_time_multiplier` (default 1.0) to give more or less reading time. Extensions are capped at the next subtitle's start time minus `min_gap`. Pass `SaveSettings(options)` when saving translations directly with a `Subtitles` instance.
 
 Example usage:
 

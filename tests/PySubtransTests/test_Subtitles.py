@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Helpers.FillerWords import standard_filler_words
+from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
 from PySubtrans.Helpers.LineBreaks import split_sequences
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_info
@@ -286,36 +287,69 @@ class SubtitleProcessorTests(LoggedTestCase):
 class SubtitleTimingTests(LoggedTestCase):
 
     def test_ExtendShortSubtitles(self):
+        long_text = "The quick brown fox jumps"
         source = [
             SubtitleLine("1\n00:00:01,000 --> 00:00:01,200\nabc"),
-            SubtitleLine("2\n00:00:03,000 --> 00:00:03,200\nabcdefghijkl"),
-            SubtitleLine("3\n00:00:03,900 --> 00:00:04,100\nabcdefghijkl"),
+            SubtitleLine(f"2\n00:00:03,000 --> 00:00:03,200\n{long_text}"),
+            SubtitleLine(f"3\n00:00:03,900 --> 00:00:04,100\n{long_text}"),
         ]
         subtitles = Subtitles()
         save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.8,
-            'seconds_per_character': 0.1,
             'min_gap': 0.05,
         }))
 
         result = subtitles._extend_short_subtitles(source, save_settings)
 
+        speech_duration = timedelta(seconds=EstimateSpeechSeconds(long_text))
+        self.assertLoggedGreater("speech estimate exceeds minimum", speech_duration, timedelta(seconds=0.8))
         self.assertLoggedEqual("fixed minimum duration", timedelta(seconds=1.8), result[0].end)
         self.assertLoggedEqual("capped by next subtitle", timedelta(seconds=3.85), result[1].end)
-        self.assertLoggedEqual("dynamic final duration", timedelta(seconds=5.1), result[2].end)
+        self.assertLoggedEqual("speech duration for final line", timedelta(seconds=3.9) + speech_duration, result[2].end)
         self.assertLoggedEqual("source remains unchanged", timedelta(seconds=1.2), source[0].end)
 
-    def test_ExtendShortSubtitles_ignores_formatting_and_whitespace(self):
-        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\nA <i>好</i>\n👨‍👩‍👧‍👦")
+    def test_ExtendShortSubtitles_allows_for_script(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:01,200\nabcdefgh"),
+            SubtitleLine("2\n00:00:10,000 --> 00:00:10,200\n你好朋友我们走吧"),
+        ]
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.8,
+            'min_gap': 0.05,
+        }))
+
+        result = Subtitles()._extend_short_subtitles(source, save_settings)
+
+        latin_duration = result[0].end - result[0].start
+        syllabic_duration = result[1].end - result[1].start
+        self.assertLoggedEqual("latin text uses minimum duration", timedelta(seconds=0.8), latin_duration)
+        self.assertLoggedEqual("syllabic text uses speech estimate", timedelta(seconds=EstimateSpeechSeconds("你好朋友我们走吧")), syllabic_duration)
+        self.assertLoggedGreater("syllabic text given longer", syllabic_duration, latin_duration)
+
+    def test_ExtendShortSubtitles_ignores_formatting(self):
+        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\n<i>好好好</i> {\\an8}abc\n👨‍👩‍👧‍👦")
         subtitles = Subtitles()
         save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.0,
-            'seconds_per_character': 0.1,
         }))
 
         result = subtitles._extend_short_subtitles([line], save_settings)
 
-        self.assertLoggedEqual("three visible graphemes", timedelta(seconds=1.3), result[0].end)
+        expected_end = timedelta(seconds=1) + timedelta(seconds=EstimateSpeechSeconds("好好好abc"))
+        self.assertLoggedEqual("duration from visible text only", expected_end, result[0].end)
+
+    def test_ExtendShortSubtitles_scales_reading_time(self):
+        text = "The quick brown fox jumps"
+        line = SubtitleLine(f"1\n00:00:01,000 --> 00:00:01,100\n{text}")
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.0,
+            'reading_time_multiplier': 2.0,
+        }))
+
+        result = Subtitles()._extend_short_subtitles([line], save_settings)
+
+        expected_end = timedelta(seconds=1) + timedelta(seconds=2.0 * EstimateSpeechSeconds(text))
+        self.assertLoggedEqual("scaled speech duration", expected_end, result[0].end)
 
     def test_ExtendShortSubtitles_preserves_existing_overlap(self):
         source = [
@@ -325,7 +359,6 @@ class SubtitleTimingTests(LoggedTestCase):
         subtitles = Subtitles()
         save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.8,
-            'seconds_per_character': 0.1,
             'min_gap': 0.05,
         }))
 
@@ -340,7 +373,6 @@ class SubtitleTimingTests(LoggedTestCase):
         ]
         save_settings = SaveSettings(SettingsType({
             'min_line_duration': 1.0,
-            'seconds_per_character': 0.1,
             'min_gap': 0.05,
         }))
 

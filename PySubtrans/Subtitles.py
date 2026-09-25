@@ -10,6 +10,7 @@ from typing import Any
 import regex
 
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
 from PySubtrans.Options import Options
 
 from PySubtrans.SettingsType import SettingsType
@@ -23,7 +24,6 @@ from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleData import SubtitleData
 
 FORMATTING_TAG_PATTERN = regex.compile(r'<[^>]*>|\{\\[^}]*\}')
-GRAPHEME_PATTERN = regex.compile(r'\X')
 DURATION_EPSILON = timedelta(milliseconds=50)
 
 def HasDuplicateLineNumbers(lines : list[SubtitleLine]) -> bool:
@@ -44,8 +44,8 @@ class SaveSettings:
             settings.get_timedelta('min_line_duration', timedelta(seconds=0.8)),
             timedelta(),
         )
-        self.seconds_per_character : float = max(
-            settings.get_float('seconds_per_character', 0.1) or 0.0,
+        self.reading_time_multiplier : float = max(
+            settings.get_float('reading_time_multiplier', 1.0) or 0.0,
             0.0,
         )
         self.min_gap : timedelta = max(
@@ -384,7 +384,10 @@ class Subtitles:
             line.number = line_number
 
     def _extend_short_subtitles(self, lines : list[SubtitleLine], save_settings : SaveSettings) -> list[SubtitleLine]:
-        """Extend output subtitle durations without changing the stored lines."""
+        """
+        Extend output subtitle durations without changing the stored lines.
+        Reading time is the estimated time to say the visible text, allowing for its script.
+        """
         adjusted : list[SubtitleLine] = [line.copy() for line in lines]
 
         for index, line in enumerate(adjusted):
@@ -392,8 +395,8 @@ class Subtitles:
                 continue
 
             visible_text = FORMATTING_TAG_PATTERN.sub('', line.text)
-            character_count = sum(1 for character in GRAPHEME_PATTERN.findall(visible_text) if not character.isspace())
-            reading_duration = timedelta(seconds=character_count * save_settings.seconds_per_character)
+            reading_seconds = EstimateSpeechSeconds(visible_text) * save_settings.reading_time_multiplier
+            reading_duration = timedelta(seconds=reading_seconds)
             target_end = line.start + max(save_settings.min_line_duration, reading_duration)
 
             if index + 1 < len(adjusted):

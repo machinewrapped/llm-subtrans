@@ -78,7 +78,7 @@ default_settings = {
     'break_dialog_on_one_line': env_bool('break_dialog_on_one_line', True),
     'max_line_duration': env_float('MAX_LINE_DURATION', 4.0),
     'min_line_duration': env_float('MIN_LINE_DURATION', 0.8),
-    'seconds_per_character': env_float('SECONDS_PER_CHARACTER', 0.1),
+    'reading_time_multiplier': env_float('READING_TIME_MULTIPLIER', 1.0),
     'min_gap': env_float('MIN_GAP', 0.05),
     'merge_line_duration': env_float('MERGE_LINE_DURATION', 0.0),
     'max_gap_for_merge': env_float('MAX_GAP_FOR_MERGE', 0.5),
@@ -348,6 +348,12 @@ class Options(SettingsType):
         if 'gpt_model' in self:
             self['model'] = self['gpt_model']
             del self['gpt_model']
+
+        # seconds_per_character became a multiplier on the speech estimate.
+        # Scaling by 12 keeps latin text close to its old reading time, without over-extending syllabic scripts.
+        if 'seconds_per_character' in self:
+            self['reading_time_multiplier'] = (self.get_float('seconds_per_character') or 0.0) * 12
+            del self['seconds_per_character']
 
         if not self.provider_settings:
             self['provider_settings'] = {'OpenAI': {}} if self.get_str('api_key') else {}

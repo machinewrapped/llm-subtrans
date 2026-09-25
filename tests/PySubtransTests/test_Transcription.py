@@ -1,5 +1,6 @@
 import array
 import io
+import json
 import logging
 import math
 import os
@@ -25,6 +26,7 @@ from PySubtrans.Transcription.LineMerger import MIN_TIMING_CORRECTION
 from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.SilenceStream import SilenceStream
 from PySubtrans.Transcription.WordTiming import WordTiming
+from PySubtrans.Transcription.TranscriptionCapture import LoadCaptureLineSettings
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionLines import MIN_WORD_CAP_SECONDS, WORD_CAP_MULTIPLE, TranscriptionLineBuilder
@@ -1518,6 +1520,35 @@ class TestTranscriptionCoordinator(LoggedTestCase):
         self.assertLoggedEqual("second start", timedelta(seconds=6), subtitles.originals[1].start)
         assert provider.client is not None  # Type narrowing for PyLance
         self.assertLoggedEqual("client calls", 2, provider.client.calls)
+
+    def test_capture_records_the_line_settings(self):
+        """A capture records the line settings its run used, so a replay can reproduce them."""
+        provider = FakeTranscriptionProvider(SettingsType({'timing_correction_factor': 0.6}), ["first line"], [_word("w", 0.0, 1.0)])
+        provider.word_coverage = WordCoverage.PARTIAL
+
+        with tempfile.TemporaryDirectory() as folder:
+            capture_path = os.path.join(folder, "capture.json")
+            coordinator = TranscriptionCoordinator(provider, SettingsType({'min_chunk_seconds': 1.0,
+                                                                          'transcription_capture_path': capture_path}))
+            stub_media(self, coordinator, [AudioChunk(start=timedelta(seconds=0), end=timedelta(seconds=4))])
+
+            with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
+                _subtitles_of(coordinator.TranscribeMedia(media.name))
+
+            recorded = LoadCaptureLineSettings(capture_path)
+
+        self.assertLoggedEqual("recorded settings", coordinator.line_builder.settings, recorded)
+
+    def test_capture_without_line_settings_loads_none(self):
+        """A capture from before line settings were recorded still loads, with none to replay."""
+        with tempfile.TemporaryDirectory() as folder:
+            capture_path = os.path.join(folder, "capture.json")
+            with open(capture_path, 'w', encoding='utf-8') as file:
+                json.dump({'provider': 'Gemini', 'media': None, 'segments': []}, file)
+
+            recorded = LoadCaptureLineSettings(capture_path)
+
+        self.assertLoggedIsNone("no recorded settings", recorded)
 
     def test_gate_refuses_untimed_provider(self):
         """Providers without timings are refused before spending anything."""

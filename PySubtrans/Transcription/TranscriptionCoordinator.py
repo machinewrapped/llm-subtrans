@@ -127,7 +127,8 @@ class TranscriptionCoordinator:
 
         # Capture raw provider segments when requested (scripts/replay_transcription.py)
         capture_path = CapturePath(self.settings)
-        self._capture = TranscriptionCapture(capture_path, self.provider.name, media_path) if capture_path else None
+        self._capture = (TranscriptionCapture(capture_path, self.provider.name, media_path, self.line_builder.settings)
+                         if capture_path else None)
 
         def on_duration(duration : timedelta) -> None:
             run.audio_total_seconds = max(0.0, duration.total_seconds())

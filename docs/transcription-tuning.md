@@ -12,6 +12,8 @@ Use the project virtual environment Python: `.\envsubtrans\Scripts\python.exe` o
 
 You can also set the capture destination with the `TRANSCRIPTION_CAPTURE_PATH` environment variable.
 
+A capture also records the line settings the run assembled lines with, including the provider's merge gaps and timing correction. Replay uses them unless they are overridden on the command line. Older captures did not record them, so they replay with the current options and the provider's defaults.
+
 ## Replay and Compare
 
 Replay a capture with the current line-building code:

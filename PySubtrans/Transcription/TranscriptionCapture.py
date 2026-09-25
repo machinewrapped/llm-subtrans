@@ -10,11 +10,14 @@ from __future__ import annotations
 import json
 import logging
 import os
+from dataclasses import asdict, fields
 from datetime import timedelta
 from typing import Any
 
 from PySubtrans.SettingsType import SettingsType
+from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
+from PySubtrans.Transcription.WordAlignment import WordCoverage
 from PySubtrans.Transcription.WordTiming import WordTiming
 
 # Set either to capture the next transcription
@@ -35,11 +38,13 @@ class TranscriptionCapture:
 
     The file is rewritten after every segment so an aborted run still
     leaves a readable capture.
+    The line settings the run assembled lines with are recorded too, so a replay can reproduce them.
     """
-    def __init__(self, path : str, provider : str, media_path : str|None = None):
+    def __init__(self, path : str, provider : str, media_path : str|None = None, line_settings : LineSettings|None = None):
         self.path : str = path
         self.provider : str = provider
         self.media_path : str|None = media_path
+        self.line_settings : LineSettings|None = line_settings
         self.segments : list[TranscriptionSegment] = []
 
     def Add(self, segment : TranscriptionSegment) -> None:
@@ -54,11 +59,34 @@ class TranscriptionCapture:
             logging.error(f"Unable to write transcription capture: {e}")
 
     def _document(self) -> dict[str, Any]:
-        return {
+        document : dict[str, Any] = {
             'provider': self.provider,
             'media': os.path.basename(self.media_path) if self.media_path else None,
-            'segments': [SerializeSegment(segment) for segment in self.segments],
         }
+
+        if self.line_settings is not None:
+            document['line_settings'] = SerializeLineSettings(self.line_settings)
+
+        document['segments'] = [SerializeSegment(segment) for segment in self.segments]
+        return document
+
+
+def SerializeLineSettings(settings : LineSettings) -> dict[str, Any]:
+    """Line settings as plain JSON-safe data."""
+    data = asdict(settings)
+    data['word_coverage'] = settings.word_coverage.value
+    return data
+
+
+def DeserializeLineSettings(data : dict[str, Any]) -> LineSettings|None:
+    """Rebuild line settings from captured data, or None if a field is missing."""
+    names = {field.name for field in fields(LineSettings)}
+    if not names.issubset(data):
+        return None
+
+    values = {name: data[name] for name in names}
+    values['word_coverage'] = WordCoverage(values['word_coverage'])
+    return LineSettings(**values)
 
 
 def SerializeSegment(segment : TranscriptionSegment) -> dict[str, Any]:
@@ -109,6 +137,15 @@ def LoadCaptureProvider(path : str) -> str|None:
 
     provider = document.get('provider')
     return str(provider) if provider else None
+
+
+def LoadCaptureLineSettings(path : str) -> LineSettings|None:
+    """The line settings a capture's run assembled lines with, if they were recorded."""
+    with open(path, 'r', encoding='utf-8') as file:
+        document = json.load(file)
+
+    data = document.get('line_settings')
+    return DeserializeLineSettings(data) if isinstance(data, dict) else None
 
 
 def LoadCapture(path : str) -> list[TranscriptionSegment]:

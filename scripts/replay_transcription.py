@@ -19,9 +19,10 @@ import argparse
 import os
 import statistics
 import sys
-from dataclasses import replace
+from dataclasses import asdict, replace
 from datetime import timedelta
 from difflib import SequenceMatcher
+from typing import Any
 
 import regex
 
@@ -33,7 +34,7 @@ from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Transcription.LineSettings import DEFAULT_TIMING_CORRECTION_FACTOR, LineSettings
-from PySubtrans.Transcription.TranscriptionCapture import LoadCapture, LoadCaptureProvider
+from PySubtrans.Transcription.TranscriptionCapture import LoadCapture, LoadCaptureLineSettings, LoadCaptureProvider
 from PySubtrans.Transcription.TranscriptionLines import TranscriptionLineBuilder
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionRun import TranscriptionRun
@@ -72,7 +73,7 @@ def ProviderWordCoverage(capture : str) -> WordCoverage:
 
 
 def ProviderTimingCorrection(capture : str) -> float:
-    """The timing correction factor the capture's provider defaults to, as a transcription run would use it."""
+    """The timing correction factor the capture's provider defaults to, for captures that did not record it."""
     name = LoadCaptureProvider(capture)
     if not name:
         return DEFAULT_TIMING_CORRECTION_FACTOR
@@ -226,9 +227,9 @@ def main() -> int:
     parser.add_argument('--same-speaker-gap', type=float, help="As above, for one speaker continuing")
     parser.add_argument('--no-merge-speakers', action='store_true', help="Keep separate speakers on separate lines")
     parser.add_argument('--timing-correction-factor', type=float,
-                        help="Extend lines shorter than this fraction of their speech estimate (default: the capture provider's)")
+                        help="Extend lines shorter than this fraction of their speech estimate (default: the capture's)")
     parser.add_argument('--word-coverage', choices=[coverage.value for coverage in WordCoverage],
-                        help="How much of the transcript the words spell (default: the capture provider's)")
+                        help="How much of the transcript the words spell (default: the capture's)")
     parser.add_argument('--source', choices=('auto', 'parts', 'words'), default='auto',
                         help="Build lines from parts or words (default: whatever the builder prefers)")
     parser.add_argument('--quiet', action='store_true', help="Print only the summary")
@@ -244,7 +245,19 @@ def main() -> int:
     segments = SelectSource(segments, args.source)
     transcript_chars = sum(len(SpokenText(segment.text)) for segment in segments)
 
-    overrides = {
+    # Settings not given on the command line are the ones the capture's run used.
+    # Older captures did not record them, so they fall back to the current options and their provider's defaults.
+    recorded = LoadCaptureLineSettings(args.capture)
+    if recorded is not None:
+        defaults : dict[str, Any] = asdict(recorded)
+    else:
+        print("Line settings were not recorded in this capture, so the current options and provider defaults are used")
+        defaults = {
+            'word_coverage': ProviderWordCoverage(args.capture),
+            'timing_correction_factor': ProviderTimingCorrection(args.capture),
+        }
+
+    overrides : dict[str, Any] = {
         'min_line_seconds': args.min_line_duration,
         'max_line_seconds': args.max_line_duration,
         'max_line_chars': args.max_characters,
@@ -252,10 +265,13 @@ def main() -> int:
         'merge_eligible_gap': args.merge_eligible_gap,
         'same_speaker_merge_eligible_gap': args.same_speaker_gap,
         'can_merge_different_speakers': False if args.no_merge_speakers else None,
-        'word_coverage': WordCoverage(args.word_coverage) if args.word_coverage else ProviderWordCoverage(args.capture),
-        'timing_correction_factor': args.timing_correction_factor if args.timing_correction_factor is not None
-                                    else ProviderTimingCorrection(args.capture),
+        'word_coverage': WordCoverage(args.word_coverage) if args.word_coverage else None,
+        'timing_correction_factor': args.timing_correction_factor,
     }
+
+    for key, value in defaults.items():
+        if overrides.get(key) is None:
+            overrides[key] = value
 
     if args.compare:
         setting, *values = args.compare

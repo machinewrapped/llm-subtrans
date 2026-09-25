@@ -183,7 +183,8 @@ class TestAudioExtractorCommands(LoggedTestCase):
             self.assertLoggedEqual('explicit ffprobe path', str(ffprobe_path), commands[0][0])
             self.assertLoggedEqual('explicit ffmpeg path', str(ffmpeg_path), commands[1][0])
 
-    def test_blank_ffmpeg_path_keeps_system_commands(self):
+    @patch('PySubtrans.Transcription.AudioExtractor.CheckFfmpegAvailable')
+    def test_blank_ffmpeg_path_keeps_system_commands(self, _check_ffmpeg):
         """A blank setting preserves the existing PATH-based commands."""
         extractor = AudioExtractor(SettingsType({'ffmpeg_path': '  '}))
 

@@ -98,8 +98,9 @@ class TestQwenLocalProvider(LoggedTestCase):
         provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/fake/path'}))
         self.assertLoggedEqual("valid with torch", True, provider.ValidateSettings())
 
+    @patch('PySubtrans.Transcription.AudioExtractor.CheckFfmpegAvailable')
     @patch.object(qwen_module, "_load_qwen_dependencies", side_effect=ImportError("missing torch"))
-    def test_missing_torch_returns_coordinator_compatible_error(self, _load_dependencies):
+    def test_missing_torch_returns_coordinator_compatible_error(self, _load_dependencies, _check_ffmpeg):
         """A missing Torch runtime becomes a failed outcome instead of leaking ImportError."""
         provider = QwenLocalProvider(SettingsType())
         coordinator = TranscriptionCoordinator(provider, SettingsType())

@@ -29,7 +29,7 @@ class SentenceEnds(Enum):
     Which punctuation ends a sentence.
 
     STRONG is question and exclamation marks, CJK full stops, ellipses and line breaks.
-    Text with word timings is left to them to divide at full stops.
+    Text with word timings only splits at full stops when a part is too long (see UtteranceSplitter).
     ALL adds full stops, other than after initials or dotted abbreviations, for text with no word timings to divide it.
     """
     STRONG = 'strong'

@@ -7,7 +7,8 @@ from PySubtrans.Helpers.Script import JoinWords
 from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.WordTiming import WordTiming
 
-# Clause punctuation (and a period, which is not a hard boundary) that makes a good place to break an over-long utterance
+# Clause punctuation that makes a good place to break an over-long utterance.
+# A period is only a soft boundary: short consecutive sentences read better together (docs/transcription-timing-correction.md).
 CLAUSE_END_CHARS = frozenset('.,;:，、；：-–—')
 
 # Split-point scoring for over-long utterances: the pause at a boundary is the primary signal, weighted by how central the boundary is.

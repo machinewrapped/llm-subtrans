@@ -6,7 +6,25 @@ This records what was learned about lines that are too short for their text, whi
 
 #460 proposed treating full stops as sentence ends for parts derived from a transcript (Gemini, Qwen Local, OpenAI word timestamps). A trial on the #459 branch split La Madre Muerta (Gemini) into more, shorter lines, and blind assessment rejected it. The main complaint was lines too fast to read, such as `Cuando estoy nerviosa es aún peor.` in 1.4 s. Each sentence was timed by its own words only, so the pause after it belonged to no line.
 
-The issue proposed merging lines that are too fast to read into a neighbour. This investigation tested that, found it was the wrong fix, and replaced it with extending the line into the pause after it.
+The issue proposed merging lines that are too fast to read into a neighbour. This investigation tested that, found it was the wrong fix, and replaced it with extending the line into the pause after it. Full stops as sentence ends were then assessed again with the correction in place, and rejected again, for the reasons below.
+
+## Full stops are soft boundaries
+
+Full stops do not end a part the way `?`, `!` and `。` do, but they are not ignored. `.` is in `CLAUSE_END_CHARS`, so when a part runs over the length or duration limit, `UtteranceSplitter.FitUtterance` prefers to split it at a full stop. A full stop is a good place to split a line that is too long, but not a reason to split one that is not.
+
+No reason for this was recorded when it was written. The sentence-end set arrived with the first transcription commit (35a1bb3), and d6fc4b7 called a period "not a hard boundary" without saying why. The reason now comes from testing hard full-stop boundaries twice:
+
+- **#459:** blind assessment split 2–2. The complaints were lines too fast to read, short sentences stranded at the 0.8 s minimum, and glued text.
+- **With the correction at 0.7:** two 25-minute windows of La Madre Muerta, two Haiku assessors each, compared `main` against full stops. `main` won 3–1. The work is kept in a git stash, "transcription-full-stops".
+
+The correction fixed the timing, but two problems remained, and neither is about timing:
+
+- **Short consecutive sentences read better together.** `No hay prisa.`, `Eso es.` and `Hija puta.` became lines of their own at the 0.8 s minimum. Their speaking-time estimate is under 0.8 s, so the correction rightly leaves them alone. In `main` they share a line with the sentence beside them, like `David, ven. Rafa, llévatelos.`, which an assessor singled out as better.
+- **Gemini's glued text relies on the speaker-change cut.** Gemini returned no word timing for `Ánimo` in `…Tú te la llevas. Ánimo.Nadie debía saber nada.`, and wrote no space after it. In `main`, the cut at the speaker change gives the unmatched text to the word before it, so `Ánimo.` stays with its speaker at 01:10:53. With full stops, `Ánimo.Nadie debía saber nada.` is one sentence, so `Ánimo` took the timing and speaker of `Nadie`, 22 s later.
+
+Two concerns about full stops were also raised on #459, and still apply to any use of them as sentence ends:
+- **Abbreviations.** Initials (`J.`) and dotted abbreviations (`U.S.A.`, `e.g.`) do not end a sentence under `SentenceEnds.ALL`. Titles such as `Dr.` and `Mr.` cannot be recognised by their shape, and are tracked in #463.
+- **Duplicating `SubtitleProcessor`.** Where only text is available, `SubtitleProcessor` already splits lines over the duration limit, so the transcription should not add a second text-only splitter.
 
 ## Measuring "too short for its text"
 
@@ -87,6 +105,7 @@ Qwen's lines under 0.5× bottom out at 34 whatever the factor. They are the late
 - **It is a per-provider setting**, read with `settings.get_float` and shown in each provider's line options, so users can tune it.
 - **Reading time is left to `extend_short_subtitles`**, which runs when a translation is saved. Timings are then adjusted for the final text, and the stored project is not changed irreversibly. The correction here addresses squeezed speaking time only.
 - **`WordCoverage` stays separate.** Words missing whole stretches of the transcript is a difference in kind, and decides which heuristics apply. The correction factor is a difference in degree.
+- **Full stops stay soft boundaries** for transcripts with word timings. They are preferred split points for parts over the limits, not sentence ends that always start a new line.
 
 ## Other findings
 
@@ -101,4 +120,4 @@ Qwen's lines under 0.5× bottom out at 34 whatever the factor. They are the late
 .\envsubtrans\Scripts\python.exe scripts/replay_transcription.py transcription_tests/la_madre_muerta_gemini.json --quiet --compare timing_correction_factor 0.0 0.6 0.7
 ```
 
-The report counts lines shorter than their speech estimate, and flags each one `[fast]` without `--quiet`. See [transcription-tuning.md](transcription-tuning.md) for capturing and replaying transcriptions.
+The report counts lines shorter than their speech estimate, and flags each one `[fast]` without `--quiet`. The captures above predate recorded line settings, so they replay with the current options and each provider's defaults. See [transcription-tuning.md](transcription-tuning.md) for capturing and replaying transcriptions.

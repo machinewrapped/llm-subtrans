@@ -5,12 +5,14 @@ import sys
 import argparse
 import json
 import subprocess
+import warnings
 from datetime import datetime
 from types import ModuleType
 
 import unittest
 
 import regex
+from pysubs2.warnings import SubtitleAttributeWarning
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, base_path)
@@ -287,20 +289,21 @@ def run_integration_tests(results_path: str) -> bool:
 
     integration_script = os.path.join(base_path, "tests", "integration_tests.py")
 
-    # Stream the output through, collecting the result reported for each suite
+    # Collect the result lines from stdout.
+    # unittest progress goes to stderr, which is left unpiped so it stays live.
     suite_results : list[tuple[str, dict[str, int]]] = []
     try:
         with subprocess.Popen(
             [sys.executable, integration_script],
             cwd=base_path,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
             text=True,
             errors="replace"
         ) as process:
             assert process.stdout is not None
             for line in process.stdout:
                 sys.stdout.write(line)
+                sys.stdout.flush()
                 match = suite_result_pattern.fullmatch(line.rstrip())
                 if match:
                     counts = {name: int(count) for name, count in suite_count_pattern.findall(match['counts'])}
@@ -313,12 +316,6 @@ def run_integration_tests(results_path: str) -> bool:
 
     global total_run, total_failures, total_errors, total_skipped
 
-    # No results means the process failed before completing a suite
-    if not suite_results:
-        total_run += 1
-        total_failures += 1 if integration_failed else 0
-        summary_lines.append(format_summary_line('Integration', 1, int(integration_failed), 0, 0, not integration_failed))
-
     for label, counts in suite_results:
         if not counts:
             summary_lines.append(f"  {label:<16} | SKIPPED")
@@ -330,6 +327,13 @@ def run_integration_tests(results_path: str) -> bool:
         total_errors += errors
         total_skipped += counts.get('skipped', 0)
         summary_lines.append(format_summary_line(label, counts.get('run', 0), failures, errors, counts.get('skipped', 0), failures == 0 and errors == 0))
+
+    # Count a failure no suite reported, e.g. a crash before a suite completed
+    reported_failure = any(counts.get('failures', 0) or counts.get('errors', 0) for _label, counts in suite_results)
+    if integration_failed and not reported_failure:
+        total_run += 1
+        total_failures += 1
+        summary_lines.append(format_summary_line('Integration run', 1, 1, 0, 0, False))
 
     end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
     logging.info(separator)
@@ -376,7 +380,10 @@ def run_functional_tests(tests_directory, subtitles_directory, results_directory
         if hasattr(module, 'run_tests'):
             test_files_run += 1
             try:
-                module.run_tests(subtitles_directory, results_directory)
+                # Real-world test files contain fields pysubs2 can't parse and replaces with defaults
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", SubtitleAttributeWarning)
+                    module.run_tests(subtitles_directory, results_directory)
             except Exception as e:
                 logging.error(f"Error running tests in {filename}: {e}")
                 summary_lines.append(f"Tests in {filename} failed")

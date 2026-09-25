@@ -108,6 +108,13 @@ It requires a separate [PyTorch](https://pytorch.org/get-started/locally/); inst
 
 For source installs, `qwen-asr`'s own dependencies (numpy, scipy, librosa) currently require **Python 3.12+**, higher than the 3.10+ needed for the rest of the project.
 
+### Line timing settings
+Each transcription provider's settings include options for how transcribed lines are assembled:
+- `merge_eligible_gap`: The widest gap, in seconds, across which brief lines can be merged into one subtitle.
+- `same_speaker_merge_eligible_gap`: The same, when the speaker has not changed (providers with speaker identification only).
+- `can_merge_different_speakers`: Allow brief lines by different speakers to be combined into one subtitle as dialogue (providers with speaker identification only).
+- `timing_correction_factor`: Corrects provider timings that look too short for their text. A line lasting less than this fraction of the time its text would normally take to say is extended into the pause after it. 0 trusts the provider's timings completely, and is the default.
+
 ## Installing from source
 If you want to use the command line tools or modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.
 

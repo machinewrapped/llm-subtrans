@@ -4,8 +4,12 @@ from dataclasses import replace
 from datetime import timedelta
 
 from PySubtrans.Helpers.Script import JoinWords
+from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
 from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
+
+# A timing correction smaller than this is imperceptible, so it is not made
+MIN_TIMING_CORRECTION = timedelta(milliseconds=50)
 
 
 def IsDialogue(line : TranscriptionSegment) -> bool:
@@ -52,7 +56,8 @@ class LineMerger:
         for line in lines[1:]:
             run = runs[-1]
 
-            # A fragment joins the fragment before it.
+            # A fragment joins the fragment before it, never a readable line.
+            # Letting readable lines take on fragments stacked them into long, dense subtitles.
             # One left standing alone takes the next line whatever its length, unless it can be extended into a pause instead.
             stranded = len(run) == 1
             takes_fragment = self._is_sliver(line) or (stranded and not self._extends_instead(run[-1], line))
@@ -147,22 +152,43 @@ class LineMerger:
         return first.speaker is None or second.speaker is None or first.speaker == second.speaker
 
     def _extend_into_pauses(self, lines : list[TranscriptionSegment], limit : timedelta|None) -> list[TranscriptionSegment]:
-        """Extend each brief line to the minimum duration where the pause after it allows."""
+        """
+        Extend each brief line to the minimum duration where the pause after it allows.
+        With timing correction, a line too short for its text is also extended towards the time it takes to say.
+        """
         min_duration = timedelta(seconds=self.settings.min_line_seconds)
         min_gap = timedelta(seconds=self.settings.min_gap)
 
         extended : list[TranscriptionSegment] = []
         for index, line in enumerate(lines):
             following = lines[index + 1].start - min_gap if index + 1 < len(lines) else limit
-            target = line.start + min_duration
+            if following is None:
+                extended.append(line)
+                continue
 
             # Only the end moves, so a subtitle never appears before its speech
-            if self._is_sliver(line) and following is not None and target <= following:
-                line = replace(line, end=target)
+            end = line.end
+            target = line.start + min_duration
+            if self._is_sliver(line) and target <= following:
+                end = target
 
-            extended.append(line)
+            # Squeezed word timings leave the pause after a sentence outside its line, so it is given back, as far as the next line allows
+            speech_end = self._corrected_end(line)
+            if speech_end is not None and min(speech_end, following) > end + MIN_TIMING_CORRECTION:
+                end = min(speech_end, following)
+
+            extended.append(replace(line, end=end) if end != line.end else line)
 
         return extended
+
+    def _corrected_end(self, line : TranscriptionSegment) -> timedelta|None:
+        """Where a line would end if it lasted the corrected share of its estimated speaking time, when correction is on."""
+        # Correction is opt-in, since some providers time their lines more accurately than the estimate
+        factor = self.settings.timing_correction_factor
+        if factor <= 0.0:
+            return None
+
+        return line.start + timedelta(seconds=factor * EstimateSpeechSeconds(line.text))
 
     def _is_sliver(self, line : TranscriptionSegment) -> bool:
         """Whether a line is too brief to read."""

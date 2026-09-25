@@ -14,7 +14,8 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.LineSettings import (DEFAULT_MERGE_ELIGIBLE_GAP_SECONDS,
-                                                   DEFAULT_SAME_SPEAKER_MERGE_ELIGIBLE_GAP_SECONDS)
+                                                   DEFAULT_SAME_SPEAKER_MERGE_ELIGIBLE_GAP_SECONDS,
+                                                   DEFAULT_TIMING_CORRECTION_FACTOR)
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.WordAlignment import WordCoverage
 
@@ -49,6 +50,7 @@ class TranscriptionProvider:
             'same_speaker_merge_eligible_gap': settings.get_float(
                 'same_speaker_merge_eligible_gap', DEFAULT_SAME_SPEAKER_MERGE_ELIGIBLE_GAP_SECONDS),
             'can_merge_different_speakers': settings.get_bool('can_merge_different_speakers', True),
+            'timing_correction_factor': settings.get_float('timing_correction_factor', DEFAULT_TIMING_CORRECTION_FACTOR),
         })
         self._available_models : list[str] = []
         self.refresh_when_changed : list[str] = []
@@ -222,6 +224,7 @@ class TranscriptionProvider:
         """Options for how transcribed lines are merged, with the speaker-aware ones only when speakers are labelled."""
         options : GuiSettingsType = {
             'merge_eligible_gap': (float, _("Widest gap, in seconds, across which transcribed lines can still be merged")),
+            'timing_correction_factor': (float, _("Extend lines shorter than this fraction of their estimated speaking time (0 = never)")),
         }
 
         if self.supports_diarization:

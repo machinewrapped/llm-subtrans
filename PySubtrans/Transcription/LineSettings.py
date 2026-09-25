@@ -13,6 +13,9 @@ DEFAULT_SAME_SPEAKER_MERGE_ELIGIBLE_GAP_SECONDS = 1.0
 # Space left between a line extended into a pause and the line after it
 DEFAULT_MIN_GAP_SECONDS = 0.05
 
+# Provider timings are trusted unless a provider has shown they need correcting
+DEFAULT_TIMING_CORRECTION_FACTOR = 0.0
+
 
 @dataclass(frozen=True)
 class LineSettings:
@@ -27,6 +30,7 @@ class LineSettings:
     can_merge_different_speakers : bool = True
     min_gap : float = DEFAULT_MIN_GAP_SECONDS
     word_coverage : WordCoverage = WordCoverage.COMPLETE
+    timing_correction_factor : float = DEFAULT_TIMING_CORRECTION_FACTOR
 
     def EligibleGap(self, first_speaker : str|None, second_speaker : str|None) -> float:
         """The widest gap that still leaves two lines eligible to be one."""

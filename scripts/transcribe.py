@@ -35,8 +35,8 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
     parser.add_argument('--ffmpeg-path', type=str, default=None,
                         help="Path to the ffmpeg executable (default: use ffmpeg and ffprobe from PATH)")
-    parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
-    parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
+    parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider setting)")
+    parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider setting)")
     parser.add_argument('--format', choices=('srt', 'ass', 'vtt'), default='vtt', help="Subtitle format for the transcribed output (default vtt; ass and vtt preserve speaker labels)")
     parser.add_argument('--rate-limit', type=float, default=None, help="Maximum backend requests per minute (0 for unlimited)")
     parser.add_argument('--align', action='store_true', default=True, help="Request word timestamps for timed lines (default on)")
@@ -70,6 +70,8 @@ def main() -> int:
         'model': args.model,
         'language': args.language,
         'diarize': args.diarize,
+        'min_chunk_seconds': args.min_chunk,
+        'max_chunk_seconds': args.max_chunk,
     })
     # Drop unset values so provider environment defaults apply
     provider_settings = SettingsType({k: v for k, v in provider_settings.items() if v is not None})
@@ -105,11 +107,7 @@ def main() -> int:
         'max_newlines': options.get_int('max_newlines'),
         'min_gap': options.get_float('min_gap'),
     })
-    # Drop unset values so provider recommendations apply
-    if args.min_chunk is not None:
-        coordinator_settings['min_chunk_seconds'] = args.min_chunk
-    if args.max_chunk is not None:
-        coordinator_settings['max_chunk_seconds'] = args.max_chunk
+    # Drop unset values so provider defaults apply
     if args.rate_limit is not None:
         coordinator_settings['rate_limit'] = args.rate_limit
     if args.ffmpeg_path is not None:

@@ -1344,6 +1344,30 @@ class TestLineBuilderWiring(LoggedTestCase):
         self.assertLoggedEqual("min split chars", 3, coordinator.line_builder.settings.min_split_chars)
         self.assertLoggedEqual("no timing correction", 0.0, coordinator.line_builder.settings.timing_correction_factor)
 
+class TestChunkSettings(LoggedTestCase):
+    """The coordinator plans chunks with the provider's chunk bounds."""
+
+    def _provider(self) -> FakeTranscriptionProvider:
+        provider = FakeTranscriptionProvider()
+        provider.settings['min_chunk_seconds'] = 20.0
+        provider.settings['max_chunk_seconds'] = 90.0
+        return provider
+
+    def test_coordinator_takes_provider_chunk_bounds(self):
+        """The chunker is planned with the provider's chunk bounds."""
+        coordinator = TranscriptionCoordinator(self._provider())
+
+        self.assertLoggedEqual("chunker min", 20.0, coordinator.chunker.min_chunk_seconds)
+        self.assertLoggedEqual("chunker max", 90.0, coordinator.chunker.max_chunk_seconds)
+
+    def test_run_settings_override_provider_chunk_bounds(self):
+        """An explicit bound for the run wins; an omitted one falls back to the provider."""
+        coordinator = TranscriptionCoordinator(self._provider(), SettingsType({'min_chunk_seconds': 5.0}))
+
+        self.assertLoggedEqual("run min", 5.0, coordinator.chunker.min_chunk_seconds)
+        self.assertLoggedEqual("provider max", 90.0, coordinator.chunker.max_chunk_seconds)
+
+
 class TestSettingsNamespaces(LoggedTestCase):
     def _options(self):
         options = Options()

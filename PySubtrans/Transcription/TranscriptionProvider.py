@@ -109,22 +109,6 @@ class TranscriptionProvider:
         return name.strip() if name else None
 
     @property
-    def recommended_min_chunk_seconds(self) -> float:
-        """
-        Recommended minimum audio chunk length: providers with per-request
-        overhead or speaker tracking prefer longer chunks, constrained
-        engines prefer shorter ones. Explicit user settings always win.
-        """
-        return 8.0
-
-    @property
-    def recommended_max_chunk_seconds(self) -> float:
-        """
-        Recommended maximum audio chunk length (see recommended_min_chunk_seconds).
-        """
-        return 60.0
-
-    @property
     def supports_diarization(self) -> bool:
         """Whether the provider will label speakers, as currently configured."""
         return False
@@ -219,6 +203,16 @@ class TranscriptionProvider:
         Validate the settings for the provider
         """
         return True
+
+    def _chunk_options(self) -> GuiSettingsType:
+        """
+        Options for how the audio is split into chunks.
+        Each provider reads min_chunk_seconds and max_chunk_seconds with its own defaults.
+        """
+        return {
+            'min_chunk_seconds': (float, _("Shortest audio chunk, in seconds, sent in one request (shorter spans merge into a neighbour)")),
+            'max_chunk_seconds': (float, _("Longest audio chunk, in seconds, sent in one request (audio is cut at a pause near this length)")),
+        }
 
     def _line_options(self) -> GuiSettingsType:
         """Options for how transcribed lines are merged, with the speaker-aware ones only when speakers are labelled."""

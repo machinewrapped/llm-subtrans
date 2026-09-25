@@ -46,16 +46,6 @@ try:
         # The forced aligner drops stretches of the transcript and crams others into a moment
         word_coverage = WordCoverage.PARTIAL
 
-        @property
-        def recommended_min_chunk_seconds(self) -> float:
-            """Short chunks fit the default generation budget and GPU memory."""
-            return 30.0
-
-        @property
-        def recommended_max_chunk_seconds(self) -> float:
-            """Longer chunks need a raised max_new_tokens to avoid silent truncation."""
-            return 60.0
-
         def __init__(self, settings : SettingsType):
             super().__init__(self.name, settings)
             self.settings = SettingsType(self.settings | {
@@ -65,6 +55,10 @@ try:
                 'max_new_tokens': settings.get_int('max_new_tokens', env_int('QWEN_MAX_NEW_TOKENS', 2048)),
                 'request_timeout': settings.get_float('request_timeout', env_float('TRANSCRIPTION_TIMEOUT', 300.0)),
                 'rate_limit': settings.get_float('rate_limit', env_float('QWEN_TRANSCRIPTION_RATE_LIMIT')),
+                # Short chunks fit the default generation budget and GPU memory.
+                # Longer chunks need a raised max_new_tokens to avoid silent truncation.
+                'min_chunk_seconds': settings.get_float('min_chunk_seconds', 30.0),
+                'max_chunk_seconds': settings.get_float('max_chunk_seconds', 60.0),
                 'allow_cpu_fallback': settings.get_bool('allow_cpu_fallback', False),
                 'torch_installation_directory': settings.get_str('torch_installation_directory', ''),
             })
@@ -106,6 +100,7 @@ try:
                 'model': (self.available_models, _("Transcription model to run")),
                 'language': (str, _("Spoken language hint (optional, auto-detected when empty)")),
             }
+            options.update(self._chunk_options())
 
             if scope is OptionsScope.ALL:
                 options.update({

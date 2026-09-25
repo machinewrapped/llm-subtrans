@@ -39,11 +39,12 @@ class TranscriptionCoordinator:
         self.settings : SettingsType = SettingsType(settings or {})
         self.aborted : bool = False
 
+        # Chunk bounds are provider settings; an explicit value for this run wins
         chunk_settings = SettingsType({
             'min_chunk_seconds': self.settings.get_float('min_chunk_seconds')
-                or provider.recommended_min_chunk_seconds,
+                or provider.settings.get_float('min_chunk_seconds'),
             'max_chunk_seconds': self.settings.get_float('max_chunk_seconds')
-                or provider.recommended_max_chunk_seconds,
+                or provider.settings.get_float('max_chunk_seconds'),
             'silence_min_duration': self.settings.get_float('silence_min_duration', 1.0),
             'ffmpeg_path': self.settings.get_str('ffmpeg_path'),
         })

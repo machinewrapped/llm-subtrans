@@ -10,8 +10,10 @@ import os
 from unittest.mock import patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
+from PySubtrans.Transcription.Providers.Provider_OpenRouter import OpenRouterTranscriptionProvider
+from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
 
 
 class TestTranscriptionProviderRefreshTriggers(LoggedTestCase):
@@ -41,3 +43,44 @@ class TestTranscriptionProviderUnsetSettings(LoggedTestCase):
                 provider.UpdateSettings(SettingsType({'rate_limit': 12.0}))
 
                 self.assertLoggedEqual(f'{name} rate limit', 12.0, provider.settings.get_float('rate_limit'))
+
+
+class TestTranscriptionProviderChunkSettings(LoggedTestCase):
+    """Chunk bounds are provider settings, each provider with its own defaults."""
+
+    # Settings that unlock each provider's full options schema
+    UNLOCK_SETTINGS = SettingsType({'api_key': 'k', 'torch_installation_directory': '/fake/path'})
+
+    def test_every_provider_declares_chunk_bounds(self) -> None:
+        for name, provider_class in sorted(TranscriptionProvider.get_providers().items()):
+            provider = provider_class(SettingsType())
+            min_chunk_seconds = provider.settings.get_float('min_chunk_seconds')
+            max_chunk_seconds = provider.settings.get_float('max_chunk_seconds')
+
+            self.assertLoggedIsNotNone(f'{name} min chunk default', min_chunk_seconds)
+            self.assertLoggedIsNotNone(f'{name} max chunk default', max_chunk_seconds)
+            self.assertLoggedLessEqual(f'{name} min within max', min_chunk_seconds, max_chunk_seconds)
+
+    def test_chunk_bounds_offered_in_every_scope(self) -> None:
+        """Chunk bounds show in Settings and can be adjusted for a single run."""
+        for name, provider_class in sorted(TranscriptionProvider.get_providers().items()):
+            provider = provider_class(self.UNLOCK_SETTINGS)
+
+            for scope in OptionsScope:
+                options = provider.GetOptions(provider.settings, scope)
+                self.assertLoggedIn(f'{name} min chunk option', 'min_chunk_seconds', options, input_value=scope)
+                self.assertLoggedIn(f'{name} max chunk option', 'max_chunk_seconds', options, input_value=scope)
+
+    def test_saved_settings_override_defaults(self) -> None:
+        """A saved chunk bound wins over the provider default; the other keeps its default."""
+        options = Options()
+        options.provider_settings[TranscriptionProvider.SettingsKey('OpenRouter')] = SettingsType({
+            'api_key': 'k',
+            'min_chunk_seconds': 45.0,
+        })
+        resolved = TranscriptionProvider.ResolveProviderSettings(
+            'OpenRouter', SettingsType(), options.get_dict('provider_settings'))
+        provider = OpenRouterTranscriptionProvider(resolved)
+
+        self.assertLoggedEqual('saved min', 45.0, provider.settings.get_float('min_chunk_seconds'))
+        self.assertLoggedEqual('default max', 120.0, provider.settings.get_float('max_chunk_seconds'))

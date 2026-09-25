@@ -61,8 +61,13 @@ Supports translating subtitle files and transcribing subtitles from video/audio.
 
 `PySubtrans/Helpers/` contains reusable utilities. Check here before adding a utility; an existing solution or a natural home for shared functionality may already exist.
 
-- `Text` - text manipulation and script-aware rules: whitespace and punctuation normalisation, break/split sequences for long lines, dialog markers, filler words, xml-like tag extraction, token joining (`JoinWords` / `NeedsSpace` handle CJK vs Latin spacing), and RTL detection.
-- `Time` - `timedelta` parsing and formatting, including SRT timestamps.
+- `Text` - general text utilities: whitespace and punctuation normalisation, content comparison, and filename sanitising.
+- `Script` - script-aware rules: token joining (`JoinWords` / `NeedsSpace` handle CJK vs Latin spacing), full-width punctuation, and RTL detection.
+- `LineBreaks` - break/split sequences and finding the best point to break a long line.
+- `Dialog` - dialog markers: splitting dialog onto separate lines, normalising markers, and removing empty rows.
+- `FillerWords` - the default filler words and their removal.
+- `ResponseText` - xml-like tag extraction from translation responses, and summary cleanup.
+- `Time` - `timedelta` parsing and formatting, including SRT timestamps and time span labels.
 - `Speech` - how long text takes to say, by script, and where its sentences end.
 - `Parse` - key/value pairs, name lists, numeric coercion, and retry-delay/error-message extraction from provider responses.
 - `SubtitleHelpers` - operations that need `SubtitleLine`: insert-or-replace by number, merging lines, and merging translations back onto originals.

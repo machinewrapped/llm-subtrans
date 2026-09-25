@@ -4,9 +4,10 @@ import logging
 from datetime import timedelta
 
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Script import JoinWords
 from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
-from PySubtrans.Helpers.Text import CompactText, CutText, JoinWords
-from PySubtrans.Transcription.AudioChunker import AudioChunk
+from PySubtrans.Helpers.Text import CompactText, CutText
+from PySubtrans.Helpers.Time import SpanLabel
 from PySubtrans.Transcription.LineMerger import LineMerger
 from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.TranscriptCutter import TranscriptCutter
@@ -25,11 +26,6 @@ MIN_UNRELIABLE_WORD_SECONDS = 2.0
 
 # Parts below this confidence are logged, since the engine thought they were probably not speech
 LOW_CONFIDENCE = 0.4
-
-
-def SpanLabel(span : AudioChunk|TranscriptionSegment) -> str:
-    """Human-readable start-end label for a chunk or segment, in seconds."""
-    return f"{span.start.total_seconds():.1f}s-{span.end.total_seconds():.1f}s"
 
 
 class TranscriptionLineBuilder:
@@ -80,7 +76,7 @@ class TranscriptionLineBuilder:
 
         if not any(assigned):
             logging.info(_("Chunk {}: no word timings match the transcript, so lines are placed by length").format(
-                SpanLabel(segment)))
+                SpanLabel(segment.start, segment.end)))
 
         return self._fit_parts(segment, parts, assigned)
 
@@ -169,7 +165,7 @@ class TranscriptionLineBuilder:
         start, end = self._clamped_span(segment, part.start, part.end)
         if part.confidence is not None and part.confidence < LOW_CONFIDENCE:
             logging.info(_("Chunk {}: low-confidence segment ({:.0%} no-speech probability): '{}'").format(
-                SpanLabel(segment), 1.0 - part.confidence, part.text[:120]))
+                SpanLabel(segment.start, segment.end), 1.0 - part.confidence, part.text[:120]))
 
         return TranscriptionSegment(start=start, end=end, text=part.text.strip(),
                                     speaker=part.speaker or segment.speaker,

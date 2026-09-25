@@ -1,6 +1,6 @@
 import logging
 from PySubtrans.Helpers.Parse import TryParseNonNegative
-from PySubtrans.Helpers.Text import ExtractTag, ExtractTagDict, ExtractTagList
+from PySubtrans.Helpers.ResponseText import ExtractTag, ExtractTagDict, ExtractTagList
 from PySubtrans.Substitutions import Substitutions
 
 def ExtractTagSafely(tag : str, text : str) -> tuple[str, str|None]:

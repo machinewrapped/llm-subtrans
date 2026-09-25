@@ -7,7 +7,8 @@ from PySubtrans.Helpers.ContextHelpers import GetBatchContext
 from PySubtrans.Helpers.Parse import FormatKeyValuePairs
 from PySubtrans.Helpers.SubtitleHelpers import FindBestSplitIndex, MergeTranslations
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Text import CompressWhitespace, Linearise, SanitiseSummary
+from PySubtrans.Helpers.ResponseText import SanitiseSummary
+from PySubtrans.Helpers.Text import CompressWhitespace, Linearise
 from PySubtrans.Instructions import DEFAULT_TASK_TYPE, Instructions
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleLine import SubtitleLine

@@ -112,4 +112,6 @@ def TimedeltaToSrtTimestamp(time: datetime.timedelta|str|None) -> str|None:
 
     return f"{hours:02}:{minutes:02}:{seconds:02},{milliseconds:03}"
 
-
+def SpanLabel(start : datetime.timedelta, end : datetime.timedelta) -> str:
+    """Human-readable start-end label for a time span, in seconds."""
+    return f"{start.total_seconds():.1f}s-{end.total_seconds():.1f}s"

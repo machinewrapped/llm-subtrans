@@ -4,22 +4,19 @@ import regex
 from datetime import timedelta
 
 from PySubtrans.Helpers.SubtitleHelpers import FindSplitPoint, GetProportionalDuration
-from PySubtrans.Helpers.Text import (
+from PySubtrans.Helpers.Dialog import (
     dialog_marker,
-    split_sequences,
-    break_sequences,
-    sentence_end_punctuation,
-    BreakLongLine,
     BreakDialogOnOneLine,
     CompileDialogSplitPattern,
-    CompileFillerWordsPattern,
-    ConvertWhitespaceBlocksToNewlines,
     ConvertWideDashesToStandardDashes,
-    EnsureFullWidthPunctuation,
     NormaliseDialogTags,
-    RemoveEmptyDialogRows,
-    RemoveFillerWords
+    RemoveEmptyDialogRows
 )
+from PySubtrans.Helpers.FillerWords import CompileFillerWordsPattern, RemoveFillerWords
+from PySubtrans.Helpers.LineBreaks import split_sequences, break_sequences, BreakLongLine
+from PySubtrans.Helpers.Script import EnsureFullWidthPunctuation
+from PySubtrans.Helpers.Speech import SENTENCE_END_CHARS
+from PySubtrans.Helpers.Text import ConvertWhitespaceBlocksToNewlines
 from PySubtrans.Options import SettingsType
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleLine import SubtitleLine
@@ -288,7 +285,8 @@ class SubtitleProcessor:
 
             if line.duration < short_duration and gap <= self.max_gap_for_merge:
                 # If the line ends with a sentence-ending punctuation mark, assume different speakers (questionable logic)
-                if current_line.text_normalized[-1] in sentence_end_punctuation:
+                last_char = current_line.text_normalized[-1]
+                if last_char in SENTENCE_END_CHARS or last_char == '.':
                     current_line.text = f"{dialog_marker}{current_line.text}\n{dialog_marker}{line.text}"
                 else:
                     current_line.text = f"{current_line.text}\n{line.text}"

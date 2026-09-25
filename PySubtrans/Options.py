@@ -11,7 +11,7 @@ from PySubtrans.Helpers.Version import VersionNumberLessThan
 from PySubtrans.Instructions import Instructions, default_user_prompt
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Resources import GetConfigDir, GetSettingsPath
-from PySubtrans.Helpers.Text import standard_filler_words
+from PySubtrans.Helpers.FillerWords import standard_filler_words
 from PySubtrans.ProviderSettingsView import ProviderSettingsView
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.version import __version__

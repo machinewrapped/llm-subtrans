@@ -4,7 +4,8 @@ import regex
 from datetime import timedelta
 
 from PySubtrans.SubtitleLine import SubtitleLine
-from PySubtrans.Helpers.Text import split_sequences, standard_filler_words
+from PySubtrans.Helpers.FillerWords import standard_filler_words
+from PySubtrans.Helpers.LineBreaks import split_sequences
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_info
 from PySubtrans.Helpers.SubtitleHelpers import MergeSubtitles, MergeTranslations, FindSplitPoint, GetProportionalDuration

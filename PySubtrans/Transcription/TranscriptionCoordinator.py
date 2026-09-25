@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Time import SpanLabel
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
@@ -19,7 +20,7 @@ from PySubtrans.Transcription.LineSettings import (DEFAULT_MERGE_ELIGIBLE_GAP_SE
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionCapture import CapturePath, TranscriptionCapture
 from PySubtrans.Transcription.TranscriptionEvents import TranscriptionEvents
-from PySubtrans.Transcription.TranscriptionLines import SpanLabel, TranscriptionLineBuilder
+from PySubtrans.Transcription.TranscriptionLines import TranscriptionLineBuilder
 from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionOutcome, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionRun import TranscriptionRun
@@ -204,7 +205,7 @@ class TranscriptionCoordinator:
         """
         def report_progress(done : int, chunk : AudioChunk) -> None:
             # Total is unknown while the plan streams in (0 signals that)
-            self.events.progress.send(self, done=done, total=0, span=SpanLabel(chunk))
+            self.events.progress.send(self, done=done, total=0, span=SpanLabel(chunk.start, chunk.end))
 
         def report_audio(chunk : AudioChunk) -> None:
             if run.audio_total_seconds > 0.0:
@@ -326,13 +327,13 @@ class TranscriptionCoordinator:
 
         if run.transcribed > 0:
             run.error = SubtitleError(
-                _("Transcription stopped at {span}: {error}").format(span=SpanLabel(chunk), error=error),
+                _("Transcription stopped at {span}: {error}").format(span=SpanLabel(chunk.start, chunk.end), error=error),
                 error=error)
             logging.error(str(run.error))
             return True
 
         raise SubtitleError(
-            _("Transcription failed at {span}: {error}").format(span=SpanLabel(chunk), error=error),
+            _("Transcription failed at {span}: {error}").format(span=SpanLabel(chunk.start, chunk.end), error=error),
             error=error)
 
     def _accept_chunk(self, run : TranscriptionRun, segment : TranscriptionSegment|None,
@@ -397,7 +398,7 @@ class TranscriptionCoordinator:
         or empty chunks) and whether the provider was actually asked.
         """
         if self.extractor.IsSilent(audio_bytes, self.silence_skip_db):
-            logging.debug(_("Skipping silent chunk {} before requesting").format(SpanLabel(chunk)))
+            logging.debug(_("Skipping silent chunk {} before requesting").format(SpanLabel(chunk.start, chunk.end)))
             return None, False
 
         result = client.TranscribeChunk(audio_bytes, 'wav')
@@ -407,7 +408,7 @@ class TranscriptionCoordinator:
 
         text = (result.text or '').strip()
         if not text:
-            logging.debug(_("Empty transcription for chunk {}").format(SpanLabel(chunk)))
+            logging.debug(_("Empty transcription for chunk {}").format(SpanLabel(chunk.start, chunk.end)))
             return None, True
 
         return TranscriptionSegment(start=chunk.start, end=chunk.end, text=text,

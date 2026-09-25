@@ -2,28 +2,12 @@ import unittest
 import regex
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
-from PySubtrans.Helpers.Text import (
-    EnsureFullWidthPunctuation,
-    break_sequences,
-    standard_filler_words,
-    BreakDialogOnOneLine,
-    BreakLongLine,
-    CompileDialogSplitPattern,
-    CompileFillerWordsPattern,
-    ContainsTags,
-    ExtractTag,
-    ExtractTagDict,
-    ExtractTagList,
-    IsTextContentEqual,
-    JoinWords,
-    LimitTextLength,
-    Linearise,
-    NormaliseDialogTags,
-    RemoveEmptyDialogRows,
-    RemoveFillerWords,
-    RemoveWhitespaceAndPunctuation,
-    SanitiseSummary
-    )
+from PySubtrans.Helpers.Dialog import BreakDialogOnOneLine, CompileDialogSplitPattern, NormaliseDialogTags, RemoveEmptyDialogRows
+from PySubtrans.Helpers.FillerWords import standard_filler_words, CompileFillerWordsPattern, RemoveFillerWords
+from PySubtrans.Helpers.LineBreaks import break_sequences, BreakLongLine
+from PySubtrans.Helpers.ResponseText import ContainsTags, ExtractTag, ExtractTagDict, ExtractTagList, LimitTextLength, SanitiseSummary
+from PySubtrans.Helpers.Script import EnsureFullWidthPunctuation, JoinWords
+from PySubtrans.Helpers.Text import IsTextContentEqual, Linearise, RemoveWhitespaceAndPunctuation
 
 class TestTextHelpers(LoggedTestCase):
     dialog_marker = "- "

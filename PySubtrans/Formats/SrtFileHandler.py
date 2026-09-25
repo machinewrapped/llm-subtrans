@@ -54,7 +54,7 @@ class SrtFileHandler(SubtitleFileHandler):
         Returns:
             str: SRT formatted subtitle content
         """
-        from PySubtrans.Helpers.Text import IsRightToLeftText
+        from PySubtrans.Helpers.Script import IsRightToLeftText
         
         # Filter out invalid lines and renumber for SRT compliance
         output_lines = []

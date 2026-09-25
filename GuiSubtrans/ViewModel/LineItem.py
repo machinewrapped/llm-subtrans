@@ -1,6 +1,7 @@
 from GuiSubtrans.GuiHelpers import GetLineHeight
 from PySubtrans.Helpers import UpdateFields
-from PySubtrans.Helpers.Text import Linearise, emdash
+from PySubtrans.Helpers.Dialog import emdash
+from PySubtrans.Helpers.Text import Linearise
 
 from GuiSubtrans.ViewModel.ViewModelError import ViewModelError
 

@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 from PySubtrans.Helpers.Speech import SENTENCE_END_CHARS
-from PySubtrans.Helpers.Text import JoinWords
+from PySubtrans.Helpers.Script import JoinWords
 from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.WordTiming import WordTiming
 

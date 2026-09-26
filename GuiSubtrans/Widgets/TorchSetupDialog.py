@@ -597,7 +597,7 @@ class TorchSetupDialog(QDialog):
             return
 
         step = self._steps[self._step_index]
-        self._step_status_label.setText(_("Step {number} of {total}: {status}").format(
+        self._step_status_label.setText(_("Part {number} of {total}: {status}").format(
             number=self._step_index + 1, total=len(self._steps), status=step.status))
         self._log(step.start_message)
 
@@ -624,7 +624,7 @@ class TorchSetupDialog(QDialog):
     def _fail_step(self) -> None:
         """Report that the current installer step failed and let the user go back."""
         self._installation_failed = True
-        self._step_status_label.setText(_("Step {number} could not be completed. Check the log and try again.").format(number=self._step_index + 1))
+        self._step_status_label.setText(_("Part {number} could not be completed. Check the log and try again.").format(number=self._step_index + 1))
         self._show_page(2)
 
     def _on_steps_finished(self) -> None:

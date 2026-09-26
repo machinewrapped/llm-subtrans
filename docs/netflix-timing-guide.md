@@ -11,7 +11,7 @@ The implementation is in `PySubtrans/Helpers/Reading.py` (reading speeds and cou
 Limits are in characters per second.
 LLM-Subtrans uses the adult limit for interlingual subtitles.
 Afrikaans and Zulu allow a higher limit for SDH (subtitles for the deaf and hard of hearing), which does not apply to translations.
-The Japanese guide gives a single limit, without separate adult and children's figures.
+The Japanese guide gives a single limit for subtitles, without separate adult and children's figures, and a separate limit of 7 for Japanese SDH.
 
 | Language | Adult | Children | Style guide |
 |---|---|---|---|
@@ -43,7 +43,7 @@ The Japanese guide gives a single limit, without separate adult and children's f
 | Indonesian | 17 | 13 | [Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/216009727-Indonesian-Timed-Text-Style-Guide) |
 | Irish | 17 | 13 | [Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/43418149359507-Irish-Timed-Text-Style-Guide) |
 | Italian | 17 | 13 | [Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215349898-Italian-Timed-Text-Style-Guide) |
-| Japanese | 4 | Not specified | [Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215767517-Japanese-Timed-Text-Style-Guide) |
+| Japanese | 4 (SDH: 7) | Not specified | [Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215767517-Japanese-Timed-Text-Style-Guide) |
 | Kannada | 22 | 18 | [Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/4482685308819-Kannada-Timed-Text-Style-Guide) |
 | Korean | 12 | 9 | [Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/216001127-Korean-Timed-Text-Style-Guide) |
 | Malay | 17 | 13 | [Guide](https://partnerhelp.netflixstudios.com/hc/en-us/articles/115002675707-Malay-Timed-Text-Style-Guide) |
@@ -92,12 +92,15 @@ The language guides add:
 - **Japanese**: "Full-width character, space, and punctuation counts as 1 character. Half-width character, space, and punctuation counts as 0.5 characters."
 - **Korean**: "Latin characters, spaces, punctuation count as 0.5 character."
 - **Thai**: "35 characters per line (excluding all composite characters, i.e. tone marks, top and bottom vowels are not counted)."
+- **Japanese ruby** (furigana) is drawn above or beside its base characters rather than inline, so it is not part of the line.
+  SRT files cannot represent ruby, so conversions often insert the reading after its kanji, e.g. "美津子みつこ", which inflates the count.
 
 ## Timing rules
 
 From [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/articles/215758617-Timed-Text-Style-Guide-General-Requirements) and [Subtitle Timing Guidelines](https://partnerhelp.netflixstudios.com/hc/en-us/articles/360051554394-Timed-Text-Style-Guide-Subtitle-Timing-Guidelines):
 
 - **Minimum duration**: 5/6 of a second per subtitle event (20 frames at 24 fps).
+  The Japanese guide sets its own minimum of 0.5 seconds.
 - **Maximum duration**: 7 seconds per subtitle event.
 - **Gaps**: subtitles must have a minimum of 2 frames between them.
   In 24 fps content, gaps of 3 to 11 frames inclusive must be closed to 2 frames, so every gap is either 2 frames or half a second or more.

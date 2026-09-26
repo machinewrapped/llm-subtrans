@@ -46,6 +46,7 @@ class TranscriptionCoordinator:
             'max_chunk_seconds': self.settings.get_float('max_chunk_seconds')
                 or provider.settings.get_float('max_chunk_seconds'),
             'silence_min_duration': self.settings.get_float('silence_min_duration', 1.0),
+            'fallback_silence_min_duration': self.settings.get_float('fallback_silence_min_duration'),
             'ffmpeg_path': self.settings.get_str('ffmpeg_path'),
         })
         self.chunker : AudioChunker = AudioChunker(chunk_settings)

@@ -83,7 +83,7 @@ class TestAudioChunkerIntegration(LoggedTestCase):
         self.assertLoggedGreater("cut near silence", 66.5, chunks[0].end.total_seconds())
 
     def test_max_chunk_cap(self):
-        """Long stretches without silence are hard-split at the cap."""
+        """Long stretches without silence are still split within the cap."""
 
         with tempfile.TemporaryDirectory() as tmpdir:
             wav_path = os.path.join(tmpdir, "tone.wav")
@@ -102,6 +102,21 @@ class TestAudioChunkerIntegration(LoggedTestCase):
                 "chunk within cap",
                 5.5, (chunk.end - chunk.start).total_seconds()
             )
+
+    def test_short_pause_used_before_hard_cut(self):
+        """Continuous speech is cut at a short pause rather than at the cap."""
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            wav_path = os.path.join(tmpdir, "continuous.wav")
+            _make_dialogue_wav(wav_path, tone_seconds=4.0, pause_seconds=0.4, repeats=3)
+
+            chunker = AudioChunker(SettingsType({
+                'min_chunk_seconds': 2.0, 'max_chunk_seconds': 6.0, 'silence_min_duration': 1.0}))
+            chunks = chunker.PlanChunks(wav_path)
+
+        self.assertLoggedGreater("chunk count", len(chunks), 1)
+        self.assertLoggedGreater("first cut after the speech", chunks[0].end.total_seconds(), 3.9)
+        self.assertLoggedGreater("first cut before the cap", 4.5, chunks[0].end.total_seconds())
 
     def test_dense_dialogue_respects_minimum(self):
         """Frequent pauses never produce sub-minimum chunks."""

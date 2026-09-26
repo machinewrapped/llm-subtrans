@@ -158,6 +158,47 @@ class TestTranscriptionProviderRegistry(LoggedTestCase):
         self.assertLoggedIn("model option", "model", options)
         self.assertLoggedIn("language option", "language", options)
 
+def _tone_wav_bytes(spans : list[tuple[float, int]], sample_rate : int = 16000) -> bytes:
+    """Mono 16-bit WAV of a 440Hz tone, as (seconds, amplitude) spans."""
+    samples = array.array('h')
+    for seconds, amplitude in spans:
+        samples.extend(int(amplitude * math.sin(2.0 * math.pi * 440.0 * t / sample_rate))
+                       for t in range(int(sample_rate * seconds)))
+
+    buffer = io.BytesIO()
+    with wave.open(buffer, 'wb') as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(samples.tobytes())
+    return buffer.getvalue()
+
+
+class TestQuietestStretch(LoggedTestCase):
+    def test_finds_the_quiet_stretch(self):
+        """A dip in level is found even though it is far from silent."""
+        extractor = AudioExtractor(SettingsType())
+        stretch = extractor.QuietestStretch(_tone_wav_bytes([(2.0, 10000), (0.5, 2000), (2.0, 10000)]), 0.3)
+
+        assert stretch is not None  # Type narrowing for PyLance
+        self.assertLoggedGreaterEqual("stretch starts in the dip", stretch[0], 2.0)
+        self.assertLoggedGreaterEqual("stretch ends in the dip", 2.5, stretch[1])
+
+    def test_ties_break_toward_latest(self):
+        """Uniform audio puts the stretch at the end, nearest the cap."""
+        extractor = AudioExtractor(SettingsType())
+        stretch = extractor.QuietestStretch(_tone_wav_bytes([(2.0, 0)]), 0.3)
+
+        self.assertLoggedEqual("latest stretch", (1.7, 2.0), stretch)
+
+    def test_unusable_audio_has_no_stretch(self):
+        """Audio that is unreadable or shorter than the stretch gives no result."""
+        extractor = AudioExtractor(SettingsType())
+
+        self.assertLoggedIsNone("garbage", extractor.QuietestStretch(b"not-a-wav", 0.3))
+        self.assertLoggedIsNone("too short", extractor.QuietestStretch(_tone_wav_bytes([(0.2, 10000)]), 0.3))
+
+
 class TestAudioChunker(LoggedTestCase):
     @skip_if_debugger_attached
     def test_rejects_minimum_longer_than_maximum(self):
@@ -183,6 +224,9 @@ class TestAudioChunker(LoggedTestCase):
             ("middle silence", 10, [(4, 6)], 30, [(0, 4), (6, 10)]),
             ("lookahead", 72, [(65, 67)], 60, [(0, 65), (67, 72)]),
             ("hard cap", 12, [], 5, [(0, 5), (5, 10), (10, 12)]),
+            ("short pause beats hard cap", 100, [(50, 50.4)], 60, [(0, 50), (50.4, 100)]),
+            ("lookahead silence beats short pause", 100, [(50, 50.4), (70, 72)], 60, [(0, 70), (72, 100)]),
+            ("short pause stays inside the cap", 100, [(70, 70.4)], 60, [(0, 60), (60, 100)]),
         ]
         for label, duration, gaps, maximum, expected in cases:
             with self.subTest(label=label):
@@ -191,10 +235,28 @@ class TestAudioChunker(LoggedTestCase):
                     'lookahead_seconds': 30.0}))
                 silences = [(timedelta(seconds=start), timedelta(seconds=end)) for start, end in gaps]
                 with patch.object(chunker.extractor, 'GetDuration', return_value=timedelta(seconds=duration)), \
-                     patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(silences)):
+                     patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(silences)), \
+                     patch.object(chunker.extractor, 'ReadChunkBytes', return_value=b''):
                     chunks = chunker.PlanChunks('fake.wav')
                 actual = [(chunk.start.total_seconds(), chunk.end.total_seconds()) for chunk in chunks]
                 self.assertLoggedEqual(label, expected, actual)
+
+    def test_quietest_stretch_used_when_there_is_no_pause(self):
+        """Without any pause the chunk ends in the quietest stretch before the cap."""
+        chunker = AudioChunker(SettingsType({'min_chunk_seconds': 30.0, 'max_chunk_seconds': 60.0}))
+        audio = _tone_wav_bytes([(3.0, 10000), (0.5, 1000), (1.5, 10000)])
+
+        with patch.object(chunker.extractor, 'GetDuration', return_value=timedelta(seconds=100)), \
+             patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(())), \
+             patch.object(chunker.extractor, 'ReadChunkBytes', return_value=audio) as read:
+            chunks = chunker.PlanChunks('fake.wav')
+
+        scan_span = (read.call_args.args[1], read.call_args.args[2])
+        self.assertLoggedEqual("scan span", (timedelta(seconds=55), timedelta(seconds=60)), scan_span)
+        self.assertLoggedEqual("chunk count", 2, len(chunks))
+        self.assertLoggedGreater("cut after the speech", chunks[0].end.total_seconds(), 58.0)
+        self.assertLoggedGreater("cut inside the quiet stretch", 58.5, chunks[0].end.total_seconds())
+        self.assertLoggedEqual("next chunk resumes at the cut", chunks[0].end, chunks[1].start)
 
 
 

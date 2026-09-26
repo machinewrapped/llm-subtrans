@@ -56,6 +56,12 @@ if errorlevel 1 (
     exit /b 1
 )
 
+.\envsubtrans\Scripts\python.exe scripts\collect_third_party_notices.py --dist-dir "dist\gui-subtrans"
+if errorlevel 1 (
+    echo Failed to write third-party notices.
+    exit /b 1
+)
+
 .\envsubtrans\Scripts\python.exe -m pip install pip-audit
 .\envsubtrans\Scripts\python.exe -m pip_audit
 if %errorlevel% neq 0 (

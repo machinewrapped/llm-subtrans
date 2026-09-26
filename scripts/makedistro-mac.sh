@@ -50,6 +50,8 @@ fi
     --metadata-only \
     --metadata-path "dist/gui-subtrans/_internal/assets/frozen-python-compatibility.json" || exit 1
 
+./envsubtrans/bin/python scripts/collect_third_party_notices.py --dist-dir "dist/gui-subtrans" || exit 1
+
 ./envsubtrans/bin/python -m pip install pip-audit
 ./envsubtrans/bin/python -m pip_audit
 if [ $? -ne 0 ]; then

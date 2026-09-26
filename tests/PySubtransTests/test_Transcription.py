@@ -1367,6 +1367,41 @@ class TestDerivedParts(LoggedTestCase):
         self.assertLoggedLessEqual("within the limit", (lines[0].end - lines[0].start).total_seconds(), 4.0)
 
 
+class TestPunctuationOnly(LoggedTestCase):
+    """Text that is only punctuation or symbols produces no lines, whichever form the provider returns it in."""
+    def _lines(self, text : str, parts : list[TranscriptionSegment]|None = None,
+               words : list[WordTiming]|None = None) -> list[TranscriptionSegment]:
+        segment = TranscriptionSegment(start=timedelta(seconds=0), end=timedelta(seconds=90), text=text,
+                                       language="Korean", parts=parts or [], words=words or [])
+        return _default_builder().LinesForSegment(segment)
+
+    def test_punctuation_transcript_is_dropped(self):
+        """A transcript of a lone full stop becomes no line."""
+        with self.assertNoLogs(level=logging.INFO):
+            lines = self._lines(".")
+
+        self.assertLoggedEqual("line count", 0, len(lines))
+
+    def test_punctuation_parts_are_dropped(self):
+        """Provider parts holding only punctuation are skipped, keeping the parts with words."""
+        parts = [_part("...", 0.0, 2.0), _part("안녕하세요.", 3.0, 5.0), _part(" ♪ ", 6.0, 8.0)]
+        lines = self._lines("... 안녕하세요. ♪", parts=parts)
+
+        self.assertLoggedEqual("texts", ["안녕하세요."], [line.text for line in lines])
+
+    def test_punctuation_words_are_dropped(self):
+        """Word timings holding only punctuation make no line when there is no transcript."""
+        lines = self._lines("", words=[_word(".", 0.0, 0.5), _word("?", 1.0, 1.5)])
+
+        self.assertLoggedEqual("line count", 0, len(lines))
+
+    def test_digits_are_kept(self):
+        """A transcript of digits alone is still a line."""
+        lines = self._lines("2024.")
+
+        self.assertLoggedEqual("texts", ["2024."], [line.text for line in lines])
+
+
 class TestLineBuilderWiring(LoggedTestCase):
     def test_builder_limits_come_from_settings(self):
         """The coordinator configures its line builder from transcription settings."""

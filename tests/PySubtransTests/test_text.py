@@ -29,6 +29,8 @@ class TestTextHelpers(LoggedTestCase):
         ("This is a test", "Thisisatest"),
         ("This\nis\na\ntest", "Thisisatest"),
         ("This, is a test!", "Thisisatest"),
+        ("♪ This is a test ♪", "Thisisatest"),
+        ("~ 50% + $5 ~", "505"),
     ]
 
     def test_RemoveWhitespaceAndPunctuation(self):

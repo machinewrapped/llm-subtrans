@@ -21,6 +21,7 @@ PYZ_TYPECODE = 'z'
 EXTENSION_SUFFIXES = ('.pyd', '.so')
 METADATA_SUFFIXES = ('.dist-info', '.egg-info')
 LICENSE_FILE_PATTERN = regex.compile(r'^(licen[cs]e|copying|notice)', regex.IGNORECASE)
+APACHE_LICENSE_PATTERN = regex.compile(r'^apache', regex.IGNORECASE)
 SEPARATOR = '=' * 78
 
 # Bundle entries that are not third-party modules
@@ -176,11 +177,17 @@ def BuildNotices(distributions : dict[str, metadata.Distribution]) -> tuple[str,
     ]
     missing : list[str] = []
 
+    entries : list[tuple[metadata.Distribution, str, str, list[tuple[str, str]]]] = []
     for name in sorted(distributions):
         distribution = distributions[name]
         license_name, embedded_text = DescribeLicense(distribution)
-        license_files = ReadLicenseFiles(distribution)
+        entries.append((distribution, license_name, embedded_text, ReadLicenseFiles(distribution)))
 
+    # The Apache License 2.0 text has no per-project copyright line, so one copy covers every Apache package
+    apache_text_source = next((distribution.metadata['Name'] for distribution, license_name, _embedded, license_files in entries
+                               if license_files and APACHE_LICENSE_PATTERN.match(license_name)), None)
+
+    for distribution, license_name, embedded_text, license_files in entries:
         sections.append("")
         sections.append(SEPARATOR)
         sections.append(f"{distribution.metadata['Name']} {distribution.version}")
@@ -201,6 +208,9 @@ def BuildNotices(distributions : dict[str, metadata.Distribution]) -> tuple[str,
             sections.append(embedded_text)
 
         if not license_files and not embedded_text:
+            if apache_text_source and APACHE_LICENSE_PATTERN.match(license_name):
+                sections.append("")
+                sections.append(f"This package's distribution does not include its licence file. The Apache License 2.0 text is reproduced under {apache_text_source}.")
             missing.append(f"{distribution.metadata['Name']} {distribution.version} ({license_name or 'unknown licence'})")
 
     return '\n'.join(sections) + '\n', missing

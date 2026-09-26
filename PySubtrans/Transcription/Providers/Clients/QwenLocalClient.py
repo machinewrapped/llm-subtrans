@@ -212,17 +212,27 @@ class QwenLocalClient(TranscriptionClient):
                     language=self.language,
                     return_time_stamps=want_stamps,
                 )
-            except ValueError as e:
+            except (ValueError, ModuleNotFoundError) as e:
                 # The ASR model may detect a language outside the forced aligner's coverage.
+                # Korean alignment needs soynlp, which is GPL-licensed and excluded from the packaged build.
                 # Try English alignment first (better than nothing), then fall back to
                 # no timestamps if that also fails.
-                message = str(e).casefold()
-                unsupported = 'unsupported language' in message or 'language is not supported' in message
+                # English alignment splits text on spaces, which still works for Korean at a coarser grain.
+                missing_korean_tokenizer = isinstance(e, ModuleNotFoundError) and (e.name or '').split('.')[0] == 'soynlp'
+                if isinstance(e, ModuleNotFoundError):
+                    unsupported = missing_korean_tokenizer
+                else:
+                    message = str(e).casefold()
+                    unsupported = 'unsupported language' in message or 'language is not supported' in message
 
                 if not (want_stamps and unsupported):
                     raise
 
-                logging.warning(_("Detected language unsupported by aligner, retrying with English"))
+                if missing_korean_tokenizer:
+                    logging.warning(_("Korean word timestamps need the soynlp package, which is not included in the packaged build because it is licensed under the GPL. "
+                                      "Aligning Korean text on spaces instead, so timestamps are less precise."))
+                else:
+                    logging.warning(_("Detected language unsupported by aligner, retrying with English"))
                 try:
                     results = model.transcribe(
                         audio=chunk_path,

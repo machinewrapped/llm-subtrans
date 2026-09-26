@@ -1,4 +1,5 @@
 import importlib.util
+import logging
 import sys
 import tempfile
 import unittest
@@ -359,6 +360,30 @@ class TestQwenAlignment(LoggedTestCase):
                                model.transcribe.call_args_list[1].kwargs['return_time_stamps'])
         self.assertLoggedEqual("fallback timestamps", False,
                                model.transcribe.call_args_list[2].kwargs['return_time_stamps'])
+
+    @skip_if_debugger_attached
+    def test_missing_korean_tokenizer_retries_with_english(self):
+        """Korean alignment without soynlp retries with English alignment."""
+        client_type = QwenLocalClientClass
+        client = client_type(SettingsType())
+        result = type("Result", (), {"text": "안녕하세요", "language": "Korean", "time_stamps": None})()
+        model = Mock()
+        model.transcribe.side_effect = [
+            ModuleNotFoundError("No module named 'soynlp.tokenizer'", name='soynlp.tokenizer'),
+            [result],
+        ]
+        with patch.object(client, '_load_model', return_value=model), \
+                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
+                patch.object(qwen_module.os, 'remove'), \
+                self.assertLogs(level=logging.WARNING):
+            transcription = client._transcribe_chunk(b"audio", "wav")
+
+        self.assertLoggedEqual("aligned text", "안녕하세요", transcription.text)
+        self.assertLoggedEqual("retry count", 2, model.transcribe.call_count)
+        self.assertLoggedEqual("alignment retry language", "English",
+                               model.transcribe.call_args_list[1].kwargs['language'])
+        self.assertLoggedEqual("alignment retry timestamps", True,
+                               model.transcribe.call_args_list[1].kwargs['return_time_stamps'])
 
 
 @unittest.skipUnless(QWEN_ASR_AVAILABLE, "qwen-asr not installed")

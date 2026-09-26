@@ -32,6 +32,10 @@ if %errorlevel% neq 0 (
     --additional-hooks-dir="hooks" ^
     --exclude-module torch ^
     --exclude-module torchgen ^
+    --exclude-module soynlp ^
+    --exclude-module gradio ^
+    --exclude-module gradio_client ^
+    --exclude-module av ^
     --runtime-hook "hooks/rthook-nagisa-compat.py" ^
     --add-data "theme/*;theme/" ^
     --add-data "assets/*;assets/" ^
@@ -49,6 +53,12 @@ if errorlevel 1 (
     --metadata-path "dist\gui-subtrans\_internal\assets\frozen-python-compatibility.json"
 if errorlevel 1 (
     echo Failed to write frozen Python compatibility metadata.
+    exit /b 1
+)
+
+.\envsubtrans\Scripts\python.exe scripts\collect_third_party_notices.py --dist-dir "dist\gui-subtrans"
+if errorlevel 1 (
+    echo Failed to write third-party notices.
     exit /b 1
 )
 

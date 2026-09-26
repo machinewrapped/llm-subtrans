@@ -34,7 +34,8 @@ fi
 
 ./envsubtrans/bin/pyinstaller --noconfirm \
     --additional-hooks-dir="hooks" \
-    --exclude-module torch --exclude-module torchgen \
+    --exclude-module torch --exclude-module torchgen --exclude-module soynlp \
+    --exclude-module gradio --exclude-module gradio_client --exclude-module av \
     --runtime-hook "hooks/rthook-nagisa-compat.py" \
     --paths="./envsubtrans/lib" \
     --add-data "theme/*:theme/" \
@@ -48,6 +49,8 @@ fi
 ./envsubtrans/bin/python scripts/prepare_external_torch.py \
     --metadata-only \
     --metadata-path "dist/gui-subtrans/_internal/assets/frozen-python-compatibility.json" || exit 1
+
+./envsubtrans/bin/python scripts/collect_third_party_notices.py --dist-dir "dist/gui-subtrans" || exit 1
 
 ./envsubtrans/bin/python -m pip install pip-audit
 ./envsubtrans/bin/python -m pip_audit

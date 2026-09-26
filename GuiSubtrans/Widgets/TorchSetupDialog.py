@@ -10,6 +10,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import QProcess
+from PySide6.QtGui import QTextOption
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -313,9 +314,10 @@ class TorchSetupDialog(QDialog):
         page_layout.addWidget(self._step_status_label)
         self._log_output = QTextEdit(page)
         self._log_output.setReadOnly(True)
-        # Keep Windows paths intact in diagnostic output; wrapping at the drive
-        # letter colon makes paths look malformed and harder to copy.
-        self._log_output.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        # Wrap at the edge like a terminal rather than at word boundaries, which split Windows paths after the drive letter colon.
+        # Soft wraps are not copied, so paths still paste intact.
+        self._log_output.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        self._log_output.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere)
         self._log_output.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         page_layout.addWidget(self._log_output)
         self._page_stack.addWidget(page)

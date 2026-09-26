@@ -6,10 +6,14 @@ from PySubtrans.Helpers.Languages import ResolveLanguage
 
 # Adult reading speed limits in characters per second, from Netflix's Timed Text Style Guides.
 # Languages without an entry use DEFAULT_CHARS_PER_SECOND, the limit for most languages.
-# Afrikaans and Zulu allow 20 only for SDH, so interlingual subtitles use the default.
+# Where a guide gives a separate limit for SDH, that limit is used.
+# Professional subtitles are condensed to meet the lower limit, but LLM translations are closer to verbatim, like SDH.
+# This applies to Japanese (4 for subtitles, 7 for SDH), Afrikaans and Zulu (17 and 20).
 READING_CHARS_PER_SECOND : dict[str, float] = {
     'en': 20.0,
     'ar': 20.0,
+    'af': 20.0,
+    'zu': 20.0,
     'bn': 22.0,
     'hi': 22.0,
     'kn': 22.0,
@@ -19,7 +23,7 @@ READING_CHARS_PER_SECOND : dict[str, float] = {
     'te': 22.0,
     'ko': 12.0,
     'zh': 9.0,
-    'ja': 4.0,
+    'ja': 7.0,
 }
 DEFAULT_CHARS_PER_SECOND = 17.0
 

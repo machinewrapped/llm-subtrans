@@ -54,9 +54,11 @@ class TestReading(LoggedTestCase):
         ('hi', 22.0),
         ('ko', 12.0),
         ('zh', 9.0),
-        ('ja', 4.0),
+        ('ja', 7.0),
         ('fr', 17.0),
-        ('af', 17.0),
+        ('af', 20.0),
+        ('zu', 20.0),
+        ('de', 17.0),
         (None, 17.0),
     ]
 
@@ -85,7 +87,7 @@ class TestReading(LoggedTestCase):
 
     def test_EstimateReadingSeconds_for_language(self):
         self.assertLoggedEqual("english", 0.6, EstimateReadingSeconds("Hello there!", 'en'))
-        self.assertLoggedEqual("japanese", 2.25, EstimateReadingSeconds("今日は良い天気です", 'ja'))
+        self.assertLoggedEqual("japanese", 1.0, EstimateReadingSeconds("今日は良い天気", 'ja'))
 
     def test_EstimateReadingSeconds_detects_language(self):
         self.assertLoggedEqual("chinese detected", 4 / 9, EstimateReadingSeconds("你好朋友"))

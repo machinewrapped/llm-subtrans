@@ -49,7 +49,7 @@ class NetflixTimingTests(LoggedTestCase):
         durations = [line.end - line.start for line in result]
         self.assertLoggedEqual("latin text uses minimum duration", timedelta(seconds=0.8), durations[0])
         self.assertLoggedEqual("chinese at 9 per second", timedelta(seconds=8 / 9), durations[1])
-        self.assertLoggedEqual("kanji with kana at 4 per second", timedelta(seconds=9 / 4), durations[2])
+        self.assertLoggedEqual("kanji with kana at 7 per second", timedelta(seconds=9 / 7), durations[2])
         self.assertLoggedEqual("korean spaces count half at 12 per second", timedelta(seconds=13 / 12), durations[3])
 
     def test_NetflixTiming_ignores_formatting(self):
@@ -64,7 +64,7 @@ class NetflixTimingTests(LoggedTestCase):
         self.assertLoggedEqual("11 visible characters at 20 per second", timedelta(seconds=1.55), result[0].end)
 
     def test_NetflixTiming_caps_at_maximum_duration(self):
-        long_text = "今日は良い天気です" * 4
+        long_text = "今日は良い天気です" * 6
         source = [
             SubtitleLine(f"1\n00:00:01,000 --> 00:00:01,200\n{long_text}"),
             SubtitleLine(f"2\n00:00:20,000 --> 00:00:29,000\n{long_text}"),
@@ -185,7 +185,7 @@ class NetflixTimingTests(LoggedTestCase):
     def test_SaveTranslation_uses_netflix_timing_guide(self):
         subtitles = (SubtitleBuilder(max_batch_size=1)
             .AddLines([
-                (timedelta(seconds=1), timedelta(seconds=1.1), "今日は良い天気です"),
+                (timedelta(seconds=1), timedelta(seconds=1.1), "今日は良い天気です、本当に。"),
             ])
             .Build())
         save_settings = SaveSettings(SettingsType({
@@ -205,8 +205,8 @@ class NetflixTimingTests(LoggedTestCase):
         subtitles.SaveTranslation(output_path, save_settings=save_settings)
         output_data = SrtFileHandler().load_file(output_path)
 
-        # 9 characters at 4 per second, ignoring seconds_per_character
-        self.assertLoggedEqual("netflix reading time", timedelta(seconds=3.25), output_data.lines[0].end)
+        # 14 characters at 7 per second, ignoring seconds_per_character
+        self.assertLoggedEqual("netflix reading time", timedelta(seconds=3), output_data.lines[0].end)
         self.assertLoggedEqual(
             "stored translation unchanged",
             timedelta(seconds=1.1),

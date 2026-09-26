@@ -9,9 +9,9 @@ The implementation is in `PySubtrans/Helpers/Reading.py` (reading speeds and cou
 ## Reading speed limits
 
 Limits are in characters per second.
-LLM-Subtrans uses the adult limit for interlingual subtitles.
-Afrikaans and Zulu allow a higher limit for SDH (subtitles for the deaf and hard of hearing), which does not apply to translations.
-The Japanese guide gives a single limit for subtitles, without separate adult and children's figures, and a separate limit of 7 for Japanese SDH.
+LLM-Subtrans uses the adult limit.
+Three guides give a separate, higher limit for SDH (subtitles for the deaf and hard of hearing): Japanese, Afrikaans and Zulu.
+The Japanese guide gives a single limit for subtitles, without separate adult and children's figures.
 
 | Language | Adult | Children | Style guide |
 |---|---|---|---|
@@ -74,11 +74,12 @@ In summary:
 | Adult limit | Languages |
 |---|---|
 | 22 | Bangla, Hindi, Kannada, Malayalam, Marathi, Tamil, Telugu |
-| 20 | English, Arabic |
+| 20 | English, Arabic, and Afrikaans and Zulu for SDH (17 for subtitles) |
 | 17 | All other languages with a guide, and the default for languages without one |
 | 12 | Korean |
 | 9 | Chinese (Simplified and Traditional) |
-| 4 | Japanese |
+| 7 | Japanese SDH |
+| 4 | Japanese subtitles |
 
 ## Counting rules
 
@@ -112,6 +113,9 @@ From [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/arti
 ## How LLM-Subtrans applies them
 
 - The reading speed comes from the project's target language.
+  Where a guide gives a separate limit for SDH, LLM-Subtrans uses it: 7 for Japanese, and 20 for Afrikaans and Zulu.
+  Professional subtitles are condensed to meet the lower limit, but LLM translations are closer to verbatim, like SDH.
+  The extension only ever lengthens subtitles, so it is better to extend too little than to move ends that may be synced with the picture.
   Regional variants such as "French (Canada)" share their base language's limit, so only the language code matters.
   When the target language is not recognised, the language is detected from the script of each subtitle, and anything unrecognised uses 17.
 - Characters are counted as above: spaces and punctuation count, half-width characters count as 0.5 in Chinese, Japanese and Korean, and Thai tone marks and upper and lower vowels are not counted.
@@ -124,6 +128,15 @@ From [General Requirements](https://partnerhelp.netflixstudios.com/hc/en-us/arti
   Gaps are rounded to whole frames at 24 fps, since timestamps are rarely frame-aligned.
 - Extensions of 50 ms or less are ignored, because moving an end that may sit on a cut is not worth a frame or two of reading time.
 - Lines are never shortened, and existing overlaps are left alone.
+
+Measured against two Netflix Japanese subtitle files, using LLM-Subtrans's counting:
+
+| File | Subtitles | Median | Over 4 cps | Over 7 cps |
+|---|---|---|---|---|
+| Japanese subtitles (translation) | 935 | 3.8 cps | 25% | 1% |
+| Japanese SDH | 2,430 | 5.9 cps | 78% | 33% |
+
+The SDH figures are inflated a little by inline ruby, speaker labels and subtitles split around title cards.
 
 Not implemented:
 

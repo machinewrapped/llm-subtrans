@@ -1430,6 +1430,14 @@ class TestChunkSettings(LoggedTestCase):
         self.assertLoggedEqual("run min", 5.0, coordinator.chunker.min_chunk_seconds)
         self.assertLoggedEqual("run max", 45.0, coordinator.chunker.max_chunk_seconds)
 
+    def test_run_settings_reach_the_cut_fallbacks(self):
+        """Tuning for the short-pause and quiet-stretch fallbacks reaches the chunker."""
+        coordinator = TranscriptionCoordinator(self._provider(), SettingsType({
+            'fallback_silence_min_duration': 0.5, 'quiet_scan_seconds': 8.0}))
+
+        self.assertLoggedEqual("fallback pause", 0.5, coordinator.chunker.fallback_silence_min_duration)
+        self.assertLoggedEqual("quiet scan", 8.0, coordinator.chunker.quiet_scan_seconds)
+
 
 class TestSettingsNamespaces(LoggedTestCase):
     def _options(self):

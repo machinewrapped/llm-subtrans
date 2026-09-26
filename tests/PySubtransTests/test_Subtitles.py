@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Helpers.FillerWords import standard_filler_words
-from PySubtrans.Helpers.Reading import BASELINE_WORDS_PER_MINUTE, READING_CHARS_PER_SECOND, ReadingScript
+from PySubtrans.Helpers.Reading import READING_CHARS_PER_SECOND, ReadingScript
 from PySubtrans.Helpers.LineBreaks import split_sequences
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_info
@@ -14,7 +14,7 @@ from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.Subtitles import SaveSettings, Subtitles
+from PySubtrans.Subtitles import NETFLIX_FRAME_RATE, NETFLIX_MIN_GAP_FRAMES, SaveSettings, Subtitles
 
 
 class TestSubtitles(LoggedTestCase):
@@ -287,84 +287,36 @@ class SubtitleProcessorTests(LoggedTestCase):
 class SubtitleTimingTests(LoggedTestCase):
 
     def test_ExtendShortSubtitles(self):
-        long_text = "The quick brown fox jumps"
         source = [
             SubtitleLine("1\n00:00:01,000 --> 00:00:01,200\nabc"),
-            SubtitleLine(f"2\n00:00:03,000 --> 00:00:03,200\n{long_text}"),
-            SubtitleLine(f"3\n00:00:03,900 --> 00:00:04,100\n{long_text}"),
+            SubtitleLine("2\n00:00:03,000 --> 00:00:03,200\nabcdefghijkl"),
+            SubtitleLine("3\n00:00:03,900 --> 00:00:04,100\nabcdefghijkl"),
         ]
         subtitles = Subtitles()
         save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.8,
+            'seconds_per_character': 0.1,
             'min_gap': 0.05,
         }))
 
         result = subtitles._extend_short_subtitles(source, save_settings)
 
-        reading_duration = timedelta(seconds=len(long_text) / READING_CHARS_PER_SECOND[ReadingScript.ALPHABETIC])
-        self.assertLoggedGreater("reading time exceeds minimum", reading_duration, timedelta(seconds=0.8))
         self.assertLoggedEqual("fixed minimum duration", timedelta(seconds=1.8), result[0].end)
         self.assertLoggedEqual("capped by next subtitle", timedelta(seconds=3.85), result[1].end)
-        self.assertLoggedEqual("reading time for final line", timedelta(seconds=3.9) + reading_duration, result[2].end)
+        self.assertLoggedEqual("dynamic final duration", timedelta(seconds=5.1), result[2].end)
         self.assertLoggedEqual("source remains unchanged", timedelta(seconds=1.2), source[0].end)
 
-    def test_ExtendShortSubtitles_allows_for_script(self):
-        source = [
-            SubtitleLine("1\n00:00:01,000 --> 00:00:01,200\nabcdefgh"),
-            SubtitleLine("2\n00:00:10,000 --> 00:00:10,200\n你好朋友我们走吧"),
-            SubtitleLine("3\n00:00:20,000 --> 00:00:20,200\n今日は良い天気です"),
-            SubtitleLine("4\n00:00:30,000 --> 00:00:30,200\n안녕하세요 친구들 반가워요"),
-        ]
-        save_settings = SaveSettings(SettingsType({
-            'min_line_duration': 0.8,
-            'min_gap': 0.05,
-        }))
-
-        result = Subtitles()._extend_short_subtitles(source, save_settings)
-
-        durations = [line.end - line.start for line in result]
-        self.assertLoggedEqual("latin text uses minimum duration", timedelta(seconds=0.8), durations[0])
-        self.assertLoggedEqual("chinese at chinese rate", timedelta(seconds=8 / READING_CHARS_PER_SECOND[ReadingScript.CHINESE]), durations[1])
-        self.assertLoggedEqual("kanji with kana at japanese rate", timedelta(seconds=9 / READING_CHARS_PER_SECOND[ReadingScript.JAPANESE]), durations[2])
-        self.assertLoggedEqual("korean without spaces at korean rate", timedelta(seconds=12 / READING_CHARS_PER_SECOND[ReadingScript.KOREAN]), durations[3])
-
-    def test_ExtendShortSubtitles_ignores_formatting(self):
-        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\n<i>好好好</i> {\\an8}abc\n👨‍👩‍👧‍👦")
+    def test_ExtendShortSubtitles_ignores_formatting_and_whitespace(self):
+        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\nA <i>好</i>\n👨‍👩‍👧‍👦")
         subtitles = Subtitles()
         save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.0,
+            'seconds_per_character': 0.1,
         }))
 
         result = subtitles._extend_short_subtitles([line], save_settings)
 
-        # 好好好abc and the emoji, which counts as one character
-        expected_end = timedelta(seconds=1) + timedelta(seconds=7 / READING_CHARS_PER_SECOND[ReadingScript.CHINESE])
-        self.assertLoggedEqual("duration from visible text only", expected_end, result[0].end)
-
-    def test_ExtendShortSubtitles_scales_with_words_per_minute(self):
-        text = "The quick brown fox jumps"
-        line = SubtitleLine(f"1\n00:00:01,000 --> 00:00:01,100\n{text}")
-        words_per_minute = BASELINE_WORDS_PER_MINUTE // 2
-        save_settings = SaveSettings(SettingsType({
-            'min_line_duration': 0.0,
-            'words_per_minute': words_per_minute,
-        }))
-
-        result = Subtitles()._extend_short_subtitles([line], save_settings)
-
-        expected_end = timedelta(seconds=1) + timedelta(seconds=2.0 * len(text) / READING_CHARS_PER_SECOND[ReadingScript.ALPHABETIC])
-        self.assertLoggedEqual("half speed doubles duration", expected_end, result[0].end, input_value=words_per_minute)
-
-    def test_ExtendShortSubtitles_zero_words_per_minute_applies_minimum_only(self):
-        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\nThe quick brown fox jumps over the lazy dog")
-        save_settings = SaveSettings(SettingsType({
-            'min_line_duration': 0.8,
-            'words_per_minute': 0,
-        }))
-
-        result = Subtitles()._extend_short_subtitles([line], save_settings)
-
-        self.assertLoggedEqual("minimum duration only", timedelta(seconds=1.8), result[0].end)
+        self.assertLoggedEqual("three visible graphemes", timedelta(seconds=1.3), result[0].end)
 
     def test_ExtendShortSubtitles_preserves_existing_overlap(self):
         source = [
@@ -374,6 +326,7 @@ class SubtitleTimingTests(LoggedTestCase):
         subtitles = Subtitles()
         save_settings = SaveSettings(SettingsType({
             'min_line_duration': 0.8,
+            'seconds_per_character': 0.1,
             'min_gap': 0.05,
         }))
 
@@ -388,12 +341,123 @@ class SubtitleTimingTests(LoggedTestCase):
         ]
         save_settings = SaveSettings(SettingsType({
             'min_line_duration': 1.0,
+            'seconds_per_character': 0.1,
             'min_gap': 0.05,
         }))
 
         result = Subtitles()._extend_short_subtitles(source, save_settings)
 
         self.assertLoggedEqual("50ms capped extension ignored", timedelta(seconds=1.9), result[0].end)
+
+    def test_NetflixTiming_allows_for_script(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:01,200\nabcdefgh"),
+            SubtitleLine("2\n00:00:10,000 --> 00:00:10,200\n你好朋友我们走吧"),
+            SubtitleLine("3\n00:00:20,000 --> 00:00:20,200\n今日は良い天気です"),
+            SubtitleLine("4\n00:00:30,000 --> 00:00:30,200\n안녕하세요 친구들 반가워요"),
+        ]
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.8,
+        }))
+
+        result = Subtitles()._apply_netflix_timing(source, save_settings)
+
+        durations = [line.end - line.start for line in result]
+        self.assertLoggedEqual("latin text uses minimum duration", timedelta(seconds=0.8), durations[0])
+        self.assertLoggedEqual("chinese at chinese rate", timedelta(seconds=8 / READING_CHARS_PER_SECOND[ReadingScript.CHINESE]), durations[1])
+        self.assertLoggedEqual("kanji with kana at japanese rate", timedelta(seconds=9 / READING_CHARS_PER_SECOND[ReadingScript.JAPANESE]), durations[2])
+        self.assertLoggedEqual("korean without spaces at korean rate", timedelta(seconds=12 / READING_CHARS_PER_SECOND[ReadingScript.KOREAN]), durations[3])
+        self.assertLoggedEqual("source remains unchanged", timedelta(seconds=1.2), source[0].end)
+
+    def test_NetflixTiming_adjustment_scales_reading_speed(self):
+        text = "The quick brown fox jumps over lazy dogs"
+        reading_seconds = len(text) / READING_CHARS_PER_SECOND[ReadingScript.ALPHABETIC]
+
+        for adjustment, expected_seconds in [(100, reading_seconds), (50, reading_seconds * 2), (200, reading_seconds / 2)]:
+            with self.subTest(adjustment=adjustment):
+                line = SubtitleLine(f"1\n00:00:01,000 --> 00:00:01,100\n{text}")
+                save_settings = SaveSettings(SettingsType({
+                    'min_line_duration': 0.0,
+                    'netflix_timings_adjustment': adjustment,
+                }))
+
+                result = Subtitles()._apply_netflix_timing([line], save_settings)
+
+                expected_end = timedelta(seconds=1) + timedelta(seconds=expected_seconds)
+                self.assertLoggedEqual("scaled reading time", expected_end, result[0].end, input_value=adjustment)
+
+    def test_NetflixTiming_zero_adjustment_applies_minimum_only(self):
+        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\nThe quick brown fox jumps over the lazy dog")
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.8,
+            'netflix_timings_adjustment': 0,
+        }))
+
+        result = Subtitles()._apply_netflix_timing([line], save_settings)
+
+        self.assertLoggedEqual("minimum duration only", timedelta(seconds=1.8), result[0].end)
+
+    def test_NetflixTiming_closes_gaps_of_3_to_11_frames(self):
+        min_gap = timedelta(seconds=NETFLIX_MIN_GAP_FRAMES / NETFLIX_FRAME_RATE)
+        gap_cases = [
+            ("00:00:02,100", False),
+            ("00:00:02,125", True),
+            ("00:00:02,300", True),
+            ("00:00:02,458", True),
+            ("00:00:02,500", False),
+        ]
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.0,
+        }))
+
+        for next_start, closed in gap_cases:
+            with self.subTest(next_start=next_start):
+                source = [
+                    SubtitleLine("1\n00:00:01,000 --> 00:00:02,000\nHi"),
+                    SubtitleLine(f"2\n{next_start} --> 00:00:03,000\nThere"),
+                ]
+
+                result = Subtitles()._apply_netflix_timing(source, save_settings)
+
+                expected_end = source[1].start - min_gap if closed else timedelta(seconds=2)
+                self.assertLoggedEqual("end after gap rule", expected_end, result[0].end, input_value=next_start)
+
+    def test_NetflixTiming_caps_extension_before_next_subtitle(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:01,200\n今日は良い天気です"),
+            SubtitleLine("2\n00:00:02,000 --> 00:00:03,000\nNext subtitle"),
+        ]
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.8,
+        }))
+
+        result = Subtitles()._apply_netflix_timing(source, save_settings)
+
+        expected_end = timedelta(seconds=2) - timedelta(seconds=NETFLIX_MIN_GAP_FRAMES / NETFLIX_FRAME_RATE)
+        self.assertLoggedEqual("capped 2 frames before next subtitle", expected_end, result[0].end)
+
+    def test_NetflixTiming_preserves_existing_overlap(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:03,000\nA long translated subtitle"),
+            SubtitleLine("2\n00:00:02,500 --> 00:00:04,000\nNext subtitle"),
+        ]
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.8,
+        }))
+
+        result = Subtitles()._apply_netflix_timing(source, save_settings)
+
+        self.assertLoggedEqual("existing overlap remains unchanged", timedelta(seconds=3), result[0].end)
+
+    def test_NetflixTiming_ignores_frame_sized_extensions(self):
+        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,780\nHi")
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.8,
+        }))
+
+        result = Subtitles()._apply_netflix_timing([line], save_settings)
+
+        self.assertLoggedEqual("20ms extension ignored", timedelta(seconds=1.78), result[0].end)
 
     def test_BatchSubtitles_prevents_overlap_by_trimming_previous_end(self):
         source = [

@@ -26,17 +26,14 @@ class ReadingScript(Enum):
 
 
 # Reading speeds in characters per second, from Netflix's adult reading speed limits.
-# Alphabetic uses 17, the limit for most European languages (English allows 20).
+# Alphabetic uses the English limit of 20, rather than 17 for most other European languages.
+# Translations tend to be wordier than authored subtitles, so the faster rate avoids over-extending them.
 READING_CHARS_PER_SECOND : dict[ReadingScript, float] = {
-    ReadingScript.ALPHABETIC: 17.0,
+    ReadingScript.ALPHABETIC: 20.0,
     ReadingScript.CHINESE: 9.0,
     ReadingScript.JAPANESE: 4.0,
     ReadingScript.KOREAN: 12.0,
 }
-
-# The reading speed in words per minute that the rates above correspond to.
-# 17 characters per second is about 180 words per minute of English.
-BASELINE_WORDS_PER_MINUTE = 180
 
 
 def GetReadingScript(text : str) -> ReadingScript:
@@ -73,11 +70,11 @@ def CountReadingCharacters(text : str, script : ReadingScript) -> int:
     return len(GRAPHEME.findall(text))
 
 
-def EstimateReadingSeconds(text : str, words_per_minute : int) -> float:
+def EstimateReadingSeconds(text : str, speed : float = 1.0) -> float:
     """
-    How long a subtitle takes to read at a speed in words per minute.
-    Other scripts are scaled to match, so the same setting gives a natural pace in each.
+    How long a subtitle takes to read at the reading speed for its script.
+    Speed scales the reading speed, so 1.0 is Netflix's limit and higher values give less time.
     """
     script = GetReadingScript(text)
-    chars_per_second = READING_CHARS_PER_SECOND[script] * words_per_minute / BASELINE_WORDS_PER_MINUTE
+    chars_per_second = READING_CHARS_PER_SECOND[script] * speed
     return CountReadingCharacters(text, script) / chars_per_second

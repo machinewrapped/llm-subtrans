@@ -8,7 +8,6 @@ from typing import TextIO
 from PySubtrans.Formats.SSAFileHandler import SSAFileHandler
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.Helpers.Color import Color
-from PySubtrans.Helpers.Reading import EstimateReadingSeconds
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
@@ -143,13 +142,13 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
     def test_SaveTranslation_extends_output_duration_without_changing_project(self):
         subtitles = (SubtitleBuilder(max_batch_size=1)
             .AddLines([
-                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghijklmnopq"),
+                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghij"),
             ])
             .Build())
         save_settings = SaveSettings(SettingsType({
             'extend_short_subtitles': True,
             'min_line_duration': 0.8,
-            'words_per_minute': 90,
+            'seconds_per_character': 0.1,
             'min_gap': 0.05,
         }))
 
@@ -163,8 +162,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         subtitles.SaveTranslation(output_path, save_settings=save_settings)
         output_data = SrtFileHandler().load_file(output_path)
 
-        expected_end = timedelta(seconds=1) + timedelta(seconds=EstimateReadingSeconds("abcdefghijklmnopq", 90))
-        self.assertLoggedEqual("dynamic output duration", expected_end, output_data.lines[0].end)
+        self.assertLoggedEqual("dynamic output duration", timedelta(seconds=2), output_data.lines[0].end)
         self.assertLoggedEqual(
             "stored translation unchanged",
             timedelta(seconds=1.1),
@@ -179,6 +177,37 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
             "duration recalculated after correction",
             timedelta(seconds=1.8),
             corrected_output.lines[0].end,
+        )
+
+    def test_SaveTranslation_uses_netflix_timing_guide(self):
+        subtitles = (SubtitleBuilder(max_batch_size=1)
+            .AddLines([
+                (timedelta(seconds=1), timedelta(seconds=1.1), "今日は良い天気です"),
+            ])
+            .Build())
+        save_settings = SaveSettings(SettingsType({
+            'extend_short_subtitles': True,
+            'use_netflix_timing_guide': True,
+            'min_line_duration': 0.8,
+            'seconds_per_character': 10.0,
+        }))
+
+        with SubtitleEditor(subtitles) as editor:
+            editor.DuplicateOriginalsAsTranslations()
+
+        with tempfile.NamedTemporaryFile(delete=False, suffix=".srt") as output_file:
+            output_path = output_file.name
+        self.addCleanup(os.remove, output_path)
+
+        subtitles.SaveTranslation(output_path, save_settings=save_settings)
+        output_data = SrtFileHandler().load_file(output_path)
+
+        # 9 characters at 4 per second, ignoring seconds_per_character
+        self.assertLoggedEqual("netflix reading time", timedelta(seconds=3.25), output_data.lines[0].end)
+        self.assertLoggedEqual(
+            "stored translation unchanged",
+            timedelta(seconds=1.1),
+            subtitles.scenes[0].batches[0].translated[0].end,
         )
 
     def test_AssHandlerBasicFunctionality(self):

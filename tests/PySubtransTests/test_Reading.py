@@ -1,7 +1,6 @@
 import unittest
 
 from PySubtrans.Helpers.Reading import (
-    BASELINE_WORDS_PER_MINUTE,
     READING_CHARS_PER_SECOND,
     CountReadingCharacters,
     EstimateReadingSeconds,
@@ -44,21 +43,21 @@ class TestReading(LoggedTestCase):
             with self.subTest(text=text):
                 self.assertLoggedEqual("reading characters", expected, CountReadingCharacters(text, script), input_value=text)
 
-    def test_EstimateReadingSeconds_at_baseline(self):
+    def test_EstimateReadingSeconds_at_netflix_speed(self):
         for text, script in [("Hello there!", ReadingScript.ALPHABETIC), ("你好朋友", ReadingScript.CHINESE), ("今日は", ReadingScript.JAPANESE), ("안녕하세요", ReadingScript.KOREAN)]:
             with self.subTest(text=text):
                 expected = CountReadingCharacters(text, script) / READING_CHARS_PER_SECOND[script]
-                self.assertLoggedEqual("reading seconds", expected, EstimateReadingSeconds(text, BASELINE_WORDS_PER_MINUTE), input_value=text)
+                self.assertLoggedEqual("reading seconds", expected, EstimateReadingSeconds(text), input_value=text)
 
-    def test_EstimateReadingSeconds_scales_with_words_per_minute(self):
+    def test_EstimateReadingSeconds_scales_with_speed(self):
         text = "今日は良い天気です"
-        baseline = EstimateReadingSeconds(text, BASELINE_WORDS_PER_MINUTE)
+        baseline = EstimateReadingSeconds(text)
 
-        self.assertLoggedEqual("half speed doubles time", 2 * baseline, EstimateReadingSeconds(text, BASELINE_WORDS_PER_MINUTE // 2))
-        self.assertLoggedEqual("double speed halves time", baseline / 2, EstimateReadingSeconds(text, BASELINE_WORDS_PER_MINUTE * 2))
+        self.assertLoggedEqual("half speed doubles time", 2 * baseline, EstimateReadingSeconds(text, 0.5))
+        self.assertLoggedEqual("double speed halves time", baseline / 2, EstimateReadingSeconds(text, 2.0))
 
     def test_EstimateReadingSeconds_empty_text(self):
-        self.assertLoggedEqual("no reading time", 0.0, EstimateReadingSeconds("", BASELINE_WORDS_PER_MINUTE))
+        self.assertLoggedEqual("no reading time", 0.0, EstimateReadingSeconds(""))
 
 
 if __name__ == '__main__':

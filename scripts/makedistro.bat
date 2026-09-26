@@ -24,6 +24,7 @@ if %errorlevel% neq 0 (
 
 rem numpy and the packages built on it are optional imports of openai (pandas) and httpx's command-line client (pygments, PIL).
 rem The Qwen runtime brings its own copies, which a bundled numpy would shadow.
+rem cython is an optional import of pydantic.v1, present when the Qwen runtime is installed in the build environment.
 .\envsubtrans\scripts\pyinstaller --noconfirm ^
     --additional-hooks-dir="hooks" ^
     --exclude-module torch ^
@@ -34,6 +35,7 @@ rem The Qwen runtime brings its own copies, which a bundled numpy would shadow.
     --exclude-module llvmlite ^
     --exclude-module pandas ^
     --exclude-module PIL ^
+    --exclude-module cython ^
     --add-data "theme/*;theme/" ^
     --add-data "assets/*;assets/" ^
     --add-data "instructions/*;instructions/" ^
@@ -60,7 +62,7 @@ if errorlevel 1 (
 )
 
 .\envsubtrans\Scripts\python.exe -m pip install pip-audit
-.\envsubtrans\Scripts\python.exe -m pip_audit
+.\envsubtrans\Scripts\python.exe -m pip_audit --cache-dir build\pip-audit-cache
 if %errorlevel% neq 0 (
     echo WARNING: Vulnerability scan detected known vulnerabilities. DO NOT publish or run this build!
     exit /b %errorlevel%

@@ -660,4 +660,4 @@ Version 0.2 employs a new prompting approach that greatly reduces desyncs caused
 The instructions have also been made more detailed, with multiple examples of correct output for GPT to reference, and the generation of summaries has been improved so that GPT is better able to understand the context of the batch it is translating. Additionally, double-clicking a scene or batch now allows the summary to be edited by hand, which can greatly improve the results of a retranslation and of subsequent batches or scenes. Individually lines can also be edited by double-clicking them.
 
 ## License
-LLM-Subtrans is licensed under the MIT License. See LICENSE for the 3rd party library licenses.
+LLM-Subtrans is licensed under the MIT License. The packaged GUI-Subtrans build includes THIRD-PARTY-NOTICES.txt with the licenses of the third-party libraries it bundles.

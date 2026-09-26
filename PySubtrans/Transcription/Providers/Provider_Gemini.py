@@ -48,6 +48,8 @@ else:
             """
             Speech-to-text via Gemini 3.5 Transcribe with word timestamps
             and speaker diarization.
+
+            It can silently drop extended sections of the audio.
             """
             name = "Gemini"
 
@@ -75,7 +77,6 @@ else:
                     'max_retries': settings.get_int('max_retries', 5),
                     'rate_limit': settings.get_float('rate_limit', env_float('GEMINI_TRANSCRIPTION_RATE_LIMIT')),
                     # Rate limits and quotas are brutal, but Gemini handles long chunks.
-                    # Very long chunks can silently drop whole scenes, which transcribe fine in shorter chunks.
                     'min_chunk_seconds': settings.get_float('min_chunk_seconds', 600.0),
                     'max_chunk_seconds': settings.get_float('max_chunk_seconds', 900.0),
                 })

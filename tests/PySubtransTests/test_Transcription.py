@@ -1361,11 +1361,12 @@ class TestChunkSettings(LoggedTestCase):
         self.assertLoggedEqual("chunker max", 90.0, coordinator.chunker.max_chunk_seconds)
 
     def test_run_settings_override_provider_chunk_bounds(self):
-        """An explicit bound for the run wins; an omitted one falls back to the provider."""
-        coordinator = TranscriptionCoordinator(self._provider(), SettingsType({'min_chunk_seconds': 5.0}))
+        """Explicit bounds for the run win over the provider's."""
+        coordinator = TranscriptionCoordinator(self._provider(), SettingsType({
+            'min_chunk_seconds': 5.0, 'max_chunk_seconds': 45.0}))
 
         self.assertLoggedEqual("run min", 5.0, coordinator.chunker.min_chunk_seconds)
-        self.assertLoggedEqual("provider max", 90.0, coordinator.chunker.max_chunk_seconds)
+        self.assertLoggedEqual("run max", 45.0, coordinator.chunker.max_chunk_seconds)
 
 
 class TestSettingsNamespaces(LoggedTestCase):

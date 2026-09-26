@@ -210,8 +210,8 @@ class TranscriptionProvider:
         Each provider reads min_chunk_seconds and max_chunk_seconds with its own defaults.
         """
         return {
-            'min_chunk_seconds': (float, _("Shortest audio chunk, in seconds, sent in one request (shorter spans merge into a neighbour)")),
-            'max_chunk_seconds': (float, _("Longest audio chunk, in seconds, sent in one request (audio is cut at a pause near this length)")),
+            'min_chunk_seconds': (float, _("Shortest audio chunk to send in one request")),
+            'max_chunk_seconds': (float, _("Longest audio chunk to send in one request")),
         }
 
     def _line_options(self) -> GuiSettingsType:

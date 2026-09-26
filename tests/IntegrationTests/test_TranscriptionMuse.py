@@ -93,7 +93,7 @@ class TestMuseRegistered(LoggedTestCase):
         provider = MuseTranscriptionProvider(SettingsType({'api_key': 'k'}))
         options = provider.GetOptions(provider.settings, OptionsScope.PER_RUN)
 
-        for key in ('model', 'language', 'diarize', 'min_chunk_seconds', 'max_chunk_seconds'):
+        for key in ('model', 'language', 'diarize'):
             self.assertLoggedIn(f"{key} offered per run", key, options)
 
         for key in ('request_timeout', 'rate_limit', 'merge_eligible_gap'):

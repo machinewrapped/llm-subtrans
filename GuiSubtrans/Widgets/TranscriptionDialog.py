@@ -28,7 +28,6 @@ from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from GuiSubtrans.Widgets.OptionsWidgets import (
     CreateOptionWidget,
-    FloatOptionWidget,
     OptionWidget,
     ParseOptionDefinition,
 )
@@ -73,12 +72,6 @@ class TranscriptionDialog(QDialog):
     the existing loading flow.
     """
     PROVIDER_ROW_START : int = 3
-
-    # Sensible bounds for the provider's chunk length fields
-    CHUNK_FIELD_LIMITS : dict[str, tuple[float, float]] = {
-        'min_chunk_seconds': (1.0, 600.0),
-        'max_chunk_seconds': (10.0, 1800.0),
-    }
 
     RUN_OPTION_DEFINITIONS = {
         'save_transcription': (bool, _("Write the transcription to a subtitle file alongside the media before translating")),
@@ -440,13 +433,6 @@ class TranscriptionDialog(QDialog):
                 self.provider.settings.get(key),
                 option_definition=option_definition,
                 fields=self.provider_fields)
-
-            # Clamp before connecting, so fitting a saved value into range is not a user edit
-            limits = self.CHUNK_FIELD_LIMITS.get(key)
-            if limits is not None and isinstance(field, FloatOptionWidget):
-                field.SetRange(*limits)
-                field.SetSuffix(_(" s"))
-
             field.contentChanged.connect(lambda dummy=None, k=field.key: self._on_provider_field_committed(k))
 
             self.form.insertRow(self.PROVIDER_ROW_START + self._provider_row_count, field.name, field)

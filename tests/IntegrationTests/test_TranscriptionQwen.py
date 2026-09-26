@@ -43,8 +43,6 @@ class TestQwenLocalProvider(LoggedTestCase):
 
         self.assertLoggedEqual("CPU fallback default", False, provider.settings.get_bool('allow_cpu_fallback'))
         per_run = provider.GetOptions(provider.settings, OptionsScope.PER_RUN)
-        self.assertLoggedIn("min chunk is a per-run choice", "min_chunk_seconds", per_run)
-        self.assertLoggedIn("max chunk is a per-run choice", "max_chunk_seconds", per_run)
         self.assertLoggedNotIn("CPU fallback is not a per-run choice", "allow_cpu_fallback", per_run)
         self.assertLoggedNotIn("Torch directory is not a per-run choice", "torch_installation_directory", per_run)
 

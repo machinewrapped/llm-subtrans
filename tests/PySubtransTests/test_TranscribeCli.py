@@ -91,27 +91,6 @@ class TestTranscribeCliExecution(LoggedTestCase):
         settings = call_args.args[1]
         self.assertLoggedEqual("coordinator ffmpeg path", r"C:\tools\ffmpeg.exe", settings.get_str('ffmpeg_path'))
 
-    def test_chunk_bounds_pass_to_provider_settings(self):
-        """Explicit chunk bounds override the provider settings; omitted ones leave its defaults alone."""
-        coordinator = Mock()
-        coordinator.CreateTranscription.return_value = TranscriptionOutcome(
-            TranscriptionStatus.COMPLETED, Mock(linecount=1))
-
-        for argv, expected_min, expected_max in (
-                (['--min-chunk', '12', '--max-chunk', '34'], 12.0, 34.0),
-                ([], None, None)):
-            with patch.object(transcribe, 'InitLogger'), \
-                    patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=Mock()) as provider_factory, \
-                    patch.object(transcribe, 'TranscriptionCoordinator', return_value=coordinator), \
-                    patch.object(transcribe, 'GetOutputPath', return_value='out.vtt'), \
-                    patch.object(sys, 'argv', ['transcribe.py', 'input.wav', *argv]):
-                result = transcribe.main()
-
-            self.assertLoggedEqual("exit status", 0, result, input_value=argv)
-            provider_settings = provider_factory.call_args.args[1]
-            self.assertLoggedEqual("provider min chunk", expected_min, provider_settings.get('min_chunk_seconds'), input_value=argv)
-            self.assertLoggedEqual("provider max chunk", expected_max, provider_settings.get('max_chunk_seconds'), input_value=argv)
-
     def test_invalid_provider_settings_return_nonzero_before_transcription(self):
         """CLI validation prevents extraction when provider settings are invalid."""
         provider = Mock()

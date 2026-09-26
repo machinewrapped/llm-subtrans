@@ -1,60 +1,102 @@
 import unittest
 
 from PySubtrans.Helpers.Reading import (
-    READING_CHARS_PER_SECOND,
     CountReadingCharacters,
+    DetectReadingLanguage,
     EstimateReadingSeconds,
-    GetReadingScript,
-    ReadingScript,
+    GetReadingLanguage,
+    GetReadingSpeed,
 )
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 
 
 class TestReading(LoggedTestCase):
 
-    reading_script_cases = [
-        ("The quick brown fox", ReadingScript.ALPHABETIC),
-        ("Привет, как дела?", ReadingScript.ALPHABETIC),
-        ("สวัสดีครับ", ReadingScript.ALPHABETIC),
-        ("你好朋友", ReadingScript.CHINESE),
-        ("我用iPhone", ReadingScript.CHINESE),
-        ("今日は良い天気です", ReadingScript.JAPANESE),
-        ("カメラ", ReadingScript.JAPANESE),
-        ("안녕하세요", ReadingScript.KOREAN),
+    reading_language_cases = [
+        ("English", 'en'),
+        ("Chinese (Simplified)", 'zh'),
+        ("Traditional Chinese", 'zh'),
+        ("French (Canada)", 'fr'),
+        ("Brazilian Portuguese", 'pt'),
+        ("日本語", 'ja'),
+        ("ko", 'ko'),
+        ("Klingon", None),
+        ("", None),
+        (None, None),
     ]
 
-    def test_GetReadingScript(self):
-        for text, expected in self.reading_script_cases:
+    def test_GetReadingLanguage(self):
+        for target_language, expected in self.reading_language_cases:
+            with self.subTest(target_language=target_language):
+                self.assertLoggedEqual("reading language", expected, GetReadingLanguage(target_language), input_value=target_language)
+
+    detect_language_cases = [
+        ("The quick brown fox", None),
+        ("Привет, как дела?", None),
+        ("สวัสดีครับ", None),
+        ("你好朋友", 'zh'),
+        ("我用iPhone", 'zh'),
+        ("今日は良い天気です", 'ja'),
+        ("カメラ", 'ja'),
+        ("안녕하세요", 'ko'),
+        ("नमस्ते", 'hi'),
+        ("مرحبا", 'ar'),
+    ]
+
+    def test_DetectReadingLanguage(self):
+        for text, expected in self.detect_language_cases:
             with self.subTest(text=text):
-                self.assertLoggedEqual("reading script", expected, GetReadingScript(text), input_value=text)
+                self.assertLoggedEqual("detected language", expected, DetectReadingLanguage(text), input_value=text)
+
+    reading_speed_cases = [
+        ('en', 20.0),
+        ('ar', 20.0),
+        ('hi', 22.0),
+        ('ko', 12.0),
+        ('zh', 9.0),
+        ('ja', 4.0),
+        ('fr', 17.0),
+        ('af', 17.0),
+        (None, 17.0),
+    ]
+
+    def test_GetReadingSpeed(self):
+        for language, expected in self.reading_speed_cases:
+            with self.subTest(language=language):
+                self.assertLoggedEqual("reading speed", expected, GetReadingSpeed(language), input_value=language)
 
     count_cases = [
-        ("Hello there!", ReadingScript.ALPHABETIC, 12),
-        ("Hello  \n  there", ReadingScript.ALPHABETIC, 11),
-        ("  Hello  ", ReadingScript.ALPHABETIC, 5),
-        ("สวัสดี", ReadingScript.ALPHABETIC, 4),
-        ("你好， 朋友。", ReadingScript.CHINESE, 6),
-        ("안녕하세요 친구", ReadingScript.KOREAN, 7),
-        ("👨‍👩‍👧‍👦", ReadingScript.ALPHABETIC, 1),
+        ("Hello there!", 'en', 12.0),
+        ("Hello  \n  there", 'en', 11.0),
+        ("  Hello  ", 'en', 5.0),
+        ("café", 'fr', 4.0),
+        ("สวัสดี", 'th', 4.0),
+        ("你好，朋友。", 'zh', 6.0),
+        ("我用iPhone", 'zh', 5.0),
+        ("안녕하세요 친구", 'ko', 7.5),
+        ("今日は　晴れ", 'ja', 6.0),
+        ("OK!", 'ja', 1.5),
     ]
 
     def test_CountReadingCharacters(self):
-        for text, script, expected in self.count_cases:
+        for text, language, expected in self.count_cases:
             with self.subTest(text=text):
-                self.assertLoggedEqual("reading characters", expected, CountReadingCharacters(text, script), input_value=text)
+                self.assertLoggedEqual("reading characters", expected, CountReadingCharacters(text, language), input_value=text)
 
-    def test_EstimateReadingSeconds_at_netflix_speed(self):
-        for text, script in [("Hello there!", ReadingScript.ALPHABETIC), ("你好朋友", ReadingScript.CHINESE), ("今日は", ReadingScript.JAPANESE), ("안녕하세요", ReadingScript.KOREAN)]:
-            with self.subTest(text=text):
-                expected = CountReadingCharacters(text, script) / READING_CHARS_PER_SECOND[script]
-                self.assertLoggedEqual("reading seconds", expected, EstimateReadingSeconds(text), input_value=text)
+    def test_EstimateReadingSeconds_for_language(self):
+        self.assertLoggedEqual("english", 0.6, EstimateReadingSeconds("Hello there!", 'en'))
+        self.assertLoggedEqual("japanese", 2.25, EstimateReadingSeconds("今日は良い天気です", 'ja'))
+
+    def test_EstimateReadingSeconds_detects_language(self):
+        self.assertLoggedEqual("chinese detected", 4 / 9, EstimateReadingSeconds("你好朋友"))
+        self.assertLoggedEqual("default speed", 12 / 17, EstimateReadingSeconds("Hello there!"))
 
     def test_EstimateReadingSeconds_scales_with_speed(self):
         text = "今日は良い天気です"
-        baseline = EstimateReadingSeconds(text)
+        baseline = EstimateReadingSeconds(text, 'ja')
 
-        self.assertLoggedEqual("half speed doubles time", 2 * baseline, EstimateReadingSeconds(text, 0.5))
-        self.assertLoggedEqual("double speed halves time", baseline / 2, EstimateReadingSeconds(text, 2.0))
+        self.assertLoggedEqual("half speed doubles time", 2 * baseline, EstimateReadingSeconds(text, 'ja', 0.5))
+        self.assertLoggedEqual("double speed halves time", baseline / 2, EstimateReadingSeconds(text, 'ja', 2.0))
 
     def test_EstimateReadingSeconds_empty_text(self):
         self.assertLoggedEqual("no reading time", 0.0, EstimateReadingSeconds(""))

@@ -10,7 +10,7 @@ from typing import Any
 import regex
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Reading import EstimateReadingSeconds
+from PySubtrans.Helpers.Reading import EstimateReadingSeconds, GetReadingLanguage
 from PySubtrans.Options import Options
 
 from PySubtrans.SettingsType import SettingsType
@@ -32,6 +32,7 @@ DURATION_EPSILON = timedelta(milliseconds=50)
 NETFLIX_FRAME_RATE = 24
 NETFLIX_MIN_GAP_FRAMES = 2
 NETFLIX_MAX_CLOSED_GAP_FRAMES = 11
+NETFLIX_MAX_DURATION = timedelta(seconds=7)
 
 def HasDuplicateLineNumbers(lines : list[SubtitleLine]) -> bool:
     """
@@ -423,13 +424,16 @@ class Subtitles:
     def _apply_netflix_timing(self, lines : list[SubtitleLine], save_settings : SaveSettings) -> list[SubtitleLine]:
         """
         Extend output subtitle durations following Netflix's timing guide, without changing the stored lines.
-        Short subtitles are extended to their reading time at Netflix's reading speed for their script, scaled by netflix_timings_adjustment.
-        Gaps of 3 to 11 frames are closed to 2 frames.
+        Short subtitles are extended to their reading time at Netflix's reading speed for the target language, scaled by netflix_timings_adjustment.
+        Extensions stop at Netflix's maximum duration, and gaps of 3 to 11 frames are closed to 2 frames.
         Lines are never shortened and existing overlaps are left alone.
         """
         adjusted : list[SubtitleLine] = [line.copy() for line in lines]
         min_gap = timedelta(seconds=NETFLIX_MIN_GAP_FRAMES / NETFLIX_FRAME_RATE)
         speed = save_settings.netflix_timings_adjustment / 100
+
+        # When the target language is unknown, each line's language is detected from its script
+        language = GetReadingLanguage(self.settings.get_str('target_language'))
 
         for index, line in enumerate(adjusted):
             if not line.text:
@@ -438,7 +442,9 @@ class Subtitles:
             target_end = line.start + save_settings.min_line_duration
             if speed > 0:
                 visible_text = FORMATTING_TAG_PATTERN.sub('', line.text)
-                target_end = max(target_end, line.start + timedelta(seconds=EstimateReadingSeconds(visible_text, speed)))
+                target_end = max(target_end, line.start + timedelta(seconds=EstimateReadingSeconds(visible_text, language, speed)))
+
+            target_end = min(target_end, max(line.end, line.start + NETFLIX_MAX_DURATION))
 
             # A frame or two of extra reading time is not worth moving an end that may sit on a cut
             if target_end <= line.end + DURATION_EPSILON:
@@ -456,7 +462,8 @@ class Subtitles:
 
                 # Gaps are measured in whole frames, since timestamps are rarely frame-aligned
                 gap_frames = round((next_start - target_end).total_seconds() * NETFLIX_FRAME_RATE)
-                if NETFLIX_MIN_GAP_FRAMES < gap_frames <= NETFLIX_MAX_CLOSED_GAP_FRAMES:
+                closes_gap = NETFLIX_MIN_GAP_FRAMES < gap_frames <= NETFLIX_MAX_CLOSED_GAP_FRAMES
+                if closes_gap and latest_end - line.start <= NETFLIX_MAX_DURATION:
                     target_end = latest_end
 
             line.end = target_end

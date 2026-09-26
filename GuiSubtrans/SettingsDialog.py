@@ -73,7 +73,7 @@ class SettingsDialog(QDialog):
             'max_line_duration': (float, _("Maximum duration of a single line of subtitles")),
             'min_line_duration': (float, _("Minimum duration of a single line of subtitles")),
             'seconds_per_character': (float, _("Minimum reading time per visible character in seconds")),
-            'use_netflix_timing_guide': (bool, _("Extend short subtitles using Netflix's reading speed for each script instead of seconds_per_character, and close gaps of under half a second")),
+            'use_netflix_timing_guide': (bool, _("Extend short subtitles using Netflix's reading speed for the target language instead of seconds_per_character, and close gaps of under half a second")),
             'netflix_timings_adjustment': (int, _("Reading speed as a percentage of Netflix's guideline. Higher values give shorter subtitles. 0 applies only the minimum line duration and gap rules")),
             'min_gap': (float, _("Minimum gap between consecutive subtitles, in seconds, used when preprocess_subtitles, extend_short_subtitles, or prevent_overlapping_times is enabled")),
             'merge_line_duration': (float, _("Merge lines with a duration less than this with the previous line")),

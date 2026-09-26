@@ -1,6 +1,7 @@
 from datetime import timedelta
 import gc
 import importlib
+import importlib.util
 import logging
 import os
 import tempfile
@@ -80,6 +81,35 @@ def _xpu_available() -> bool:
     if xpu is None:
         return False
     return bool(xpu.is_available())
+
+
+class _SpaceSplitKoreanTokenizer:
+    """
+    Stands in for soynlp's Korean tokenizer in qwen-asr's forced aligner when soynlp is not installed.
+    soynlp is GPL-licensed, so the packaged build leaves it out.
+    Korean separates words with spaces, so splitting on them still aligns words, at a coarser grain.
+    """
+    def __init__(self):
+        self._warned = False
+
+    def tokenize(self, text : str) -> list[str]:
+        """Split on whitespace, warning the first time that Korean timestamps are less precise."""
+        if not self._warned:
+            self._warned = True
+            logging.warning(_("Korean word timestamps need the soynlp package, which is not included in the packaged build because it is licensed under the GPL. "
+                              "Aligning Korean text on spaces instead, so timestamps are less precise."))
+        return text.split()
+
+
+def _install_korean_tokenizer_fallback(model : Any) -> None:
+    """Give qwen-asr's forced aligner a Korean tokenizer when soynlp is not installed, so Korean audio can still be aligned."""
+    if importlib.util.find_spec('soynlp') is not None:
+        return
+
+    # The aligner only imports soynlp when ko_tokenizer is unset
+    processor = getattr(getattr(model, 'forced_aligner', None), 'aligner_processor', None)
+    if processor is not None and hasattr(processor, 'ko_tokenizer') and processor.ko_tokenizer is None:
+        processor.ko_tokenizer = _SpaceSplitKoreanTokenizer()
 
 
 class QwenLocalClient(TranscriptionClient):
@@ -212,27 +242,17 @@ class QwenLocalClient(TranscriptionClient):
                     language=self.language,
                     return_time_stamps=want_stamps,
                 )
-            except (ValueError, ModuleNotFoundError) as e:
+            except ValueError as e:
                 # The ASR model may detect a language outside the forced aligner's coverage.
-                # Korean alignment needs soynlp, which is GPL-licensed and excluded from the packaged build.
                 # Try English alignment first (better than nothing), then fall back to
                 # no timestamps if that also fails.
-                # English alignment splits text on spaces, which still works for Korean at a coarser grain.
-                missing_korean_tokenizer = isinstance(e, ModuleNotFoundError) and (e.name or '').split('.')[0] == 'soynlp'
-                if isinstance(e, ModuleNotFoundError):
-                    unsupported = missing_korean_tokenizer
-                else:
-                    message = str(e).casefold()
-                    unsupported = 'unsupported language' in message or 'language is not supported' in message
+                message = str(e).casefold()
+                unsupported = 'unsupported language' in message or 'language is not supported' in message
 
                 if not (want_stamps and unsupported):
                     raise
 
-                if missing_korean_tokenizer:
-                    logging.warning(_("Korean word timestamps need the soynlp package, which is not included in the packaged build because it is licensed under the GPL. "
-                                      "Aligning Korean text on spaces instead, so timestamps are less precise."))
-                else:
-                    logging.warning(_("Detected language unsupported by aligner, retrying with English"))
+                logging.warning(_("Detected language unsupported by aligner, retrying with English"))
                 try:
                     results = model.transcribe(
                         audio=chunk_path,
@@ -293,6 +313,8 @@ class QwenLocalClient(TranscriptionClient):
             )
         except Exception as e:
             raise SubtitleError(_("Unable to load Qwen model: {}").format(str(e)), error=e)
+
+        _install_korean_tokenizer_fallback(model)
 
         _loaded_key = cache_key
         _loaded_model = model

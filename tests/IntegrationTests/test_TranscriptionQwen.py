@@ -361,29 +361,30 @@ class TestQwenAlignment(LoggedTestCase):
         self.assertLoggedEqual("fallback timestamps", False,
                                model.transcribe.call_args_list[2].kwargs['return_time_stamps'])
 
-    @skip_if_debugger_attached
-    def test_missing_korean_tokenizer_retries_with_english(self):
-        """Korean alignment without soynlp retries with English alignment."""
-        client_type = QwenLocalClientClass
-        client = client_type(SettingsType())
-        result = type("Result", (), {"text": "안녕하세요", "language": "Korean", "time_stamps": None})()
-        model = Mock()
-        model.transcribe.side_effect = [
-            ModuleNotFoundError("No module named 'soynlp.tokenizer'", name='soynlp.tokenizer'),
-            [result],
-        ]
-        with patch.object(client, '_load_model', return_value=model), \
-                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
-                patch.object(qwen_module.os, 'remove'), \
-                self.assertLogs(level=logging.WARNING):
-            transcription = client._transcribe_chunk(b"audio", "wav")
+    def test_missing_soynlp_installs_space_split_korean_tokenizer(self):
+        """Without soynlp, the aligner gets a Korean tokenizer that splits on spaces and warns once."""
+        processor = SimpleNamespace(ko_tokenizer=None)
+        model = SimpleNamespace(forced_aligner=SimpleNamespace(aligner_processor=processor))
+        with patch.object(qwen_module.importlib.util, 'find_spec', return_value=None):
+            qwen_module._install_korean_tokenizer_fallback(model)
 
-        self.assertLoggedEqual("aligned text", "안녕하세요", transcription.text)
-        self.assertLoggedEqual("retry count", 2, model.transcribe.call_count)
-        self.assertLoggedEqual("alignment retry language", "English",
-                               model.transcribe.call_args_list[1].kwargs['language'])
-        self.assertLoggedEqual("alignment retry timestamps", True,
-                               model.transcribe.call_args_list[1].kwargs['return_time_stamps'])
+        self.assertLoggedIsInstance("korean tokenizer", processor.ko_tokenizer, qwen_module._SpaceSplitKoreanTokenizer)
+
+        with self.assertLogs(level=logging.WARNING) as logs:
+            first = processor.ko_tokenizer.tokenize("안녕하세요, 만나서 반갑습니다.")
+            processor.ko_tokenizer.tokenize("감사합니다")
+
+        self.assertLoggedEqual("tokens", ["안녕하세요,", "만나서", "반갑습니다."], first)
+        self.assertLoggedEqual("warning count", 1, len(logs.records))
+
+    def test_installed_soynlp_is_left_to_the_aligner(self):
+        """With soynlp installed, the aligner's own Korean tokenizer is used."""
+        processor = SimpleNamespace(ko_tokenizer=None)
+        model = SimpleNamespace(forced_aligner=SimpleNamespace(aligner_processor=processor))
+        with patch.object(qwen_module.importlib.util, 'find_spec', return_value=object()):
+            qwen_module._install_korean_tokenizer_fallback(model)
+
+        self.assertLoggedIsNone("korean tokenizer", processor.ko_tokenizer)
 
 
 @unittest.skipUnless(QWEN_ASR_AVAILABLE, "qwen-asr not installed")

@@ -41,6 +41,11 @@ EXCLUDE_DIRS = (
 # Global store of setting keys discovered during extraction
 SETTING_KEYS: set[str] = set()
 
+# Provider base classes whose __init__ defines settings shared by every provider of that kind
+PROVIDER_BASE_FILES = (
+    os.path.join('PySubtrans', 'Transcription', 'TranscriptionProvider.py'),
+)
+
 
 def ensure_parent(path: str):
     parent = os.path.dirname(path)
@@ -130,7 +135,16 @@ class SettingKeyExtractor:
             raise Exception(f"Could not extract setting keys from Options.py: {e}")
     
     def _extract_provider_keys(self, entries: dict[tuple[str|None, str], list[tuple[str, int]]]):
-        """Extract setting keys from all translation and transcription providers"""
+        """Extract setting keys from all translation and transcription providers, and the base classes they share"""
+        for base_file in PROVIDER_BASE_FILES:
+            base_keys = self._extract_provider_settings_static(os.path.join(REPO_ROOT, base_file))
+            if not base_keys:
+                raise Exception(f"No setting keys found in {base_file}")
+
+            self.setting_keys.update(base_keys)
+            for key in base_keys:
+                entries.setdefault((None, key), []).append((base_file.replace('\\', '/'), 0))
+
         provider_dirs = [
             os.path.join(REPO_ROOT, 'PySubtrans', 'Providers'),
             os.path.join(REPO_ROOT, 'PySubtrans', 'Transcription', 'Providers'),
@@ -171,6 +185,19 @@ class SettingKeyExtractor:
                     node.name == '__init__'):
                     
                     for child in ast.walk(node):
+                        # Transcription providers build their settings with SettingsType({...}) or extend them with SettingsType(self.settings | {...})
+                        if (isinstance(child, ast.Call) and
+                            isinstance(child.func, ast.Name) and
+                            child.func.id == 'SettingsType' and
+                            child.args):
+                            settings_node = child.args[0]
+                            if isinstance(settings_node, ast.BinOp):
+                                settings_node = settings_node.right
+                            if isinstance(settings_node, ast.Dict):
+                                for key_node in settings_node.keys:
+                                    if isinstance(key_node, ast.Constant) and isinstance(key_node.value, str):
+                                        keys.add(key_node.value)
+
                         if (isinstance(child, ast.Call) and
                             isinstance(child.func, ast.Attribute) and
                             child.func.attr == '__init__' and

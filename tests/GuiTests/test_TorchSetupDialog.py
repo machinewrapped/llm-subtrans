@@ -6,10 +6,12 @@ from tests.GuiTestSupport import ConfigureOffscreenPlatform
 
 ConfigureOffscreenPlatform()
 
-from PySide6.QtWidgets import QApplication
+from PySide6.QtCore import QProcess
+from PySide6.QtWidgets import QApplication, QMessageBox
 
 from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Transcription.Torch.QwenRuntime import QWEN_ASR_REQUIREMENT
 from PySubtrans.Transcription.Torch.Hardware import (
     DetectHardware,
     HardwareDetection,
@@ -65,6 +67,13 @@ class TestTorchSetupSelection(LoggedTestCase):
         super().setUpClass()
         existing = QApplication.instance()
         cls.application = existing if isinstance(existing, QApplication) else QApplication([])
+
+    def setUp(self) -> None:
+        """Treat environments as having the Qwen runtime unless a test says otherwise."""
+        super().setUp()
+        needs_runtime = patch('GuiSubtrans.Widgets.TorchSetupDialog.NeedsQwenRuntime', return_value=False)
+        self.needs_qwen_runtime = needs_runtime.start()
+        self.addCleanup(needs_runtime.stop)
 
     def _new_dialog(self) -> TorchSetupDialog:
         """Create a dialog with existing-installation detection disabled."""
@@ -199,5 +208,155 @@ class TestTorchSetupSelection(LoggedTestCase):
 
             self.assertLoggedTrue('environment without interpreter is accepted in source mode', accepted)
             self.assertLoggedEqual('no spurious warning', 0, warning.call_count)
+        finally:
+            self._dispose(dialog)
+
+    def test_automatic_install_adds_qwen_runtime_after_torch(self) -> None:
+        """A new environment gets Torch, then qwen-asr without its dependencies, then the dependencies it declares."""
+        dialog = self._new_dialog()
+
+        try:
+            with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindCompatiblePython', return_value='python'), \
+                    patch.object(dialog, '_run_steps') as run_steps:
+                started = dialog._on_install()
+
+            self.assertLoggedTrue('installation started', started)
+            steps = run_steps.call_args.args[0]
+            self.assertLoggedEqual('venv, Torch, qwen-asr and dependencies steps', 4, len(steps))
+
+            venv_python = Path(dialog._target_dir) / 'Scripts' / 'python.exe'
+            site_packages = Path(dialog._target_dir) / 'Lib' / 'site-packages'
+            with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=venv_python), \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=site_packages), \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.ReadQwenAsrDependencies', return_value=['transformers==4.57.6', 'librosa']) as read_dependencies:
+                qwen_command = steps[2].command()
+                dependencies_command = steps[3].command()
+
+            self.assertLoggedEqual('qwen-asr installed without dependencies', (str(venv_python), ['-m', 'pip', 'install', '--no-deps', QWEN_ASR_REQUIREMENT]), qwen_command)
+            self.assertLoggedEqual('dependencies read from the venv', [str(site_packages)], read_dependencies.call_args.args[0])
+            self.assertLoggedEqual('dependencies installed with pip', (str(venv_python), ['-m', 'pip', 'install', '--no-warn-conflicts', 'transformers==4.57.6', 'librosa']), dependencies_command)
+        finally:
+            self._dispose(dialog)
+
+    def test_missing_qwen_asr_metadata_fails_the_dependencies_step(self) -> None:
+        """If qwen-asr's metadata cannot be read after installing it, the dependencies step fails rather than installing nothing."""
+        dialog = self._new_dialog()
+
+        try:
+            dialog._target_dir = '/some/torch/env'
+            steps = dialog._qwen_runtime_steps()
+
+            with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=Path('/some/torch/env/Lib/site-packages')), \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.ReadQwenAsrDependencies', return_value=None):
+                command = steps[1].command()
+
+            self.assertLoggedIsNone('no dependencies command', command)
+        finally:
+            self._dispose(dialog)
+
+    def test_torch_only_environment_offers_qwen_runtime_install(self) -> None:
+        """Selecting an environment set up for 1.7.0 installs the Qwen runtime into it before accepting it."""
+        dialog = self._new_dialog()
+        self.needs_qwen_runtime.return_value = True
+
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'torch').mkdir()
+
+                with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=root / 'python.exe'), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.question', return_value=QMessageBox.StandardButton.Yes), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information') as information, \
+                        patch.object(dialog, '_run_steps') as run_steps:
+                    accepted = dialog._validate_and_accept(directory)
+
+            self.assertLoggedFalse('environment not accepted until the runtime is installed', accepted)
+            self.assertLoggedEqual('runtime steps started', 2, len(run_steps.call_args.args[0]))
+            self.assertLoggedEqual('progress page shown', 2, dialog._current_page)
+            self.assertLoggedEqual('failure returns to the first page', 0, dialog._retry_page)
+            self.assertLoggedEqual('no restart prompt yet', 0, information.call_count)
+        finally:
+            self._dispose(dialog)
+
+    def test_declining_qwen_runtime_install_leaves_environment_unselected(self) -> None:
+        """The user can decline to install the Qwen runtime, and the environment is not selected."""
+        dialog = self._new_dialog()
+        self.needs_qwen_runtime.return_value = True
+
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                (root / 'torch').mkdir()
+
+                with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=root / 'python.exe'), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.question', return_value=QMessageBox.StandardButton.No), \
+                        patch.object(dialog, '_run_steps') as run_steps:
+                    accepted = dialog._validate_and_accept(directory)
+
+            self.assertLoggedFalse('environment not accepted', accepted)
+            self.assertLoggedEqual('nothing installed', 0, run_steps.call_count)
+            self.assertLoggedEqual('no path chosen', '', dialog.chosen_path)
+        finally:
+            self._dispose(dialog)
+
+    def test_environment_without_interpreter_cannot_get_qwen_runtime(self) -> None:
+        """An environment with no interpreter to run pip is rejected rather than offered an install."""
+        dialog = self._new_dialog()
+        self.needs_qwen_runtime.return_value = True
+
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                (Path(directory) / 'torch').mkdir()
+
+                with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=None), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.question') as question:
+                    accepted = dialog._validate_and_accept(directory)
+
+            self.assertLoggedFalse('environment not accepted', accepted)
+            self.assertLoggedEqual('user is warned', 1, warning.call_count)
+            self.assertLoggedEqual('install not offered', 0, question.call_count)
+        finally:
+            self._dispose(dialog)
+
+    def test_failed_step_stops_the_installation(self) -> None:
+        """A failed installer step stops the sequence and lets the user go back."""
+        dialog = self._new_dialog()
+
+        try:
+            dialog._target_dir = '/some/torch/env'
+            steps = dialog._qwen_runtime_steps()
+
+            with patch.object(dialog, '_start_process') as start_process, \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=Path('/some/torch/env/bin/python')):
+                dialog._run_steps(steps)
+                dialog._on_step_finished(1, QProcess.ExitStatus.NormalExit)
+
+            self.assertLoggedEqual('only the first step started', 1, start_process.call_count)
+            self.assertLoggedTrue('installation marked failed', dialog._installation_failed)
+            self.assertLoggedTrue('back is available', dialog._back_button.isEnabled())
+        finally:
+            self._dispose(dialog)
+
+    def test_successful_steps_run_in_sequence(self) -> None:
+        """Each installer step starts only after the previous one succeeds."""
+        dialog = self._new_dialog()
+
+        try:
+            dialog._target_dir = '/some/torch/env'
+            steps = dialog._qwen_runtime_steps()
+
+            with patch.object(dialog, '_start_process') as start_process, \
+                    patch.object(dialog, '_on_steps_finished') as steps_finished, \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=Path('/some/torch/env/bin/python')), \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=Path('/some/torch/env/Lib/site-packages')), \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.ReadQwenAsrDependencies', return_value=['transformers==4.57.6']):
+                dialog._run_steps(steps)
+                dialog._on_step_finished(0, QProcess.ExitStatus.NormalExit)
+                self.assertLoggedEqual('second step started', 2, start_process.call_count)
+                dialog._on_step_finished(0, QProcess.ExitStatus.NormalExit)
+
+            self.assertLoggedEqual('environment verified once all steps finish', 1, steps_finished.call_count)
+            self.assertLoggedFalse('installation not failed', dialog._installation_failed)
         finally:
             self._dispose(dialog)

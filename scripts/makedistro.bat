@@ -3,14 +3,8 @@ call envsubtrans/scripts/activate
 .\envsubtrans\Scripts\python.exe -m pip install --upgrade pip
 .\envsubtrans\Scripts\python.exe -m pip install pywin32-ctypes
 .\envsubtrans\Scripts\python.exe -m pip install --upgrade pyinstaller
-echo Checking for an installed Torch build before installing Qwen dependencies...
-.\envsubtrans\Scripts\python.exe -c "import torch" >nul 2>&1
-if %errorlevel% neq 0 (
-    echo Torch is required in the build environment before qwen-asr is installed.
-    echo Choose the hardware-appropriate command at https://pytorch.org/get-started/locally/
-    exit /b 1
-)
-.\envsubtrans\Scripts\python.exe -m pip install --upgrade -e ".[gui,openai,gemini,claude,mistral,qwen-asr]"
+rem Torch and the Qwen runtime are installed into an external environment by the application, not bundled
+.\envsubtrans\Scripts\python.exe -m pip install --upgrade -e ".[gui,openai,gemini,claude,mistral]"
 rem pip install --upgrade "boto3"  REM Bedrock dependencies excluded
 
 rem Update and compile localization files before tests/build
@@ -28,15 +22,18 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 
+rem numpy and the packages built on it are optional imports of openai (pandas) and httpx's command-line client (pygments, PIL).
+rem The Qwen runtime brings its own copies, which a bundled numpy would shadow.
 .\envsubtrans\scripts\pyinstaller --noconfirm ^
     --additional-hooks-dir="hooks" ^
     --exclude-module torch ^
     --exclude-module torchgen ^
-    --exclude-module soynlp ^
-    --exclude-module gradio ^
-    --exclude-module gradio_client ^
-    --exclude-module av ^
-    --runtime-hook "hooks/rthook-nagisa-compat.py" ^
+    --exclude-module numpy ^
+    --exclude-module scipy ^
+    --exclude-module numba ^
+    --exclude-module llvmlite ^
+    --exclude-module pandas ^
+    --exclude-module PIL ^
     --add-data "theme/*;theme/" ^
     --add-data "assets/*;assets/" ^
     --add-data "instructions/*;instructions/" ^

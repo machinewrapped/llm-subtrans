@@ -32,6 +32,10 @@ if %errorlevel% neq 0 (
     --additional-hooks-dir="hooks" ^
     --exclude-module torch ^
     --exclude-module torchgen ^
+    --exclude-module soynlp ^
+    --exclude-module gradio ^
+    --exclude-module gradio_client ^
+    --exclude-module av ^
     --runtime-hook "hooks/rthook-nagisa-compat.py" ^
     --add-data "theme/*;theme/" ^
     --add-data "assets/*;assets/" ^

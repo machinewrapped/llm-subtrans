@@ -15,7 +15,8 @@ python tests/unit_tests.py || exit 1
 python tests/integration_tests.py || exit 1
 
 pyinstaller --noconfirm --additional-hooks-dir="hooks" \
-    --exclude-module torch --exclude-module torchgen \
+    --exclude-module torch --exclude-module torchgen --exclude-module soynlp \
+    --exclude-module gradio --exclude-module gradio_client --exclude-module av \
     --runtime-hook "hooks/rthook-nagisa-compat.py" \
     --add-data "theme/*:theme/"  --add-data "assets/*:assets/" \
     --add-data "instructions/*:instructions/" \

@@ -39,6 +39,7 @@ paid_translation_model = os.getenv('PAID_TRANSLATION_MODEL', 'openrouter/auto')
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
+from PySubtrans.Helpers.Attribution import APP_ATTRIBUTION_HEADERS
 from PySubtrans.Helpers.Localization import get_available_locales
 
 # Optional: use Babel to determine plural forms for locales
@@ -159,8 +160,7 @@ def auto_translate_strings(untranslated: dict[str,str], target_language: str, pa
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/machinewrapped/llm-subtrans',
-        'X-Title': 'LLM-Subtrans'
+        **APP_ATTRIBUTION_HEADERS,
     }
 
     # Split into batches to avoid exceeding token limits

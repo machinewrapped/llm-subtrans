@@ -1,3 +1,4 @@
+from PySubtrans.Helpers.Attribution import APP_ATTRIBUTION_HEADERS
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Providers.Clients.CustomClient import CustomClient
 from PySubtrans.SettingsType import SettingsType
@@ -12,8 +13,5 @@ class OpenRouterClient(CustomClient):
         settings.setdefault('supports_streaming', True)
         settings.setdefault('server_address', 'https://openrouter.ai/api/')
         settings.setdefault('endpoint', 'v1/chat/completions')
-        settings.setdefault('additional_headers', {
-            'HTTP-Referer': 'https://github.com/machinewrapped/llm-subtrans',
-            'X-Title': 'LLM-Subtrans'
-            })
+        settings.setdefault('additional_headers', dict(APP_ATTRIBUTION_HEADERS))
         super().__init__(settings)

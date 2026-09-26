@@ -14,15 +14,15 @@ def SanitiseForFilename(text : str) -> str:
     sanitised = _non_word_pattern.sub('', text).strip().lower()
     return _whitespace_run_pattern.sub('-', sanitised)
 
-whitespace_and_punctuation_pattern = regex.compile(r'[\p{P}\p{Z}\p{C}]')
+whitespace_and_punctuation_pattern = regex.compile(r'[\p{P}\p{S}\p{Z}\p{C}]')
 
 whitespace_pattern = regex.compile(r'\s+')
 
 def RemoveWhitespaceAndPunctuation(string) -> str:
     """
-    Remove all whitespace and punctuation from a string
+    Remove all whitespace, punctuation and symbols from a string
     """
-    # Matches any punctuation, separator, or other Unicode character
+    # Matches any punctuation, symbol, separator, or other Unicode character
     stripped = whitespace_and_punctuation_pattern.sub('', string)
 
     # Normalize Unicode characters to their canonical forms

@@ -6,7 +6,7 @@ from datetime import timedelta
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Script import JoinWords
 from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
-from PySubtrans.Helpers.Text import CompactText, CutText
+from PySubtrans.Helpers.Text import CompactText, CutText, RemoveWhitespaceAndPunctuation
 from PySubtrans.Helpers.Time import SpanLabel
 from PySubtrans.Transcription.LineMerger import LineMerger
 from PySubtrans.Transcription.LineSettings import LineSettings
@@ -41,18 +41,21 @@ class TranscriptionLineBuilder:
         self.cutter : TranscriptCutter = TranscriptCutter(settings, self.splitter)
 
     def LinesForSegment(self, segment : TranscriptionSegment) -> list[TranscriptionSegment]:
-        """Turn a transcribed chunk into timed subtitle lines."""
-        if segment.parts:
-            return self._lines_from_parts(segment)
+        """
+        Turn a transcribed chunk into timed subtitle lines.
+        Text that is only punctuation or symbols is dropped, since engines return stray marks for music and silence.
+        """
+        parts = [part for part in segment.parts if RemoveWhitespaceAndPunctuation(part.text)]
+        if parts:
+            return self._lines_from_parts(segment, parts)
 
-        if segment.text.strip():
+        if RemoveWhitespaceAndPunctuation(segment.text):
             return self._lines_from_transcript(segment)
 
-        if segment.words:
-            return self._lines_from_words(segment) or [segment]
+        if any(RemoveWhitespaceAndPunctuation(word.text) for word in segment.words):
+            return self._lines_from_words(segment)
 
-        self.WarnIfOverlong(segment)
-        return [segment]
+        return []
 
     def WarnIfOverlong(self, line : TranscriptionSegment) -> bool:
         """Log a warning for a line over the duration limit, returning whether one was logged."""
@@ -65,9 +68,8 @@ class TranscriptionLineBuilder:
 
         return False
 
-    def _lines_from_parts(self, segment : TranscriptionSegment) -> list[TranscriptionSegment]:
+    def _lines_from_parts(self, segment : TranscriptionSegment, parts : list[TranscriptionSegment]) -> list[TranscriptionSegment]:
         """Lines from the provider's sub-segments."""
-        parts = [part for part in segment.parts if part.text.strip()]
         return self._fit_parts(segment, parts, self._assign_words(parts, self._timing_words(segment.words)))
 
     def _lines_from_transcript(self, segment : TranscriptionSegment) -> list[TranscriptionSegment]:

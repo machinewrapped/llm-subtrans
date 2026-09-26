@@ -8,7 +8,7 @@ from typing import TextIO
 from PySubtrans.Formats.SSAFileHandler import SSAFileHandler
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.Helpers.Color import Color
-from PySubtrans.Helpers.Speech import EstimateReadingSeconds
+from PySubtrans.Helpers.Reading import EstimateReadingSeconds
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
@@ -143,7 +143,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
     def test_SaveTranslation_extends_output_duration_without_changing_project(self):
         subtitles = (SubtitleBuilder(max_batch_size=1)
             .AddLines([
-                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghij"),
+                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghijklmnopq"),
             ])
             .Build())
         save_settings = SaveSettings(SettingsType({
@@ -163,7 +163,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         subtitles.SaveTranslation(output_path, save_settings=save_settings)
         output_data = SrtFileHandler().load_file(output_path)
 
-        expected_end = timedelta(seconds=1) + timedelta(seconds=EstimateReadingSeconds("abcdefghij", 90))
+        expected_end = timedelta(seconds=1) + timedelta(seconds=EstimateReadingSeconds("abcdefghijklmnopq", 90))
         self.assertLoggedEqual("dynamic output duration", expected_end, output_data.lines[0].end)
         self.assertLoggedEqual(
             "stored translation unchanged",

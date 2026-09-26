@@ -10,7 +10,7 @@ from typing import Any
 import regex
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Speech import EstimateReadingSeconds
+from PySubtrans.Helpers.Reading import EstimateReadingSeconds
 from PySubtrans.Options import Options
 
 from PySubtrans.SettingsType import SettingsType
@@ -383,7 +383,7 @@ class Subtitles:
     def _extend_short_subtitles(self, lines : list[SubtitleLine], save_settings : SaveSettings) -> list[SubtitleLine]:
         """
         Extend output subtitle durations without changing the stored lines.
-        Reading time is estimated from the visible text at words_per_minute, allowing for its script.
+        Reading time is estimated from the visible text at words_per_minute, with other scripts scaled to match.
         A words_per_minute of 0 applies only min_line_duration.
         """
         adjusted : list[SubtitleLine] = [line.copy() for line in lines]

@@ -350,7 +350,7 @@ class Options(SettingsType):
             del self['gpt_model']
 
         # seconds_per_character became a reading speed in words per minute, where 0 means no reading time.
-        # The old default of 0.1 becomes 150 wpm, keeping latin text close to its old reading time without over-extending syllabic scripts.
+        # The old default of 0.1 becomes 150 wpm, keeping latin text close to its old reading time.
         if 'seconds_per_character' in self:
             seconds_per_character = self.get_float('seconds_per_character') or 0.0
             self['words_per_minute'] = round(15 / seconds_per_character) if seconds_per_character > 0 else 0

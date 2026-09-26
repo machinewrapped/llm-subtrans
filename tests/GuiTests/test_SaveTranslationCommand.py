@@ -7,7 +7,7 @@ from GuiSubtrans.Command import CommandError
 from GuiSubtrans.Commands.SaveTranslationFile import SaveTranslationFile
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
-from PySubtrans.Helpers.Speech import EstimateReadingSeconds
+from PySubtrans.Helpers.Reading import EstimateReadingSeconds
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
 from PySubtrans.Options import Options
@@ -21,7 +21,7 @@ class SaveTranslationCommandTests(LoggedTestCase):
     def test_SaveTranslationFile_uses_current_project_options(self):
         subtitles = (SubtitleBuilder(max_batch_size=1)
             .AddLines([
-                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghij"),
+                (timedelta(seconds=1), timedelta(seconds=1.1), "abcdefghijklmnopq"),
             ])
             .Build())
         with SubtitleEditor(subtitles) as editor:
@@ -46,7 +46,7 @@ class SaveTranslationCommandTests(LoggedTestCase):
         command.execute()
 
         output_data = SrtFileHandler().load_file(output_path)
-        expected_end = timedelta(seconds=1) + timedelta(seconds=EstimateReadingSeconds("abcdefghij", 90))
+        expected_end = timedelta(seconds=1) + timedelta(seconds=EstimateReadingSeconds("abcdefghijklmnopq", 90))
         self.assertLoggedEqual("duration extended from GUI options", expected_end, output_data.lines[0].end)
         self.assertLoggedNotIn("save option not stored in project settings", 'extend_short_subtitles', subtitles.settings)
 

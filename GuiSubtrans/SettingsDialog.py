@@ -72,7 +72,7 @@ class SettingsDialog(QDialog):
             'save_preprocessed_subtitles': (bool, _("Save preprocessed subtitles to a separate file")),
             'max_line_duration': (float, _("Maximum duration of a single line of subtitles")),
             'min_line_duration': (float, _("Minimum duration of a single line of subtitles")),
-            'words_per_minute': (int, _("Reading speed used to extend short subtitles, in words per minute (other scripts are scaled to match). 0 applies only the minimum line duration")),
+            'words_per_minute': (int, _("Reading speed used to extend short subtitles, in words per minute. Chinese, Japanese and Korean are scaled to match. 0 applies only the minimum line duration")),
             'min_gap': (float, _("Minimum gap between consecutive subtitles, in seconds, used when preprocess_subtitles, extend_short_subtitles, or prevent_overlapping_times is enabled")),
             'merge_line_duration': (float, _("Merge lines with a duration less than this with the previous line")),
             'max_gap_for_merge': (float, _("Maximum gap between lines for them to be considered part of the same utterance")),

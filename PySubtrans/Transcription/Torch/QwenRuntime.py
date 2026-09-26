@@ -52,9 +52,21 @@ def ReadQwenAsrDependencies(search_path : list[str]) -> list[str]|None:
 
 
 def HasQwenRuntime(root : Path) -> bool:
-    """Whether the Torch environment at *root* has qwen-asr installed beside Torch."""
+    """
+    Whether the Torch environment at *root* has qwen-asr and the dependencies it declares installed beside Torch.
+    qwen-asr is installed before its dependencies, so on its own it may be left from an interrupted setup.
+    Requirements with environment markers are not checked, since they may not apply here.
+    """
     site_packages = FindTorchSitePackages(root)
-    return site_packages is not None and (site_packages / QWEN_ASR_MODULE).is_dir()
+    if site_packages is None:
+        return False
+
+    search_path = [str(site_packages)]
+    dependencies = ReadQwenAsrDependencies(search_path)
+    if dependencies is None:
+        return False
+
+    return all(_IsInstalled(RequirementName(dependency), search_path) for dependency in dependencies if ';' not in dependency)
 
 
 def NeedsQwenRuntime(root : Path) -> bool:
@@ -67,3 +79,8 @@ def NeedsQwenRuntime(root : Path) -> bool:
         return False
 
     return bool(getattr(sys, 'frozen', False)) or importlib.util.find_spec(QWEN_ASR_MODULE) is None
+
+
+def _IsInstalled(distribution_name : str, search_path : list[str]) -> bool:
+    """Whether a distribution is installed on the search path."""
+    return next(iter(metadata.distributions(name=distribution_name, path=search_path)), None) is not None

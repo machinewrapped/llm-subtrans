@@ -4,7 +4,6 @@ import sys
 import tempfile
 import unittest
 from datetime import timedelta
-from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import Mock, patch
@@ -109,30 +108,24 @@ class TestQwenLocalProvider(LoggedTestCase):
 
     def test_frozen_build_gates_torch_environment_without_qwen_runtime(self):
         """A Torch environment set up for 1.7.0 lacks the Qwen runtime, so only the setup option is offered."""
-        with tempfile.TemporaryDirectory() as directory:
-            (Path(directory) / 'Lib' / 'site-packages' / 'torch').mkdir(parents=True)
-            provider = QwenLocalProvider(SettingsType({'torch_installation_directory': directory}))
+        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/torch-env'}))
 
-            with patch.object(sys, 'frozen', True, create=True):
-                options = provider.GetOptions(provider.settings)
-                valid = provider.ValidateSettings()
-                info = provider.GetInformation(ffmpeg_available=True)
+        with patch(NEEDS_QWEN_RUNTIME, return_value=True), patch.object(sys, 'frozen', True, create=True):
+            options = provider.GetOptions(provider.settings)
+            valid = provider.ValidateSettings()
+            info = provider.GetInformation(ffmpeg_available=True)
 
         self.assertLoggedEqual("only the setup option", ['torch_installation_directory'], list(options))
         self.assertLoggedEqual("settings invalid without the Qwen runtime", False, valid)
-        self.assertLoggedIsNotNone("provider information", info)
+        self.assertLoggedIn("setup action named", TorchConfigOption.label, info or '')
 
     def test_frozen_build_accepts_torch_environment_with_qwen_runtime(self):
-        """A Torch environment with qwen-asr beside Torch is ready for transcription."""
-        with tempfile.TemporaryDirectory() as directory:
-            site_packages = Path(directory) / 'Lib' / 'site-packages'
-            (site_packages / 'torch').mkdir(parents=True)
-            (site_packages / 'qwen_asr').mkdir()
-            provider = QwenLocalProvider(SettingsType({'torch_installation_directory': directory}))
+        """A Torch environment with the Qwen runtime is ready for transcription."""
+        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/torch-env'}))
 
-            with patch.object(sys, 'frozen', True, create=True):
-                options = provider.GetOptions(provider.settings)
-                valid = provider.ValidateSettings()
+        with patch(NEEDS_QWEN_RUNTIME, return_value=False), patch.object(sys, 'frozen', True, create=True):
+            options = provider.GetOptions(provider.settings)
+            valid = provider.ValidateSettings()
 
         self.assertLoggedIn("model option offered", 'model', options)
         self.assertLoggedEqual("settings valid", True, valid)

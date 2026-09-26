@@ -106,7 +106,7 @@ Media transcription lives in `PySubtrans/Transcription/`:
 - `TranscriptionLineBuilder` assembles timed subtitle lines. `TranscriptCutter`, `UtteranceSplitter`, `WordAlignment`, and `LineMerger` support segmentation, timing, and line assembly.
 - `TranscriptionCoordinator` plans chunks, calls the selected provider client, applies the resume/abort/failure policy, returns a `TranscriptionOutcome`, and emits progress, audio-progress, and segment events. Expected failures are reported in the outcome.
 
-The CLI at `scripts/transcribe.py` and the GUI's `TranscribeMediaCommand` use the same coordinator. For capture and replay tools used to tune line assembly, see [transcription-tuning.md](transcription-tuning.md). `Provider_QwenLocal` uses a local Torch runtime; see [torch-packaging.md](torch-packaging.md) for packaging details.
+The CLI at `scripts/transcribe.py` and the GUI's `TranscribeMediaCommand` use the same coordinator. For capture and replay tools used to tune line assembly, see [transcription-tuning.md](transcription-tuning.md). `Provider_QwenLocal` runs Torch and the Qwen runtime from an external environment that the packaged build does not bundle; see [torch-packaging.md](torch-packaging.md) for packaging details.
 
 ## Command-Line Architecture
 

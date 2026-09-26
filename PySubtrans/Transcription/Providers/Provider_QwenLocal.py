@@ -1,5 +1,6 @@
 import logging
 import os
+from pathlib import Path
 import sys
 
 from PySubtrans.Helpers.Languages import LanguageName
@@ -7,6 +8,7 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleError import SubtitleError
+from PySubtrans.Transcription.Torch.QwenRuntime import NeedsQwenRuntime
 from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
@@ -28,7 +30,8 @@ try:
         application even before torch is installed.  The actual runtime
         (torch + qwen-asr) is loaded lazily on first use; until then the
         provider info panel guides the user to configure an external Torch
-        installation.
+        installation.  Packaged builds import qwen-asr from that
+        installation too, so it has to contain the Qwen runtime.
 
         Prefers a hardware accelerator and requires explicit consent for
         CPU inference.
@@ -84,16 +87,16 @@ try:
         def GetOptions(self, settings : SettingsType, scope : OptionsScope = OptionsScope.ALL) -> GuiSettingsType:
             """Returns the configurable options for the provider.
 
-            Uses progressive disclosure: when torch_installation_directory is
-            not configured, only the torch directory setting is shown so the
-            user focuses on the critical prerequisite first.
+            Uses progressive disclosure: until the Torch environment is set up
+            with the Qwen runtime, only the torch directory setting is shown so
+            the user focuses on the critical prerequisite first.
             """
-            if not settings.get_str('torch_installation_directory'):
+            if not self._runtime_configured(settings):
                 if scope is not OptionsScope.ALL:
                     return {}
 
                 return {
-                    'torch_installation_directory': (TorchConfigOption, _("Configure the Torch environment for local transcription")),
+                    'torch_installation_directory': (TorchConfigOption, _("Install Torch and the Qwen runtime for local transcription")),
                 }
 
             options : GuiSettingsType = {
@@ -109,7 +112,7 @@ try:
                     'max_new_tokens': (int, _("Generation budget per chunk (long chunks need headroom)")),
                     'rate_limit': (float, _("Maximum requests per minute (0 for unlimited)")),
                     'allow_cpu_fallback': (bool, _("Allow emergency CPU fallback (may be slow)")),
-                    'torch_installation_directory': (TorchConfigOption, _("Set up Torch...")),
+                    'torch_installation_directory': (TorchConfigOption, _("Install or change the environment that runs local transcription")),
                 })
 
                 options.update(self._line_options())
@@ -123,7 +126,7 @@ try:
             contains torch, so a separate installation directory is not needed.
             """
             if bool(self.settings.get_str('torch_installation_directory')):
-                return True
+                return self._runtime_configured(self.settings)
 
             return not getattr(sys, 'frozen', False)
 
@@ -139,8 +142,13 @@ try:
 
             if not self.settings.get_str('torch_installation_directory'):
                 notes.extend([
-                    _("<p><b>Torch setup required:</b> Qwen3-ASR needs a separate PyTorch installation. The correct build depends on your operating system and hardware.</p>"),
-                    _("<p>Click <b>Set up Torch...</b> to detect available hardware and install a suitable Torch build.</p>"),
+                    _("<p><b>Setup required:</b> Qwen3-ASR runs on PyTorch and the Qwen speech recognition packages, which are installed separately from the application. The correct Torch build depends on your operating system and hardware.</p>"),
+                    _("<p>Click <b>{button}</b> to detect available hardware and install them.</p>").format(button=TorchConfigOption.label),
+                ])
+            elif not self._runtime_configured(self.settings):
+                notes.extend([
+                    _("<p><b>Qwen runtime required:</b> The Torch environment does not include the Qwen speech recognition packages. Earlier versions bundled them with the application.</p>"),
+                    _("<p>Click <b>{button}</b> and select the same environment to install them into it.</p>").format(button=TorchConfigOption.label),
                 ])
             elif torch_device == "Unknown":
                 notes.append(_("<p>Torch is configured but has not been verified by a transcription yet.</p>"))
@@ -153,6 +161,11 @@ try:
 
             parts = [part for part in [base, *notes] if part]
             return "\n".join(parts) if parts else None
+
+        def _runtime_configured(self, settings : SettingsType) -> bool:
+            """Whether a Torch environment is configured and has the Qwen runtime this build needs."""
+            directory = settings.get_str('torch_installation_directory')
+            return bool(directory) and not NeedsQwenRuntime(Path(directory))
 
 
 except Exception as e:

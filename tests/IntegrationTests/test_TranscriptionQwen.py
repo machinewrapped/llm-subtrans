@@ -9,7 +9,7 @@ from typing import Any
 from unittest.mock import Mock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
-from PySubtrans.Helpers.Tests import skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Transcription.TranscriptionProvider import OptionsScope
 from PySubtrans.SubtitleError import SubtitleError
@@ -17,10 +17,14 @@ from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoord
 from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.Providers.Provider_QwenLocal import QwenLocalProvider
+from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
 from PySubtrans.Transcription.Providers.Clients import QwenLocalClient as qwen_module
 
 QWEN_ASR_AVAILABLE = importlib.util.find_spec("qwen_asr") is not None
 QwenLocalClientClass = qwen_module.QwenLocalClient
+
+# Patch target for the check that a configured Torch environment has the Qwen runtime
+NEEDS_QWEN_RUNTIME = 'PySubtrans.Transcription.Providers.Provider_QwenLocal.NeedsQwenRuntime'
 
 class TestQwenLocalProvider(LoggedTestCase):
     def setUp(self):
@@ -35,7 +39,9 @@ class TestQwenLocalProvider(LoggedTestCase):
     def test_options_ungated_when_torch_configured(self):
         """Full schema is shown when torch_installation_directory is set."""
         provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/fake/path'}))
-        options = provider.GetOptions(provider.settings)
+        with patch(NEEDS_QWEN_RUNTIME, return_value=False):
+            options = provider.GetOptions(provider.settings)
+            per_run = provider.GetOptions(provider.settings, OptionsScope.PER_RUN)
 
         for key in ("model", "language", "device", "aligner_model", "max_new_tokens", "rate_limit",
                     "allow_cpu_fallback", "torch_installation_directory"):
@@ -43,7 +49,6 @@ class TestQwenLocalProvider(LoggedTestCase):
         self.assertLoggedIn("checkpoint", "Qwen/Qwen3-ASR-1.7B", provider.GetAvailableModels())
 
         self.assertLoggedEqual("CPU fallback default", False, provider.settings.get_bool('allow_cpu_fallback'))
-        per_run = provider.GetOptions(provider.settings, OptionsScope.PER_RUN)
         self.assertLoggedNotIn("CPU fallback is not a per-run choice", "allow_cpu_fallback", per_run)
         self.assertLoggedNotIn("Torch directory is not a per-run choice", "torch_installation_directory", per_run)
 
@@ -71,16 +76,17 @@ class TestQwenLocalProvider(LoggedTestCase):
 
         self.assertLoggedIsNotNone("provider information", info)
         if info:
-            self.assertLoggedIn(f"Torch setup guidance", "Torch setup required", info)
+            self.assertLoggedIn("setup action named", TorchConfigOption.label, info)
 
     def test_provider_information_hides_setup_guidance_when_configured(self):
         """Configured Qwen Local does not repeat the initial setup walkthrough."""
         provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/fake/path'}))
-        info = provider.GetInformation(ffmpeg_available=True, torch_device='cuda:0')
+        with patch(NEEDS_QWEN_RUNTIME, return_value=False):
+            info = provider.GetInformation(ffmpeg_available=True, torch_device='cuda:0')
 
         self.assertLoggedIsNotNone("provider information", info)
         if info:
-            self.assertLoggedNotIn("setup guidance omitted", "Torch setup required", info)
+            self.assertLoggedNotIn("setup action omitted", TorchConfigOption.label, info)
 
     def test_cpu_fallback_setting_refreshes_provider_information(self):
         """The settings dialog refreshes the disclaimer when consent changes."""
@@ -97,7 +103,32 @@ class TestQwenLocalProvider(LoggedTestCase):
     def test_validate_passes_with_torch_directory(self):
         """ValidateSettings returns True when torch_installation_directory is set."""
         provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/fake/path'}))
-        self.assertLoggedEqual("valid with torch", True, provider.ValidateSettings())
+        with patch(NEEDS_QWEN_RUNTIME, return_value=False):
+            self.assertLoggedEqual("valid with torch", True, provider.ValidateSettings())
+
+    def test_frozen_build_gates_torch_environment_without_qwen_runtime(self):
+        """A Torch environment set up for 1.7.0 lacks the Qwen runtime, so only the setup option is offered."""
+        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/torch-env'}))
+
+        with patch(NEEDS_QWEN_RUNTIME, return_value=True), patch.object(sys, 'frozen', True, create=True):
+            options = provider.GetOptions(provider.settings)
+            valid = provider.ValidateSettings()
+            info = provider.GetInformation(ffmpeg_available=True)
+
+        self.assertLoggedEqual("only the setup option", ['torch_installation_directory'], list(options))
+        self.assertLoggedEqual("settings invalid without the Qwen runtime", False, valid)
+        self.assertLoggedIn("setup action named", TorchConfigOption.label, info or '')
+
+    def test_frozen_build_accepts_torch_environment_with_qwen_runtime(self):
+        """A Torch environment with the Qwen runtime is ready for transcription."""
+        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/torch-env'}))
+
+        with patch(NEEDS_QWEN_RUNTIME, return_value=False), patch.object(sys, 'frozen', True, create=True):
+            options = provider.GetOptions(provider.settings)
+            valid = provider.ValidateSettings()
+
+        self.assertLoggedIn("model option offered", 'model', options)
+        self.assertLoggedEqual("settings valid", True, valid)
 
     @patch('PySubtrans.Transcription.AudioExtractor.CheckFfmpegAvailable')
     @patch.object(qwen_module, "_load_qwen_dependencies", side_effect=ImportError("missing torch"))
@@ -114,6 +145,17 @@ class TestQwenLocalProvider(LoggedTestCase):
         assert outcome.error is not None
         self.assertLoggedIn("actionable Torch message", "external Torch", outcome.error.message or "")
         self.assertLoggedIsInstance("original loader cause", outcome.error.error, ImportError)
+
+    @skip_if_debugger_attached
+    def test_missing_qwen_runtime_fails_before_importing(self):
+        """A Torch environment without qwen-asr fails with an ImportError instead of a failed import partway through."""
+        settings = SettingsType({'torch_installation_directory': '/fake/path'})
+        with patch.object(qwen_module, 'torch', None),                 patch.object(qwen_module, 'Qwen3ASRModel', None),                 patch.object(qwen_module, 'PrepareTorchRuntime'),                 patch.object(qwen_module.importlib.util, 'find_spec', return_value=None),                 patch.object(qwen_module.importlib, 'import_module') as import_module:
+            with self.assertRaises(ImportError) as raised:
+                qwen_module._load_qwen_dependencies(settings)
+
+        log_input_expected_error(settings, ImportError, raised.exception)
+        self.assertLoggedEqual("nothing imported", 0, import_module.call_count)
 
 
 @unittest.skipUnless(QWEN_ASR_AVAILABLE, "qwen-asr not installed")

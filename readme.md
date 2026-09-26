@@ -104,7 +104,7 @@ From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separ
 ### Local transcription
 **Qwen Local** runs Qwen3-ASR on your computer without sending audio to a transcription service. This is a beta feature.
 
-It requires a separate [PyTorch](https://pytorch.org/get-started/locally/); install suitable for your hardware. The first run downloads about 6 GB of model weights. For packaged builds, use **Set up Torch...** in Qwen Local's settings. For source installs the install script will manage the dependencies.
+It requires a separate [PyTorch](https://pytorch.org/get-started/locally/); install suitable for your hardware. The first run downloads about 6 GB of model weights. For packaged builds, use **Set up local transcription...** in Qwen Local's settings, which installs Torch and the Qwen runtime into a separate environment. If you set up Torch with an earlier version, run the setup again and select the same environment to add the Qwen runtime. For source installs the install script will manage the dependencies.
 
 For source installs, `qwen-asr`'s own dependencies (numpy, scipy, librosa) currently require **Python 3.12+**, higher than the 3.10+ needed for the rest of the project.
 
@@ -190,14 +190,14 @@ During the installing process, you can choose to input an API key for each selec
 
 5. Optionally install `qwen-asr` for local transcription. 
   
-  **First** install a hardware-appropriate [Torch](https://pytorch.org/get-started/locally/) version, then install the qwen package.
+  **First** install a hardware-appropriate [Torch](https://pytorch.org/get-started/locally/) version, then install the Qwen runtime.
 
     ```sh
     python scripts/install_torch.py
-    pip install -e ".[qwen-asr]"
+    python scripts/install_qwen_runtime.py
     ```
 
-    This avoids qwen pulling in a generic Torch version without hardware acceleration.
+    This avoids qwen pulling in a generic Torch version without hardware acceleration. The Qwen runtime script installs qwen-asr without the web frameworks its demo apps depend on. `pip install -e ".[qwen-asr]"` also works, but installs those as well.
 
 ## Usage
 The program works by dividing the subtitles up into batches and sending each one to the translation service in turn. 

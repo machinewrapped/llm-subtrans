@@ -50,7 +50,8 @@ from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
 from PySubtrans.Transcription.Torch.QwenRuntime import (
     QWEN_ASR_REQUIREMENT,
     NeedsQwenRuntime,
-    ReadQwenAsrDependencies,
+    QwenAsrPipArguments,
+    QwenDependencyPipArguments,
 )
 from PySubtrans.Transcription.Torch.Validation import (
     CompareCompatibility,
@@ -553,7 +554,7 @@ class TorchSetupDialog(QDialog):
                 start_message=_("Installing {requirement}...").format(requirement=QWEN_ASR_REQUIREMENT),
                 success_message=_("qwen-asr installed successfully."),
                 failure_message=_("Error: qwen-asr installation failed (exit code {code}). Check the output above for details."),
-                command=lambda: self._pip_command(['install', '--no-deps', QWEN_ASR_REQUIREMENT]),
+                command=lambda: self._pip_command(QwenAsrPipArguments()),
             ),
             _InstallStep(
                 status=_("Installing the Qwen runtime dependencies..."),
@@ -567,13 +568,12 @@ class TorchSetupDialog(QDialog):
     def _qwen_dependencies_command(self) -> tuple[str, list[str]]|None:
         """Build the pip command for the dependencies of the qwen-asr just installed into the venv."""
         site_packages = FindTorchSitePackages(Path(self._target_dir).expanduser())
-        dependencies = ReadQwenAsrDependencies([str(site_packages)]) if site_packages else None
-        if dependencies is None:
+        arguments = QwenDependencyPipArguments([str(site_packages)]) if site_packages else None
+        if arguments is None:
             self._log(_("Error: The qwen-asr package metadata could not be found in {path}.").format(path=self._target_dir))
             return None
 
-        # pip would report the demo app packages left out as missing dependencies of qwen-asr, which reads as a failed install
-        return self._pip_command(['install', '--no-warn-conflicts', *dependencies])
+        return self._pip_command(arguments)
 
     def _pip_command(self, arguments : list[str]) -> tuple[str, list[str]]|None:
         """Build a pip command that runs with the target venv's interpreter, or None if it has none."""

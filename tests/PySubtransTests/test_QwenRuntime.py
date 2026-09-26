@@ -5,8 +5,11 @@ from unittest.mock import patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Transcription.Torch.QwenRuntime import (
+    QWEN_ASR_REQUIREMENT,
     HasQwenRuntime,
     NeedsQwenRuntime,
+    QwenAsrPipArguments,
+    QwenDependencyPipArguments,
     ReadQwenAsrDependencies,
     RequirementName,
 )
@@ -36,6 +39,29 @@ class TestQwenAsrDependencies(LoggedTestCase):
     def test_requirement_name_normalises_spelling(self) -> None:
         """Names compare equal whatever their case or separators, with version specifiers removed."""
         self.assertLoggedEqual("normalised name", 'qwen-asr', RequirementName('Qwen_ASR==0.0.6'))
+
+
+class TestQwenRuntimePipArguments(LoggedTestCase):
+    """The runtime installs in two parts: qwen-asr on its own, then the dependencies it declares."""
+
+    def test_qwen_asr_is_installed_without_dependencies(self) -> None:
+        """pip installs the pinned qwen-asr without resolving its dependencies, which would bring in its demo apps."""
+        arguments = QwenAsrPipArguments()
+
+        self.assertLoggedIn("dependencies skipped", '--no-deps', arguments)
+        self.assertLoggedEqual("pinned release", QWEN_ASR_REQUIREMENT, arguments[-1])
+
+    def test_dependencies_are_installed_without_conflict_warnings(self) -> None:
+        """pip installs qwen-asr's runtime dependencies without reporting the omitted demo app packages as missing."""
+        with patch(f'{_MODULE}.ReadQwenAsrDependencies', return_value=['transformers==4.57.6', 'librosa']):
+            arguments = QwenDependencyPipArguments([str(_SITE_PACKAGES)])
+
+        self.assertLoggedEqual("pip arguments", ['install', '--no-warn-conflicts', 'transformers==4.57.6', 'librosa'], arguments)
+
+    def test_dependencies_need_qwen_asr_installed(self) -> None:
+        """Without qwen-asr's metadata there are no dependencies to install."""
+        with patch(f'{_MODULE}.ReadQwenAsrDependencies', return_value=None):
+            self.assertLoggedIsNone("pip arguments", QwenDependencyPipArguments([str(_SITE_PACKAGES)]))
 
 
 class TestQwenRuntimeDetection(LoggedTestCase):

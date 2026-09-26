@@ -11,7 +11,7 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog
 from PySubtrans.Helpers.TestCases import LoggedTestCase
-from PySubtrans.Transcription.Torch.QwenRuntime import QWEN_ASR_REQUIREMENT
+from PySubtrans.Transcription.Torch.QwenRuntime import QwenAsrPipArguments
 from PySubtrans.Transcription.Torch.Hardware import (
     DetectHardware,
     HardwareDetection,
@@ -226,15 +226,16 @@ class TestTorchSetupSelection(LoggedTestCase):
 
             venv_python = Path(dialog._target_dir) / 'Scripts' / 'python.exe'
             site_packages = Path(dialog._target_dir) / 'Lib' / 'site-packages'
+            dependency_arguments = ['install', 'transformers==4.57.6']
             with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=venv_python), \
                     patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=site_packages), \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.ReadQwenAsrDependencies', return_value=['transformers==4.57.6', 'librosa']) as read_dependencies:
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QwenDependencyPipArguments', return_value=dependency_arguments) as dependency_pip_arguments:
                 qwen_command = steps[2].command()
                 dependencies_command = steps[3].command()
 
-            self.assertLoggedEqual('qwen-asr installed without dependencies', (str(venv_python), ['-m', 'pip', 'install', '--no-deps', QWEN_ASR_REQUIREMENT]), qwen_command)
-            self.assertLoggedEqual('dependencies read from the venv', [str(site_packages)], read_dependencies.call_args.args[0])
-            self.assertLoggedEqual('dependencies installed with pip', (str(venv_python), ['-m', 'pip', 'install', '--no-warn-conflicts', 'transformers==4.57.6', 'librosa']), dependencies_command)
+            self.assertLoggedEqual('qwen-asr installed with the venv pip', (str(venv_python), ['-m', 'pip', *QwenAsrPipArguments()]), qwen_command)
+            self.assertLoggedEqual('dependencies read from the venv', [str(site_packages)], dependency_pip_arguments.call_args.args[0])
+            self.assertLoggedEqual('dependencies installed with the venv pip', (str(venv_python), ['-m', 'pip', *dependency_arguments]), dependencies_command)
         finally:
             self._dispose(dialog)
 
@@ -247,7 +248,7 @@ class TestTorchSetupSelection(LoggedTestCase):
             steps = dialog._qwen_runtime_steps()
 
             with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=Path('/some/torch/env/Lib/site-packages')), \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.ReadQwenAsrDependencies', return_value=None):
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QwenDependencyPipArguments', return_value=None):
                 command = steps[1].command()
 
             self.assertLoggedIsNone('no dependencies command', command)
@@ -350,7 +351,7 @@ class TestTorchSetupSelection(LoggedTestCase):
                     patch.object(dialog, '_on_steps_finished') as steps_finished, \
                     patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=Path('/some/torch/env/bin/python')), \
                     patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=Path('/some/torch/env/Lib/site-packages')), \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.ReadQwenAsrDependencies', return_value=['transformers==4.57.6']):
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QwenDependencyPipArguments', return_value=['install', 'transformers==4.57.6']):
                 dialog._run_steps(steps)
                 dialog._on_step_finished(0, QProcess.ExitStatus.NormalExit)
                 self.assertLoggedEqual('second step started', 2, start_process.call_count)

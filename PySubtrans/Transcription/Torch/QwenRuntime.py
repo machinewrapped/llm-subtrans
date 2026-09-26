@@ -51,6 +51,27 @@ def ReadQwenAsrDependencies(search_path : list[str]) -> list[str]|None:
     ]
 
 
+def QwenAsrPipArguments() -> list[str]:
+    """
+    The pip arguments for the first part of the Qwen runtime install: qwen-asr without its dependencies.
+    Its dependencies follow once it is installed, from QwenDependencyPipArguments.
+    """
+    return ['install', '--no-deps', QWEN_ASR_REQUIREMENT]
+
+
+def QwenDependencyPipArguments(search_path : list[str]) -> list[str]|None:
+    """
+    The pip arguments for the second part of the Qwen runtime install: the dependencies of the qwen-asr on the search path.
+    Returns None if qwen-asr is not installed there.
+    """
+    dependencies = ReadQwenAsrDependencies(search_path)
+    if dependencies is None:
+        return None
+
+    # pip would report the demo app packages left out as missing dependencies of qwen-asr, which reads as a failed install
+    return ['install', '--no-warn-conflicts', *dependencies]
+
+
 def HasQwenRuntime(root : Path) -> bool:
     """
     Whether the Torch environment at *root* has qwen-asr and the dependencies it declares installed beside Torch.

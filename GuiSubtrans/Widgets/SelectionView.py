@@ -37,9 +37,7 @@ class SelectionView(QFrame):
 
         _show(self._translate_button, selection.lines and selection.Any())
         _show(self._reparse_button, selection.AnyBatches() and selection.OnlyBatches() and selection.AnyTranslated())
-        postprocess_enabled = selection.AllLinesTranslated()
-        self._postprocess_button.setEnabled(postprocess_enabled)
-        _show(self._postprocess_button, postprocess_enabled)
+        _show(self._postprocess_button, selection.AnyLinesTranslated())
         _show(self._autosplit_batch_button, selection.AnyBatches() and selection.OnlyBatches() and not selection.MultipleSelected())
         _show(self._split_batch_button, selection.AnyLines() and not selection.MultipleSelected() and not selection.IsFirstInBatchSelected())
         _show(self._split_scene_button, selection.AnyBatches() and not selection.MultipleSelected() and not selection.IsFirstInSceneSelected())
@@ -158,7 +156,7 @@ class SelectionView(QFrame):
             self.action_handler.ReparseSelection(self.selection)
 
     def _on_postprocess(self):
-        if self.selection and self.selection.AllLinesTranslated():
+        if self.selection:
             self.action_handler.PostprocessSelection(self.selection)
 
     def _on_swap_text(self):

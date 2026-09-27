@@ -294,8 +294,9 @@ class ProjectActions(QObject):
     def PostprocessSelection(self, selection : ProjectSelection):
         """
         Post-process the translations in selected batches.
+        Untranslated lines in the selection are skipped.
         """
-        if not selection.AllLinesTranslated():
+        if not selection.AnyLinesTranslated():
             raise ActionError(_("Please select translated lines to post-process"))
 
         self._validate_datamodel()

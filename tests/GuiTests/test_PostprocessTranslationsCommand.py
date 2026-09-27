@@ -6,6 +6,7 @@ from GuiSubtrans.GuiSubtitleTestCase import GuiSubtitleTestCase
 from GuiSubtrans.ProjectSelection import ProjectSelection, SelectionBatch, SelectionLine
 from GuiSubtrans.Widgets.SelectionView import SelectionView
 from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts
+from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
 from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleLine import SubtitleLine
 
@@ -118,7 +119,7 @@ class PostprocessTranslationsCommandTests(GuiSubtitleTestCase):
             original_line.translation,
         )
 
-    def test_postprocess_does_not_mutate_any_batch_if_one_batch_fails_validation(self) -> None:
+    def test_postprocess_skips_untranslated_lines(self) -> None:
         self.options.update({
             'remove_filler_words': True,
             'break_long_lines': False,
@@ -128,27 +129,45 @@ class PostprocessTranslationsCommandTests(GuiSubtitleTestCase):
             'full_width_punctuation': False,
         })
 
-        subtitles = BuildSubtitlesFromLineCounts([[1], [1]])
+        subtitles = BuildSubtitlesFromLineCounts([[2], [1]])
         datamodel = self.create_project_datamodel(subtitles)
 
-        valid_batch = subtitles.scenes[0].batches[0]
-        valid_batch.translated = [SubtitleLine.Construct(
+        # Line 2 has no translation, e.g. because it was emptied by filler word removal
+        partial_batch = subtitles.scenes[0].batches[0]
+        partial_batch.translated = [SubtitleLine.Construct(
             line.number, line.start, line.end, 'um, translated line',
-        ) for line in valid_batch.originals]
+        ) for line in partial_batch.originals if line.number == 1]
 
-        # The second batch's selected line has no translated counterpart, so validation should fail.
-        invalid_batch = subtitles.scenes[1].batches[0]
-        invalid_batch.translated = []
+        untranslated_batch = subtitles.scenes[1].batches[0]
+        untranslated_batch.translated = []
 
-        command = PostprocessTranslationsCommand([1, 2], datamodel)
-        with self.assertRaises(CommandError):
-            command.execute()
+        command = PostprocessTranslationsCommand([1, 2, 3], datamodel)
+        self.assertLoggedTrue('postprocess command executes', command.execute())
 
         self.assertLoggedSequenceEqual(
-            'the valid batch is untouched when a later batch fails validation',
-            ['um, translated line'],
-            [line.text for line in valid_batch.translated],
+            'the translated line is postprocessed',
+            ['translated line'],
+            [line.text for line in partial_batch.translated],
         )
+        self.assertLoggedSequenceEqual(
+            'only translated lines have undo data',
+            [1],
+            list(command.undo_data.keys()),
+        )
+        self.assertLoggedEqual('only the batch with translated lines is updated', 1, len(command.model_updates))
+        self.assertLoggedEqual('the untranslated batch is untouched', 0, len(untranslated_batch.translated))
+
+    @skip_if_debugger_attached
+    def test_postprocess_fails_if_no_selected_lines_are_translated(self) -> None:
+        subtitles = BuildSubtitlesFromLineCounts([[2]])
+        datamodel = self.create_project_datamodel(subtitles)
+        subtitles.scenes[0].batches[0].translated = []
+
+        command = PostprocessTranslationsCommand([1, 2], datamodel)
+        with self.assertRaises(CommandError) as context:
+            command.execute()
+
+        log_input_expected_error([1, 2], CommandError, context.exception)
         self.assertLoggedEqual('no undo data was recorded', 0, len(command.undo_data))
         self.assertLoggedEqual('no model updates were queued', 0, len(command.model_updates))
 
@@ -230,31 +249,31 @@ class PostprocessTranslationsCommandTests(GuiSubtitleTestCase):
             batch_updates[(batch.scene, batch.number)],
         )
 
-    def test_postprocess_button_requires_all_selected_lines_translated(self) -> None:
+    def test_postprocess_button_requires_any_selected_line_translated(self) -> None:
         action_handler = Mock()
         view = SelectionView(action_handler)
 
         view.ShowSelection(ProjectSelection())
-        self.assertLoggedFalse(
-            'postprocess button is disabled without selected lines',
-            view._postprocess_button.isEnabled(),
+        self.assertLoggedTrue(
+            'postprocess button is hidden without selected lines',
+            view._postprocess_button.isHidden(),
         )
 
         selection = ProjectSelection()
-        selection.batches[(1, 1)] = SelectionBatch((1, 1), selected=True, translated=True)
-        selection.lines[1] = SelectionLine(1, 1, 1, False, translated=True)
+        selection.batches[(1, 1)] = SelectionBatch((1, 1), selected=True, translated=False)
+        selection.lines[1] = SelectionLine(1, 1, 1, False, translated=False)
         view.ShowSelection(selection)
         self.assertLoggedTrue(
-            'postprocess button is enabled when all selected lines are translated',
-            view._postprocess_button.isEnabled(),
+            'postprocess button is hidden when no selected lines are translated',
+            view._postprocess_button.isHidden(),
         )
 
-        selection.batches[(1, 2)] = SelectionBatch((1, 2), selected=True, translated=False)
-        selection.lines[2] = SelectionLine(1, 2, 2, False, translated=False)
+        selection.batches[(1, 2)] = SelectionBatch((1, 2), selected=True, translated=True)
+        selection.lines[2] = SelectionLine(1, 2, 2, False, translated=True)
         view.ShowSelection(selection)
         self.assertLoggedFalse(
-            'postprocess button is disabled when a batch is untranslated',
-            view._postprocess_button.isEnabled(),
+            'postprocess button is shown when some selected lines are translated',
+            view._postprocess_button.isHidden(),
         )
 
         view.deleteLater()

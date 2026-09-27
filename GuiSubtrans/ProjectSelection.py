@@ -194,6 +194,12 @@ class ProjectSelection():
         """
         return all(batch.translated for batch in self.selected_batches)
 
+    def AnyLinesTranslated(self) -> bool:
+        """
+        Are any lines included in the selection translated?
+        """
+        return any(line.translated for line in self.effective_lines)
+
     def AllLinesTranslated(self) -> bool:
         """
         Are all lines included in the selection translated?

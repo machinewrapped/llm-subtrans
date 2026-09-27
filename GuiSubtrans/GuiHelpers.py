@@ -38,20 +38,6 @@ def LoadStylesheet(name):
 
     return stylesheet
 
-def GetLineHeight(text: str, wrap_length: int = 60) -> int:
-    """
-    Calculate the number of lines for a given text with wrapping and newline characters.
-
-    :param text: The input text.
-    :param wrap_length: The maximum number of characters per line.
-    :return: The total number of lines.
-    """
-    if not text:
-        return 0
-
-    wraps = -(-len(text) // wrap_length) if wrap_length else 0  # Ceiling division
-    return text.count('\n') + wraps
-
 def GetWrapKey(text : str, bucket_length : int = 10) -> tuple[int, ...]:
     """
     Group text by how it will wrap, for caching layout sizes.

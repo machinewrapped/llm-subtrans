@@ -149,8 +149,10 @@ class TranslationParser:
                 translation.end = item.end or timedelta(seconds=0)
                 translation.metadata = item.metadata
 
-                if translation.original and IsTextContentEqual(translation.text, item.text):
-                    # Check for swapped original & translation
+                swapped = (translation.original and IsTextContentEqual(translation.text, item.text)
+                           and not IsTextContentEqual(translation.original, translation.text))
+                if swapped:
+                    # Check for swapped original & translation, unless the translation only differs from the original in punctuation
                     translation.text = translation.original
                     translation.original = item.text
 

@@ -25,7 +25,7 @@ from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from GuiSubtrans.Widgets.TranscriptionDialog import TranscriptionDialog
-from PySubtrans.Helpers.InstructionsHelpers import LoadInstructions
+from PySubtrans.Helpers.InstructionsHelpers import DEFAULT_INSTRUCTIONS_FILE, TRANSCRIBED_INSTRUCTIONS_FILE, LoadInstructions
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import ProviderConfigurationError, SubtitleError
@@ -245,7 +245,7 @@ class GuiInterface(QObject):
             CheckIfUpdateAvailable()
 
     def _initialise_instructions(self, options : Options) -> None:
-        instructions_file = options.get_str('instruction_file') or "instructions.txt"
+        instructions_file = options.get_str('instruction_file') or DEFAULT_INSTRUCTIONS_FILE
         try:
             instructions = LoadInstructions(instructions_file)
             options.InitialiseInstructions(instructions)
@@ -288,7 +288,7 @@ class GuiInterface(QObject):
 
         self.QueueCommand(command, callback=self._on_save)
 
-    def ShowNewProjectSettings(self, datamodel : ProjectDataModel) -> None:
+    def ShowNewProjectSettings(self, datamodel : ProjectDataModel, preferred_instruction_file : str|None = None) -> None:
         """
         Show the new project settings dialog
         """
@@ -297,7 +297,7 @@ class GuiInterface(QObject):
             return
 
         try:
-            dialog = NewProjectSettings(datamodel, parent=self.GetMainWindow())
+            dialog = NewProjectSettings(datamodel, parent=self.GetMainWindow(), preferred_instruction_file=preferred_instruction_file)
 
             if dialog.exec() == QDialog.DialogCode.Accepted:
                 datamodel.UpdateProjectSettings(dialog.settings)
@@ -313,9 +313,6 @@ class GuiInterface(QObject):
         Open the app-modal transcription dialog. On accept, load the
         transcribed project exactly like a freshly loaded subtitle file.
         """
-        if self.command_queue.has_blocking_commands:
-            logging.warning(_("Cannot start transcription while another command is queued"))
-            return
         dialog = TranscriptionDialog(self.global_options, parent=self.GetMainWindow())
         dialog.commandRequested.connect(self.QueueCommand)
         try:
@@ -343,8 +340,9 @@ class GuiInterface(QObject):
                 self._update_last_used_path(dialog.media_path)
             # Like a freshly loaded SRT, the transcription needs the
             # project settings review (which handles batching).
+            # Instructions tuned for speech recognition errors are preferred.
             if datamodel.is_project_valid:
-                self.ShowNewProjectSettings(datamodel)
+                self.ShowNewProjectSettings(datamodel, preferred_instruction_file=TRANSCRIBED_INSTRUCTIONS_FILE)
         finally:
             dialog.deleteLater()
 

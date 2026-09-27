@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field, field
+from dataclasses import dataclass, field
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SettingsType import SettingsType
@@ -7,6 +7,10 @@ from PySubtrans.Transcription.AudioExtractor import AudioExtractor
 
 from collections.abc import Callable, Generator
 from datetime import timedelta
+
+DEFAULT_SILENCE_MIN_DURATION = 0.8
+DEFAULT_FALLBACK_SILENCE_MIN_DURATION = 0.3
+DEFAULT_QUIET_SCAN_SECONDS = 5.0
 
 @dataclass
 class AudioChunk:
@@ -25,6 +29,9 @@ class AudioChunker:
 
     Cuts land inside detected silence where possible so chunks hold
     complete utterances (better for both accuracy and speaker continuity).
+    Continuous speech may have no qualifying silence near the cap.
+    A shorter pause is then used instead, since a hard cut splits a sentence.
+    Failing that, the chunk ends in the quietest stretch just before the cap.
     A hard cap guarantees no chunk exceeds backend length limits.
     Chunks never overlap: each engine returns flat text per chunk, so
     overlap would transcribe the same speech twice.
@@ -67,6 +74,26 @@ class AudioChunker:
         """
         return self.settings.get_float('lookahead_seconds') or 30.0
 
+    @property
+    def silence_min_duration(self) -> float:
+        """Shortest silence that is a preferred cut point."""
+        return self.settings.get_float('silence_min_duration') or DEFAULT_SILENCE_MIN_DURATION
+
+    @property
+    def fallback_silence_min_duration(self) -> float:
+        """
+        Shortest pause to cut at when no preferred silence is near the cap.
+        """
+        fallback = self.settings.get_float('fallback_silence_min_duration') or DEFAULT_FALLBACK_SILENCE_MIN_DURATION
+        return min(fallback, self.silence_min_duration)
+
+    @property
+    def quiet_scan_seconds(self) -> float:
+        """
+        How far back from the cap to look for the quietest stretch when there is no pause.
+        """
+        return self.settings.get_float('quiet_scan_seconds') or DEFAULT_QUIET_SCAN_SECONDS
+
     def PlanChunks(self, media_path : str, track_index : int = 0,
                    duration_cb : Callable[[timedelta], None]|None = None) -> list[AudioChunk]:
         """
@@ -97,7 +124,11 @@ class AudioChunker:
             yield AudioChunk(start=timedelta(seconds=0), end=duration)
             return
 
-        silences = self.extractor.DetectSilencesStream(media_path, track_index)
+        # One scan reports every pause down to the fallback length.
+        # Longer ones are picked out as preferred cut points.
+        silences = self.extractor.DetectSilencesStream(
+            media_path, track_index, min_duration=self.fallback_silence_min_duration)
+        preferred_gap = self.silence_min_duration
         pending : tuple[timedelta, timedelta]|None = next(silences, None)
         buffered : list[tuple[timedelta, timedelta]] = []
         stream_done : bool = pending is None
@@ -120,12 +151,18 @@ class AudioChunker:
 
             # Prefer a silence inside the window, then one a little past the cap
             fill(window)
-            cut = self._next_silence_cut(buffered, silence_index, cursor, window)
+            cut = self._next_silence_cut(buffered, silence_index, cursor, window, min_gap=preferred_gap)
 
             if cut is None and target < duration:
                 lookahead = target + timedelta(seconds=self.lookahead_seconds)
                 fill(lookahead)
-                cut = self._next_silence_cut(buffered, silence_index, cursor, lookahead, after=target)
+                cut = self._next_silence_cut(buffered, silence_index, cursor, lookahead, after=target,
+                                             min_gap=preferred_gap)
+
+                # Failing that, a short pause inside the window beats a hard cut mid-sentence
+                if cut is None:
+                    cut = self._next_silence_cut(buffered, silence_index, cursor, window,
+                                                 min_gap=self.fallback_silence_min_duration)
 
             if cut is not None:
                 # Cut at the start of the silence and resume after it, so
@@ -134,7 +171,7 @@ class AudioChunker:
             elif target >= duration:
                 end = next_cursor = duration
             else:
-                end = next_cursor = target
+                end = next_cursor = self._quietest_cut(media_path, track_index, cursor, target)
 
             # A remainder too small to stand alone is absorbed into this chunk
             if (duration - next_cursor).total_seconds() < self.min_chunk_seconds:
@@ -143,13 +180,36 @@ class AudioChunker:
             yield AudioChunk(start=cursor, end=end)
             cursor = next_cursor
 
+    def _quietest_cut(self, media_path : str, track_index : int, cursor : timedelta, target : timedelta) -> timedelta:
+        """
+        Return the middle of the quietest stretch shortly before the cap, or the cap itself.
+
+        The pause may not be silent, so the cut splits it instead of skipping it.
+        That way no audio is dropped.
+        """
+        earliest = cursor + timedelta(seconds=self.min_chunk_seconds)
+        scan_start = max(earliest, target - timedelta(seconds=self.quiet_scan_seconds))
+        stretch_seconds = self.fallback_silence_min_duration
+        if (target - scan_start).total_seconds() < stretch_seconds:
+            return target
+
+        audio = self.extractor.ReadChunkBytes(media_path, scan_start, target, track_index)
+        stretch = self.extractor.QuietestStretch(audio, stretch_seconds)
+        if stretch is None:
+            return target
+
+        middle = scan_start + timedelta(seconds=(stretch[0] + stretch[1]) / 2)
+        return min(middle, target)
+
     def _next_silence_cut(self, silences : list[tuple[timedelta, timedelta]], index : int,
                            cursor : timedelta, limit : timedelta,
-                           after : timedelta|None = None) -> tuple[timedelta, timedelta, int]|None:
+                           after : timedelta|None = None,
+                           min_gap : float = 0.0) -> tuple[timedelta, timedelta, int]|None:
         """
         Score candidate silences within (after, limit] by position times
         gap length, returning the chosen silence's start and end and the
         index to resume scanning from.
+        Silences shorter than min_gap are not candidates.
         A long pause earlier beats a short one nearer the cap, so chunks
         break on coherent boundaries instead of arbitrary times; position
         still counts, so dialogue fills toward the cap (fewer requests,
@@ -175,8 +235,8 @@ class AudioChunker:
                 break
 
             span = (silence_start - cursor).total_seconds()
-            if silence_start > lower and span >= self.min_chunk_seconds:
-                gap = (silence_end - silence_start).total_seconds()
+            gap = (silence_end - silence_start).total_seconds()
+            if silence_start > lower and span >= self.min_chunk_seconds and gap >= min_gap:
                 score = span * gap
                 if score >= best_score:
                     best_score = score

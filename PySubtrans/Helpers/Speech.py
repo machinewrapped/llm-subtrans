@@ -53,6 +53,11 @@ def EstimateSpeechSeconds(text : str) -> float:
     return max(MIN_SPEECH_SECONDS, syllabic * SYLLABIC_SECONDS_PER_CHAR + other * OTHER_SECONDS_PER_CHAR)
 
 
+def IsSpoken(text : str) -> bool:
+    """Whether the text has anything to say, rather than only punctuation, symbols and spacing."""
+    return bool(SPOKEN_CHAR.search(text))
+
+
 def IsSentenceEnd(text : str, index : int, ends : SentenceEnds = SentenceEnds.STRONG) -> bool:
     """Whether the character at index ends a sentence."""
     if text[index] in SENTENCE_END_CHARS:

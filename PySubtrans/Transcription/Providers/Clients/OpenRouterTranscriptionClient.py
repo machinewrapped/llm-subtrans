@@ -2,6 +2,7 @@ import base64
 import logging
 from datetime import timedelta
 
+from PySubtrans.Helpers.Attribution import APP_ATTRIBUTION_HEADERS
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
@@ -96,7 +97,9 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
 
     def _post(self, audio_bytes : bytes) -> dict:
         url = f"{self.server_address}/audio/transcriptions"
-        headers = {'Authorization': f"Bearer {self.api_key}"} if self.api_key else {}
+        headers = dict(APP_ATTRIBUTION_HEADERS)
+        if self.api_key:
+            headers['Authorization'] = f"Bearer {self.api_key}"
         body : dict = {
             'model': self.model,
             'input_audio': {'data': base64.b64encode(audio_bytes).decode('ascii'), 'format': 'wav'},

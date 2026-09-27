@@ -28,16 +28,6 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
     default_transcription_model = 'microsoft/mai-transcribe-2'
 
     @property
-    def recommended_min_chunk_seconds(self) -> float:
-        """Short chunks bound base64 request bodies and the blast radius of retries."""
-        return 30.0
-
-    @property
-    def recommended_max_chunk_seconds(self) -> float:
-        """Short chunks bound base64 request bodies and the blast radius of retries."""
-        return 120.0
-
-    @property
     def supports_diarization(self) -> bool:
         """Speaker labels when diarization is requested on a mapped model."""
         return self.settings.get_bool('diarize', False)
@@ -51,6 +41,9 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
             'diarize': settings.get_bool('diarize', False),
             'request_timeout': settings.get_float('request_timeout', env_float('TRANSCRIPTION_TIMEOUT', 300.0)),
             'rate_limit': settings.get_float('rate_limit', env_float('OPENROUTER_TRANSCRIPTION_RATE_LIMIT')),
+            # Short chunks bound base64 request bodies and the blast radius of retries.
+            'min_chunk_seconds': settings.get_float('min_chunk_seconds', 30.0),
+            'max_chunk_seconds': settings.get_float('max_chunk_seconds', 120.0),
             'proxy': settings.get_str('proxy') or os.getenv('OPENROUTER_PROXY'),
         })
 
@@ -99,6 +92,7 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
             'language': (str, _("Spoken language hint, e.g. Chinese or en (optional, auto-detected when empty)")),
             'diarize': (bool, _("Request speaker diarization (only supported by some models)")),
         })
+        options.update(self._chunk_options())
 
         if scope is OptionsScope.ALL:
             options['request_timeout'] = (float, _("Per-chunk request timeout in seconds"))

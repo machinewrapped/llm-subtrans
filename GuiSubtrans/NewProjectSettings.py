@@ -9,7 +9,7 @@ from PySide6.QtWidgets import (QDialog, QVBoxLayout, QDialogButtonBox, QFormLayo
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, DropdownOptionWidget, OptionWidget, ParseOptionDefinition
 
-from PySubtrans.Helpers.InstructionsHelpers import GetInstructionsFiles, LoadInstructions
+from PySubtrans.Helpers.InstructionsHelpers import DEFAULT_INSTRUCTIONS_FILE, GetInstructionsFiles, LoadInstructions
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleLine import SubtitleLine
@@ -40,7 +40,10 @@ class NewProjectSettings(QDialog):
         'format': (str, _("Output subtitle format"))
     }
 
-    def __init__(self, datamodel : ProjectDataModel, parent=None):
+    def __init__(self, datamodel : ProjectDataModel, parent=None, preferred_instruction_file : str|None = None):
+        """
+        preferred_instruction_file replaces the default instructions when the project has not chosen others.
+        """
         super().__init__(parent)
         self.setWindowTitle(_("Project Settings"))
         self.setMinimumWidth(800)
@@ -67,6 +70,9 @@ class NewProjectSettings(QDialog):
         instruction_files = GetInstructionsFiles()
         if instruction_files:
             self.OPTIONS['instruction_file'] = (instruction_files, self.OPTIONS['instruction_file'][1])
+
+        if preferred_instruction_file:
+            self._prefer_instruction_file(preferred_instruction_file, instruction_files)
 
         settings_widget = QFrame(self)
 
@@ -170,6 +176,30 @@ class NewProjectSettings(QDialog):
                 continue
             field : OptionWidget = cast(OptionWidget, item.widget())
             self.settings[field.key] = field.GetValue()
+
+    def _prefer_instruction_file(self, preferred : str, available : list[str]) -> None:
+        """
+        Select the preferred instructions if the project is using the default ones.
+        An explicit choice of other instructions is left alone.
+        """
+        current = self.settings.get_str('instruction_file')
+        if current and current.casefold() != DEFAULT_INSTRUCTIONS_FILE:
+            return
+
+        instruction_file = next((file for file in available if file.casefold() == preferred.casefold()), None)
+        if instruction_file is None:
+            return
+
+        try:
+            instructions = LoadInstructions(instruction_file)
+        except Exception as e:
+            logging.error(_("Unable to load instructions from {file}: {error}").format(file=instruction_file, error=e))
+            return
+
+        self.settings['instruction_file'] = instruction_file
+        self.settings['prompt'] = instructions.prompt
+        if instructions.target_language:
+            self.settings['target_language'] = instructions.target_language
 
     def _update_instruction_file(self):
         """ Update the prompt when the instruction file is changed """

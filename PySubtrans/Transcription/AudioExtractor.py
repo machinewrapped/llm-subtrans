@@ -161,19 +161,11 @@ class AudioExtractor:
         """
         threshold_db = threshold_db if threshold_db is not None else -40.0
 
-        try:
-            with wave.open(io.BytesIO(audio_bytes), 'rb') as wav:
-                frames = wav.readframes(wav.getnframes())
-                width = wav.getsampwidth()
-
-        except (wave.Error, EOFError, ValueError):
+        audio = _read_pcm16(audio_bytes)
+        if audio is None:
             return False
 
-        if not frames or width != 2:
-            return False
-
-        samples = array.array('h')
-        samples.frombytes(frames)
+        samples, _sample_rate = audio
         if not samples:
             return True
 
@@ -183,6 +175,38 @@ class AudioExtractor:
 
         level_db = 20.0 * math.log10(peak / 32768.0)
         return level_db < threshold_db
+
+    def QuietestStretch(self, audio_bytes : bytes, stretch_seconds : float) -> tuple[float, float]|None:
+        """
+        Return the (start, end) offsets in seconds of the lowest-energy stretch of chunk audio.
+
+        Finds a pause by its level relative to the surrounding audio.
+        This still works when background sound keeps the pause above a fixed noise floor.
+        Ties go to the latest stretch.
+        """
+        audio = _read_pcm16(audio_bytes)
+        if audio is None:
+            return None
+
+        # Sum energy in 10ms frames, then slide a stretch-long window over the frames
+        samples, sample_rate = audio
+        frame_size = max(1, sample_rate // 100)
+        energies = [sum(sample * sample for sample in samples[i:i + frame_size])
+                    for i in range(0, len(samples) - frame_size + 1, frame_size)]
+
+        stretch_frames = max(1, round(stretch_seconds * 100))
+        if len(energies) < stretch_frames:
+            return None
+
+        window = sum(energies[:stretch_frames])
+        best_energy, best_frame = window, 0
+        for frame in range(1, len(energies) - stretch_frames + 1):
+            window += energies[frame + stretch_frames - 1] - energies[frame - 1]
+            if window <= best_energy:
+                best_energy, best_frame = window, frame
+
+        start = best_frame * frame_size / sample_rate
+        return start, start + stretch_frames * frame_size / sample_rate
 
     def DetectSilences(self, media_path : str, track_index : int = 0,
                        min_duration : float|None = None, noise_db : int|None = None) -> list[tuple[timedelta, timedelta]]:
@@ -286,3 +310,22 @@ def _ffprobe_command(ffmpeg_path : str, explicit_ffmpeg : bool) -> str:
 
     candidate = os.path.join(os.path.dirname(os.path.abspath(ffmpeg_path)), f'ffprobe{extension}')
     return candidate if os.path.isfile(candidate) else 'ffprobe'
+
+
+def _read_pcm16(audio_bytes : bytes) -> tuple[array.array[int], int]|None:
+    """Return the samples and sample rate of 16-bit WAV audio, or None if it cannot be read."""
+    try:
+        with wave.open(io.BytesIO(audio_bytes), 'rb') as wav:
+            frames = wav.readframes(wav.getnframes())
+            width = wav.getsampwidth()
+            sample_rate = wav.getframerate()
+
+    except (wave.Error, EOFError, ValueError):
+        return None
+
+    if not frames or width != 2:
+        return None
+
+    samples = array.array('h')
+    samples.frombytes(frames)
+    return samples, sample_rate

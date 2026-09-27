@@ -44,7 +44,7 @@ class TestTranscribeCliOptions(LoggedTestCase):
         self.assertLoggedEqual("vtt format", "vtt", args.format)
 
     def test_chunk_bounds_default_to_provider(self):
-        """Chunk bounds stay unset so provider recommendations apply."""
+        """Chunk bounds stay unset so provider settings apply."""
         args = self._parse("movie.mkv")
 
         self.assertLoggedEqual("min unset", None, args.min_chunk)

@@ -158,6 +158,47 @@ class TestTranscriptionProviderRegistry(LoggedTestCase):
         self.assertLoggedIn("model option", "model", options)
         self.assertLoggedIn("language option", "language", options)
 
+def _tone_wav_bytes(spans : list[tuple[float, int]], sample_rate : int = 16000) -> bytes:
+    """Mono 16-bit WAV of a 440Hz tone, as (seconds, amplitude) spans."""
+    samples = array.array('h')
+    for seconds, amplitude in spans:
+        samples.extend(int(amplitude * math.sin(2.0 * math.pi * 440.0 * t / sample_rate))
+                       for t in range(int(sample_rate * seconds)))
+
+    buffer = io.BytesIO()
+    with wave.open(buffer, 'wb') as wav:
+        wav.setnchannels(1)
+        wav.setsampwidth(2)
+        wav.setframerate(sample_rate)
+        wav.writeframes(samples.tobytes())
+    return buffer.getvalue()
+
+
+class TestQuietestStretch(LoggedTestCase):
+    def test_finds_the_quiet_stretch(self):
+        """A dip in level is found even though it is far from silent."""
+        extractor = AudioExtractor(SettingsType())
+        stretch = extractor.QuietestStretch(_tone_wav_bytes([(2.0, 10000), (0.5, 2000), (2.0, 10000)]), 0.3)
+
+        assert stretch is not None  # Type narrowing for PyLance
+        self.assertLoggedGreaterEqual("stretch starts in the dip", stretch[0], 2.0)
+        self.assertLoggedGreaterEqual("stretch ends in the dip", 2.5, stretch[1])
+
+    def test_ties_break_toward_latest(self):
+        """Uniform audio puts the stretch at the end, nearest the cap."""
+        extractor = AudioExtractor(SettingsType())
+        stretch = extractor.QuietestStretch(_tone_wav_bytes([(2.0, 0)]), 0.3)
+
+        self.assertLoggedEqual("latest stretch", (1.7, 2.0), stretch)
+
+    def test_unusable_audio_has_no_stretch(self):
+        """Audio that is unreadable or shorter than the stretch gives no result."""
+        extractor = AudioExtractor(SettingsType())
+
+        self.assertLoggedIsNone("garbage", extractor.QuietestStretch(b"not-a-wav", 0.3))
+        self.assertLoggedIsNone("too short", extractor.QuietestStretch(_tone_wav_bytes([(0.2, 10000)]), 0.3))
+
+
 class TestAudioChunker(LoggedTestCase):
     @skip_if_debugger_attached
     def test_rejects_minimum_longer_than_maximum(self):
@@ -183,6 +224,9 @@ class TestAudioChunker(LoggedTestCase):
             ("middle silence", 10, [(4, 6)], 30, [(0, 4), (6, 10)]),
             ("lookahead", 72, [(65, 67)], 60, [(0, 65), (67, 72)]),
             ("hard cap", 12, [], 5, [(0, 5), (5, 10), (10, 12)]),
+            ("short pause beats hard cap", 100, [(50, 50.4)], 60, [(0, 50), (50.4, 100)]),
+            ("lookahead silence beats short pause", 100, [(50, 50.4), (70, 72)], 60, [(0, 70), (72, 100)]),
+            ("short pause stays inside the cap", 100, [(70, 70.4)], 60, [(0, 60), (60, 100)]),
         ]
         for label, duration, gaps, maximum, expected in cases:
             with self.subTest(label=label):
@@ -191,10 +235,28 @@ class TestAudioChunker(LoggedTestCase):
                     'lookahead_seconds': 30.0}))
                 silences = [(timedelta(seconds=start), timedelta(seconds=end)) for start, end in gaps]
                 with patch.object(chunker.extractor, 'GetDuration', return_value=timedelta(seconds=duration)), \
-                     patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(silences)):
+                     patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(silences)), \
+                     patch.object(chunker.extractor, 'ReadChunkBytes', return_value=b''):
                     chunks = chunker.PlanChunks('fake.wav')
                 actual = [(chunk.start.total_seconds(), chunk.end.total_seconds()) for chunk in chunks]
                 self.assertLoggedEqual(label, expected, actual)
+
+    def test_quietest_stretch_used_when_there_is_no_pause(self):
+        """Without any pause the chunk ends in the quietest stretch before the cap."""
+        chunker = AudioChunker(SettingsType({'min_chunk_seconds': 30.0, 'max_chunk_seconds': 60.0}))
+        audio = _tone_wav_bytes([(3.0, 10000), (0.5, 1000), (1.5, 10000)])
+
+        with patch.object(chunker.extractor, 'GetDuration', return_value=timedelta(seconds=100)), \
+             patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(())), \
+             patch.object(chunker.extractor, 'ReadChunkBytes', return_value=audio) as read:
+            chunks = chunker.PlanChunks('fake.wav')
+
+        scan_span = (read.call_args.args[1], read.call_args.args[2])
+        self.assertLoggedEqual("scan span", (timedelta(seconds=55), timedelta(seconds=60)), scan_span)
+        self.assertLoggedEqual("chunk count", 2, len(chunks))
+        self.assertLoggedGreater("cut after the speech", chunks[0].end.total_seconds(), 58.0)
+        self.assertLoggedGreater("cut inside the quiet stretch", 58.5, chunks[0].end.total_seconds())
+        self.assertLoggedEqual("next chunk resumes at the cut", chunks[0].end, chunks[1].start)
 
 
 
@@ -1305,6 +1367,48 @@ class TestDerivedParts(LoggedTestCase):
         self.assertLoggedLessEqual("within the limit", (lines[0].end - lines[0].start).total_seconds(), 4.0)
 
 
+class TestPunctuationOnly(LoggedTestCase):
+    """Text that is only punctuation or symbols produces no lines, whichever form the provider returns it in."""
+    def _lines(self, text : str, parts : list[TranscriptionSegment]|None = None,
+               words : list[WordTiming]|None = None) -> list[TranscriptionSegment]:
+        segment = TranscriptionSegment(start=timedelta(seconds=0), end=timedelta(seconds=90), text=text,
+                                       language="Korean", parts=parts or [], words=words or [])
+        return _default_builder().LinesForSegment(segment)
+
+    def test_punctuation_transcript_is_dropped(self):
+        """A transcript of a lone full stop becomes no line."""
+        with self.assertNoLogs(level=logging.INFO):
+            lines = self._lines(".")
+
+        self.assertLoggedEqual("line count", 0, len(lines))
+
+    def test_punctuation_parts_are_dropped(self):
+        """Provider parts holding only punctuation are skipped, keeping the parts with words."""
+        parts = [_part("...", 0.0, 2.0), _part("안녕하세요.", 3.0, 5.0), _part(" ♪ ", 6.0, 8.0)]
+        lines = self._lines("... 안녕하세요. ♪", parts=parts)
+
+        self.assertLoggedEqual("texts", ["안녕하세요."], [line.text for line in lines])
+
+    def test_punctuation_words_are_dropped(self):
+        """Word timings holding only punctuation make no line when there is no transcript."""
+        lines = self._lines("", words=[_word(".", 0.0, 0.5), _word("?", 1.0, 1.5)])
+
+        self.assertLoggedEqual("line count", 0, len(lines))
+
+    def test_stray_symbol_word_is_dropped(self):
+        """A symbol timed apart from the real words makes no line of its own."""
+        words = [_word("Hello", 0.0, 0.5), _word("there.", 0.5, 1.0), _word("♪", 10.0, 11.0)]
+        lines = self._lines("", words=words)
+
+        self.assertLoggedEqual("texts", ["Hello there."], [line.text for line in lines])
+
+    def test_digits_are_kept(self):
+        """A transcript of digits alone is still a line."""
+        lines = self._lines("2024.")
+
+        self.assertLoggedEqual("texts", ["2024."], [line.text for line in lines])
+
+
 class TestLineBuilderWiring(LoggedTestCase):
     def test_builder_limits_come_from_settings(self):
         """The coordinator configures its line builder from transcription settings."""
@@ -1343,6 +1447,39 @@ class TestLineBuilderWiring(LoggedTestCase):
         self.assertLoggedEqual("max seconds", 4.0, coordinator.line_builder.settings.max_line_seconds)
         self.assertLoggedEqual("min split chars", 3, coordinator.line_builder.settings.min_split_chars)
         self.assertLoggedEqual("no timing correction", 0.0, coordinator.line_builder.settings.timing_correction_factor)
+
+class TestChunkSettings(LoggedTestCase):
+    """The coordinator plans chunks with the provider's chunk bounds."""
+
+    def _provider(self) -> FakeTranscriptionProvider:
+        provider = FakeTranscriptionProvider()
+        provider.settings['min_chunk_seconds'] = 20.0
+        provider.settings['max_chunk_seconds'] = 90.0
+        return provider
+
+    def test_coordinator_takes_provider_chunk_bounds(self):
+        """The chunker is planned with the provider's chunk bounds."""
+        coordinator = TranscriptionCoordinator(self._provider())
+
+        self.assertLoggedEqual("chunker min", 20.0, coordinator.chunker.min_chunk_seconds)
+        self.assertLoggedEqual("chunker max", 90.0, coordinator.chunker.max_chunk_seconds)
+
+    def test_run_settings_override_provider_chunk_bounds(self):
+        """Explicit bounds for the run win over the provider's."""
+        coordinator = TranscriptionCoordinator(self._provider(), SettingsType({
+            'min_chunk_seconds': 5.0, 'max_chunk_seconds': 45.0}))
+
+        self.assertLoggedEqual("run min", 5.0, coordinator.chunker.min_chunk_seconds)
+        self.assertLoggedEqual("run max", 45.0, coordinator.chunker.max_chunk_seconds)
+
+    def test_run_settings_reach_the_cut_fallbacks(self):
+        """Tuning for the short-pause and quiet-stretch fallbacks reaches the chunker."""
+        coordinator = TranscriptionCoordinator(self._provider(), SettingsType({
+            'fallback_silence_min_duration': 0.5, 'quiet_scan_seconds': 8.0}))
+
+        self.assertLoggedEqual("fallback pause", 0.5, coordinator.chunker.fallback_silence_min_duration)
+        self.assertLoggedEqual("quiet scan", 8.0, coordinator.chunker.quiet_scan_seconds)
+
 
 class TestSettingsNamespaces(LoggedTestCase):
     def _options(self):

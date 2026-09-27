@@ -28,7 +28,6 @@ from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from GuiSubtrans.Widgets.OptionsWidgets import (
     CreateOptionWidget,
-    FloatOptionWidget,
     OptionWidget,
     ParseOptionDefinition,
 )
@@ -75,8 +74,6 @@ class TranscriptionDialog(QDialog):
     PROVIDER_ROW_START : int = 3
 
     RUN_OPTION_DEFINITIONS = {
-        'min_chunk_seconds': (float, _("Provider-recommended default;")),
-        'max_chunk_seconds': (float, _("Provider-recommended default;")),
         'save_transcription': (bool, _("Write the transcription to a subtitle file alongside the media before translating")),
         'postprocess_transcription': (bool, _("Apply the same post-processing used for translations (dashes, filler words, line breaks, etc.)")),
     }
@@ -164,16 +161,6 @@ class TranscriptionDialog(QDialog):
         self._option_definitions['output_format'] = (
             SubtitleFormatRegistry.enumerate_formats(),
             _("VTT and ASS preserve speaker labels; SRT has no speaker field"))
-
-        chunk_fields = (
-            ("min_chunk_seconds", 8.0, (1.0, 600.0), _("Min chunk length")),
-            ("max_chunk_seconds", 60.0, (10.0, 1800.0), _("Max chunk length")),
-        )
-        for key, default, limits, label in chunk_fields:
-            field = self._add_option_row(key, default, label)
-            if isinstance(field, FloatOptionWidget):
-                field.SetRange(*limits)
-                field.SetSuffix(_(" s"))
 
         save_field = self._create_option_field('save_transcription', True)
         format_field = self._create_option_field('output_format', '.vtt')
@@ -362,12 +349,6 @@ class TranscriptionDialog(QDialog):
         language = self.provider.settings.get_str('language') if self.provider is not None else None
         self._language_auto = not language or not language.strip()
         self._rebuild_provider_form()
-
-        if self.provider is not None:
-            # Chunk bounds follow the provider until the user overrides them
-            self.fields['min_chunk_seconds'].SetValue(self.provider.recommended_min_chunk_seconds)
-            self.fields['max_chunk_seconds'].SetValue(self.provider.recommended_max_chunk_seconds)
-
         self._update_settings_link()
         self._update_language_warning()
 
@@ -629,11 +610,14 @@ class TranscriptionDialog(QDialog):
             self.status_label.setText(provider.validation_message or _("Invalid provider settings"))
             return None
 
-        min_chunk_seconds = self.fields['min_chunk_seconds'].GetValue()
-        max_chunk_seconds = self.fields['max_chunk_seconds'].GetValue()
+        # Chunk bounds travel on the provider settings, edited for this run only
+        min_chunk_seconds = provider.settings.get_float('min_chunk_seconds')
+        max_chunk_seconds = provider.settings.get_float('max_chunk_seconds')
 
         try:
-            AudioChunker.ValidateChunkBounds(min_chunk_seconds, max_chunk_seconds)
+            if min_chunk_seconds is not None and max_chunk_seconds is not None:
+                AudioChunker.ValidateChunkBounds(min_chunk_seconds, max_chunk_seconds)
+
             language = provider.ResolveLanguageCode(provider.settings.get_str('language'), self.global_options.ui_language)
 
         except SubtitleError as e:
@@ -643,8 +627,6 @@ class TranscriptionDialog(QDialog):
         settings = SettingsType({
             'audio_track': self.track_combo.currentData() or 0,
             'language': language,
-            'min_chunk_seconds': min_chunk_seconds,
-            'max_chunk_seconds': max_chunk_seconds,
             'transcription_align': True,
             'ffmpeg_path': self.global_options.get_str('ffmpeg_path'),
             'max_characters': self.global_options.get_int('max_characters'),

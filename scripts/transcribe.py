@@ -70,6 +70,8 @@ def main() -> int:
         'model': args.model,
         'language': args.language,
         'diarize': args.diarize,
+        'min_chunk_seconds': args.min_chunk,
+        'max_chunk_seconds': args.max_chunk,
     })
     # Drop unset values so provider environment defaults apply
     provider_settings = SettingsType({k: v for k, v in provider_settings.items() if v is not None})
@@ -105,11 +107,7 @@ def main() -> int:
         'max_newlines': options.get_int('max_newlines'),
         'min_gap': options.get_float('min_gap'),
     })
-    # Drop unset values so provider recommendations apply
-    if args.min_chunk is not None:
-        coordinator_settings['min_chunk_seconds'] = args.min_chunk
-    if args.max_chunk is not None:
-        coordinator_settings['max_chunk_seconds'] = args.max_chunk
+    # Drop unset values so provider defaults apply
     if args.rate_limit is not None:
         coordinator_settings['rate_limit'] = args.rate_limit
     if args.ffmpeg_path is not None:

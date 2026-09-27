@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-09-21 02:18+0000\n"
+"POT-Creation-Date: 2026-09-26 12:33+0000\n"
 "PO-Revision-Date: 2025-08-09 21:00+0000\n"
 "Last-Translator: AI Assistant\n"
 "Language-Team: Czech\n"
@@ -11,14 +11,14 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=3; plural=((n==1) ? 0 : (n>=2 && n<=4) ? 1 : 2);\n"
 
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:59
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:61
 msgid "\n            <p>To use this provider you need a <a href=\"https://aistudio.google.com/app/apikey\">Google AI Studio API key</a>.</p>\n            "
 msgstr ""
 "\n"
 "            <p>Pro používání tohoto poskytovatele potřebujete <a href=\\\"https://aistudio.google.com/app/apikey\\\">API klíč Google AI Studio</a>.</p>\n"
 "            "
 
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:54
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:56
 msgid "\n            <p>Transcribe with Gemini 3.5 Transcribe (word timestamps, speaker diarization).</p>\n            <p>Gemini Transcribe has strict rate limits and daily caps, so large chunks are recommended.</p>\n            "
 msgstr ""
 "\n"
@@ -26,7 +26,7 @@ msgstr ""
 "            <p>Gemini Transcribe má přísné limity požadavků a denní limity, proto se doporučují velké dávky.</p>\n"
 "            "
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:37
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:38
 msgid "\n        <p>Transcribe audio on your local machine with Qwen3-ASR.</p>\n        <p>The first transcription downloads model weights (~6 GB) to the\n        Hugging Face cache. Subsequent runs reuse the cached files.</p>\n        "
 msgstr ""
 "\n"
@@ -96,11 +96,7 @@ msgstr " (délka zdroje {})"
 msgid " of {}"
 msgstr " z {}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:176
-msgid " s"
-msgstr " s"
-
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:166
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:197
 msgid "'{}' cannot provide subtitle timings (no word or segment timestamps). Transcription without timings has no value here, so nothing was requested and no credits were spent."
 msgstr "'{}' nemůže poskytnout časování titulků (žádná časová razítka slov ani segmentů). Transkripce bez časování zde nemá žádnou hodnotu, takže nebylo nic vyžádáno a nebyly vynaloženy žádné kredity."
 
@@ -112,36 +108,36 @@ msgstr ", Mluvčí: {speaker}"
 msgid ", Style: {style}"
 msgstr ", Styl: {style}"
 
-#: GuiSubtrans/ViewModel/BatchItem.py:203
+#: GuiSubtrans/ViewModel/BatchItem.py:222
 #: GuiSubtrans/ViewModel/SceneItem.py:144
 msgid "1 line"
 msgstr "1 řádek"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:139
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:142
 msgid "<p><b>Torch setup required:</b> Qwen3-ASR needs a separate PyTorch installation. The correct build depends on your operating system and hardware.</p>"
 msgstr "<p><b>Vyžadováno nastavení Torch:</b> Qwen3-ASR potřebuje samostatnou instalaci PyTorch. Správná verze závisí na vašem operačním systému a hardwaru.</p>"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:132
+#: PySubtrans/Transcription/TranscriptionProvider.py:140
 msgid "<p>Audio extraction needs <a href=\"https://ffmpeg.org/download.html\">ffmpeg</a> installed."
 msgstr "<p>Extrakce zvuku vyžaduje nainstalovaný <a href=\\\"https://ffmpeg.org/download.html\\\">ffmpeg</a>."
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:149
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:152
 msgid "<p>CPU inference is disabled. Enable it if you accept the performance implications.</p>"
 msgstr "<p>Inference na CPU je zakázána. Povolte ji, pokud přijímáte dopady na výkon.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:140
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:143
 msgid "<p>Click <b>Set up Torch...</b> to detect available hardware and install a suitable Torch build.</p>"
 msgstr "<p>Klikněte na <b>Nastavit Torch...</b> pro detekci dostupného hardwaru a instalaci vhodné verze Torch.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:147
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:150
 msgid "<p>Running on CPU: transcription will work but likely much slower than on a GPU.</p>"
 msgstr "<p>Běh na CPU: přepis bude fungovat, ale pravděpodobně mnohem pomaleji než na GPU.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:144
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:147
 msgid "<p>The first transcription will download model weights (~6 GB) to the Hugging Face cache.</p>"
 msgstr "<p>První přepis stáhne váhy modelu (~6 GB) do mezipaměti Hugging Face.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:143
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:146
 msgid "<p>Torch is configured but has not been verified by a transcription yet.</p>"
 msgstr "<p>Torch je nastaven, ale zatím nebyl ověřen přepisem.</p>"
 
@@ -157,7 +153,7 @@ msgstr "API klíč Google AI Studio (sdílený s překladem)"
 msgid "A Google Gemini API key is required to use this provider (https://makersuite.google.com/app/apikey)"
 msgstr "Pro použití tohoto poskytovatele je vyžadován Google Gemini API klíč (https://makersuite.google.com/app/apikey)"
 
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:72
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:69
 msgid "A Meta Model API key (MODEL_API_KEY)"
 msgstr "API klíč Meta Model (MODEL_API_KEY)"
 
@@ -205,10 +201,10 @@ msgstr "Vybráno AMD"
 #: PySubtrans/Providers/Provider_OpenAI.py:198
 #: PySubtrans/Providers/Provider_OpenRouter.py:193
 #: PySubtrans/Providers/Provider_Requesty.py:187
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:125
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:88
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:91
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:109
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:131
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:91
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:94
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:112
 msgid "API Key is required"
 msgstr "Je vyžadován API klíč"
 
@@ -258,15 +254,15 @@ msgstr "Verze API musí být nastavena v .env nebo poskytnuta jako argument"
 msgid "AWS region must be set in .env or provided as an argument"
 msgstr "Region AWS musí být nastaven v .env nebo poskytnut jako argument"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:215
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:202
 msgid "Abort"
 msgstr "Přerušit"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:843
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:825
 msgid "Aborted - partial results ({} lines)."
 msgstr "Přerušeno – částečné výsledky ({} řádků)."
 
-#: GuiSubtrans/Commands/TranslateSceneCommand.py:93
+#: GuiSubtrans/Commands/TranslateSceneCommand.py:94
 msgid "Aborted translation of scene {scene}"
 msgstr "Překlad scény {scene} byl přerušen"
 
@@ -280,7 +276,7 @@ msgstr "Přerušeno zahřívání překladatelského poskytovatele"
 msgid "Aborted {type}"
 msgstr "Přerušeno {type}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:752
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:734
 msgid "Aborting..."
 msgstr "Přerušování…"
 
@@ -313,15 +309,15 @@ msgstr "Přidat RTL značky"
 msgid "Add RTL markers around translated lines that contain primarily right-to-left script on save"
 msgstr "Při uložení přidat značky RTL kolem přeložených řádků, které obsahují primárně písmo zprava doleva"
 
-#: GuiSubtrans/SettingsDialog.py:84
+#: GuiSubtrans/SettingsDialog.py:85
 msgid "Add line breaks to long single lines (post-process)"
 msgstr "Přidat zalomení řádků do dlouhých samostatných řádků (následné zpracování)"
 
-#: GuiSubtrans/SettingsDialog.py:79
+#: GuiSubtrans/SettingsDialog.py:80
 msgid "Add line breaks to text with dialog markers"
 msgstr "Přidat zalomení řádků do textu s dialogovými značkami"
 
-#: GuiSubtrans/SettingsDialog.py:111
+#: GuiSubtrans/SettingsDialog.py:112
 msgid "Advanced"
 msgstr "Pokročilé"
 
@@ -335,7 +331,7 @@ msgstr "Zarovnání selhalo, časové údaje budou přibližné"
 
 #: GuiSubtrans/ProjectActions.py:135 GuiSubtrans/ProjectActions.py:169
 #: GuiSubtrans/ProjectActions.py:171
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:508
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:486
 msgid "All Files"
 msgstr "Všechny soubory"
 
@@ -346,6 +342,10 @@ msgstr "Všechny dávky přeloženy"
 #: GuiSubtrans/Commands/StartTranslationCommand.py:32
 msgid "All scenes are fully translated"
 msgstr "Všechny scény jsou plně přeloženy"
+
+#: PySubtrans/Transcription/TranscriptionProvider.py:227
+msgid "Allow brief lines by different speakers to be combined into a single line of dialogue"
+msgstr "Povolit spojení krátkých řádků různých mluvčích do jednoho řádku dialogu"
 
 #: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:111
 msgid "Allow emergency CPU fallback (may be slow)"
@@ -397,7 +397,7 @@ msgstr "Je vyžadován API klíč Azure"
 msgid "An Azure API version is required"
 msgstr "Je vyžadována verze Azure API"
 
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:71
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:68
 msgid "An OpenAI API key (shared with translation)"
 msgstr "API klíč OpenAI (sdílený s překladem)"
 
@@ -405,7 +405,7 @@ msgstr "API klíč OpenAI (sdílený s překladem)"
 msgid "An OpenAI API key is required to use this provider (https://platform.openai.com/account/api-keys)"
 msgstr "K použití tohoto poskytovatele je vyžadován API klíč OpenAI (https://platform.openai.com/account/api-keys)"
 
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:88
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:85
 msgid "An OpenRouter API key (shared with translation)"
 msgstr "API klíč OpenRouter (sdílený s překladem)"
 
@@ -413,7 +413,7 @@ msgstr "API klíč OpenRouter (sdílený s překladem)"
 msgid "An OpenRouter API key is required to use this provider (https://openrouter.ai/keys)"
 msgstr "Pro použití tohoto poskytovatele je vyžadován API klíč OpenRouter (https://openrouter.ai/keys)"
 
-#: PySubtrans/Transcription/AudioExtractor.py:208
+#: PySubtrans/Transcription/AudioExtractor.py:232
 msgid "Analysing audio for silences in {}"
 msgstr "Analýza zvuku na ticha v {}"
 
@@ -429,7 +429,7 @@ msgstr "Anthropic SDK není nainstalováno. Poskytovatel Claude nebude k dispozi
 msgid "Anthropic account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Kvóta účtu Anthropic byla dosažena, prosím, upgradujte si plán nebo počkejte na jeho obnovení"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:81
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:78
 msgid "Apply the same post-processing used for translations (dashes, filler words, line breaks, etc.)"
 msgstr "Použít stejné následné zpracování jako u překladů (pomlčky, výplňová slova, zalomení řádků apod.)"
 
@@ -441,7 +441,7 @@ msgstr "Pokusit se komunikovat s koncovým bodem pomocí formátu chatu"
 msgid "Audio extraction failed: {}"
 msgstr "Extrakce zvuku se nezdařila: {}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:154
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:151
 msgid "Audio track"
 msgstr "Zvuková stopa"
 
@@ -465,7 +465,7 @@ msgstr "Automatické rozdělování dávky {scene} dávka {batch}"
 msgid "Automatically save the project/translation after each scene is translated"
 msgstr "Automaticky uložit projekt/překlad po přeložení každé scény"
 
-#: GuiSubtrans/SettingsDialog.py:92
+#: GuiSubtrans/SettingsDialog.py:93
 msgid "Avoid creating a new batch smaller than this"
 msgstr "Vyhnout se vytváření nové dávky menší než tato"
 
@@ -473,7 +473,7 @@ msgstr "Vyhnout se vytváření nové dávky menší než tato"
 msgid "Back"
 msgstr "Zpět"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:216
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:203
 msgid "Back to Settings"
 msgstr "Zpět do Nastavení"
 
@@ -486,13 +486,13 @@ msgstr "Dávka ({scene},{batch}) nenalezena"
 msgid "Batch {batch} in scene {scene} is not translated"
 msgstr "Batch {batch} ve scéně {scene} není přeložen"
 
-#: GuiSubtrans/ViewModel/BatchItem.py:208
+#: GuiSubtrans/ViewModel/BatchItem.py:227
 msgid "Batch {num}"
 msgstr "Dávka {num}"
 
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:168
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:212
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:149
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:146
 msgid "Browse..."
 msgstr "Procházet…"
 
@@ -512,7 +512,7 @@ msgstr "Inference na CPU je zakázána. Povolte 'allow_cpu_fallback' v pokročil
 msgid "CPU selected -- transcription will work but will be significantly slower than with a GPU"
 msgstr "Vybráno CPU -- přepis bude fungovat, ale bude výrazně pomalejší než s GPU"
 
-#: GuiSubtrans/ProjectActions.py:417
+#: GuiSubtrans/ProjectActions.py:418
 msgid "Can only autosplit a single batch"
 msgstr "Lze automaticky rozdělit pouze jednu dávku"
 
@@ -520,7 +520,7 @@ msgstr "Lze automaticky rozdělit pouze jednu dávku"
 msgid "Can only model subtitle files"
 msgstr "Lze modelovat pouze soubory s titulky"
 
-#: GuiSubtrans/ProjectActions.py:428
+#: GuiSubtrans/ProjectActions.py:429
 msgid "Can only swap text of a single batch"
 msgstr "Lze prohodit text pouze jedné dávky"
 
@@ -536,7 +536,7 @@ msgstr "Lze vrátit zpět {command}"
 msgid "Cancel"
 msgstr "Zrušit"
 
-#: GuiSubtrans/ProjectActions.py:375
+#: GuiSubtrans/ProjectActions.py:376
 msgid "Cannot delete scenes or batches yet"
 msgstr "Zatím nelze mazat scény ani dávky"
 
@@ -553,7 +553,7 @@ msgstr "Nelze sloučit méně než dvě scény"
 msgid "Cannot merge lines, some lines are missing"
 msgstr "Nelze sloučit řádky, některé řádky chybí"
 
-#: GuiSubtrans/ProjectActions.py:348
+#: GuiSubtrans/ProjectActions.py:349
 msgid "Cannot merge non-sequential elements"
 msgstr "Nelze sloučit nesekvenční prvky"
 
@@ -621,11 +621,15 @@ msgstr "Vyberte možnosti instalace"
 msgid "Choose one option, then click Continue. You will not need to complete both."
 msgstr "Vyberte jednu možnost a poté klikněte na Pokračovat. Nebudete muset dokončit obě."
 
-#: PySubtrans/Transcription/TranscriptionLines.py:233
+#: PySubtrans/Transcription/TranscriptionLines.py:167
 msgid "Chunk {}: low-confidence segment ({:.0%} no-speech probability): '{}'"
 msgstr "Segment {}: segment s nízkou jistotou ({:.0%} pravděpodobnost absence řeči): '{}'"
 
-#: GuiSubtrans/SettingsDialog.py:61
+#: PySubtrans/Transcription/TranscriptionLines.py:78
+msgid "Chunk {}: no word timings match the transcript, so lines are placed by length"
+msgstr "Část {}: žádné časové údaje slov neodpovídají přepisu, proto jsou řádky umístěny podle délky"
+
+#: GuiSubtrans/SettingsDialog.py:62
 msgid "Clean transcribed lines with the same normalizations used for loaded subtitles (dashes, filler words, line breaks)"
 msgstr "Vyčistit transkribované řádky stejnými normalizacemi jako u načtených titulků (pomlčky, výplňová slova, zalomení řádků)"
 
@@ -641,7 +645,7 @@ msgstr "Chyba klienta: {status_code} {text}"
 msgid "Client is not initialized"
 msgstr "Klient není inicializován"
 
-#: GuiSubtrans/SettingsDialog.py:88
+#: GuiSubtrans/SettingsDialog.py:89
 msgid "Comma-separated list of filler_words to remove"
 msgstr "Čárkami oddělený seznam výplňkových slov k odstranění"
 
@@ -653,15 +657,15 @@ msgstr "Dokončeno zahřívání překladatelského poskytovatele (%d poskytovat
 msgid "Compute device for local inference"
 msgstr "Výpočetní zařízení pro lokální inferenci"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:101
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:96
 msgid "Configure the Torch environment for local transcription"
 msgstr "Nakonfigurujte prostředí Torch pro lokální přepis"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:158
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:155
 msgid "Configure..."
 msgstr "Nastavit…"
 
-#: GuiSubtrans/SettingsDialog.py:94
+#: GuiSubtrans/SettingsDialog.py:95
 msgid "Consider a new scene to have started after this many seconds without subtitles"
 msgstr "Považovat novou scénu za zahájenou po tolika sekundách bez titulků"
 
@@ -700,11 +704,11 @@ msgstr "Kontext"
 msgid "Continue"
 msgstr "Pokračovat"
 
-#: GuiSubtrans/SettingsDialog.py:81
+#: GuiSubtrans/SettingsDialog.py:82
 msgid "Convert blocks of whitespace and Chinese Commas to newlines"
 msgstr "Převést bloky bílých znaků a čínských čárek na nové řádky"
 
-#: GuiSubtrans/SettingsDialog.py:83
+#: GuiSubtrans/SettingsDialog.py:84
 msgid "Convert wide dashes (emdash) to standard dashes"
 msgstr "Převést široké pomlčky (emdash) na standardní pomlčky"
 
@@ -728,7 +732,7 @@ msgstr "Vytvořit soubor projektu pro možnost pokračování nebo revize překl
 msgid "Creating virtual environment at {path}..."
 msgstr "Vytváření virtuálního prostředí v {path}..."
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:160
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:191
 msgid "Creating {} transcription client..."
 msgstr "Vytváření klienta pro přepis {}..."
 
@@ -789,7 +793,7 @@ msgstr "Detekován formát titulků '{format}' z obsahu"
 msgid "Detected subtitle format '{format}' is not supported."
 msgstr "Detekovaný formát titulků '{format}' není podporován."
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:208
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:239
 msgid "Detecting audio..."
 msgstr "Detekce zvuku..."
 
@@ -801,15 +805,15 @@ msgstr "Vyvinul: MachineWrapped<br>Kontakt: machinewrapped@gmail.com<br><a href=
 msgid "Diarization is not mapped for model '{}', requesting without it"
 msgstr "Diarizace není pro model '{}' namapována, požaduje se bez ní"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:901
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:883
 msgid "Discard the {} transcribed lines? They have not been opened as a project."
 msgstr "Zahodit {} transkribovaných řádků? Nebyly otevřeny jako projekt."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:900
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:882
 msgid "Discard transcription?"
 msgstr "Zahodit transkripci?"
 
-#: GuiSubtrans/SettingsDialog.py:93
+#: GuiSubtrans/SettingsDialog.py:94
 msgid "Divide any batches larger than this into multiple batches"
 msgstr "Rozdělit všechny dávky větší než tato na více dávek"
 
@@ -831,7 +835,7 @@ msgstr "Úprava dávky ({scene},{batch})"
 msgid "Editing line {line}"
 msgstr "Úprava řádku {line}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:383
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:418
 msgid "Empty transcription for chunk {}"
 msgstr "Prázdná transkripce pro segment {}"
 
@@ -847,11 +851,11 @@ msgstr "Povolit streamování odpovědí pro aktualizace překladů v reálném 
 msgid "Enable thinking mode for translations"
 msgstr "Povolit režim přemýšlení pro překlady"
 
-#: GuiSubtrans/SettingsDialog.py:80
+#: GuiSubtrans/SettingsDialog.py:81
 msgid "Ensure dialog markers match in multi-line subtitles"
 msgstr "Zajistit, aby se dialogové značky shodovaly ve víceřádkových titulcích"
 
-#: GuiSubtrans/SettingsDialog.py:82
+#: GuiSubtrans/SettingsDialog.py:83
 msgid "Ensure full-width punctuation is used in Asian languages"
 msgstr "Zajistit použití interpunkce plné šířky v asijských jazycích"
 
@@ -875,7 +879,7 @@ msgstr "Chyba při dekódování souboru JSON: {}"
 msgid "Error during streaming: {error}"
 msgstr "Chyba při streamování: {error}"
 
-#: GuiSubtrans/Command.py:101
+#: GuiSubtrans/Command.py:133
 msgid "Error executing {type}: {str}"
 msgstr "Chyba při provádění {type}: {str}"
 
@@ -885,19 +889,19 @@ msgstr "Chyba při provádění {type}: {str}"
 msgid "Error fetching models: {status} {text}"
 msgstr "Chyba při načítání modelů: {status} {text}"
 
-#: GuiSubtrans/Command.py:132
+#: GuiSubtrans/Command.py:144
 msgid "Error in {command}: {message}"
 msgstr "Chyba v {command}: {message}"
 
-#: PySubtrans/Options.py:251
+#: PySubtrans/Options.py:252
 msgid "Error loading settings from {}"
 msgstr "Chyba při načítání nastavení z {}"
 
-#: PySubtrans/Subtitles.py:244
+#: PySubtrans/Subtitles.py:252
 msgid "Error parsing file... attempting format detection"
 msgstr "Chyba při parsování souboru... pokus o detekci formátu"
 
-#: PySubtrans/SubtitleTranslator.py:554
+#: PySubtrans/SubtitleTranslator.py:555
 msgid "Error processing streaming update for scene {scene} batch {batch}: {error}"
 msgstr "Chyba při zpracování streamované aktualizace pro scénu {scene} dávku {batch}: {error}"
 
@@ -909,16 +913,17 @@ msgstr "Chyba při opakování posledního příkazu: {error}"
 msgid "Error reparsing scene {scene} batch {batch}: {error}"
 msgstr "Chyba při opětovné analýze scény {scene} dávky {batch}: {error}"
 
-#: PySubtrans/Options.py:280
+#: PySubtrans/Options.py:281
 msgid "Error saving settings to {}"
 msgstr "Chyba při ukládání nastavení do {}"
 
-#: PySubtrans/SubtitleTranslator.py:199
+#: PySubtrans/SubtitleTranslator.py:200
 msgid "Error translating scene {scene} batch {batch}: {error}"
 msgstr "Chyba při překladu scény {scene} dávky {batch}: {error}"
 
-#: GuiSubtrans/Commands/TranslateSceneCommand.py:98
-#: GuiSubtrans/Commands/TranslateSceneCommand.py:102
+#: GuiSubtrans/Commands/TranslateSceneCommand.py:99
+#: GuiSubtrans/Commands/TranslateSceneCommand.py:104
+#: GuiSubtrans/Commands/TranslateSceneCommand.py:108
 msgid "Error translating scene {scene}: {error}"
 msgstr "Chyba při překladu scény {scene}: {error}"
 
@@ -938,15 +943,15 @@ msgstr "Chyba: Vytvoření virtuálního prostředí selhalo (kód ukončení {c
 msgid "Error: {error}"
 msgstr "Chyba: {error}"
 
-#: PySubtrans/SubtitleTranslator.py:212
+#: PySubtrans/SubtitleTranslator.py:213
 msgid "Errors encountered translating scene {scene} batch {batch}"
 msgstr "Při překladu scény {scene} dávky {batch} došlo k chybám"
 
-#: GuiSubtrans/Commands/TranslateSceneCommand.py:85
+#: GuiSubtrans/Commands/TranslateSceneCommand.py:86
 msgid "Errors translating scene {scene} - aborting translation"
 msgstr "Chyby při překladu scény {scene} - překlad se přerušuje"
 
-#: GuiSubtrans/Commands/TranslateSceneCommand.py:84
+#: GuiSubtrans/Commands/TranslateSceneCommand.py:85
 msgid "Errors: {errors}"
 msgstr "Chyby: {errors}"
 
@@ -976,6 +981,10 @@ msgstr "Očekáván slovník, obdržen {type}"
 msgid "Expected a patch dictionary"
 msgstr "Očekáván slovník s opravami"
 
+#: PySubtrans/Transcription/TranscriptionProvider.py:221
+msgid "Extend lines shorter than this fraction of their estimated speaking time (0 = never)"
+msgstr "Prodloužit řádky kratší než tento zlomek odhadovaného času řeči (0 = nikdy)"
+
 #: GuiSubtrans/SettingsDialog.py:70
 msgid "Extend short subtitles to a minimum reading duration when saving"
 msgstr "Při ukládání prodloužit krátké titulky na minimální dobu čtení"
@@ -992,11 +1001,11 @@ msgstr "Nepodařilo se navázat spojení s poskytovatelem po {max_retries} pokus
 
 #: PySubtrans/Providers/Clients/CustomClient.py:190
 msgid "Failed to communicate with server after {max_retries} retries: {error}"
-msgstr ""
+msgstr "Selhalo spojení se serverem po {max_retries} pokusech: {error}"
 
 #: PySubtrans/Providers/Clients/CustomClient.py:158
 msgid "Failed to connect to server at {server_address}{endpoint}: {error}"
-msgstr ""
+msgstr "Selhalo připojení k serveru na adrese {server_address}{endpoint}: {error}"
 
 #: GuiSubtrans/Commands/SplitBatchCommand.py:45
 msgid "Failed to create new batch after splitting"
@@ -1053,7 +1062,7 @@ msgstr "Selhání parsování obsahu: {}"
 msgid "Failed to parse file: {}"
 msgstr "Selhání parsování souboru: {}"
 
-#: PySubtrans/Subtitles.py:268
+#: PySubtrans/Subtitles.py:276
 msgid "Failed to parse subtitles string: {}"
 msgstr "Nepodařilo se parsovat řetězec titulků: {}"
 
@@ -1070,7 +1079,7 @@ msgstr "Nepodařilo se uložit soubor projektu po překladu: {}"
 msgid "Failed to switch language - restart the application: {error}"
 msgstr "Přepnutí jazyka se nezdařilo - restartujte aplikaci: {error}"
 
-#: PySubtrans/SubtitleTranslator.py:149
+#: PySubtrans/SubtitleTranslator.py:150
 msgid "Failed to translate scene {scene}... stopping translation"
 msgstr "Nepodařilo se přeložit scénu {scene}... překlad se zastavuje"
 
@@ -1078,7 +1087,7 @@ msgstr "Nepodařilo se přeložit scénu {scene}... překlad se zastavuje"
 msgid "Failed to translate subtitles: {}"
 msgstr "Nepodařilo se přeložit titulky: {}"
 
-#: PySubtrans/SubtitleTranslator.py:163
+#: PySubtrans/SubtitleTranslator.py:164
 msgid "Failed to translate {count} lines:"
 msgstr "Nepodařilo se přeložit {count} řádků:"
 
@@ -1106,7 +1115,7 @@ msgstr "Nalezena neostrá shoda pro řádek {number} v překladech"
 msgid "Found unclosed tag {tag} in translation"
 msgstr "Nalezen neuzavřený tag {tag} v překladu"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:526
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:504
 msgid "Found {} audio track(s)."
 msgstr "Nalezeno {} zvukových stop."
 
@@ -1122,7 +1131,7 @@ msgstr "Detekce GPU byla nejednoznačná. Vyberte nejbližší možnost:"
 msgid "GUI-Subtrans"
 msgstr "GUI-Subtrans"
 
-#: GuiSubtrans/SettingsDialog.py:150
+#: GuiSubtrans/SettingsDialog.py:151
 msgid "GUI-Subtrans Settings"
 msgstr "Nastavení GUI-Subtrans"
 
@@ -1197,11 +1206,11 @@ msgstr "Přepis Gemini selhal"
 msgid "Gemini transcription failed: {}"
 msgstr "Transkripce Gemini se nezdařila: {}"
 
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:99
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:97
 msgid "Gemini transcription runtime is not installed"
 msgstr "Runtime pro transkripci Gemini není nainstalován"
 
-#: GuiSubtrans/SettingsDialog.py:107
+#: GuiSubtrans/SettingsDialog.py:108
 msgid "General"
 msgstr "Obecné"
 
@@ -1230,19 +1239,19 @@ msgstr "Obecné pokyny pro překladatele"
 msgid "Higher temperature introduces more randomness to the translation (default 0.0)"
 msgstr "Vyšší teplota vnáší do překladu více náhodnosti (výchozí 0.0)"
 
-#: PySubtrans/SubtitleTranslator.py:287
+#: PySubtrans/SubtitleTranslator.py:288
 msgid "Hit API token limit with errors, retrying batch without context..."
 msgstr "Dosažen limit tokenů API s chybami, opakuji dávku bez kontextu..."
 
-#: PySubtrans/Subtitles.py:302
+#: PySubtrans/Subtitles.py:310
 msgid "I don't know where to save the translated subtitles"
 msgstr "Nevím, kam uložit přeložené titulky"
 
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:79
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:77
 msgid "Identify speakers (DIARIZATION mode)"
 msgstr "Rozpoznávat mluvčí (režim DIARIZACE)"
 
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:116
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:117
 msgid "Identify speakers (up to 8, experimental past 3)"
 msgstr "Rozpoznávat mluvčí (až 8, nad 3 experimentální)"
 
@@ -1278,7 +1287,7 @@ msgstr "Zahrnout původní text"
 msgid "Include original text in translated subtitles"
 msgstr "Zahrnout původní text do přeložených titulků"
 
-#: GuiSubtrans/SettingsDialog.py:62
+#: GuiSubtrans/SettingsDialog.py:60
 msgid "Information about the selected transcription provider"
 msgstr "Informace o vybraném poskytovateli přepisu"
 
@@ -1368,7 +1377,7 @@ msgstr "Neplatný časový rozsah bloku"
 msgid "Invalid message role: {role}. Must be one of 'user', 'system', 'developer', or 'assistant'."
 msgstr "Neplatná role zprávy: {role}. Musí být jedna z hodnot: 'uživatel', 'systém', 'vývojář' nebo 'asistent'"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:632
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:610
 msgid "Invalid provider settings"
 msgstr "Neplatné nastavení poskytovatele"
 
@@ -1376,7 +1385,7 @@ msgstr "Neplatné nastavení poskytovatele"
 msgid "Invalid response received, retrying in {backoff_time} seconds..."
 msgstr "Byla přijata neplatná odpověď, opakuji za {backoff_time} sekund..."
 
-#: PySubtrans/SubtitleTranslator.py:80
+#: PySubtrans/SubtitleTranslator.py:81
 msgid "Invalid substitutions list, must be a dictionary, list or string"
 msgstr "Neplatný seznam substitucí, musí být slovník, seznam nebo řetězec"
 
@@ -1416,7 +1425,7 @@ msgstr "Ponechte prázdné pro použití ffmpeg a ffprobe ze systémové PATH"
 msgid "Length: {duration}"
 msgstr "Délka: {duration}"
 
-#: GuiSubtrans/SettingsDialog.py:96
+#: GuiSubtrans/SettingsDialog.py:97
 msgid "Limits the number of scene/batch summaries to include as context with each translation batch"
 msgstr "Omezuje počet shrnutí scén/dávek, které se mají zahrnout jako kontext ke každé překladové dávce"
 
@@ -1439,12 +1448,12 @@ msgstr "Řádek {line} nebyl nalezen v dávce ({scene},{batch})"
 msgid "Line {line}: {start} --> {end}"
 msgstr "Řádek {line}: {start} --> {end}"
 
-#: GuiSubtrans/ViewModel/BatchItem.py:209
+#: GuiSubtrans/ViewModel/BatchItem.py:228
 #: GuiSubtrans/ViewModel/SceneItem.py:150
 msgid "Lines {first}-{last} ({start} -> {end})"
 msgstr "Řádky {first}-{last} ({start} -> {end})"
 
-#: GuiSubtrans/ViewModel/ViewModel.py:544
+#: GuiSubtrans/ViewModel/ViewModel.py:531
 msgid "Lines {lines} not found in batch {batch}"
 msgstr "Řádky {lines} nebyly nalezeny v dávce {batch}"
 
@@ -1469,7 +1478,7 @@ msgstr "Dočasná chyba LiteLLM (pokus {retry}/{max_retries}): {error}, opaková
 msgid "Load Instructions"
 msgstr "Načíst pokyny"
 
-#: GuiSubtrans/SettingsDialog.py:102
+#: GuiSubtrans/SettingsDialog.py:103
 msgid "Load previously used translation providers after startup to make switching providers faster"
 msgstr "Načíst dříve použité překladatelské služby po spuštění, aby se přepínání služeb zrychlilo"
 
@@ -1489,11 +1498,11 @@ msgstr "Načítání modelu Qwen {} na {}"
 msgid "Loading existing project file {}"
 msgstr "Načítání existujícího souboru projektu {}"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:242
+#: PySubtrans/Transcription/TranscriptionProvider.py:275
 msgid "Loading transcription providers"
 msgstr "Načítání poskytovatelů přepisu"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:114
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:111
 msgid "Loading transcription providers..."
 msgstr "Načítání poskytovatelů přepisu..."
 
@@ -1509,17 +1518,21 @@ msgstr "Zaznamenávání do {path}"
 msgid "Logo generated with <a href=\"https://qwen.ai/home\">Qwen3</a>"
 msgstr "Logo vygenerováno pomocí <a href=\"https://qwen.ai/home\">Qwen3</a>"
 
-#: PySubtrans/Transcription/TranscriptionLines.py:87
+#: PySubtrans/Transcription/TranscriptionLines.py:62
 msgid "Long transcription line ({:.1f}s, no word timings to split it): '{}'"
 msgstr "Dlouhý řádek přepisu ({:.1f} s, chybí časování slov pro jeho rozdělení): '{}'"
 
-#: PySubtrans/SubtitleTranslator.py:321
+#: PySubtrans/Transcription/TranscriptionProvider.py:214
+msgid "Longest audio chunk to send in one request"
+msgstr "Nejdelší audio chunk k odeslání v jedné žádosti"
+
+#: PySubtrans/SubtitleTranslator.py:322
 msgid "Made substitutions in input:\n{replaced}"
 msgstr ""
 "Provedeny záměny ve vstupu:\n"
 "{replaced}"
 
-#: PySubtrans/SubtitleTranslator.py:379
+#: PySubtrans/SubtitleTranslator.py:380
 msgid "Made substitutions in output:\n{replaced}"
 msgstr ""
 "Provedeny záměny ve výstupu:\n"
@@ -1533,18 +1546,14 @@ msgstr "Hlavní panel nástrojů"
 msgid "Max batch size is less than min batch size"
 msgstr "Maximální velikost dávky je menší než minimální velikost dávky"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:170
-msgid "Max chunk length"
-msgstr "Maximální délka bloku"
-
 #: PySubtrans/Providers/Provider_LiteLLM.py:77
 msgid "Maximum API requests per minute"
 msgstr "Maximální počet požadavků na API za minutu"
 
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:118
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:81
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:79
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:97
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:123
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:83
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:81
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:99
 msgid "Maximum API requests per minute (0 for unlimited)"
 msgstr "Maximální počet požadavků na API za minutu (0 = bez omezení)"
 
@@ -1564,11 +1573,15 @@ msgstr "Maximální počet požadavků OpenAI API za minutu. Užitečné hlavně
 msgid "Maximum duration of a single line of subtitles"
 msgstr "Maximální délka jednoho řádku titulků"
 
-#: GuiSubtrans/SettingsDialog.py:85
+#: GuiSubtrans/SettingsDialog.py:78
+msgid "Maximum gap between lines for them to be considered part of the same utterance"
+msgstr "Maximální mezera mezi řádky, aby byly považovány za součást stejné věty"
+
+#: GuiSubtrans/SettingsDialog.py:86
 msgid "Maximum length of a single line of subtitles"
 msgstr "Maximální délka jednoho řádku titulků"
 
-#: GuiSubtrans/SettingsDialog.py:97
+#: GuiSubtrans/SettingsDialog.py:98
 msgid "Maximum length of the context summary to include with each translation batch"
 msgstr "Maximální délka kontextového shrnutí, které se má zahrnout ke každé překladové dávce"
 
@@ -1582,7 +1595,7 @@ msgstr "Maximální počet výstupních tokenů v odpovědi"
 msgid "Maximum number of output tokens to return in the response."
 msgstr "Maximální počet výstupních tokenů, které se mají vrátit v odpovědi."
 
-#: GuiSubtrans/SettingsDialog.py:91
+#: GuiSubtrans/SettingsDialog.py:92
 msgid "Maximum number of simultaneous translation threads for fast translation"
 msgstr "Maximální počet souběžných vláken překladu pro rychlý překlad"
 
@@ -1594,21 +1607,21 @@ msgstr "Maximální počet požadavků za minutu (0 = neomezeně)"
 msgid "Maximum tokens a completion can contain (only applicable for -instruct models)"
 msgstr "Maximální počet tokenů, které může dokončení obsahovat (platí pouze pro modely -instruct)"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:150
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:147
 msgid "Media file"
 msgstr "Mediální soubor"
 
-#: PySubtrans/Transcription/AudioChunker.py:90
+#: PySubtrans/Transcription/AudioChunker.py:117
 msgid "Media file has no playable duration"
 msgstr "Mediální soubor nemá přehratelnou délku"
 
-#: PySubtrans/Transcription/AudioExtractor.py:232
+#: PySubtrans/Transcription/AudioExtractor.py:256
 #: PySubtrans/Transcription/SilenceStream.py:51
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:93
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:119
 msgid "Media file not found: {}"
 msgstr "Mediální soubor nenalezen: {}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:508
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:486
 msgid "Media files"
 msgstr "Mediální soubory"
 
@@ -1640,11 +1653,7 @@ msgstr "Slučování scén {scenes}"
 msgid "Messages"
 msgstr "Zprávy"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:169
-msgid "Min chunk length"
-msgstr "Minimální délka bloku"
-
-#: PySubtrans/Transcription/AudioChunker.py:42
+#: PySubtrans/Transcription/AudioChunker.py:49
 msgid "Minimum chunk length cannot exceed maximum chunk length"
 msgstr "Minimální délka bloku nemůže přesáhnout maximální délku bloku"
 
@@ -1656,11 +1665,11 @@ msgstr "Minimální délka jednoho řádku titulků"
 msgid "Minimum gap between consecutive subtitles, in seconds, used when preprocess_subtitles, extend_short_subtitles, or prevent_overlapping_times is enabled"
 msgstr "Minimální mezera mezi po sobě následujícími titulky v sekundách, používaná při zapnutém předzpracování titulků, prodlužování krátkých titulků nebo předcházení překrývání časů"
 
-#: GuiSubtrans/SettingsDialog.py:86
+#: GuiSubtrans/SettingsDialog.py:87
 msgid "Minimum length of a single line of subtitles"
 msgstr "Minimální délka jednoho řádku titulků"
 
-#: GuiSubtrans/SettingsDialog.py:78
+#: GuiSubtrans/SettingsDialog.py:79
 msgid "Minimum number of characters to split a line at"
 msgstr "Minimální počet znaků pro rozdělení řádku"
 
@@ -1692,7 +1701,7 @@ msgstr "Model"
 msgid "Model '{}' does not support timestamped transcription (verbose_json was rejected{}). Choose a model with timestamp support instead of spending credits on untimed text."
 msgstr "Model '{}' nepodporuje přepis s časovými značkami (verbose_json byl odmítnut{}). Zvolte model s podporou časových značek, místo abyste utráceli kredity za text bez časování."
 
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:96
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:99
 msgid "Model '{}' returns no timings and cannot produce subtitles"
 msgstr "Model '{}' nevrací žádná časování a nemůže vytvořit titulky"
 
@@ -1706,8 +1715,8 @@ msgid "Model family/provider to choose from"
 msgstr "Rodina modelů/poskytovatel k výběru"
 
 #: GuiSubtrans/NewProjectSettings.py:35
-msgid "Most lines to send in each batch"
-msgstr "Nejvíce řádků k odeslání v každé dávce"
+msgid "Most lines to send in each batch (modern LLMs can easily handle 100+ lines)"
+msgstr "Nejvíce řádků k odeslání v každém batchi (moderní LLM snadno zvládnou 100+ řádků)"
 
 #: GuiSubtrans/Widgets/ProjectSettings.py:140
 msgid "Movie Name"
@@ -1735,7 +1744,11 @@ msgstr "Bez GPU / pouze CPU"
 
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:525
 msgid "No Torch package could be found in:\n{path}\n\nSelect a virtual environment that contains Torch, or use the automatic install."
-msgstr "Žádný balíček Torch nebyl nalezen v:\n{path}\n\nVyberte virtuální prostředí, které obsahuje Torch, nebo použijte automatickou instalaci."
+msgstr ""
+"Žádný balíček Torch nebyl nalezen v:\n"
+"{path}\n"
+"\n"
+"Vyberte virtuální prostředí, které obsahuje Torch, nebo použijte automatickou instalaci."
 
 #: PySubtrans/Transcription/TranscriptionClient.py:82
 msgid "No audio data provided for transcription"
@@ -1760,7 +1773,7 @@ msgstr "V odpovědi nebyly vráceny žádné volby"
 
 #: PySubtrans/Providers/Clients/CustomClient.py:431
 msgid "No choices returned in the response: {text}"
-msgstr ""
+msgstr "V odpovědi nebyly vráceny žádné možnosti: {text}"
 
 #: PySubtrans/Providers/Clients/AnthropicClient.py:99
 #: PySubtrans/Providers/Clients/BedrockClient.py:76
@@ -1791,7 +1804,7 @@ msgstr "Žádné smazání k vrácení zpět"
 msgid "No existing Torch installation found on this system."
 msgstr "Na tomto systému nebyla nalezena žádná existující instalace Torch."
 
-#: PySubtrans/Subtitles.py:276
+#: PySubtrans/Subtitles.py:284
 msgid "No file path set"
 msgstr "Není nastavena cesta k souboru"
 
@@ -1799,7 +1812,7 @@ msgstr "Není nastavena cesta k souboru"
 msgid "No file path specified"
 msgstr "Není zadána cesta k souboru"
 
-#: PySubtrans/SubtitleTranslator.py:259
+#: PySubtrans/SubtitleTranslator.py:260
 msgid "No instructions provided for translation"
 msgstr "Nebyly poskytnuty žádné instrukce pro překlad"
 
@@ -1849,11 +1862,11 @@ msgstr "Žádné dostupné modely"
 msgid "No models available for {provider}"
 msgstr "Žádné modely nejsou k dispozici pro {provider}"
 
-#: PySubtrans/Subtitles.py:287
+#: PySubtrans/Subtitles.py:295
 msgid "No original subtitles to save to {}"
 msgstr "Žádné původní titulky k uložení do {}"
 
-#: PySubtrans/Subtitles.py:299
+#: PySubtrans/Subtitles.py:307
 msgid "No output path specified, saving to {}"
 msgstr "Není specifikována výstupní cesta, ukládání do {}"
 
@@ -1861,7 +1874,7 @@ msgstr "Není specifikována výstupní cesta, ukládání do {}"
 msgid "No output returned in the response"
 msgstr "V odpovědi nebyl vrácen žádný výstup"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:695
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:677
 msgid "No partial results to resume from."
 msgstr "Nejsou žádné částečné výsledky, ze kterých by bylo možné pokračovat."
 
@@ -1902,7 +1915,7 @@ msgstr "Nebyla poskytnuta cesta k souboru projektu"
 msgid "No project or subtitles to load"
 msgstr "Žádný projekt nebo titulky k načtení"
 
-#: PySubtrans/SubtitleTranslator.py:408
+#: PySubtrans/SubtitleTranslator.py:409
 msgid "No prompt to retranslate"
 msgstr "Žádný prompt k opětovnému překladu"
 
@@ -1910,15 +1923,15 @@ msgstr "Žádný prompt k opětovnému překladu"
 msgid "No response from Gemini"
 msgstr "Žádná odpověď od Gemini"
 
-#: PySubtrans/SubtitleTranslator.py:411
+#: PySubtrans/SubtitleTranslator.py:412
 msgid "No retry instructions provided"
 msgstr "Nebyly poskytnuty žádné pokyny pro opakování"
 
-#: PySubtrans/Subtitles.py:310
+#: PySubtrans/Subtitles.py:318
 msgid "No scenes in subtitles"
 msgstr "Žádné scény v titulkách"
 
-#: GuiSubtrans/ProjectActions.py:273
+#: GuiSubtrans/ProjectActions.py:272
 msgid "No scenes selected for translation"
 msgstr "Nebyly vybrány žádné scény k překladu"
 
@@ -1933,7 +1946,7 @@ msgstr "Žádné scény nebyly vytvořeny z titulků"
 #: GuiSubtrans/Commands/SplitBatchCommand.py:75
 #: GuiSubtrans/Commands/SplitSceneCommand.py:24
 #: GuiSubtrans/Commands/SplitSceneCommand.py:53
-#: GuiSubtrans/ProjectActions.py:442
+#: GuiSubtrans/ProjectActions.py:443
 msgid "No subtitles"
 msgstr "Žádné titulky"
 
@@ -1945,7 +1958,7 @@ msgstr "Žádné titulky v projektu"
 msgid "No subtitles to batch"
 msgstr "Žádné titulky k dávkování"
 
-#: PySubtrans/SubtitleTranslator.py:119
+#: PySubtrans/SubtitleTranslator.py:120
 msgid "No subtitles to translate"
 msgstr "Žádné titulky k překladu"
 
@@ -1953,7 +1966,7 @@ msgstr "Žádné titulky k překladu"
 msgid "No subtitles to translate in {}"
 msgstr "V {} nejsou žádné titulky k překladu"
 
-#: PySubtrans/Subtitles.py:316
+#: PySubtrans/Subtitles.py:324
 msgid "No subtitles translated"
 msgstr "Nebyly přeloženy žádné titulky"
 
@@ -1971,13 +1984,13 @@ msgstr "V odpovědi nebyl nalezen žádný textový obsah"
 
 #: PySubtrans/Providers/Clients/CustomClient.py:454
 msgid "No text returned in the response: {text}"
-msgstr ""
+msgstr "V odpovědi nebyl vrácen žádný text: {text}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:330
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:365
 msgid "No timed subtitles could be produced from {}"
 msgstr "Z {} nebylo možné vytvořit žádné časované titulky"
 
-#: PySubtrans/SubtitleTranslator.py:342
+#: PySubtrans/SubtitleTranslator.py:343
 msgid "No translation provided"
 msgstr "Nebyl poskytnut žádný překlad"
 
@@ -1993,15 +2006,15 @@ msgstr "Není nakonfigurován žádný poskytovatel překladu"
 msgid "No translation providers available. Please install one or more providers."
 msgstr "Nejsou k dispozici žádní poskytovatelé překladu. Nainstalujte prosím jednoho nebo více poskytovatelů."
 
-#: PySubtrans/SubtitleTranslator.py:476
+#: PySubtrans/SubtitleTranslator.py:477
 msgid "No translation returned for batch half"
 msgstr "Pro polovinu dávky nebyl vrácen žádný překlad"
 
-#: PySubtrans/SubtitleTranslator.py:414
+#: PySubtrans/SubtitleTranslator.py:415
 msgid "No translation text to retranslate"
 msgstr "Žádný text překladu k opětovnému překladu"
 
-#: PySubtrans/SubtitleTranslator.py:404
+#: PySubtrans/SubtitleTranslator.py:405
 msgid "No translation to retranslate"
 msgstr "Žádný překlad k opětovnému překladu"
 
@@ -2029,15 +2042,15 @@ msgstr "Žádný"
 msgid "Not sure what you just double-clicked on"
 msgstr "Nejsem si jistý, na co jste právě dvakrát klikli"
 
-#: GuiSubtrans/ProjectActions.py:372
+#: GuiSubtrans/ProjectActions.py:373
 msgid "Nothing selected to delete"
 msgstr "Nic není vybráno ke smazání"
 
-#: GuiSubtrans/ProjectActions.py:345
+#: GuiSubtrans/ProjectActions.py:346
 msgid "Nothing selected to merge"
 msgstr "Nic není vybráno ke sloučení"
 
-#: GuiSubtrans/ProjectActions.py:284
+#: GuiSubtrans/ProjectActions.py:285
 msgid "Nothing selected to reparse"
 msgstr "Nic není vybráno k opětovné analýze"
 
@@ -2065,7 +2078,7 @@ msgstr "Není co vracet zpět"
 msgid "Number of seconds gap to consider it a new scene"
 msgstr "Počet sekund mezery pro považování za novou scénu"
 
-#: GuiSubtrans/SettingsDialog.py:100
+#: GuiSubtrans/SettingsDialog.py:101
 msgid "Number of times to retry a failed translation before giving up"
 msgstr "Počet pokusů o opakování neúspěšného překladu před vzdáním se"
 
@@ -2081,11 +2094,11 @@ msgstr "Zobrazit pouze modely z kategorie překladů"
 msgid "Open File"
 msgstr "Otevřít soubor"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:222
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:209
 msgid "Open as Project"
 msgstr "Otevřít jako projekt"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:159
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:156
 msgid "Open transcription settings for this provider"
 msgstr "Otevřít nastavení přepisu pro tohoto poskytovatele"
 
@@ -2121,7 +2134,7 @@ msgstr "Volitelná cesta ke spustitelnému souboru ffmpeg. Ponechte prázdné pr
 msgid "Optional proxy server to use for requests (e.g. https://api.not-anthropic.com/"
 msgstr "Volitelný proxy server pro požadavky (např. https://api.not-anthropic.com/)"
 
-#: GuiSubtrans/ViewModel/BatchItem.py:193
+#: GuiSubtrans/ViewModel/BatchItem.py:212
 msgid "Original line {line} not found in batch {batch}"
 msgstr "Původní řádek {line} nebyl nalezen v dávce {batch}"
 
@@ -2137,9 +2150,9 @@ msgstr "Cesta k virtuálnímu prostředí Pythonu obsahujícímu Torch"
 msgid "Penalise token repetition — values > 1.0 reduce repetitive output (0.0 to disable)"
 msgstr "Penalizace opakování tokenů — hodnoty > 1.0 snižují opakující se výstup (0.0 pro vypnutí)"
 
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:80
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:78
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:96
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:82
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:80
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:98
 msgid "Per-chunk request timeout in seconds"
 msgstr "Časový limit požadavku na blok v sekundách"
 
@@ -2155,19 +2168,19 @@ msgstr "Oprávnění odepřeno: {error}"
 msgid "Please configure the translation provider settings"
 msgstr "Nakonfigurujte prosím nastavení poskytovatele překladu"
 
-#: GuiSubtrans/ProjectActions.py:401
+#: GuiSubtrans/ProjectActions.py:402
 msgid "Please select a batch to split the scene at"
 msgstr "Vyberte prosím dávku, u které chcete scénu rozdělit"
 
-#: GuiSubtrans/ProjectActions.py:385
+#: GuiSubtrans/ProjectActions.py:386
 msgid "Please select a line to split the batch at"
 msgstr "Vyberte prosím řádek, u kterého chcete dávku rozdělit"
 
-#: GuiSubtrans/ProjectActions.py:388 GuiSubtrans/ProjectActions.py:404
+#: GuiSubtrans/ProjectActions.py:389 GuiSubtrans/ProjectActions.py:405
 msgid "Please select a single split point"
 msgstr "Vyberte prosím jeden bod rozdělení"
 
-#: GuiSubtrans/ProjectActions.py:298
+#: GuiSubtrans/ProjectActions.py:299
 msgid "Please select translated lines to post-process"
 msgstr "Vyberte prosím přeložené řádky pro dodatečné zpracování"
 
@@ -2191,7 +2204,7 @@ msgstr "Připravuje se běhové prostředí Torch..."
 msgid "Preparing installation..."
 msgstr "Připravuje se instalace..."
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:95
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:121
 msgid "Preparing {} transcription..."
 msgstr "Připravuje se přepis {}..."
 
@@ -2207,7 +2220,7 @@ msgstr "Předzpracovat titulky při načítání"
 msgid "Prevent overlapping subtitle display times"
 msgstr "Zabránit překrývání časů zobrazení titulků"
 
-#: GuiSubtrans/SettingsDialog.py:110
+#: GuiSubtrans/SettingsDialog.py:111
 msgid "Processing"
 msgstr "Zpracování"
 
@@ -2241,7 +2254,7 @@ msgstr "Soubor projektu {} nebyl nalezen"
 msgid "Project instructions set from {file}"
 msgstr "Pokyny pro projekt nastaveny ze souboru {file}"
 
-#: GuiSubtrans/ProjectActions.py:439
+#: GuiSubtrans/ProjectActions.py:440
 msgid "Project is not valid"
 msgstr "Projekt je neplatný"
 
@@ -2258,11 +2271,11 @@ msgid "Prompt: {text}"
 msgstr "Výzva: {text}"
 
 #: GuiSubtrans/Widgets/ProjectSettings.py:157
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:161
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:158
 msgid "Provider"
 msgstr "Poskytovatel"
 
-#: GuiSubtrans/SettingsDialog.py:108
+#: GuiSubtrans/SettingsDialog.py:109
 msgid "Provider Settings"
 msgstr "Nastavení poskytovatele"
 
@@ -2270,7 +2283,7 @@ msgstr "Nastavení poskytovatele"
 msgid "Provider error: {error}"
 msgstr "Chyba poskytovatele: {error}"
 
-#: GuiSubtrans/SettingsDialog.py:522
+#: GuiSubtrans/SettingsDialog.py:523
 #: GuiSubtrans/Widgets/ProviderSettingsForm.py:93
 msgid "Provider information"
 msgstr "Informace o poskytovateli"
@@ -2295,11 +2308,6 @@ msgstr "Poskytovatel {provider} vyžaduje konfiguraci: {message}"
 msgid "Provider-prefixed model name (e.g. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
 msgstr "Název modelu s prefixem poskytovatele (např. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:78
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:79
-msgid "Provider-recommended default;"
-msgstr "Výchozí hodnota doporučená poskytovatelem;"
-
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:78
 msgid "PyTorch GPU support for AMD requires Linux with ROCm."
 msgstr "Podpora GPU v PyTorchu pro AMD vyžaduje Linux s ROCm."
@@ -2312,7 +2320,7 @@ msgstr "Podpora XPU v PyTorchu vyžaduje sadu Intel oneAPI (intel.com/oneapi)."
 msgid "Python 3.10 or newer is required. Install Python, then try again."
 msgstr "Je vyžadován Python 3.10 nebo novější. Nainstalujte Python a zkuste to znovu."
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:156
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:159
 msgid "Qwen Local provider could not be registered: {}"
 msgstr "Nepodařilo se zaregistrovat poskytovatele Qwen Local: {}"
 
@@ -2332,7 +2340,7 @@ msgstr "Běhové prostředí pro přepis Qwen se nepodařilo načíst. Ověřte,
 msgid "Qwen transcription runtime could not be loaded: {}. Restart after changing the Torch installation setting."
 msgstr "Běhové prostředí pro přepis Qwen se nepodařilo načíst: {}. Po změně nastavení instalace Torch restartujte."
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:87
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:79
 msgid "Qwen transcription runtime is not installed"
 msgstr "Běhové prostředí pro přepis Qwen není nainstalováno"
 
@@ -2348,11 +2356,11 @@ msgstr "Dosažen limit rychlosti, opakuji za {retry_seconds} sekund..."
 msgid "Rate limited (attempt {}/{}), retrying in {:.0f}s..."
 msgstr "Omezení rychlosti (pokus {}/{}), opakování za {:.0f}s..."
 
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:117
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:122
 msgid "Rate-limit retries per chunk before giving up"
 msgstr "Počet opakování při omezení rychlosti na blok před vzdáním"
 
-#: PySubtrans/SubtitleTranslator.py:220
+#: PySubtrans/SubtitleTranslator.py:221
 msgid "Reached max_lines limit of ({lines} lines)... finishing"
 msgstr "Byl dosažen limit max_lines ({lines} řádků)... dokončuje se"
 
@@ -2384,15 +2392,19 @@ msgstr "Uvolňuji dříve načtený model Qwen {}"
 msgid "Reloading subtitles from the source file"
 msgstr "Opětovné načítání titulků ze zdrojového souboru"
 
-#: GuiSubtrans/SettingsDialog.py:87
+#: GuiSubtrans/SettingsDialog.py:88
 msgid "Remove filler_words and filler words from subtitles"
 msgstr "Odstranit výplňková slova z titulků"
 
-#: PySubtrans/SubtitleEditor.py:238
+#: PySubtrans/SubtitleEditor.py:239
 msgid "Removing {} translated lines in batch ({},{}) that don't match an original line"
 msgstr "Odstraňování {} přeložených řádků v batchi ({},{}) které neodpovídají původnímu řádku"
 
-#: PySubtrans/Subtitles.py:364
+#: PySubtrans/SubtitleEditor.py:247 PySubtrans/Subtitles.py:377
+msgid "Renumbering subtitle lines due to duplicate indices"
+msgstr "Přečíslování řádků titulků kvůli duplicitním indexům"
+
+#: PySubtrans/Subtitles.py:375
 msgid "Renumbering subtitle lines due to missing indices"
 msgstr "Přečíslování řádků titulků z důvodu chybějících indexů"
 
@@ -2404,11 +2416,11 @@ msgstr "Znovu analyzovat překlad"
 msgid "Reparse batches {batches}"
 msgstr "Znovu analyzovat dávky {batches}"
 
-#: PySubtrans/SubtitleTranslator.py:240
+#: PySubtrans/SubtitleTranslator.py:241
 msgid "Reparsing scene {scene} batch {batch} with {count} lines..."
 msgstr "Znovu se analyzuje scéna {scene} dávky {batch} s {count} řádky..."
 
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:95
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:93
 msgid "Request speaker diarization (only supported by some models)"
 msgstr "Vyžádat diarizaci mluvčích (podporováno pouze některými modely)"
 
@@ -2436,7 +2448,7 @@ msgstr "Je vyžadován restart"
 msgid "Restoring deleted lines"
 msgstr "Obnovování smazaných řádků"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:214
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:201
 msgid "Resume"
 msgstr "Pokračovat"
 
@@ -2448,15 +2460,15 @@ msgstr "Pokračování"
 msgid "Resuming transcription after {}"
 msgstr "Pokračuji v přepisu po {}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:710
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:692
 msgid "Resuming transcription..."
 msgstr "Pokračuji v přepisu..."
 
-#: PySubtrans/SubtitleTranslator.py:122
+#: PySubtrans/SubtitleTranslator.py:123
 msgid "Resuming translation"
 msgstr "Pokračuje se v překladu"
 
-#: PySubtrans/SubtitleTranslator.py:432
+#: PySubtrans/SubtitleTranslator.py:433
 msgid "Retranslation is not the expected type"
 msgstr "Opětovný překlad není očekávaného typu"
 
@@ -2464,11 +2476,11 @@ msgstr "Opětovný překlad není očekávaného typu"
 msgid "Retry"
 msgstr "Opakovat"
 
-#: PySubtrans/SubtitleTranslator.py:439
+#: PySubtrans/SubtitleTranslator.py:440
 msgid "Retry failed validation: {errors}"
 msgstr "Opakování po neúspěšné validaci: {errors}"
 
-#: PySubtrans/SubtitleTranslator.py:441
+#: PySubtrans/SubtitleTranslator.py:442
 msgid "Retry passed validation"
 msgstr "Opakování úspěšně prošlo validací"
 
@@ -2511,7 +2523,7 @@ msgstr "Uložit projekt/překlad (Podržte shift pro uložení jako...)"
 msgid "Save project/translation as..."
 msgstr "Uložit projekt/překlad jako..."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:181
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:168
 msgid "Save transcribed subtitles"
 msgstr "Uložit přepsané titulky"
 
@@ -2519,7 +2531,7 @@ msgstr "Uložit přepsané titulky"
 msgid "Saving backup copy of the project"
 msgstr "Ukládání záložní kopie projektu"
 
-#: PySubtrans/Subtitles.py:326
+#: PySubtrans/Subtitles.py:334
 msgid "Saving translation to {}"
 msgstr "Ukládání překladu do {}"
 
@@ -2532,19 +2544,19 @@ msgstr "Scéna {num}"
 msgid "Scene {scene} Batch {batch}"
 msgstr "Scéna {scene} Dávka {batch}"
 
-#: PySubtrans/SubtitleTranslator.py:140
+#: PySubtrans/SubtitleTranslator.py:141
 msgid "Scene {scene} already translated {linecount} lines..."
 msgstr "Scéna {scene} již má přeloženo {linecount} řádků..."
 
-#: PySubtrans/SubtitleTranslator.py:245
+#: PySubtrans/SubtitleTranslator.py:246
 msgid "Scene {scene} batch {batch} already translated {lines} lines..."
 msgstr "Scéna {scene} dávky {batch} již má přeloženo {lines} řádků..."
 
-#: PySubtrans/SubtitleTranslator.py:295
+#: PySubtrans/SubtitleTranslator.py:296
 msgid "Scene {scene} batch {batch} failed validation, requesting retranslation"
 msgstr "Scéna {scene} dávky {batch} neprošla validací, požaduje se nový překlad"
 
-#: PySubtrans/SubtitleTranslator.py:388
+#: PySubtrans/SubtitleTranslator.py:389
 msgid "Scene {scene} batch {batch}: {translated} lines and {untranslated} untranslated."
 msgstr "Scéna {scene} dávky {batch}: {translated} přeložených řádků a {untranslated} nepřeložených."
 
@@ -2556,7 +2568,7 @@ msgstr "Scéna {scene}, dávka {batch}"
 msgid "Searching for an existing Torch installation..."
 msgstr "Hledá se existující instalace Torch..."
 
-#: GuiSubtrans/SettingsDialog.py:101
+#: GuiSubtrans/SettingsDialog.py:102
 msgid "Seconds to wait before retrying a failed translation"
 msgstr "Počet sekund čekání před opakováním neúspěšného překladu"
 
@@ -2564,7 +2576,7 @@ msgstr "Počet sekund čekání před opakováním neúspěšného překladu"
 msgid "Secret access key must be set in .env or provided as an argument"
 msgstr "Tajný přístupový klíč musí být nastaven v .env nebo poskytnut jako argument"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:510
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:488
 msgid "Select Media File"
 msgstr "Vybrat mediální soubor"
 
@@ -2573,16 +2585,16 @@ msgstr "Vybrat mediální soubor"
 msgid "Select Torch Installation Directory"
 msgstr "Vyberte instalační adresář Torch"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:205
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:328
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:192
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:315
 msgid "Select a media file to begin."
 msgstr "Chcete-li začít, vyberte mediální soubor."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:581
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:559
 msgid "Select a valid media file first."
 msgstr "Nejprve vyberte platný mediální soubor."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:147
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:144
 msgid "Select a video or audio file..."
 msgstr "Vyberte video nebo zvukový soubor..."
 
@@ -2605,11 +2617,11 @@ msgstr "Chyba serveru: {status_code} {text}"
 
 #: PySubtrans/Providers/Clients/CustomClient.py:237
 msgid "Server returned an invalid response: {text}"
-msgstr ""
+msgstr "Server vrátil neplatnou odpověď: {text}"
 
 #: PySubtrans/Providers/Clients/CustomClient.py:242
 msgid "Server returned an unexpected response format: {text}"
-msgstr ""
+msgstr "Server vrátil neočekávaný formát odpovědi: {text}"
 
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:104
 msgid "Set up Torch for Local Transcription"
@@ -2628,6 +2640,10 @@ msgstr "Nastavení výstupní cesty na {}"
 msgid "Settings"
 msgstr "Nastavení"
 
+#: PySubtrans/Transcription/TranscriptionProvider.py:213
+msgid "Shortest audio chunk to send in one request"
+msgstr "Nejkratší audio chunk k odeslání v jedné žádosti"
+
 #: PySubtrans/Transcription/SilenceStream.py:116
 msgid "Silence detection failed"
 msgstr "Detekce ticha selhala"
@@ -2640,7 +2656,7 @@ msgstr "Časový limit detekce ticha vypršel po {} sekundách"
 msgid "Silence stream was used outside a with block"
 msgstr "Stream ticha byl použit mimo blok with"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:373
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:408
 msgid "Skipping silent chunk {} before requesting"
 msgstr "Přeskakuji tichý blok {} před odesláním požadavku"
 
@@ -2656,16 +2672,16 @@ msgstr "Některé vybrané řádky nebyly nalezeny"
 msgid "Speakers"
 msgstr "Mluvčí"
 
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:114
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:93
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:115
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:91
 msgid "Speech-to-text model"
 msgstr "Model přepisu řeči"
 
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:76
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:74
 msgid "Speech-to-text model (both return timings)"
 msgstr "Model přepisu řeči (oba vracejí časování)"
 
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:77
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:75
 msgid "Speech-to-text model (turns carry timings)"
 msgstr "Model přepisu řeči (promluvy nesou časování)"
 
@@ -2677,11 +2693,11 @@ msgstr "Rozdělit dávku"
 msgid "Split Scene"
 msgstr "Rozdělit scénu"
 
-#: PySubtrans/SubtitleTranslator.py:512
+#: PySubtrans/SubtitleTranslator.py:513
 msgid "Split retranslation has errors: {errors}"
 msgstr "Dělený zpětný překlad obsahuje chyby: {errors}"
 
-#: PySubtrans/SubtitleTranslator.py:514
+#: PySubtrans/SubtitleTranslator.py:515
 msgid "Split retranslation passed validation"
 msgstr "Dělený zpětný překlad prošel validací"
 
@@ -2689,7 +2705,7 @@ msgstr "Dělený zpětný překlad prošel validací"
 msgid "Splitting batch {scene} at batch {batch}"
 msgstr "Rozdělování dávky {scene} u dávky {batch}"
 
-#: PySubtrans/SubtitleTranslator.py:461
+#: PySubtrans/SubtitleTranslator.py:462
 msgid "Splitting scene {scene} batch {batch} into two halves for retranslation..."
 msgstr "Rozdělování scény {scene} dávky {batch} na dvě poloviny pro zpětný překlad..."
 
@@ -2697,20 +2713,20 @@ msgstr "Rozdělování scény {scene} dávky {batch} na dvě poloviny pro zpětn
 msgid "Splitting scene {scene} batch: {batch} at line {line}"
 msgstr "Rozdělování scény {scene} dávky: {batch} u řádku {line}"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:106
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:101
 msgid "Spoken language hint (optional, auto-detected when empty)"
 msgstr "Nápověda k mluvenému jazyku (volitelné, při prázdné hodnotě se jazyk automaticky rozpozná)"
 
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:77
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:94
+#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:75
+#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:92
 msgid "Spoken language hint, e.g. Chinese or en (optional, auto-detected when empty)"
 msgstr "Nápověda mluveného jazyka, např. Chinese nebo en (volitelné, při prázdném poli automaticky detekováno)"
 
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:115
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:116
 msgid "Spoken language hint, e.g. Chinese, ja or cmn-Hans-CN (optional, auto-detected when empty)"
 msgstr "Nápověda mluveného jazyka, např. Chinese, ja nebo cmn-Hans-CN (volitelné, při prázdném poli automaticky detekováno)"
 
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:78
+#: PySubtrans/Transcription/Providers/Provider_Muse.py:76
 msgid "Spoken language hint, e.g. english (optional, auto-detected when empty)"
 msgstr "Nápověda mluveného jazyka, např. angličtina (volitelné, při prázdném poli automaticky rozpoznáno)"
 
@@ -2806,11 +2822,11 @@ msgstr "Soubor titulků neobsahuje žádný překladatelný obsah"
 msgid "Subtitle files"
 msgstr "Soubory s titulky"
 
-#: GuiSubtrans/ProjectActions.py:445 PySubtrans/Subtitles.py:110
+#: GuiSubtrans/ProjectActions.py:446 PySubtrans/Subtitles.py:118
 msgid "Subtitles have not been batched"
 msgstr "Titulky nebyly rozděleny do dávek"
 
-#: PySubtrans/SubtitleTranslator.py:125
+#: PySubtrans/SubtitleTranslator.py:126
 msgid "Subtitles must be batched before translation"
 msgstr "Titulky musí být seskupeny do batchů před překladem"
 
@@ -2822,7 +2838,7 @@ msgstr "Soubory Subtrans (*.subtrans);;Všechny soubory (*)"
 msgid "Subtrans projects"
 msgstr "Projekty Subtrans"
 
-#: PySubtrans/SubtitleTranslator.py:160
+#: PySubtrans/SubtitleTranslator.py:161
 msgid "Successfully translated {count} lines!"
 msgstr "Úspěšně přeloženo {count} řádků!"
 
@@ -2830,11 +2846,11 @@ msgstr "Úspěšně přeloženo {count} řádků!"
 msgid "Summary"
 msgstr "Shrnutí"
 
-#: PySubtrans/SubtitleTranslator.py:533
+#: PySubtrans/SubtitleTranslator.py:534
 msgid "Summary was truncated from {original} to {truncated} characters"
 msgstr "Souhrn byl zkrácen z {original} na {truncated} znaků"
 
-#: PySubtrans/SubtitleTranslator.py:396
+#: PySubtrans/SubtitleTranslator.py:397
 msgid "Summary: {summary}"
 msgstr "Souhrn: {summary}"
 
@@ -2926,7 +2942,7 @@ msgstr "Informace o kompatibilitě pro toto sestavení nebylo možné přečíst
 msgid "The configured Torch installation directory is invalid. Select the external site-packages directory containing the 'torch' package."
 msgstr "Nakonfigurovaný instalační adresář Torch je neplatný. Vyberte externí adresář site-packages obsahující balíček 'torch'."
 
-#: PySubtrans/Transcription/AudioExtractor.py:254
+#: PySubtrans/Transcription/AudioExtractor.py:278
 msgid "The configured ffmpeg executable was not found: {}"
 msgstr "Nakonfigurovaný spustitelný soubor ffmpeg nebyl nalezen: {}"
 
@@ -2954,7 +2970,7 @@ msgstr "V externí instalaci Torch chybí adresář nativních knihoven: {}."
 msgid "The external Torch installation setting was cleared after Torch runtime setup. Restart the application to apply that change."
 msgstr "Nastavení externí instalace Torch bylo po nastavení běhového prostředí Torch vymazáno. Restartujte aplikaci, aby se tato změna projevila."
 
-#: PySubtrans/Transcription/AudioExtractor.py:263
+#: PySubtrans/Transcription/AudioExtractor.py:287
 msgid "The ffprobe executable paired with ffmpeg was not found: {}"
 msgstr "Spustitelný soubor ffprobe přidružený k ffmpeg nebyl nalezen: {}"
 
@@ -3004,7 +3020,11 @@ msgstr "Omezení rychlosti pro překlady (výchozí 60.0)"
 
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:574
 msgid "The selected Torch environment may be incompatible with this application:\n{details}\n\nTorch is loaded into this application, so its Python ABI, OS, architecture and pointer width should match the build. If Torch fails to load, install a matching environment."
-msgstr "Vybrané prostředí Torch může být nekompatibilní s touto aplikací:\n{details}\n\nTorch je do této aplikace načítán, takže jeho Python ABI, OS, architektura a šířka ukazatele by měly odpovídat sestavení. Pokud se Torch nepodaří načíst, nainstalujte odpovídající prostředí."
+msgstr ""
+"Vybrané prostředí Torch může být nekompatibilní s touto aplikací:\n"
+"{details}\n"
+"\n"
+"Torch je do této aplikace načítán, takže jeho Python ABI, OS, architektura a šířka ukazatele by měly odpovídat sestavení. Pokud se Torch nepodaří načíst, nainstalujte odpovídající prostředí."
 
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:562
 msgid "The selected environment has no Python interpreter, so its compatibility could not be verified."
@@ -3089,11 +3109,11 @@ msgstr "Torch byl úspěšně nainstalován."
 msgid "Torch is already loaded from '{}'. Changing the Torch installation requires restarting the application."
 msgstr "Torch je již načten z '{}'. Změna instalace Torch vyžaduje restartování aplikace."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:213
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:200
 msgid "Transcribe"
 msgstr "Přepsat"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:88
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:85
 msgid "Transcribe Media"
 msgstr "Přepsat média"
 
@@ -3101,19 +3121,19 @@ msgstr "Přepsat média"
 msgid "Transcribe audio/video to subtitles"
 msgstr "Přepsat zvuk/video na titulky"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:191
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:178
 msgid "Transcribed lines will appear here..."
 msgstr "Přepsané řádky se zobrazí zde..."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:854
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:836
 msgid "Transcribed {} lines (saving to {})."
 msgstr "Přepsáno {} řádků (ukládá se do {})."
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:332
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:367
 msgid "Transcribed {} lines from {} chunks"
 msgstr "Přepsáno {} řádků z {} bloků"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:856
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:838
 msgid "Transcribed {} lines."
 msgstr "Přepsáno {} řádků."
 
@@ -3125,15 +3145,15 @@ msgstr "Přepisuji blok {current}"
 msgid "Transcribing chunk {current}/{total}"
 msgstr "Přepisuji blok {current}/{total}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:111
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:142
 msgid "Transcribing {} with {}"
 msgstr "Přepisuji {} pomocí {} (bloky se streamují, zatímco běží detekce ticha)"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:686
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:668
 msgid "Transcribing..."
 msgstr "Přepisuji..."
 
-#: GuiSubtrans/SettingsDialog.py:109
+#: GuiSubtrans/SettingsDialog.py:110
 msgid "Transcription Settings"
 msgstr "Nastavení přepisu"
 
@@ -3144,11 +3164,11 @@ msgstr "Nastavení přepisu"
 msgid "Transcription aborted"
 msgstr "Přepis zrušen"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:244
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:275
 msgid "Transcription cancelled after {done} chunks"
 msgstr "Přepis zrušen po {done} blocích"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:335
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:370
 msgid "Transcription cost: ${:.4f}"
 msgstr "Cena přepisu: ${:.4f}"
 
@@ -3156,24 +3176,24 @@ msgstr "Cena přepisu: ${:.4f}"
 msgid "Transcription failed ({}): non-JSON response: {}"
 msgstr "Přepis selhal ({}): odpověď není ve formátu JSON: {}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:312
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:343
 msgid "Transcription failed at {span}: {error}"
 msgstr "Přepis selhal v {span}: {error}"
 
 #: GuiSubtrans/Commands/TranscribeMediaCommand.py:168
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:848
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:830
 msgid "Transcription failed: {error}"
 msgstr "Přepis selhal: {error}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:847
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:829
 msgid "Transcription failed; partial results ({} lines) are available."
 msgstr "Přepis selhal; částečné výsledky ({} řádků) jsou k dispozici."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:851
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:833
 msgid "Transcription incomplete - partial results ({} lines)."
 msgstr "Přepis neúplný - částečné výsledky ({} řádků)."
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:105
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:100
 msgid "Transcription model to run"
 msgstr "Model přepisu ke spuštění"
 
@@ -3181,15 +3201,15 @@ msgstr "Model přepisu ke spuštění"
 msgid "Transcription produced no subtitles"
 msgstr "Přepis nevygeneroval žádné titulky"
 
-#: GuiSubtrans/SettingsDialog.py:735
+#: GuiSubtrans/SettingsDialog.py:736
 msgid "Transcription provider is not set"
 msgstr "Poskytovatel přepisu není nastaven"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:624
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:602
 msgid "Transcription providers are still loading..."
 msgstr "Poskytovatelé přepisu se stále načítají..."
 
-#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:100
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:105
 #: PySubtrans/Transcription/TranscriptionClient.py:221
 msgid "Transcription request failed: POST {} returned {}: {}"
 msgstr "Požadavek na přepis selhal: POST {} vrátil {}: {}"
@@ -3198,7 +3218,7 @@ msgstr "Požadavek na přepis selhal: POST {} vrátil {}: {}"
 msgid "Transcription request failed: {}"
 msgstr "Požadavek na přepis selhal: {}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:306
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:337
 msgid "Transcription stopped at {span}: {error}"
 msgstr "Přepis zastaven u {span}: {error}"
 
@@ -3247,16 +3267,16 @@ msgstr "Překládám s modelem {model}, používám základnu API: {api_base}"
 msgid "Translating with server at {server_address}{endpoint}"
 msgstr "Překládání pomocí serveru na adrese {server_address}{endpoint}"
 
-#: PySubtrans/SubtitleTranslator.py:127
+#: PySubtrans/SubtitleTranslator.py:128
 msgid "Translating {linecount} lines in {scenecount} scenes"
 msgstr "Překládá se {linecount} řádků v {scenecount} scénách"
 
 #: PySubtrans/SubtitleError.py:59 PySubtrans/SubtitleProject.py:439
-#: PySubtrans/SubtitleTranslator.py:153
+#: PySubtrans/SubtitleTranslator.py:154
 msgid "Translation aborted"
 msgstr "Překlad byl přerušen"
 
-#: PySubtrans/SubtitleTranslator.py:345
+#: PySubtrans/SubtitleTranslator.py:346
 msgid "Translation contains no translated text"
 msgstr "Překlad neobsahuje žádný přeložený text"
 
@@ -3284,7 +3304,7 @@ msgstr "Nastavení poskytovatele překladu jsou neplatná. Zkontrolujte prosím 
 msgid "Translation response error: {error}, retrying in {backoff_time} seconds..."
 msgstr "Chyba odpovědi překladu: {error}, opakuji za {backoff_time} sekund..."
 
-#: PySubtrans/SubtitleTranslator.py:332
+#: PySubtrans/SubtitleTranslator.py:333
 msgid "Truncating batch to remain within max_lines"
 msgstr "Dávka se zkracuje, aby zůstala v limitu max_lines"
 
@@ -3307,15 +3327,15 @@ msgstr "Nelze získat zámek titulků"
 msgid "Unable to create option widget for {key}: {error}"
 msgstr "Nelze vytvořit widget volby pro {key}: {error}"
 
-#: PySubtrans/SubtitleTranslator.py:100
+#: PySubtrans/SubtitleTranslator.py:101
 msgid "Unable to create provider client: {error}"
 msgstr "Nelze vytvořit klienta poskytovatele: {error}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:357
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:344
 msgid "Unable to create transcription provider: {error}"
 msgstr "Nepodařilo se vytvořit poskytovatele přepisu: {error}"
 
-#: PySubtrans/SubtitleTranslator.py:103
+#: PySubtrans/SubtitleTranslator.py:104
 msgid "Unable to create translation client"
 msgstr "Nelze vytvořit klienta překladu"
 
@@ -3365,7 +3385,7 @@ msgstr "Nelze načíst pokyny ze souboru {file}: {error}"
 msgid "Unable to load models for {provider}: {error}"
 msgstr "Nepodařilo se načíst modely pro {provider}: {error}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:446
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:427
 msgid "Unable to load provider options: {error}"
 msgstr "Nepodařilo se načíst možnosti poskytovatele: {error}"
 
@@ -3373,16 +3393,16 @@ msgstr "Nepodařilo se načíst možnosti poskytovatele: {error}"
 msgid "Unable to load subtitles from {file}"
 msgstr "Nelze načíst titulky ze souboru {file}"
 
-#: GuiSubtrans/SettingsDialog.py:652
+#: GuiSubtrans/SettingsDialog.py:653
 msgid "Unable to load transcription provider options: {error}"
 msgstr "Nepodařilo se načíst možnosti poskytovatele přepisu: {error}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:334
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:321
 msgid "Unable to load transcription providers."
 msgstr "Nepodařilo se načíst poskytovatele přepisu."
 
-#: GuiSubtrans/SettingsDialog.py:594
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:333
+#: GuiSubtrans/SettingsDialog.py:595
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:320
 msgid "Unable to load transcription providers: {error}"
 msgstr "Nepodařilo se načíst poskytovatele přepisu: {error}"
 
@@ -3390,11 +3410,11 @@ msgstr "Nepodařilo se načíst poskytovatele přepisu: {error}"
 msgid "Unable to load {file} ({error})"
 msgstr "Nelze načíst {file} ({error})"
 
-#: PySubtrans/SubtitleTranslator.py:371
+#: PySubtrans/SubtitleTranslator.py:372
 msgid "Unable to match {count} lines with a source line"
 msgstr "Nepodařilo se spárovat {count} řádků se zdrojovým řádkem"
 
-#: GuiSubtrans/ProjectActions.py:363
+#: GuiSubtrans/ProjectActions.py:364
 msgid "Unable to merge selection ({selection})"
 msgstr "Nelze sloučit výběr ({selection})"
 
@@ -3420,7 +3440,7 @@ msgstr "Nelze zobrazit náhled dávek: {error}"
 msgid "Unable to probe media duration: {}"
 msgstr "Nepodařilo se zjistit délku média: {}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:532
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:510
 msgid "Unable to read media: {error}"
 msgstr "Nelze přečíst médium: {error}"
 
@@ -3428,7 +3448,7 @@ msgstr "Nelze přečíst médium: {error}"
 msgid "Unable to read project file, starting afresh"
 msgstr "Nelze načíst soubor projektu, začíná se znovu"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:604
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:582
 msgid "Unable to record dependency evidence: {error}"
 msgstr "Nelze zaznamenat důkazy o závislostech: {error}"
 
@@ -3439,7 +3459,7 @@ msgstr "Nelze zaregistrovat nativní knihovny Torch z '{}': {}."
 #: PySubtrans/Providers/Provider_OpenRouter.py:298
 #: PySubtrans/Providers/Provider_Requesty.py:292
 msgid "Unable to resolve model ID for {model}: {error}"
-msgstr ""
+msgstr "Nelze vyřešit ID modelu pro {model}: {error}"
 
 #: PySubtrans/Providers/Provider_Claude.py:163
 msgid "Unable to retrieve Claude model list: {error}"
@@ -3469,7 +3489,7 @@ msgstr "Nelze načíst modely"
 
 #: PySubtrans/Providers/Provider_Gemini.py:129
 msgid "Unable to retrieve models. Gemini API may be unavailable in your region."
-msgstr ""
+msgstr "Nelze načíst modely. Gemini API nemusí být ve vaší oblasti dostupné."
 
 #: PySubtrans/SubtitleProject.py:251
 msgid "Unable to save original subtitles: {}"
@@ -3483,7 +3503,7 @@ msgstr "Nelze uložit soubor terminologie '{path}': {error}"
 msgid "Unable to save translation: {}"
 msgstr "Nelze uložit překlad: {}"
 
-#: PySubtrans/SubtitleTranslator.py:275
+#: PySubtrans/SubtitleTranslator.py:276
 msgid "Unable to translate scene {scene} batch {batch}"
 msgstr "Nelze přeložit scénu {scene} dávku {batch}"
 
@@ -3521,7 +3541,7 @@ msgstr "Nečekaná chyba při komunikaci s OpenAI"
 
 #: PySubtrans/Providers/Clients/CustomClient.py:182
 msgid "Unexpected error communicating with server: {error}"
-msgstr ""
+msgstr "Neočekávaná chyba při komunikaci se serverem: {error}"
 
 #: PySubtrans/Providers/Clients/LiteLLMClient.py:183
 #: PySubtrans/Providers/Clients/MistralClient.py:136
@@ -3554,11 +3574,11 @@ msgstr "Neznámý formát titulků: {extension}. Dostupné formáty: {available}
 msgid "Unrecognised language '{}': use a language name or BCP-47 code, or leave empty to auto-detect"
 msgstr "Nerozpoznaný jazyk '{}': použijte název jazyka nebo kód BCP-47, nebo ponechte prázdné pro automatickou detekci"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:219
+#: PySubtrans/Transcription/TranscriptionProvider.py:252
 msgid "Unrecognised language '{}': use a language name or code, or leave empty to auto-detect"
 msgstr "Nerozpoznaný jazyk '{}': použijte název jazyka nebo kód, nebo ponechte prázdné pro automatickou detekci"
 
-#: GuiSubtrans/Command.py:90
+#: GuiSubtrans/Command.py:92
 msgid "Unrecoverable error in {name}"
 msgstr "Neopravitelná chyba v {name}"
 
@@ -3566,7 +3586,7 @@ msgstr "Neopravitelná chyba v {name}"
 msgid "Unsupported reasoning effort: {error}. Choose a different reasoning effort or model."
 msgstr "Nepodporované úsilí o uvažování: {error}. Vyberte jiné úsilí o uvažování nebo model."
 
-#: PySubtrans/SubtitleTranslator.py:165
+#: PySubtrans/SubtitleTranslator.py:166
 msgid "Untranslated > {number}. {text}"
 msgstr "Nepřeloženo > {number}. {text}"
 
@@ -3611,7 +3631,7 @@ msgstr "Použít knihovnu httpx pro požadavky. Může pomoci, pokud obdržíte 
 msgid "Use this installation"
 msgstr "Použít tuto instalaci"
 
-#: GuiSubtrans/ViewModel/BatchItem.py:252
+#: GuiSubtrans/ViewModel/BatchItem.py:271
 msgid "User Prompt:\n {text}"
 msgstr ""
 "Uživatelská výzva:\n"
@@ -3626,7 +3646,7 @@ msgstr "Používá se model: {model}"
 msgid "Using proxy: {proxy}"
 msgstr "Používám proxy: {proxy}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:166
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:163
 msgid "VTT and ASS preserve speaker labels; SRT has no speaker field"
 msgstr "VTT a ASS zachovávají popisky mluvčích; SRT nemá pole pro mluvčího"
 
@@ -3634,11 +3654,11 @@ msgstr "VTT a ASS zachovávají popisky mluvčích; SRT nemá pole pro mluvčíh
 msgid "Validated Torch installation at {path}."
 msgstr "Ověřena instalace Torch v {path}."
 
-#: GuiSubtrans/SettingsDialog.py:98
+#: GuiSubtrans/SettingsDialog.py:99
 msgid "Validator: Maximum number of characters to allow in a single translated line"
 msgstr "Validátor: Maximální počet znaků povolených v jednom přeloženém řádku"
 
-#: GuiSubtrans/SettingsDialog.py:99
+#: GuiSubtrans/SettingsDialog.py:100
 msgid "Validator: Maximum number of newlines to allow in a single translated line"
 msgstr "Validátor: Maximální počet nových řádků povolených v jednom přeloženém řádku"
 
@@ -3650,16 +3670,24 @@ msgstr "Virtuální prostředí bylo úspěšně vytvořeno."
 msgid "Warming up translation provider"
 msgstr "Zahřívání překladatelského poskytovatele"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:409
-#: PySubtrans/Transcription/TranscriptionProvider.py:140
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:390
+#: PySubtrans/Transcription/TranscriptionProvider.py:148
 msgid "Warning"
 msgstr "Varování"
 
-#: GuiSubtrans/SettingsDialog.py:95
+#: GuiSubtrans/SettingsDialog.py:96
 msgid "Whether to substitute whole words or partial matches, or choose automatically based on input language"
 msgstr "Zda nahrazovat celá slova nebo částečné shody, nebo zvolit automaticky na základě vstupního jazyka"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:80
+#: PySubtrans/Transcription/TranscriptionProvider.py:225
+msgid "Widest gap, in seconds, across which lines can be merged when the speaker has not changed"
+msgstr "Největší mezera v sekundách, přes kterou lze řádky sloučit, pokud se mluvčí nezměnil"
+
+#: PySubtrans/Transcription/TranscriptionProvider.py:220
+msgid "Widest gap, in seconds, across which transcribed lines can still be merged"
+msgstr "Největší mezera v sekundách, přes kterou lze stále sloučit přepisované řádky"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:77
 msgid "Write the transcription to a subtitle file alongside the media before translating"
 msgstr "Před překladem zapište přepis do souboru titulků vedle média"
 
@@ -3674,14 +3702,6 @@ msgstr "Přístupový klíč"
 #: PySubtrans/Options.py:62
 msgid "add_right_to_left_markers"
 msgstr "Přidat značky zprava doleva"
-
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
-msgid "aligner_model"
-msgstr "Model zarovnávání"
-
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
-msgid "allow_cpu_fallback"
-msgstr "Povolit záložní CPU"
 
 #: PySubtrans/Providers/Provider_Azure.py:0
 #: PySubtrans/Providers/Provider_DeepSeek.py:0
@@ -3700,10 +3720,6 @@ msgstr "Základní API"
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
 msgid "api_key"
 msgstr "API klíč"
 
@@ -3711,15 +3727,15 @@ msgstr "API klíč"
 msgid "api_version"
 msgstr "Verze API"
 
-#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:111
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:116
 msgid "audio over the 10-minute cap, or a malformed request"
 msgstr "zvuk přesahuje 10minutový limit, nebo chybně formátovaný požadavek"
 
-#: PySubtrans/Options.py:102
+#: PySubtrans/Options.py:103
 msgid "autosave"
 msgstr "Automatické ukládání"
 
-#: PySubtrans/Options.py:94
+#: PySubtrans/Options.py:95
 msgid "autosplit_on_error"
 msgstr "Automatické rozdělení při chybě"
 
@@ -3727,11 +3743,11 @@ msgstr "Automatické rozdělení při chybě"
 msgid "aws_region"
 msgstr "Region AWS"
 
-#: PySubtrans/Options.py:100
+#: PySubtrans/Options.py:101
 msgid "backoff_time"
 msgstr "Čas odkladu"
 
-#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:114
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:119
 msgid "body over 32 MB"
 msgstr "tělo požadavku přesahuje 32 MB"
 
@@ -3743,11 +3759,11 @@ msgstr "Rozdělit dialog na jeden řádek"
 msgid "break_long_lines"
 msgstr "Rozdělit dlouhé řádky"
 
-#: PySubtrans/Options.py:92
+#: PySubtrans/Options.py:93
 msgid "build_terminology_map"
 msgstr "Vytvořit mapu terminologie"
 
-#: PySubtrans/Options.py:91
+#: PySubtrans/Options.py:92
 msgid "convert_wide_dashes"
 msgstr "Převést široké pomlčky"
 
@@ -3766,17 +3782,7 @@ msgstr "výchozí model"
 msgid "deployment_name"
 msgstr "Název nasazení"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
-msgid "device"
-msgstr "Zařízení"
-
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
-msgid "diarize"
-msgstr "Diarizace"
-
-#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:108
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:113
 #: PySubtrans/Transcription/TranscriptionClient.py:220
 msgid "empty response body"
 msgstr "prázdné tělo odpovědi"
@@ -3790,7 +3796,7 @@ msgstr "Povolit uvažování"
 msgid "endpoint"
 msgstr "Koncový bod"
 
-#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:113
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:118
 msgid "endpoint not found"
 msgstr "koncový bod nebyl nalezen"
 
@@ -3798,23 +3804,23 @@ msgstr "koncový bod nebyl nalezen"
 msgid "extend_short_subtitles"
 msgstr "Prodloužit krátké titulky"
 
-#: PySubtrans/Transcription/AudioExtractor.py:250
+#: PySubtrans/Transcription/AudioExtractor.py:274
 msgid "ffmpeg and ffprobe are required for transcription but were not found on PATH"
 msgstr "ffmpeg a ffprobe jsou pro přepis vyžadovány, ale nebyly nalezeny v PATH"
 
-#: PySubtrans/Options.py:108
+#: PySubtrans/Options.py:109
 msgid "ffmpeg_path"
 msgstr "Cesta k FFmpeg"
 
-#: PySubtrans/Transcription/AudioExtractor.py:259
+#: PySubtrans/Transcription/AudioExtractor.py:283
 msgid "ffprobe was not found alongside the configured ffmpeg executable or on PATH"
 msgstr "ffprobe nebyl nalezen vedle nakonfigurovaného spustitelného souboru ffmpeg ani v PATH"
 
-#: PySubtrans/Options.py:87
+#: PySubtrans/Options.py:88
 msgid "filler_words"
 msgstr "Výplňková slova"
 
-#: PySubtrans/Options.py:115
+#: PySubtrans/Options.py:116
 msgid "firstrun"
 msgstr "První spuštění"
 
@@ -3822,12 +3828,12 @@ msgstr "První spuštění"
 msgid "free_plan"
 msgstr "Bezplatný plán"
 
-#: PySubtrans/Options.py:90
+#: PySubtrans/Options.py:91
 msgid "full_width_punctuation"
 msgstr "Interpunkce plné šířky"
 
 #: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:196
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:135
+#: PySubtrans/Transcription/Providers/Provider_Gemini.py:141
 msgid "google-genai dependencies missing, Gemini transcription unavailable ({})"
 msgstr "Chybí závislosti google-genai, přepis přes Gemini není k dispozici ({})"
 
@@ -3839,15 +3845,7 @@ msgstr "Zahrnout originál"
 msgid "instruction_file"
 msgstr "Soubor s pokyny"
 
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
-msgid "language"
-msgstr "Jazyk"
-
-#: PySubtrans/Options.py:107
+#: PySubtrans/Options.py:108
 msgid "last_used_path"
 msgstr "Poslední použitá cesta"
 
@@ -3867,6 +3865,10 @@ msgstr "Maximální počet tokenů pro dokončení"
 msgid "max_context_summaries"
 msgstr "Maximální počet shrnutí kontextu"
 
+#: PySubtrans/Options.py:84
+msgid "max_gap_for_merge"
+msgstr "Maximální mez pro sloučení"
+
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 msgid "max_instruct_tokens"
 msgstr "Maximální počet tokenů pro instrukce"
@@ -3875,20 +3877,15 @@ msgstr "Maximální počet tokenů pro instrukce"
 msgid "max_line_duration"
 msgstr "Maximální délka řádku"
 
-#: PySubtrans/Options.py:95
+#: PySubtrans/Options.py:96
 msgid "max_lines"
 msgstr "Maximální počet řádků"
-
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
-msgid "max_new_tokens"
-msgstr "Maximální počet nových tokenů"
 
 #: PySubtrans/Options.py:68
 msgid "max_newlines"
 msgstr "Maximální počet nových řádků"
 
-#: PySubtrans/Options.py:98
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Options.py:99
 msgid "max_retries"
 msgstr "Maximální počet opakování"
 
@@ -3896,7 +3893,7 @@ msgstr "Maximální počet opakování"
 msgid "max_single_line_length"
 msgstr "Maximální délka jednoho řádku"
 
-#: PySubtrans/Options.py:99
+#: PySubtrans/Options.py:100
 msgid "max_summary_length"
 msgstr "Maximální délka shrnutí"
 
@@ -3904,7 +3901,7 @@ msgstr "Maximální délka shrnutí"
 msgid "max_thinking_tokens"
 msgstr "Maximální počet tokenů pro přemýšlení"
 
-#: PySubtrans/Options.py:96
+#: PySubtrans/Options.py:97
 msgid "max_threads"
 msgstr "Maximální počet vláken"
 
@@ -3942,7 +3939,7 @@ msgstr "Minimální pravděpodobnost (min_p)"
 msgid "min_single_line_length"
 msgstr "Minimální délka jednoho řádku"
 
-#: PySubtrans/Options.py:84
+#: PySubtrans/Options.py:85
 msgid "min_split_chars"
 msgstr "Minimální počet znaků pro rozdělení"
 
@@ -3956,11 +3953,6 @@ msgstr "Minimální počet znaků pro rozdělení"
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
 msgid "model"
 msgstr "Model"
 
@@ -3977,7 +3969,7 @@ msgstr "Vícevláknové"
 msgid "non-JSON response (check the Server address): {}"
 msgstr "odpověď není ve formátu JSON (zkontrolujte adresu serveru): {}"
 
-#: PySubtrans/Options.py:85
+#: PySubtrans/Options.py:86
 msgid "normalise_dialog_tags"
 msgstr "Normalizovat značky dialogu"
 
@@ -4001,15 +3993,15 @@ msgstr "Předzpracování titulků"
 msgid "prevent_overlapping_times"
 msgstr "Zabránit překrývajícím se časům"
 
-#: PySubtrans/Options.py:103
+#: PySubtrans/Options.py:104
 msgid "preview"
 msgstr "náhled"
 
-#: PySubtrans/Options.py:97
+#: PySubtrans/Options.py:98
 msgid "prewarm_providers"
 msgstr "Předhřát poskytovatele"
 
-#: PySubtrans/Options.py:101
+#: PySubtrans/Options.py:102
 msgid "project_file"
 msgstr "Soubor projektu"
 
@@ -4039,13 +4031,10 @@ msgstr "Nastavení poskytovatele"
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
 msgid "proxy"
 msgstr "Proxy"
 
-#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:115
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:120
 msgid "rate limited"
 msgstr "překročen limit požadavků"
 
@@ -4058,11 +4047,6 @@ msgstr "překročen limit požadavků"
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
-#: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
 msgid "rate_limit"
 msgstr "Omezení rychlosti"
 
@@ -4070,15 +4054,15 @@ msgstr "Omezení rychlosti"
 msgid "reasoning_effort"
 msgstr "Úsilí pro uvažování"
 
-#: PySubtrans/Options.py:106
+#: PySubtrans/Options.py:107
 msgid "reload"
 msgstr "znovu načíst"
 
-#: PySubtrans/Options.py:86
+#: PySubtrans/Options.py:87
 msgid "remove_filler_words"
 msgstr "Odstranit výplňková slova"
 
-#: PySubtrans/Options.py:105
+#: PySubtrans/Options.py:106
 msgid "reparse"
 msgstr "znovu parsovat"
 
@@ -4086,18 +4070,11 @@ msgstr "znovu parsovat"
 msgid "repetition_penalty"
 msgstr "Penalizace opakování"
 
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
-msgid "request_timeout"
-msgstr "Časový limit požadavku"
-
-#: PySubtrans/Options.py:104
+#: PySubtrans/Options.py:105
 msgid "retranslate"
 msgstr "přeložit znovu"
 
-#: PySubtrans/Options.py:93
+#: PySubtrans/Options.py:94
 msgid "retry_on_error"
 msgstr "Opakovat při chybě"
 
@@ -4126,9 +4103,6 @@ msgstr "Tajný přístupový klíč"
 #: PySubtrans/Providers/Provider_Custom.py:0
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Providers/Provider_Requesty.py:0
-#: PySubtrans/Transcription/Providers/Provider_Muse.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
-#: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
 msgid "server_address"
 msgstr "Adresa serveru"
 
@@ -4140,7 +4114,7 @@ msgstr "URL serveru"
 msgid "single threaded"
 msgstr "Jednovláknové"
 
-#: PySubtrans/Options.py:111
+#: PySubtrans/Options.py:112
 msgid "stop_on_error"
 msgstr "Zastavit při chybě"
 
@@ -4153,7 +4127,7 @@ msgstr "Zastavit při chybě"
 msgid "stream_responses"
 msgstr "Streamovat odpovědi"
 
-#: PySubtrans/Options.py:88
+#: PySubtrans/Options.py:89
 msgid "substitution_mode"
 msgstr "Režim nahrazování"
 
@@ -4185,11 +4159,11 @@ msgstr "Cílový jazyk"
 msgid "temperature"
 msgstr "Teplota"
 
-#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:112
+#: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:117
 msgid "the credential was not accepted"
 msgstr "přihlašovací údaje nebyly přijaty"
 
-#: PySubtrans/Options.py:113
+#: PySubtrans/Options.py:114
 msgid "theme"
 msgstr "Motiv"
 
@@ -4205,11 +4179,7 @@ msgstr "Rozpočet pro uvažování"
 msgid "timeout"
 msgstr "Časový limit"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
-msgid "torch_installation_directory"
-msgstr "Adresář instalace Torch"
-
-#: PySubtrans/Options.py:109
+#: PySubtrans/Options.py:110
 msgid "transcription_ffmpeg_available"
 msgstr "Dostupnost ffmpeg pro přepis"
 
@@ -4217,11 +4187,11 @@ msgstr "Dostupnost ffmpeg pro přepis"
 msgid "transcription_provider"
 msgstr "Poskytovatel přepisu"
 
-#: PySubtrans/Options.py:110
+#: PySubtrans/Options.py:111
 msgid "transcription_torch_device"
 msgstr "Zařízení PyTorch pro přepis"
 
-#: PySubtrans/Options.py:114
+#: PySubtrans/Options.py:115
 msgid "ui_language"
 msgstr "Jazyk uživatelského rozhraní"
 
@@ -4242,11 +4212,11 @@ msgstr "Použít httpx"
 msgid "version"
 msgstr "Verze"
 
-#: PySubtrans/Options.py:89
+#: PySubtrans/Options.py:90
 msgid "whitespaces_to_newline"
 msgstr "Bílé znaky na nový řádek"
 
-#: PySubtrans/Options.py:112
+#: PySubtrans/Options.py:113
 msgid "write_backup"
 msgstr "Zapsat zálohu"
 
@@ -4274,7 +4244,7 @@ msgstr "{command} vráceno zpět."
 msgid "{command} was successful."
 msgstr "{command} bylo úspěšné."
 
-#: GuiSubtrans/GuiHelpers.py:56 GuiSubtrans/ViewModel/BatchItem.py:203
+#: GuiSubtrans/GuiHelpers.py:56 GuiSubtrans/ViewModel/BatchItem.py:222
 msgid "{count} lines"
 msgstr "{count} řádků"
 
@@ -4282,7 +4252,7 @@ msgstr "{count} řádků"
 msgid "{count} lines translated"
 msgstr "{count} řádků přeloženo"
 
-#: GuiSubtrans/ViewModel/BatchItem.py:204
+#: GuiSubtrans/ViewModel/BatchItem.py:223
 msgid "{count} translated"
 msgstr "{count} přeloženo"
 
@@ -4333,6 +4303,45 @@ msgstr "~450 MB"
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:56
 msgid "~5 GB"
 msgstr "~5 GB"
+
+#~ msgid " s"
+#~ msgstr " s"
+
+#~ msgid "Max chunk length"
+#~ msgstr "Maximální délka bloku"
+
+#~ msgid "Min chunk length"
+#~ msgstr "Minimální délka bloku"
+
+#~ msgid "Most lines to send in each batch"
+#~ msgstr "Nejvíce řádků k odeslání v každé dávce"
+
+#~ msgid "Provider-recommended default;"
+#~ msgstr "Výchozí hodnota doporučená poskytovatelem;"
+
+#~ msgid "aligner_model"
+#~ msgstr "Model zarovnávání"
+
+#~ msgid "allow_cpu_fallback"
+#~ msgstr "Povolit záložní CPU"
+
+#~ msgid "device"
+#~ msgstr "Zařízení"
+
+#~ msgid "diarize"
+#~ msgstr "Diarizace"
+
+#~ msgid "language"
+#~ msgstr "Jazyk"
+
+#~ msgid "max_new_tokens"
+#~ msgstr "Maximální počet nových tokenů"
+
+#~ msgid "request_timeout"
+#~ msgstr "Časový limit požadavku"
+
+#~ msgid "torch_installation_directory"
+#~ msgstr "Adresář instalace Torch"
 
 #~ msgid "Failed to communicate with server after {max_retries} retries"
 #~ msgstr "Nepodařilo se navázat spojení se serverem po {max_retries} pokusech"

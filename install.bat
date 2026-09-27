@@ -195,7 +195,7 @@ REM Create or update the virtual environment
 if not exist "envsubtrans" (
     echo.
     echo Creating virtual environment...
-    python -m venv envsubtrans
+    python -m venv --upgrade-deps envsubtrans
     if errorlevel 1 (
         echo Failed to create virtual environment.
         pause
@@ -240,9 +240,9 @@ if /i "!install_transcription!"=="y" (
     ) else (
         echo.
         echo Installing local transcription package...
-        .\envsubtrans\Scripts\python.exe -m pip install --upgrade -e ".[qwen-asr]"
+        .\envsubtrans\Scripts\python.exe scripts\install_qwen_runtime.py
         if errorlevel 1 (
-            echo Failed to install qwen-asr.
+            echo Failed to install the Qwen runtime.
         ) else if !TORCH_EXIT! equ 1 (
             echo.
             echo No GPU-accelerated torch variant was detected.

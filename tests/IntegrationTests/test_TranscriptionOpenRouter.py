@@ -3,6 +3,7 @@ import unittest
 from datetime import timedelta
 from unittest.mock import Mock, patch
 
+from PySubtrans.Helpers.Attribution import APP_ATTRIBUTION_HEADERS
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Transcription.TranscriptionProvider import OptionsScope
@@ -246,6 +247,22 @@ class TestOpenRouterClient(LoggedTestCase):
 
         self.assertLoggedEqual("duration", timedelta(seconds=9.2), result.duration)
         self.assertLoggedEqual("cost", 0.000508, result.cost)
+
+    def test_request_identifies_the_app(self):
+        """Transcription requests carry the same app attribution as translation requests."""
+        client = self._client()
+
+        with patch('httpx.Client') as mock_client:
+            post = mock_client.return_value.__enter__.return_value.post
+            post.return_value.status_code = 200
+            post.return_value.is_error = False
+            post.return_value.text = '{"text": "hi"}'
+            client.TranscribeChunk(b"fake-audio", "wav")
+
+        headers = post.call_args.kwargs['headers']
+        for key, value in APP_ATTRIBUTION_HEADERS.items():
+            self.assertLoggedEqual(key, value, headers.get(key))
+        self.assertLoggedIn("authorization kept", 'Authorization', headers)
 
     def test_no_speech_prob_maps_to_confidence(self):
         """no_speech_prob surfaces as segment confidence for review."""

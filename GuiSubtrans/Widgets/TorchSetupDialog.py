@@ -1,4 +1,4 @@
-"""Dialog for setting up a Torch installation for local transcription."""
+"""Dialog for setting up the Torch environment and Qwen runtime for local transcription."""
 
 from __future__ import annotations
 
@@ -6,9 +6,11 @@ import logging
 import os
 import sys
 from collections.abc import Callable
+from dataclasses import dataclass
 from pathlib import Path
 
 from PySide6.QtCore import QProcess
+from PySide6.QtGui import QTextOption
 from PySide6.QtWidgets import (
     QButtonGroup,
     QCheckBox,
@@ -44,19 +46,40 @@ from PySubtrans.Transcription.Torch.Hardware import (
     HardwareDetection,
     ROCM_INDEX_URL,  # pyright: ignore[reportUnusedImport] — only reached on Linux; false positive on Windows
 )
+from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
+from PySubtrans.Transcription.Torch.QwenRuntime import (
+    QWEN_ASR_REQUIREMENT,
+    NeedsQwenRuntime,
+    QwenAsrPipArguments,
+    QwenDependencyPipArguments,
+)
 from PySubtrans.Transcription.Torch.Validation import (
     CompareCompatibility,
+    FindTorchSitePackages,
     FindVenvPython,
     HasTorchPackage,
     ProbeVenvCompatibility,
 )
 
 
-# Approximate total disk usage (venv + torch + dependencies) by build variant.
-_ESTIMATED_SIZE_CUDA = _("~5 GB")
-_ESTIMATED_SIZE_ROCM = _("~3.5 GB")
-_ESTIMATED_SIZE_CPU = _("~350 MB")
-_ESTIMATED_SIZE_MPS = _("~450 MB")
+# Approximate total disk usage (venv + torch + Qwen runtime) by build variant.
+_ESTIMATED_SIZE_CUDA = _("~5.5 GB")
+_ESTIMATED_SIZE_ROCM = _("~4 GB")
+_ESTIMATED_SIZE_CPU = _("~1 GB")
+_ESTIMATED_SIZE_MPS = _("~1 GB")
+
+# Approximate disk usage of the Qwen runtime on its own, when adding it to an existing environment
+_ESTIMATED_SIZE_QWEN_RUNTIME = _("~600 MB")
+
+
+@dataclass(frozen=True)
+class _InstallStep:
+    """One installer subprocess in the setup sequence."""
+    status : str
+    start_message : str
+    success_message : str
+    failure_message : str
+    command : Callable[[], tuple[str, list[str]]|None]
 
 
 # Answers for the "what GPU do you have?" fallback question
@@ -66,7 +89,7 @@ _GPU_VENDOR_OPTIONS : dict[str, HardwareDetection] = {
         index_url=CPU_INDEX_URL,
         is_gpu=False,
         guidance=_("Install the latest NVIDIA driver for this GPU from nvidia.com, "
-                   "restart the computer, and choose Set up Torch again."),
+                   "restart the computer, and choose {button} again.").format(button=TorchConfigOption.label),
         hardware_detected=True,
         estimated_size=_ESTIMATED_SIZE_CPU,
     ),
@@ -97,11 +120,11 @@ _GPU_VENDOR_OPTIONS : dict[str, HardwareDetection] = {
 
 
 class TorchSetupDialog(QDialog):
-    """Step-by-step dialog that helps users choose and install a Torch environment."""
+    """Step-by-step dialog that helps users choose or install an environment with Torch and the Qwen runtime."""
 
     def __init__(self, current_path : str = '', parent=None):
         super().__init__(parent)
-        self.setWindowTitle(_("Set up Torch for Local Transcription"))
+        self.setWindowTitle(_("Set Up Local Transcription"))
         self.setMinimumWidth(680)
         self.setMinimumHeight(600)
 
@@ -112,6 +135,12 @@ class TorchSetupDialog(QDialog):
         self._cpu_fallback_checkbox : QCheckBox|None = None
         self._current_page : int = 0
         self._installation_failed : bool = False
+        self._target_dir : str = ''
+        self._steps : list[_InstallStep] = []
+        self._step_index : int = 0
+
+        # The page Back returns to after a failed installation
+        self._retry_page : int = 1
 
         self._build_ui(current_path)
         self._scan_for_existing_torch()
@@ -144,7 +173,7 @@ class TorchSetupDialog(QDialog):
         page = QWidget(self)
         page_layout = QVBoxLayout(page)
 
-        title = QLabel(_("Step 1 of 3 - Choose how to provide Torch"))
+        title = QLabel(_("Step 1 of 3 - Choose an environment for local transcription"))
         title.setStyleSheet("font-weight: bold;")
         page_layout.addWidget(title)
         page_layout.addWidget(QLabel(_("Choose one option, then click Continue. You will not need to complete both.")))
@@ -174,7 +203,7 @@ class TorchSetupDialog(QDialog):
 
         install_group = QGroupBox(_("Install automatically"), page)
         install_layout = QVBoxLayout(install_group)
-        self._automatic_radio = QRadioButton(_("Create a new environment and install Torch"), install_group)
+        self._automatic_radio = QRadioButton(_("Create a new environment and install Torch and the Qwen runtime"), install_group)
         self._automatic_radio.setChecked(True)
         install_layout.addWidget(self._automatic_radio)
         install_layout.addWidget(QLabel(_("The next page will ask where to create it and show the detected hardware.")))
@@ -275,20 +304,21 @@ class TorchSetupDialog(QDialog):
         self._page_stack.addWidget(page)
 
     def _build_progress_page(self) -> None:
-        """Build the page that reports the two installation subprocesses."""
+        """Build the page that reports the installation subprocesses."""
         page = QWidget(self)
         page_layout = QVBoxLayout(page)
-        title = QLabel(_("Step 3 of 3 - Installing Torch"))
-        title.setStyleSheet("font-weight: bold;")
-        page_layout.addWidget(title)
+        self._progress_title = QLabel(_("Step 3 of 3 - Installing Torch and the Qwen runtime"))
+        self._progress_title.setStyleSheet("font-weight: bold;")
+        page_layout.addWidget(self._progress_title)
         self._step_status_label = QLabel(_("Preparing installation..."), page)
         self._step_status_label.setWordWrap(True)
         page_layout.addWidget(self._step_status_label)
         self._log_output = QTextEdit(page)
         self._log_output.setReadOnly(True)
-        # Keep Windows paths intact in diagnostic output; wrapping at the drive
-        # letter colon makes paths look malformed and harder to copy.
-        self._log_output.setLineWrapMode(QTextEdit.LineWrapMode.NoWrap)
+        # Wrap at the edge like a terminal rather than at word boundaries, which split Windows paths after the drive letter colon.
+        # Soft wraps are not copied, so paths still paste intact.
+        self._log_output.setLineWrapMode(QTextEdit.LineWrapMode.WidgetWidth)
+        self._log_output.setWordWrapMode(QTextOption.WrapMode.WrapAnywhere)
         self._log_output.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         page_layout.addWidget(self._log_output)
         self._page_stack.addWidget(page)
@@ -309,7 +339,7 @@ class TorchSetupDialog(QDialog):
         elif page_index == 1:
             self._update_cpu_fallback_choice()
             self._next_button.setText(
-                _("Install CPU-only Torch") if self._requires_cpu_confirmation() else _("Install Torch"))
+                _("Install with CPU-only Torch") if self._requires_cpu_confirmation() else _("Install"))
             self._next_button.setEnabled(self._can_start_install())
 
     def _on_choice_changed(self) -> None:
@@ -350,7 +380,7 @@ class TorchSetupDialog(QDialog):
         if self._current_page == 1:
             self._show_page(0)
         elif self._current_page == 2 and self._installation_failed:
-            self._show_page(1)
+            self._show_page(self._retry_page)
 
     def _requires_cpu_confirmation(self) -> bool:
         """Whether a detected GPU lacks a usable Torch acceleration backend."""
@@ -373,7 +403,7 @@ class TorchSetupDialog(QDialog):
 
         if hasattr(self, '_next_button') and self._current_page == 1:
             self._next_button.setText(
-                _("Install CPU-only Torch") if requires_confirmation else _("Install Torch"))
+                _("Install with CPU-only Torch") if requires_confirmation else _("Install"))
             self._next_button.setEnabled(self._can_start_install())
 
     def _on_cpu_fallback_changed(self, checked : bool) -> None:
@@ -399,9 +429,10 @@ class TorchSetupDialog(QDialog):
         """Look for a torch installation already on the system."""
         existing = FindExistingTorch()
         if existing:
-            self._existing_label.setText(
-                _("Found an existing Torch installation at: {path}").format(path=existing)
-            )
+            description = _("Found an existing Torch installation at: {path}").format(path=existing)
+            if NeedsQwenRuntime(Path(existing)):
+                description += "\n" + _("It does not include the Qwen runtime yet, which will be installed into it ({size}).").format(size=_ESTIMATED_SIZE_QWEN_RUNTIME)
+            self._existing_label.setText(description)
             self._existing_path = existing
             self._existing_radio.setEnabled(True)
             self._existing_radio.setChecked(True)
@@ -439,21 +470,177 @@ class TorchSetupDialog(QDialog):
             self._install_error_label.setText(_("Choose an installation folder before continuing."))
             return False
 
-        self._install_error_label.clear()
-        self._installation_failed = False
-        self._step_status_label.setText(_("Step 1 of 2: Creating the private Python environment..."))
-        self._log_output.clear()
-
         # Find a Python interpreter to create the venv with
         python = FindCompatiblePython()
         if not python:
             self._install_error_label.setText(_("Python 3.10 or newer is required. Install Python, then try again."))
             return False
 
+        self._install_error_label.clear()
         self._target_dir = target_dir
-        self._log(_("Creating virtual environment at {path}...").format(path=target_dir))
-        self._run_step_create_venv(python, target_dir)
+        self._retry_page = 1
+        self._progress_title.setText(_("Step 3 of 3 - Installing Torch and the Qwen runtime"))
+
+        steps = [self._create_venv_step(python), self._install_torch_step(), *self._qwen_runtime_steps()]
+        self._run_steps(steps)
         return True
+
+    def _offer_qwen_runtime_install(self, directory : str) -> bool:
+        """
+        Offer to install the Qwen runtime into a Torch environment that lacks it, such as one set up for an earlier version.
+        Returns whether the installation was started.
+        """
+        root = Path(directory).expanduser()
+        if FindVenvPython(root) is None:
+            QMessageBox.warning(
+                self,
+                _("Qwen Runtime Not Found"),
+                _("The Torch environment at:\n{path}\n\n"
+                  "does not include the Qwen runtime, and has no Python interpreter to install it with.\n\n"
+                  "Select a virtual environment, or use the automatic install.").format(path=directory),
+            )
+            return False
+
+        answer = QMessageBox.question(
+            self,
+            _("Install Qwen Runtime"),
+            _("The Torch environment at:\n{path}\n\n"
+              "does not include the Qwen runtime that local transcription needs.\n\n"
+              "Install it into this environment now? It needs about {size} of disk space.").format(path=directory, size=_ESTIMATED_SIZE_QWEN_RUNTIME),
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return False
+
+        self._target_dir = directory
+        self._retry_page = 0
+        self._progress_title.setText(_("Installing the Qwen runtime"))
+        self._run_steps(self._qwen_runtime_steps())
+        self._show_page(2)
+        return True
+
+    def _create_venv_step(self, python : str) -> _InstallStep:
+        """Create a venv at the target directory."""
+        target_dir = self._target_dir
+        return _InstallStep(
+            status=_("Creating the private Python environment..."),
+            start_message=_("Creating virtual environment at {path}...").format(path=target_dir),
+            success_message=_("Virtual environment created successfully."),
+            failure_message=_("Error: Virtual environment creation failed (exit code {code})."),
+            command=lambda: (python, ['-m', 'venv', '--upgrade-deps', target_dir]),
+        )
+
+    def _install_torch_step(self) -> _InstallStep:
+        """Install the Torch build for the detected hardware into the venv."""
+        arguments = ['install', 'torch']
+        if self._hardware and self._hardware.index_url:
+            arguments.extend(['--index-url', self._hardware.index_url])
+
+        return _InstallStep(
+            status=_("Installing the Torch build for your hardware..."),
+            start_message=_("Installing Torch (this may take several minutes)..."),
+            success_message=_("Torch installed successfully."),
+            failure_message=_("Error: Torch installation failed (exit code {code}). Check the output above for details."),
+            command=lambda: self._pip_command(arguments),
+        )
+
+    def _qwen_runtime_steps(self) -> list[_InstallStep]:
+        """
+        Install the Qwen runtime into the venv.
+        qwen-asr goes in without its dependencies, then the dependencies it declares follow, minus those only its demo apps use.
+        """
+        return [
+            _InstallStep(
+                status=_("Installing qwen-asr..."),
+                start_message=_("Installing {requirement}...").format(requirement=QWEN_ASR_REQUIREMENT),
+                success_message=_("qwen-asr installed successfully."),
+                failure_message=_("Error: qwen-asr installation failed (exit code {code}). Check the output above for details."),
+                command=lambda: self._pip_command(QwenAsrPipArguments()),
+            ),
+            _InstallStep(
+                status=_("Installing the Qwen runtime dependencies..."),
+                start_message=_("Installing the Qwen runtime dependencies (this may take several minutes)..."),
+                success_message=_("Qwen runtime dependencies installed successfully."),
+                failure_message=_("Error: Qwen runtime dependency installation failed (exit code {code}). Check the output above for details."),
+                command=self._qwen_dependencies_command,
+            ),
+        ]
+
+    def _qwen_dependencies_command(self) -> tuple[str, list[str]]|None:
+        """Build the pip command for the dependencies of the qwen-asr just installed into the venv."""
+        site_packages = FindTorchSitePackages(Path(self._target_dir).expanduser())
+        arguments = QwenDependencyPipArguments([str(site_packages)]) if site_packages else None
+        if arguments is None:
+            self._log(_("Error: The qwen-asr package metadata could not be found in {path}.").format(path=self._target_dir))
+            return None
+
+        return self._pip_command(arguments)
+
+    def _pip_command(self, arguments : list[str]) -> tuple[str, list[str]]|None:
+        """Build a pip command that runs with the target venv's interpreter, or None if it has none."""
+        venv_python = FindVenvPython(Path(self._target_dir).expanduser())
+        if venv_python is None:
+            self._log(_("Error: No Python interpreter was found in {path}.").format(path=self._target_dir))
+            return None
+
+        return str(venv_python), ['-m', 'pip', *arguments]
+
+    def _run_steps(self, steps : list[_InstallStep]) -> None:
+        """Run the installer steps in sequence, stopping at the first failure."""
+        self._steps = steps
+        self._step_index = 0
+        self._installation_failed = False
+        self._log_output.clear()
+        self._run_next_step()
+
+    def _run_next_step(self) -> None:
+        """Start the next installer step, or verify the environment once all have finished."""
+        if self._step_index >= len(self._steps):
+            self._on_steps_finished()
+            return
+
+        step = self._steps[self._step_index]
+        self._step_status_label.setText(_("Part {number} of {total}: {status}").format(
+            number=self._step_index + 1, total=len(self._steps), status=step.status))
+        self._log(step.start_message)
+
+        command = step.command()
+        if command is None:
+            self._fail_step()
+            return
+
+        program, arguments = command
+        self._start_process(program, arguments, self._on_step_finished)
+
+    def _on_step_finished(self, exit_code : int, exit_status : QProcess.ExitStatus) -> None:
+        """Advance to the next installer step, or stop if this one failed."""
+        step = self._steps[self._step_index]
+        if exit_code != 0 or exit_status != QProcess.ExitStatus.NormalExit:
+            self._log(step.failure_message.format(code=exit_code))
+            self._fail_step()
+            return
+
+        self._log(step.success_message)
+        self._step_index += 1
+        self._run_next_step()
+
+    def _fail_step(self) -> None:
+        """Report that the current installer step failed and let the user go back."""
+        self._installation_failed = True
+        self._step_status_label.setText(_("Part {number} could not be completed. Check the log and try again.").format(number=self._step_index + 1))
+        self._show_page(2)
+
+    def _on_steps_finished(self) -> None:
+        """Validate the environment once every installer step has succeeded."""
+        self._step_status_label.setText(_("Installation finished. Verifying the Torch environment..."))
+
+        if NeedsQwenRuntime(Path(self._target_dir).expanduser()):
+            self._log(_("Error: The Qwen runtime could not be found in {path} after installation.").format(path=self._target_dir))
+        elif self._validate_and_accept(self._target_dir):
+            return
+
+        self._installation_failed = True
+        self._step_status_label.setText(_("Torch could not be validated. Check the log and try again."))
+        self._show_page(2)
 
     def _start_process(self, program : str, arguments : list[str], on_finished : Callable[[int, QProcess.ExitStatus], None]) -> None:
         """Run an installer subprocess with merged output and a completion handler."""
@@ -463,58 +650,15 @@ class TorchSetupDialog(QDialog):
         self._process.finished.connect(on_finished)
         self._process.start(program, arguments)
 
-    def _run_step_create_venv(self, python : str, target_dir : str) -> None:
-        """Step 1: Create a venv at the target directory."""
-        self._start_process(python, ['-m', 'venv', target_dir], self._on_venv_created)
-
-    def _on_venv_created(self, exit_code : int, exit_status : QProcess.ExitStatus) -> None:
-        """After venv creation, install torch."""
-        if exit_code != 0 or exit_status != QProcess.ExitStatus.NormalExit:
-            self._log(_("Error: Virtual environment creation failed (exit code {code}).").format(code=exit_code))
-            self._installation_failed = True
-            self._step_status_label.setText(_("Step 1 could not be completed. Check the log and try again."))
-            self._show_page(2)
-            return
-
-        self._log(_("Virtual environment created successfully."))
-        self._step_status_label.setText(_("Step 2 of 2: Installing the Torch build for your hardware..."))
-        self._log(_("Installing Torch (this may take several minutes)..."))
-        self._run_step_install_torch()
-
-    def _run_step_install_torch(self) -> None:
-        """Step 2: Install torch into the venv via pip."""
-        scripts_dir = 'Scripts' if sys.platform == 'win32' else 'bin'
-        pip = os.path.join(self._target_dir, scripts_dir, 'pip')
-
-        args = ['install', 'torch']
-        if self._hardware and self._hardware.index_url:
-            args.extend(['--index-url', self._hardware.index_url])
-
-        self._start_process(pip, args, self._on_torch_installed)
-
-    def _on_torch_installed(self, exit_code : int, exit_status : QProcess.ExitStatus) -> None:
-        """After torch install, validate the result."""
-        if exit_code != 0 or exit_status != QProcess.ExitStatus.NormalExit:
-            self._log(_("Error: Torch installation failed (exit code {code}). Check the output above for details.").format(code=exit_code))
-            self._installation_failed = True
-            self._step_status_label.setText(_("Step 2 could not be completed. Check the log and try again."))
-            self._show_page(2)
-            return
-
-        self._log(_("Torch installed successfully."))
-        self._step_status_label.setText(_("Installation finished. Verifying the Torch environment..."))
-        if not self._validate_and_accept(self._target_dir):
-            self._installation_failed = True
-            self._step_status_label.setText(_("Torch could not be validated. Check the log and try again."))
-            self._show_page(2)
-
     def _validate_and_accept(self, directory : str) -> bool:
         """Validate that the directory contains a usable torch installation.
 
         A missing Torch package is a hard error, since accepting it would only
-        fail on restart.  An interpreter mismatch is a strong warning instead:
-        the environment may still work, and if it does not the user needs to
-        know what to change.  Returns whether the environment was accepted.
+        fail on restart.  A missing Qwen runtime is offered for installation,
+        and the environment is validated again once it is installed.  An
+        interpreter mismatch is a strong warning instead: the environment may
+        still work, and if it does not the user needs to know what to change.
+        Returns whether the environment was accepted.
         """
         root = Path(directory).expanduser()
 
@@ -525,6 +669,10 @@ class TorchSetupDialog(QDialog):
                 _("No Torch package could be found in:\n{path}\n\n"
                   "Select a virtual environment that contains Torch, or use the automatic install.").format(path=directory),
             )
+            return False
+
+        if NeedsQwenRuntime(root):
+            self._offer_qwen_runtime_install(directory)
             return False
 
         self._log(_("Validated Torch installation at {path}.").format(path=directory))

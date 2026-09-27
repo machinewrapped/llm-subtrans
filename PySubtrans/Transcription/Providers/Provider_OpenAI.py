@@ -26,16 +26,6 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
     """)
 
     @property
-    def recommended_min_chunk_seconds(self) -> float:
-        """Short chunks bound request bodies and the blast radius of retries."""
-        return 8.0
-
-    @property
-    def recommended_max_chunk_seconds(self) -> float:
-        """Short chunks bound request bodies and the blast radius of retries."""
-        return 60.0
-
-    @property
     def supports_diarization(self) -> bool:
         """Speaker labels only from the diarize model."""
         return (self.selected_model or '').casefold() == 'gpt-4o-transcribe-diarize'
@@ -48,6 +38,9 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
             'model': settings.get_str('model', os.getenv('OPENAI_STT_MODEL', 'whisper-1')),
             'request_timeout': settings.get_float('request_timeout', env_float('TRANSCRIPTION_TIMEOUT', 300.0)),
             'rate_limit': settings.get_float('rate_limit', env_float('OPENAI_TRANSCRIPTION_RATE_LIMIT')),
+            # Short chunks bound request bodies and the blast radius of retries.
+            'min_chunk_seconds': settings.get_float('min_chunk_seconds', 8.0),
+            'max_chunk_seconds': settings.get_float('max_chunk_seconds', 60.0),
             'proxy': settings.get_str('proxy') or os.getenv('OPENAI_PROXY'),
         })
 
@@ -81,6 +74,7 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
             'model': (self.available_models, _("Speech-to-text model (both return timings)")),
             'language': (str, _("Spoken language hint, e.g. Chinese or en (optional, auto-detected when empty)")),
         })
+        options.update(self._chunk_options())
 
         if scope is OptionsScope.ALL:
             options['request_timeout'] = (float, _("Per-chunk request timeout in seconds"))

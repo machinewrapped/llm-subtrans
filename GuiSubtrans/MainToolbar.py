@@ -242,14 +242,15 @@ class MainToolbar(QToolBar):
         Update the toolbar status based on the current state of the project
         """
         datamodel : ProjectDataModel = self.gui.GetDataModel()
+        command_queue : CommandQueue = self.gui.GetCommandQueue()
+        no_blocking_commands = not command_queue.has_blocking_commands
 
         if not datamodel or not datamodel.is_project_initialised:
             self.DisableActions([ "Save Project", "Start Translating", "Start Translating Fast", "Stop Translating", "Undo", "Redo" ])
-            self.EnableActions([ "Load Subtitles", "Transcribe Audio" ])
+            self.SetActionsEnabled([ "Load Subtitles", "Transcribe Audio" ], no_blocking_commands)
             return
 
         # Enable or disable toolbar commands  depending on whether any translations are ongoing
-        command_queue : CommandQueue = self.gui.GetCommandQueue()
         if command_queue.Contains(type_list = [TranslateSceneCommand, StartTranslationCommand]):
             self.DisableActions([ "Load Subtitles", "Transcribe Audio", "Save Project", "Start Translating", "Start Translating Fast", "Undo", "Redo"])
             self.EnableActions([ "Stop Translating" ])
@@ -257,7 +258,6 @@ class MainToolbar(QToolBar):
 
         self.DisableActions(["Stop Translating"])
 
-        no_blocking_commands = not command_queue.has_blocking_commands
         self.SetActionsEnabled([ "Load Subtitles", "Transcribe Audio", "Save Project", "Start Translating" ], no_blocking_commands)
         self.SetActionsEnabled([ "Start Translating Fast" ], no_blocking_commands and datamodel.allow_multithreaded_translation)
         self.SetActionsEnabled([ "Undo" ], no_blocking_commands and command_queue.can_undo)

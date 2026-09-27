@@ -1,6 +1,7 @@
 from datetime import timedelta
 import gc
 import importlib
+import importlib.util
 import logging
 import os
 import tempfile
@@ -13,7 +14,8 @@ from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
-from PySubtrans.Transcription.Torch.Runtime import PrepareTorchRuntime
+from PySubtrans.Transcription.Torch.QwenRuntime import QWEN_ASR_MODULE
+from PySubtrans.Transcription.Torch.Runtime import PrepareTorchRuntime, TorchConfigOption
 from PySubtrans.Transcription.Providers.Provider_QwenLocal import (
     _ALIGNER_CHECKPOINT,
     _QWEN_CHECKPOINTS,
@@ -40,6 +42,10 @@ def _load_qwen_dependencies(settings: SettingsType) -> None:
     PrepareTorchRuntime(settings.get_str('torch_installation_directory', ''))
     if torch is not None and Qwen3ASRModel is not None:
         return
+
+    # Packaged builds do not bundle qwen-asr, so environments set up for earlier versions may have Torch alone
+    if importlib.util.find_spec(QWEN_ASR_MODULE) is None:
+        raise ImportError(_("The Torch environment does not include the Qwen runtime. Use {button} and select the same environment to install it.").format(button=TorchConfigOption.label))
 
     try:
         logging.info(_("Importing torch..."))
@@ -80,6 +86,35 @@ def _xpu_available() -> bool:
     if xpu is None:
         return False
     return bool(xpu.is_available())
+
+
+class _SpaceSplitKoreanTokenizer:
+    """
+    Stands in for soynlp's Korean tokenizer in qwen-asr's forced aligner when soynlp is not installed.
+    Local transcription setup installs soynlp, but an environment prepared by hand may lack it.
+    Korean separates words with spaces, so splitting on them still aligns words, at a coarser grain.
+    """
+    def __init__(self):
+        self._warned = False
+
+    def tokenize(self, text : str) -> list[str]:
+        """Split on whitespace, warning the first time that Korean timestamps are less precise."""
+        if not self._warned:
+            self._warned = True
+            logging.warning(_("Korean word timestamps need the soynlp package, which is not installed in the Torch environment. "
+                              "Aligning Korean text on spaces instead, so timestamps are less precise."))
+        return text.split()
+
+
+def _install_korean_tokenizer_fallback(model : Any) -> None:
+    """Give qwen-asr's forced aligner a Korean tokenizer when soynlp is not installed, so Korean audio can still be aligned."""
+    if importlib.util.find_spec('soynlp') is not None:
+        return
+
+    # The aligner only imports soynlp when ko_tokenizer is unset
+    processor = getattr(getattr(model, 'forced_aligner', None), 'aligner_processor', None)
+    if processor is not None and hasattr(processor, 'ko_tokenizer') and processor.ko_tokenizer is None:
+        processor.ko_tokenizer = _SpaceSplitKoreanTokenizer()
 
 
 class QwenLocalClient(TranscriptionClient):
@@ -283,6 +318,8 @@ class QwenLocalClient(TranscriptionClient):
             )
         except Exception as e:
             raise SubtitleError(_("Unable to load Qwen model: {}").format(str(e)), error=e)
+
+        _install_korean_tokenizer_fallback(model)
 
         _loaded_key = cache_key
         _loaded_model = model

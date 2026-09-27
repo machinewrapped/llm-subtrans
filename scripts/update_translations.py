@@ -159,8 +159,6 @@ def auto_translate_strings(untranslated: dict[str,str], target_language: str, pa
     headers = {
         'Authorization': f'Bearer {api_key}',
         'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/machinewrapped/llm-subtrans',
-        'X-Title': 'LLM-Subtrans'
     }
 
     # Split into batches to avoid exceeding token limits

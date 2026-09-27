@@ -21,11 +21,30 @@ from GuiSubtrans.Widgets.TranscriptionRunProgress import _format_timestamp
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.Options import Options
-from PySubtrans.SettingsType import SettingsType
+from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.AudioExtractor import AudioTrack
-from PySubtrans.Transcription.TranscriptionProvider import OptionsScope
+from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
+
+
+class ChunkedTranscriptionProvider(FakeTranscriptionProvider):
+    """Fake provider declaring chunk bounds with its own defaults, as the real providers do."""
+    name = "Chunked Transcription"
+
+    def __init__(self, settings : SettingsType|None = None):
+        settings = settings or SettingsType()
+        super().__init__(settings)
+        self.settings = SettingsType(self.settings | {
+            'min_chunk_seconds': settings.get_float('min_chunk_seconds', 30.0),
+            'max_chunk_seconds': settings.get_float('max_chunk_seconds', 120.0),
+        })
+
+    def GetOptions(self, settings : SettingsType, scope : OptionsScope = OptionsScope.ALL) -> GuiSettingsType:
+        """Fake options plus the shared chunk bounds."""
+        options = super().GetOptions(settings, scope)
+        options.update(self._chunk_options())
+        return options
 
 
 class TestTranscriptionRunProgressFormatting(LoggedTestCase):
@@ -236,8 +255,8 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             dialog = TranscriptionDialog(options)
         try:
             initial_row_count = dialog.form.rowCount()
-            # Initial static rows: Media file, Audio track, Provider, Min chunk, Max chunk, Save, Postprocess
-            self.assertLoggedEqual('initial row count', 7, initial_row_count)
+            # Initial static rows: Media file, Audio track, Provider, Save, Postprocess
+            self.assertLoggedEqual('initial row count', 5, initial_row_count)
 
             # Assign a fake provider with options and rebuild
             provider = FakeTranscriptionProvider()
@@ -246,7 +265,7 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             dialog._rebuild_provider_form()
 
             self.assertLoggedEqual('provider row count tracked', 2, dialog._provider_row_count)
-            self.assertLoggedEqual('form row count with provider options', 9, dialog.form.rowCount())
+            self.assertLoggedEqual('form row count with provider options', 7, dialog.form.rowCount())
             self.assertLoggedIn('provider field registered', 'model', dialog.provider_fields)
             self.assertLoggedIn('provider field registered', 'language', dialog.provider_fields)
 
@@ -255,7 +274,7 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             dialog._rebuild_provider_form()
 
             self.assertLoggedEqual('provider row count updated', 1, dialog._provider_row_count)
-            self.assertLoggedEqual('form row count after rebuild', 8, dialog.form.rowCount())
+            self.assertLoggedEqual('form row count after rebuild', 6, dialog.form.rowCount())
 
             # Clear provider
             dialog.provider = None
@@ -389,16 +408,47 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
         with patch.object(TranscriptionDialog, '_refresh_providers'):
             dialog = TranscriptionDialog(options)
         try:
-            dialog.provider = FakeTranscriptionProvider()
+            dialog.provider = ChunkedTranscriptionProvider()
             dialog.media_path = __file__
-            dialog.fields['min_chunk_seconds'].SetValue(60.0)
-            dialog.fields['max_chunk_seconds'].SetValue(10.0)
+            dialog._rebuild_provider_form()
+            dialog.provider_fields['min_chunk_seconds'].SetValue(60.0)
+            dialog.provider_fields['max_chunk_seconds'].SetValue(10.0)
 
             with patch('GuiSubtrans.Widgets.TranscriptionDialog.TranscribeMediaCommand') as command_factory:
                 command = dialog._build_command()
 
             self.assertLoggedIsNone('invalid bounds produce no command', command)
             self.assertLoggedEqual('command construction skipped', 0, command_factory.call_count)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+    def test_chunk_fields_show_saved_provider_settings(self) -> None:
+        """Chunk fields show the provider's saved value or default, and run edits are not saved back."""
+        name = ChunkedTranscriptionProvider.name
+        options = Options()
+        options.provider_settings[TranscriptionProvider.SettingsKey(name)] = SettingsType({'min_chunk_seconds': 45.0})
+
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(options)
+        try:
+            with patch.object(TranscriptionProvider, 'create_provider',
+                              side_effect=lambda _name, settings: ChunkedTranscriptionProvider(settings)):
+                dialog.provider_combo.addItem(name)
+
+            self.assertLoggedEqual('saved min chunk shown', 45.0, dialog.provider_fields['min_chunk_seconds'].GetValue())
+            self.assertLoggedEqual('provider default max chunk shown', 120.0, dialog.provider_fields['max_chunk_seconds'].GetValue())
+
+            dialog.provider_fields['max_chunk_seconds'].SetValue(90.0)
+            dialog.media_path = __file__
+            with patch('GuiSubtrans.Widgets.TranscriptionDialog.TranscribeMediaCommand') as command_factory:
+                dialog._build_command()
+
+            provider = command_factory.call_args.args[0]
+            self.assertLoggedEqual('run uses the edited max chunk', 90.0, provider.settings.get_float('max_chunk_seconds'))
+
+            saved = options.provider_settings[TranscriptionProvider.SettingsKey(name)]
+            self.assertLoggedNotIn('run edit not saved', 'max_chunk_seconds', saved)
         finally:
             dialog.deleteLater()
             self.application.processEvents()

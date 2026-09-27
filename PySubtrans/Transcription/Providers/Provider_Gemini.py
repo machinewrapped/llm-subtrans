@@ -48,6 +48,8 @@ else:
             """
             Speech-to-text via Gemini 3.5 Transcribe with word timestamps
             and speaker diarization.
+
+            It can silently drop extended sections of the audio.
             """
             name = "Gemini"
 
@@ -62,16 +64,6 @@ else:
 
             # Keys and quotas live in Settings; model, diarization and language vary per job
             @property
-            def recommended_min_chunk_seconds(self) -> float:
-                """Gemini rate limits and quotas are brutal, but it can handle long chunks."""
-                return 600.0
-
-            @property
-            def recommended_max_chunk_seconds(self) -> float:
-                """Very long chunks can silently drop whole scenes, which transcribe fine in shorter chunks."""
-                return 900.0
-
-            @property
             def supports_diarization(self) -> bool:
                 """Speaker labels only when diarization is enabled."""
                 return self.settings.get_bool('diarize', True)
@@ -84,6 +76,9 @@ else:
                     'diarize': settings.get_bool('diarize', True),
                     'max_retries': settings.get_int('max_retries', 5),
                     'rate_limit': settings.get_float('rate_limit', env_float('GEMINI_TRANSCRIPTION_RATE_LIMIT')),
+                    # Rate limits and quotas are brutal, but Gemini handles long chunks.
+                    'min_chunk_seconds': settings.get_float('min_chunk_seconds', 600.0),
+                    'max_chunk_seconds': settings.get_float('max_chunk_seconds', 900.0),
                 })
 
                 self.refresh_when_changed = ['api_key', 'language', 'diarize']
@@ -121,6 +116,7 @@ else:
                     'language': (str, _("Spoken language hint, e.g. Chinese, ja or cmn-Hans-CN (optional, auto-detected when empty)")),
                     'diarize': (bool, _("Identify speakers (up to 8, experimental past 3)")),
                 })
+                options.update(self._chunk_options())
 
                 if scope is OptionsScope.ALL:
                     options['max_retries'] = (int, _("Rate-limit retries per chunk before giving up"))

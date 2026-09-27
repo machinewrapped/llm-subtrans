@@ -253,7 +253,7 @@ done
 if [ ! -d "envsubtrans" ]; then
     echo
     echo "Creating virtual environment..."
-    python3 -m venv envsubtrans
+    python3 -m venv --upgrade-deps envsubtrans
 fi
 
 source envsubtrans/bin/activate
@@ -287,9 +287,9 @@ if [ "$install_transcription" = "y" ] || [ "$install_transcription" = "Y" ]; the
     else
         echo
         echo "Installing local transcription package..."
-        pip install --upgrade -e ".[qwen-asr]"
-
-        if [ $torch_exit -eq 1 ]; then
+        if ! ./envsubtrans/bin/python scripts/install_qwen_runtime.py; then
+            echo "Failed to install the Qwen runtime."
+        elif [ $torch_exit -eq 1 ]; then
             echo
             echo "No GPU-accelerated torch variant was detected."
             echo "CPU inference is disabled by default. Enable allow_cpu_fallback in Qwen Local advanced settings to consent to slow CPU inference."

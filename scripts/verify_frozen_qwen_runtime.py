@@ -128,11 +128,10 @@ def main(arguments : list[str]|None = None) -> int:
         )
 
         origin_by_name = {str(module["name"]): module for module in modules}
+        # The packaged build bundles none of the Qwen runtime, so every module must come from the external environment
         origin_validation = {
-            "torch_external": bool(origin_by_name["torch"]["under_external_torch_root"]),
-            "qwen_bundled": bool(origin_by_name["qwen_asr"].get("under_frozen_application_root", False)),
-            "transformers_bundled": bool(origin_by_name["transformers"].get("under_frozen_application_root", False)),
-            "accelerate_bundled": bool(origin_by_name["accelerate"].get("under_frozen_application_root", False)),
+            f"{name}_external": bool(module["under_external_torch_root"])
+            for name, module in origin_by_name.items()
         }
         if bool(getattr(sys, "frozen", False)) and not all(origin_validation.values()):
             raise RuntimeError(f"Frozen origin validation failed: {origin_validation}")

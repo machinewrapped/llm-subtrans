@@ -24,7 +24,7 @@ class SubtitleListModel(QAbstractProxyModel):
         self.selected_batch_numbers = []
         self.visible = []
         self.visible_row_map : dict[int, int] = {}
-        self.size_map : dict[tuple[tuple[int, ...], tuple[int, ...]], QSize] = {}
+        self.size_map : dict[tuple[tuple[int, ...], ...], QSize] = {}
         self.item_width : int = 0
 
         # Connect signals to update mapping when source model changes

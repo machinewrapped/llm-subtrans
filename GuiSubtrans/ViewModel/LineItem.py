@@ -1,4 +1,4 @@
-from GuiSubtrans.GuiHelpers import GetWrapKey
+from GuiSubtrans.GuiHelpers import GetWrapKey, WrapKeyDominates
 from PySubtrans.Helpers import UpdateFields
 from PySubtrans.Helpers.Dialog import emdash
 from PySubtrans.Helpers.Text import Linearise
@@ -167,11 +167,23 @@ class LineItem(QStandardItem):
 
         return batch
 
-    def _get_size_key(self) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    def _get_size_key(self) -> tuple[tuple[int, ...], ...]:
         """
         Key for caching the display size of the line, which depends on how the original and translation wrap.
+        The row is as tall as the taller column, so the key is that column alone if it is taller at any width.
+        Otherwise which column is taller depends on the width, so the key includes both.
+        The columns are the same width, so their order does not affect the height.
         """
-        return (GetWrapKey(self.line_text), GetWrapKey(self.translation or ""))
+        original_key = GetWrapKey(self.line_text)
+        translation_key = GetWrapKey(self.translation or "")
+
+        if WrapKeyDominates(original_key, translation_key):
+            return (original_key,)
+
+        if WrapKeyDominates(translation_key, original_key):
+            return (translation_key,)
+
+        return tuple(sorted((original_key, translation_key)))
 
     def _format_and_set_data(self) -> None:
         """

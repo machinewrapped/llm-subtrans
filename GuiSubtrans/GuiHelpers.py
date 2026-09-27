@@ -1,5 +1,6 @@
 import logging
 import os
+import unicodedata
 import darkdetect # type: ignore
 
 from PySide6.QtCore import Qt
@@ -60,7 +61,27 @@ def GetWrapKey(text : str, bucket_length : int = 10) -> tuple[int, ...]:
     if not text:
         return ()
 
-    return tuple(sorted(-(-len(line) // bucket_length) for line in text.split('\n')))
+    return tuple(sorted(-(-GetDisplayLength(line) // bucket_length) for line in text.split('\n')))
+
+def GetDisplayLength(text : str) -> int:
+    """
+    Approximate width of text in Latin characters.
+    East Asian wide and fullwidth characters take up about two.
+    """
+    if text.isascii():
+        return len(text)
+
+    return sum(2 if unicodedata.east_asian_width(char) in ('W', 'F') else 1 for char in text)
+
+def WrapKeyDominates(key : tuple[int, ...], other : tuple[int, ...]) -> bool:
+    """
+    True if text with the first wrap key is at least as tall as text with the other at any width.
+    That holds if it has at least as many lines, and its lines are at least as long when both are sorted longest first.
+    """
+    if len(key) < len(other):
+        return False
+
+    return all(length >= other_length for length, other_length in zip(reversed(key), reversed(other)))
 
 def DescribeLineCount(line_count : int, translated_count : int) -> str:
     if translated_count == 0:

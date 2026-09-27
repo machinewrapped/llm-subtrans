@@ -51,6 +51,17 @@ def GetLineHeight(text: str, wrap_length: int = 60) -> int:
     wraps = -(-len(text) // wrap_length) if wrap_length else 0  # Ceiling division
     return text.count('\n') + wraps
 
+def GetWrapKey(text : str, bucket_length : int = 10) -> tuple[int, ...]:
+    """
+    Group text by how it will wrap, for caching layout sizes.
+    Each line wraps independently, so the key is the length of every line, rounded up to bucket_length.
+    Sorted, because the order of the lines does not affect the total height.
+    """
+    if not text:
+        return ()
+
+    return tuple(sorted(-(-len(line) // bucket_length) for line in text.split('\n')))
+
 def DescribeLineCount(line_count : int, translated_count : int) -> str:
     if translated_count == 0:
         return _("{count} lines").format(count=line_count)

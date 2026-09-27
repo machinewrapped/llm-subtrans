@@ -1,4 +1,4 @@
-from GuiSubtrans.GuiHelpers import GetLineHeight
+from GuiSubtrans.GuiHelpers import GetWrapKey
 from PySubtrans.Helpers import UpdateFields
 from PySubtrans.Helpers.Dialog import emdash
 from PySubtrans.Helpers.Text import Linearise
@@ -19,7 +19,7 @@ class LineItem(QStandardItem):
         super().__init__(f"Line {line_number}")
         self.number : int = line_number
         self.line_model : dict[str, str|int|float] = model
-        self.height = max(GetLineHeight(self.line_text), GetLineHeight(self.translation)) if self.translation else GetLineHeight(self.line_text)
+        self.size_key = self._get_size_key()
 
         self._format_and_set_data()
 
@@ -35,7 +35,7 @@ class LineItem(QStandardItem):
 
         self.number = number or self.number
 
-        self.height = max(GetLineHeight(self.line_text), GetLineHeight(self.translation)) if self.translation else GetLineHeight(self.line_text)
+        self.size_key = self._get_size_key()
 
         self._format_and_set_data()
 
@@ -166,6 +166,12 @@ class LineItem(QStandardItem):
             raise ViewModelError(f"Model field 'batch' is not an integer: {self.line_model}")
 
         return batch
+
+    def _get_size_key(self) -> tuple[tuple[int, ...], tuple[int, ...]]:
+        """
+        Key for caching the display size of the line, which depends on how the original and translation wrap.
+        """
+        return (GetWrapKey(self.line_text), GetWrapKey(self.translation or ""))
 
     def _format_and_set_data(self) -> None:
         """

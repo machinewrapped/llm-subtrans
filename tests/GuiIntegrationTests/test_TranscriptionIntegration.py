@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication, QDialog, QMainWindow
 from GuiSubtrans.Commands.SaveSubtitleFile import SaveSubtitleFile
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.GuiInterface import GuiInterface
+from GuiSubtrans.MainToolbar import MainToolbar
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
@@ -135,12 +136,16 @@ class TestTranscriptionIntegration(LoggedTestCase):
         self.assertLoggedEqual('discard keeps current model', self.old_model, self.gui.datamodel)
         self.assertLoggedEqual('discard does not install model', 0, set_model.call_count)
 
-    def test_busy_entry_guard_covers_pending_and_running_queue_commands(self) -> None:
-        for queued_command in (Mock(started=False), Mock(started=True)):
-            self.gui.command_queue.queue.append(queued_command)
-            with patch('GuiSubtrans.GuiInterface.TranscriptionDialog') as dialog_type:
-                self.gui.ShowTranscriptionDialog()
-            self.assertLoggedEqual('busy guard does not open dialog', 0, dialog_type.call_count)
+    def test_transcribe_action_gated_on_blocking_commands_without_project(self) -> None:
+        """Only blocking commands disable Transcribe before a project is loaded."""
+        toolbar = MainToolbar(self.gui)
+        self.addCleanup(toolbar.deleteLater)
+        action = toolbar.GetAction('Transcribe Audio')
+
+        for is_blocking in (True, False):
+            self.gui.command_queue.queue.append(Mock(is_blocking=is_blocking, started=True))
+            toolbar.UpdateBusyStatus()
+            self.assertLoggedEqual('transcribe enabled', not is_blocking, action.isEnabled(), input_value=is_blocking)
             self.gui.command_queue.queue.clear()
 
     def test_dialog_requests_are_queued_like_any_other_command(self) -> None:

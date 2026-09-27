@@ -1395,6 +1395,13 @@ class TestPunctuationOnly(LoggedTestCase):
 
         self.assertLoggedEqual("line count", 0, len(lines))
 
+    def test_stray_symbol_word_is_dropped(self):
+        """A symbol timed apart from the real words makes no line of its own."""
+        words = [_word("Hello", 0.0, 0.5), _word("there.", 0.5, 1.0), _word("♪", 10.0, 11.0)]
+        lines = self._lines("", words=words)
+
+        self.assertLoggedEqual("texts", ["Hello there."], [line.text for line in lines])
+
     def test_digits_are_kept(self):
         """A transcript of digits alone is still a line."""
         lines = self._lines("2024.")

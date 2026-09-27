@@ -5,8 +5,8 @@ from datetime import timedelta
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Script import JoinWords
-from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
-from PySubtrans.Helpers.Text import CompactText, CutText, RemoveWhitespaceAndPunctuation
+from PySubtrans.Helpers.Speech import EstimateSpeechSeconds, IsSpoken
+from PySubtrans.Helpers.Text import CompactText, CutText
 from PySubtrans.Helpers.Time import SpanLabel
 from PySubtrans.Transcription.LineMerger import LineMerger
 from PySubtrans.Transcription.LineSettings import LineSettings
@@ -45,14 +45,14 @@ class TranscriptionLineBuilder:
         Turn a transcribed chunk into timed subtitle lines.
         Text that is only punctuation or symbols is dropped, since engines return stray marks for music and silence.
         """
-        parts = [part for part in segment.parts if RemoveWhitespaceAndPunctuation(part.text)]
+        parts = [part for part in segment.parts if IsSpoken(part.text)]
         if parts:
             return self._lines_from_parts(segment, parts)
 
-        if RemoveWhitespaceAndPunctuation(segment.text):
+        if IsSpoken(segment.text):
             return self._lines_from_transcript(segment)
 
-        if any(RemoveWhitespaceAndPunctuation(word.text) for word in segment.words):
+        if segment.words:
             return self._lines_from_words(segment)
 
         return []
@@ -89,7 +89,9 @@ class TranscriptionLineBuilder:
         lines : list[TranscriptionSegment] = []
         for utterance in self.splitter.SplitUtterances(words):
             for run in self.splitter.FitUtterance(utterance):
-                lines.append(self._line_from_words(run, segment))
+                line = self._line_from_words(run, segment)
+                if IsSpoken(line.text):
+                    lines.append(line)
 
         return self.merger.MergeSlivers(lines, limit=segment.end)
 

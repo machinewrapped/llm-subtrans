@@ -116,6 +116,9 @@ class SilenceStream:
             error = SubtitleError(_("Silence detection failed"), error=e)
 
         finally:
+            # The reader owns the pipe, so it closes it once iteration has stopped
+            process.stderr.close()
+
             returncode = process.wait()
             if returncode != 0 and error is None:
                 logging.debug("ffmpeg silencedetect exited with code {}".format(returncode))

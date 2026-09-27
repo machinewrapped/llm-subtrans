@@ -1,5 +1,5 @@
 import logging
-from PySide6.QtCore import QAbstractProxyModel, QModelIndex, QPersistentModelIndex, Qt
+from PySide6.QtCore import QAbstractProxyModel, QModelIndex, QPersistentModelIndex, QSize, Qt
 from PySide6.QtWidgets import QWidget
 
 from GuiSubtrans.ViewModel.SceneItem import SceneItem
@@ -24,7 +24,8 @@ class SubtitleListModel(QAbstractProxyModel):
         self.selected_batch_numbers = []
         self.visible = []
         self.visible_row_map : dict[int, int] = {}
-        self.size_map : dict = {}
+        self.size_map : dict[tuple[tuple[int, ...], ...], QSize] = {}
+        self.item_width : int = 0
 
         # Connect signals to update mapping when source model changes
         # TODO: investigate whether any other signals on the base model should be handled to trigger a refresh of the proxy model.
@@ -47,6 +48,19 @@ class SubtitleListModel(QAbstractProxyModel):
 
         if sorted(batch_numbers) != self.selected_batch_numbers:
             self.ShowSelectedBatches(batch_numbers)
+
+    def SetItemWidth(self, width : int) -> bool:
+        """
+        Set the width available to each row, which determines how the text wraps.
+        Discards cached size hints if the width changed.
+        Returns True if the width changed, in which case the view should relayout its items.
+        """
+        if width <= 0 or width == self.item_width:
+            return False
+
+        self.item_width = width
+        self.size_map.clear()
+        return True
 
     def ShowSelectedBatches(self, batch_numbers : list[tuple[int, int]], emit_layout : bool = True):
         """
@@ -187,16 +201,28 @@ class SubtitleListModel(QAbstractProxyModel):
             return LineItemView(item)
 
         if role == Qt.ItemDataRole.SizeHintRole:
-            if isinstance(item, LineItem) and item.height:
-                if item.height in self.size_map:
-                    return self.size_map[item.height]
-                size = LineItemView(item).sizeHint()
-                self.size_map[item.height] = size
-                return size
-            else:
-                return LineItemView(item).sizeHint()
+            size = self.size_map.get(item.size_key)
+            if size is None:
+                size = self._calculate_size_hint(item)
+                self.size_map[item.size_key] = size
+            return size
 
         return None
+
+    def _calculate_size_hint(self, item : LineItem) -> QSize:
+        """
+        Calculate the size of a row showing the item.
+        The unconstrained size hint of a word-wrapped label assumes an arbitrary wrap width, so use the row width when it is known.
+        """
+        view = LineItemView(item)
+        if self.item_width <= 0:
+            return view.sizeHint()
+
+        height = view.heightForWidth(self.item_width)
+        if height <= 0:
+            return view.sizeHint()
+
+        return QSize(self.item_width, height)
 
     def _on_data_changed(self, top_left, bottom_right, roles=None):
         """

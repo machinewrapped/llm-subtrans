@@ -122,7 +122,7 @@ class SubtitleLine:
 
     @property
     def srt_start(self) -> str:
-        return TimedeltaToSrtTimestamp(self.start) or "00:00.00,000"
+        return TimedeltaToSrtTimestamp(self.start) or "00:00:00,000"
 
     @property
     def txt_start(self) -> str:
@@ -130,7 +130,7 @@ class SubtitleLine:
 
     @property
     def srt_end(self) -> str:
-        return TimedeltaToSrtTimestamp(self.end) or "00:00.00,000"
+        return TimedeltaToSrtTimestamp(self.end) or "00:00:00,000"
 
     @property
     def txt_end(self) -> str:

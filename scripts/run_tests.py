@@ -273,6 +273,30 @@ def run_unit_tests(results_path: str) -> bool:
     return overall_success
 
 
+def run_script_tests(results_path: str) -> bool:
+    """Run the tests for developer tools in scripts/, which are not part of the PySubtrans package."""
+    log_file = create_logfile(results_path, "script_tests.log")
+
+    logging.info(separator)
+    logging.info("Running script tests at " + datetime.now().strftime("%Y-%m-%d at %H:%M"))
+    logging.info(separator)
+
+    suite = unittest.TestLoader().discover(os.path.join(base_path, 'tests', 'ScriptTests'), pattern='test_*.py', top_level_dir=base_path)
+    result = unittest.runner.TextTestRunner(verbosity=1).run(suite)
+
+    global total_run, total_failures, total_errors, total_skipped
+    skipped = len(result.skipped)
+    total_run += result.testsRun
+    total_failures += len(result.failures)
+    total_errors += len(result.errors)
+    total_skipped += skipped
+
+    summary_lines.append(format_summary_line('Scripts', result.testsRun, len(result.failures), len(result.errors), skipped, result.wasSuccessful()))
+
+    end_logfile(log_file)
+    return result.wasSuccessful()
+
+
 def run_integration_tests(results_path: str) -> bool:
     """Run the integration test suite in a separate Python process.
 
@@ -420,6 +444,10 @@ if __name__ == "__main__":
     # Only run unit tests if type checking passed
     if overall_success:
         overall_success = run_unit_tests(results_directory)
+
+    # Script tests cover developer tools outside the package, so they run here but not in the unit runner
+    if overall_success:
+        overall_success = run_script_tests(results_directory)
 
     # Only run integration tests if unit tests passed. The integration suite
     # runs in its own process so provider imports cannot leak into unit tests.

@@ -4,7 +4,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QThread, QTimer, Qt, Signal, Slot
+from PySide6.QtCore import QTimer, Qt, Signal, Slot
 from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import (
     QComboBox,
@@ -87,7 +87,7 @@ class TranscriptionDialog(QDialog):
         self.setMinimumHeight(560)
 
         self.global_options : Options = options
-        self.loader_thread : QThread|None = None
+        self.loader : TranscriptionProviderLoader|None = None
         self.subtitles : Subtitles|None = None
         self.media_path : str|None = None
         self._audio_tracks : list[AudioTrack] = []
@@ -276,28 +276,20 @@ class TranscriptionDialog(QDialog):
         Load provider modules in a worker thread so the dialog appears
         immediately; the combo fills in when imports complete.
         """
-        if self.loader_thread is not None:
+        if self.loader is not None:
             return
 
         self.provider_combo.clear()
 
         self.loader = TranscriptionProviderLoader()
-        self.loader_thread = QThread(self)
-        self.loader.moveToThread(self.loader_thread)
-
-        self.loader_thread.started.connect(self.loader.run)
         self.loader.loaded.connect(self._on_providers_loaded)
         self.loader.failed.connect(self._on_providers_failed)
-        self.loader.loaded.connect(self.loader_thread.quit)
-        self.loader.failed.connect(self.loader_thread.quit)
-        self.loader_thread.finished.connect(self.loader.deleteLater)
-        self.loader_thread.finished.connect(self._on_loader_thread_finished)
-
-        self.loader_thread.start()
+        self.loader.start()
 
     @Slot(list)
     def _on_providers_loaded(self, names : list) -> None:
         """Populate the provider combo once module imports complete."""
+        self.loader = None
         self.provider_combo.addItems(names)
 
         if names:
@@ -317,20 +309,9 @@ class TranscriptionDialog(QDialog):
     @Slot(str)
     def _on_providers_failed(self, message : str) -> None:
         """Report provider loading failures instead of stalling silently."""
+        self.loader = None
         logging.error(_("Unable to load transcription providers: {error}").format(error=message))
         self.status_label.setText(_("Unable to load transcription providers."))
-
-    @Slot()
-    def _on_loader_thread_finished(self) -> None:
-        """Release the loader only after its QThread has actually stopped."""
-        finished_thread = self.loader_thread
-        self.loader_thread = None
-        if finished_thread is not None:
-            finished_thread.deleteLater()
-
-        if self._close_requested and self.active_command is None:
-            self._close_requested = False
-            self.reject()
 
     def _current_provider(self) -> TranscriptionProvider|None:
         name = self.provider_name
@@ -871,10 +852,6 @@ class TranscriptionDialog(QDialog):
             self._abort_transcription()
             return
 
-        if self.loader_thread is not None and self.loader_thread.isRunning():
-            self._close_requested = True
-            return
-
         if self._has_unaccepted_results():
             count = self.subtitles.linecount if self.subtitles else 0
             reply = QMessageBox.question(
@@ -957,6 +934,14 @@ class TranscriptionDialog(QDialog):
                 return
 
         event.ignore()
+
+    def done(self, result : int) -> None:
+        """Discard a provider load still in flight, so it cannot populate a closed dialog."""
+        if self.loader is not None:
+            self.loader.stop()
+            self.loader = None
+
+        super().done(result)
 
     def closeEvent(self, event) -> None:
         """Keep the dialog alive until active background work has stopped."""

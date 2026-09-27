@@ -1,8 +1,8 @@
-from PySide6.QtCore import QObject, QThread, Signal, Slot
+from PySide6.QtCore import QObject, QThreadPool, Signal, Slot
 
 from PySubtrans.TranslationProvider import TranslationProvider
 
-# Keep running loaders referenced until their thread finishes, so a superseded
+# Keep running loaders referenced until their work finishes, so a superseded
 # loader cannot be garbage collected while its worker is still running.
 _active_loaders : set['TranslationProviderModelLoader'] = set()
 
@@ -11,43 +11,41 @@ class TranslationProviderModelLoader(QObject):
     """
     Resolves a translation provider's model list off the GUI thread.
 
-    Owns the worker thread and its lifetime.
+    The lookup runs on the global thread pool, so a slow request never blocks the GUI.
+    The loader object has GUI-thread affinity, so its completion handling and deletion happen there.
+    A dedicated QThread that deleted itself on finish raced PySide's wrapper teardown and crashed.
     The provider's name is reported back so late results for a superseded provider can be ignored.
     The outcome is recorded on the provider's ModelList, so a failure keeps the persisted model selectable.
     """
     loaded = Signal(str)
     failed = Signal(str, str)
+    _finished = Signal()
 
-    def __init__(self, provider : TranslationProvider, owner : QObject|None = None):
-        # The loader must have no parent for moveToThread to work; owner only parents the thread.
+    def __init__(self, provider : TranslationProvider):
+        # Unparented, so a closing owner cannot delete the loader while the lookup is in flight
         super().__init__()
         self.provider = provider
-        self._owner = owner
-        self._thread : QThread|None = None
+        self._running : bool = False
         self._request : int = 0
+
+        # Emitted from the pool thread, so this is delivered on the GUI thread
+        self._finished.connect(self._on_finished)
 
     @property
     def running(self) -> bool:
         """Whether the load is still in progress."""
-        return self._thread is not None and self._thread.isRunning()
+        return self._running
 
     def start(self) -> None:
         """Run the load on a worker thread."""
-        if self._thread is not None:
+        if self._running:
             return
 
         self._request = self.provider.model_list.BeginLoad()
-
-        thread = QThread(self._owner)
-        self.moveToThread(thread)
-        thread.started.connect(self.run)
-        self.loaded.connect(thread.quit)
-        self.failed.connect(thread.quit)
-        thread.finished.connect(self._on_thread_finished)
+        self._running = True
 
         _active_loaders.add(self)
-        self._thread = thread
-        thread.start()
+        QThreadPool.globalInstance().start(self._run_in_pool)
 
     def stop(self) -> None:
         """Release the loader without blocking the GUI thread.
@@ -55,10 +53,6 @@ class TranslationProviderModelLoader(QObject):
         """
         # Cancelling makes the request stale, so the worker cannot record its result
         self.provider.model_list.Cancel()
-
-        thread = self._thread
-        if thread is not None:
-            thread.quit()
 
     @Slot()
     def run(self) -> None:
@@ -74,12 +68,16 @@ class TranslationProviderModelLoader(QObject):
         else:
             self.failed.emit(provider.name, provider.model_list.error or "")
 
+    def _run_in_pool(self) -> None:
+        """Pool entry point, which always reports completion to the GUI thread."""
+        try:
+            self.run()
+        finally:
+            self._finished.emit()
+
     @Slot()
-    def _on_thread_finished(self) -> None:
-        """Release the thread and loader once the worker has stopped."""
-        thread = self._thread
-        self._thread = None
+    def _on_finished(self) -> None:
+        """Release the loader on the GUI thread once the worker is done with it."""
+        self._running = False
         _active_loaders.discard(self)
-        if thread is not None:
-            thread.deleteLater()
         self.deleteLater()

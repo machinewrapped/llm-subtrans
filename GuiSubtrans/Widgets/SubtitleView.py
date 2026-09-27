@@ -1,5 +1,5 @@
 from PySide6.QtWidgets import QListView, QAbstractItemView
-from PySide6.QtCore import Qt, QItemSelectionModel, QItemSelection, Signal, QSignalBlocker
+from PySide6.QtCore import Qt, QItemSelectionModel, QItemSelection, QTimer, Signal, QSignalBlocker
 from GuiSubtrans.ViewModel.LineItem import LineItem
 from GuiSubtrans.ProjectSelection import ProjectSelection
 
@@ -10,6 +10,8 @@ from GuiSubtrans.SubtitleListModel import SubtitleListModel
 class SubtitleView(QListView):
     linesSelected = Signal(list)
     editLine = Signal(object)
+
+    RESIZE_DELAY_MS = 200
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -28,8 +30,15 @@ class SubtitleView(QListView):
         # Track previous batch numbers to detect when batch selection changes
         self.previous_batch_numbers = []
 
+        # Row heights are recalculated when resizing pauses, because it is too slow to do on every step of a drag
+        self._resize_timer = QTimer(self)
+        self._resize_timer.setSingleShot(True)
+        self._resize_timer.setInterval(self.RESIZE_DELAY_MS)
+        self._resize_timer.timeout.connect(self._update_item_width)
+
     def SetViewModel(self, viewmodel : ProjectViewModel):
         model = SubtitleListModel(viewmodel)
+        model.SetItemWidth(self._get_item_width())
         self.setModel(model)
         self.ShowSelection(ProjectSelection())
 
@@ -129,6 +138,13 @@ class SubtitleView(QListView):
 
         self.linesSelected.emit(selected_lines)
 
+    def resizeEvent(self, event):
+        """
+        Row heights depend on how the text wraps, so recalculate them when the width changes
+        """
+        super().resizeEvent(event)
+        self._resize_timer.start()
+
     def keyPressEvent(self, event):
         """
         Handle keyboard events for the list view
@@ -141,6 +157,21 @@ class SubtitleView(QListView):
             # Call the base class method to handle other key events
             super().keyPressEvent(event)
    
+    def _update_item_width(self):
+        """
+        Recalculate row heights if the width available to them has changed
+        """
+        model = self.model()
+        if isinstance(model, SubtitleListModel) and model.SetItemWidth(self._get_item_width()):
+            # Let Qt relayout at its next opportunity rather than re-entering it from here
+            self.scheduleDelayedItemsLayout()
+
+    def _get_item_width(self) -> int:
+        """
+        Width available to each row, after the spacing either side
+        """
+        return self.viewport().width() - 2 * self.spacing()
+
     def _has_visibility_changed(self, model : SubtitleListModel) -> bool:
         return self.previous_batch_numbers != model.selected_batch_numbers
 

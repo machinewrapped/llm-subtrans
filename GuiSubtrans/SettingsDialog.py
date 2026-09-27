@@ -1,6 +1,6 @@
 import logging
 from collections.abc import Callable
-from PySide6.QtCore import QThread, Slot
+from PySide6.QtCore import Slot
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBox, QWidget, QFormLayout, QFrame)
 from GuiSubtrans.GuiHelpers import ClearForm, GetThemeNames
 
@@ -158,7 +158,7 @@ class SettingsDialog(QDialog):
         self.translation_provider : TranslationProvider|None = None
         self.transcription_provider : TranscriptionProvider|None = None
         self.transcription_provider_names : list[str] = []
-        self.loader_thread : QThread|None = None
+        self.transcription_loader : TranscriptionProviderLoader|None = None
         self.provider_form : ProviderSettingsForm|None = None
         self.provider_cache = provider_cache or {}
         self.settings : SettingsType = options.GetSettings()
@@ -545,27 +545,18 @@ class SettingsDialog(QDialog):
         Load transcription provider names off the GUI thread; the tab
         fills in when imports complete.
         """
-        if self.loader_thread is not None:
+        if self.transcription_loader is not None:
             return
 
-        self.loader = TranscriptionProviderLoader()
-        self.loader_thread = QThread(self)
-        self.loader.moveToThread(self.loader_thread)
-
-        # Wire up the loader signals and tear the thread down once it reports back
-        self.loader_thread.started.connect(self.loader.run)
-        self.loader.loaded.connect(self._on_transcription_providers_loaded)
-        self.loader.failed.connect(self._on_transcription_providers_failed)
-        self.loader.loaded.connect(self.loader_thread.quit)
-        self.loader.failed.connect(self.loader_thread.quit)
-        self.loader_thread.finished.connect(self.loader.deleteLater)
-
-        self.loader_thread.start()
+        self.transcription_loader = TranscriptionProviderLoader()
+        self.transcription_loader.loaded.connect(self._on_transcription_providers_loaded)
+        self.transcription_loader.failed.connect(self._on_transcription_providers_failed)
+        self.transcription_loader.start()
 
     @Slot(list)
     def _on_transcription_providers_loaded(self, names : list) -> None:
         """Populate the transcription tab once module imports complete."""
-        self.loader_thread = None
+        self.transcription_loader = None
         self.transcription_provider_names = list(names)
 
         # Replace the placeholder dropdown definition with the loaded provider names
@@ -594,7 +585,7 @@ class SettingsDialog(QDialog):
     @Slot(str)
     def _on_transcription_providers_failed(self, message : str) -> None:
         """Report provider loading failures instead of stalling silently."""
-        self.loader_thread = None
+        self.transcription_loader = None
 
         logging.error(_("Unable to load transcription providers: {error}").format(error=message))
 
@@ -696,16 +687,16 @@ class SettingsDialog(QDialog):
         return lambda current_value: None
 
     def _stop_provider_model_load(self) -> None:
-        """Prevent late provider model results from mutating settings after the dialog closes."""
+        """Prevent late provider results from mutating settings after the dialog closes."""
         if self.provider_form is not None:
             self.provider_form.Stop()
 
+        if self.transcription_loader is not None:
+            self.transcription_loader.stop()
+            self.transcription_loader = None
+
     def closeEvent(self, event) -> None:
         """Stop the background loaders if the dialog closes early."""
-        if self.loader_thread is not None and self.loader_thread.isRunning():
-            self.loader_thread.quit()
-            self.loader_thread.wait(5000)
-
         self._stop_provider_model_load()
 
         super().closeEvent(event)

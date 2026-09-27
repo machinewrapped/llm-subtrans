@@ -1,10 +1,8 @@
 """Detect GPU hardware and install the correct torch variant.
 
-Called by install.bat / install.sh after base dependencies are installed
-but BEFORE ``pip install -e ".[qwen-asr]"``.  Detects the available GPU
-hardware and installs torch from the appropriate index URL so that
-qwen-asr's ``torch>=2.0.0`` requirement is already satisfied by a
-GPU-capable build.
+Called by install.bat / install.sh after base dependencies are installed, but BEFORE ``install_qwen_runtime.py``.
+Detects the available GPU hardware and installs torch from the appropriate index URL.
+The Qwen runtime's dependencies then find a GPU-capable torch already installed, rather than pulling in a generic build.
 
 Exit codes:
     0 = GPU torch installed (or already present)

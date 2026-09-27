@@ -101,7 +101,7 @@ class ProviderSettingsForm(QObject):
         # Apply the saved settings so the fetch uses the current API key and endpoints
         self.provider.UpdateSettings(SettingsType(self.settings))
 
-        loader = TranslationProviderModelLoader(self.provider, owner=self)
+        loader = TranslationProviderModelLoader(self.provider)
         loader.loaded.connect(self._on_models_loaded)
         loader.failed.connect(self._on_models_failed)
         loader.loaded.connect(lambda _name, loader=loader: self._release_loader(loader))

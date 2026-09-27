@@ -53,3 +53,4 @@ untranslated_msgids_*.txt
 batch-translate.sh
 /test_videos
 /transcription_tests
+transcribe.sh

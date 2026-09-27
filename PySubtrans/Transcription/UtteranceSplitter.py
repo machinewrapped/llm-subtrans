@@ -2,14 +2,13 @@ from __future__ import annotations
 
 from datetime import timedelta
 
-from PySubtrans.Helpers.Speech import SENTENCE_END_CHARS
+from PySubtrans.Helpers.Speech import EndsSentence
 from PySubtrans.Helpers.Script import JoinWords
 from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.WordTiming import WordTiming
 
-# Clause punctuation that makes a good place to break an over-long utterance.
-# A period is only a soft boundary: short consecutive sentences read better together (docs/transcription-timing-correction.md).
-CLAUSE_END_CHARS = frozenset('.,;:，、；：-–—')
+# Clause punctuation that makes a good place to break an over-long sentence
+CLAUSE_END_CHARS = frozenset(',;:，、；：-–—')
 
 # Split-point scoring for over-long utterances: the pause at a boundary is the primary signal, weighted by how central the boundary is.
 # The floor lets zero-pause boundaries still resolve by centrality.
@@ -55,7 +54,7 @@ class UtteranceSplitter:
 
         return (gap >= self.settings.EligibleGap(previous.speaker, word.speaker)
                 or speaker_changed
-                or bool(previous.text and previous.text[-1] in SENTENCE_END_CHARS))
+                or EndsSentence(previous.text))
 
     def SplitUtterances(self, words : list[WordTiming]) -> list[list[WordTiming]]:
         """Cut words at hard boundaries, regardless of line length."""
@@ -72,6 +71,22 @@ class UtteranceSplitter:
             utterances.append(current)
 
         return utterances
+
+    def SplitSentences(self, words : list[WordTiming]) -> list[list[WordTiming]]:
+        """Cut words after each one that ends a sentence, so every sentence can have its own line."""
+        sentences : list[list[WordTiming]] = []
+        current : list[WordTiming] = []
+
+        for word in words:
+            current.append(word)
+            if EndsSentence(word.text):
+                sentences.append(current)
+                current = []
+
+        if current:
+            sentences.append(current)
+
+        return sentences
 
     def FitUtterance(self, words : list[WordTiming]) -> list[list[WordTiming]]:
         """Split an over-long utterance at its best boundaries until every piece fits."""
@@ -109,10 +124,9 @@ class UtteranceSplitter:
             centrality = 1.0 - abs(position - half_span) / half_span if half_span > 0.0 else 1.0
             score = (pause + PAUSE_SCORE_FLOOR) * max(0.0, centrality)
 
-            last = previous.text[-1] if previous.text else ''
-            if last in SENTENCE_END_CHARS:
+            if EndsSentence(previous.text):
                 score += SENTENCE_END_BONUS
-            elif last in CLAUSE_END_CHARS:
+            elif previous.text and previous.text[-1] in CLAUSE_END_CHARS:
                 score += CLAUSE_END_BONUS
 
             if sum(1 for c in previous.text if c.isalnum()) <= SHORT_WORD_CHARS:

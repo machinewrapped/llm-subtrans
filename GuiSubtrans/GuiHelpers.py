@@ -1,5 +1,6 @@
 import logging
 import os
+import unicodedata
 import darkdetect # type: ignore
 
 from PySide6.QtCore import Qt
@@ -37,19 +38,36 @@ def LoadStylesheet(name):
 
     return stylesheet
 
-def GetLineHeight(text: str, wrap_length: int = 60) -> int:
+def GetWrapKey(text : str, bucket_length : int = 10) -> tuple[int, ...]:
     """
-    Calculate the number of lines for a given text with wrapping and newline characters.
-
-    :param text: The input text.
-    :param wrap_length: The maximum number of characters per line.
-    :return: The total number of lines.
+    Group text by how it will wrap, for caching layout sizes.
+    Each line wraps independently, so the key is the length of every line, rounded up to bucket_length.
+    Sorted, because the order of the lines does not affect the total height.
     """
     if not text:
-        return 0
+        return ()
 
-    wraps = -(-len(text) // wrap_length) if wrap_length else 0  # Ceiling division
-    return text.count('\n') + wraps
+    return tuple(sorted(-(-GetDisplayLength(line) // bucket_length) for line in text.split('\n')))
+
+def GetDisplayLength(text : str) -> int:
+    """
+    Approximate width of text in Latin characters.
+    East Asian wide and fullwidth characters take up about two.
+    """
+    if text.isascii():
+        return len(text)
+
+    return sum(2 if unicodedata.east_asian_width(char) in ('W', 'F') else 1 for char in text)
+
+def WrapKeyDominates(key : tuple[int, ...], other : tuple[int, ...]) -> bool:
+    """
+    True if text with the first wrap key is at least as tall as text with the other at any width.
+    That holds if it has at least as many lines, and its lines are at least as long when both are sorted longest first.
+    """
+    if len(key) < len(other):
+        return False
+
+    return all(length >= other_length for length, other_length in zip(reversed(key), reversed(other)))
 
 def DescribeLineCount(line_count : int, translated_count : int) -> str:
     if translated_count == 0:

@@ -50,3 +50,4 @@ The line assembly code is independent of provider and audio dependencies, so cap
 ## Findings
 
 - [transcription-timing-correction.md](transcription-timing-correction.md): lines too short for their text, and why `timing_correction_factor` extends rather than merges.
+- [transcription-line-segmentation.md](transcription-line-segmentation.md): why every sentence end, full stops included, starts a new line, and the levers tried for over-long lines.

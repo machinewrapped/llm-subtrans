@@ -10,16 +10,19 @@ The issue proposed merging lines that are too fast to read into a neighbour. Thi
 
 ## Full stops are soft boundaries
 
+**Superseded:** words ending in a full stop now end a sentence and start a new line, like `?`, `!` and `。`. A full stop glued to the next word ends a sentence when a timed word starts straight after it, which keeps `Ánimo` with its speaker. The evidence is in [transcription-line-segmentation.md](transcription-line-segmentation.md). The rest of this section records the earlier trials.
+
 Full stops do not end a part the way `?`, `!` and `。` do, but they are not ignored. `.` is in `CLAUSE_END_CHARS`, so when a part runs over the length or duration limit, `UtteranceSplitter.FitUtterance` prefers to split it at a full stop. A full stop is a good place to split a line that is too long, but not a reason to split one that is not.
 
 No reason for this was recorded when it was written. The sentence-end set arrived with the first transcription commit (35a1bb3), and d6fc4b7 called a period "not a hard boundary" without saying why. The reason now comes from testing hard full-stop boundaries twice:
 
 - **#459:** blind assessment split 2–2. The complaints were lines too fast to read, short sentences stranded at the 0.8 s minimum, and glued text.
 - **With the correction at 0.7:** two 25-minute windows of La Madre Muerta, two Haiku assessors each, compared `main` against full stops. `main` won 3–1. The work is kept in a git stash, "transcription-full-stops".
+- **The same pair, assessed by Codex (`gpt-6-luna`):** it preferred full stops in both windows, with medium confidence on the early one and low on the late one. It liked each sentence having its own cue, such as `No hay prisa.` at 00:06:40 and `Mañana.` at 01:22:18. It also flagged the misplaced `Ánimo` described below, and a cue in full stops that ends mid-phrase after `no me` at 00:12:40. The files are in `transcription_tests/assess/round12`, with the key in `round12_key.json`.
 
 The correction fixed the timing, but two problems remained, and neither is about timing:
 
-- **Short consecutive sentences read better together.** `No hay prisa.`, `Eso es.` and `Hija puta.` became lines of their own at the 0.8 s minimum. Their speaking-time estimate is under 0.8 s, so the correction rightly leaves them alone. In `main` they share a line with the sentence beside them, like `David, ven. Rafa, llévatelos.`, which an assessor singled out as better.
+- **Short consecutive sentences read better together.** `No hay prisa.`, `Eso es.` and `Hija puta.` became lines of their own at the 0.8 s minimum. Their speaking-time estimate is under 0.8 s, so the correction rightly leaves them alone. In `main` they share a line with the sentence beside them, like `David, ven. Rafa, llévatelos.`, which an assessor singled out as better. Codex took the opposite view of the same lines, and preferred them separate.
 - **Gemini's glued text relies on the speaker-change cut.** Gemini returned no word timing for `Ánimo` in `…Tú te la llevas. Ánimo.Nadie debía saber nada.`, and wrote no space after it. In `main`, the cut at the speaker change gives the unmatched text to the word before it, so `Ánimo.` stays with its speaker at 01:10:53. With full stops, `Ánimo.Nadie debía saber nada.` is one sentence, so `Ánimo` took the timing and speaker of `Nadie`, 22 s later.
 
 Two concerns about full stops were also raised on #459, and still apply to any use of them as sentence ends:
@@ -105,7 +108,7 @@ Qwen's lines under 0.5× bottom out at 34 whatever the factor. They are the late
 - **It is a per-provider setting**, read with `settings.get_float` and shown in each provider's line options, so users can tune it.
 - **Reading time is left to `extend_short_subtitles`**, which runs when a translation is saved. Timings are then adjusted for the final text, and the stored project is not changed irreversibly. The correction here addresses squeezed speaking time only.
 - **`WordCoverage` stays separate.** Words missing whole stretches of the transcript is a difference in kind, and decides which heuristics apply. The correction factor is a difference in degree.
-- **Full stops stay soft boundaries** for transcripts with word timings. They are preferred split points for parts over the limits, not sentence ends that always start a new line.
+- **Full stops stay soft boundaries** for transcripts with word timings. They are preferred split points for parts over the limits, not sentence ends that always start a new line. Superseded by [transcription-line-segmentation.md](transcription-line-segmentation.md).
 
 ## Other findings
 

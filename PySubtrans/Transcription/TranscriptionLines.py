@@ -111,14 +111,16 @@ class TranscriptionLineBuilder:
 
     def _fit_part(self, part : TranscriptionSegment, words : list[WordTiming],
                   segment : TranscriptionSegment) -> list[TranscriptionSegment]:
-        """Rebase a part, splitting it at its words when it runs over a limit."""
+        """Rebase a part, splitting it at its words where a sentence ends or it runs over a limit."""
         line = self._rebase_part(part, segment)
+        sentences = self.splitter.SplitSentences(AttachPunctuation(words))
         duration = (line.end - line.start).total_seconds()
-        if not words or (duration <= self.settings.max_line_seconds and len(line.text) <= self.settings.max_line_chars):
+        fits = duration <= self.settings.max_line_seconds and len(line.text) <= self.settings.max_line_chars
+        if not words or (fits and len(sentences) < 2):
             return [line]
 
         # The text always comes from the part; words only decide where it is cut and when each piece is shown
-        pieces = self.splitter.FitUtterance(AttachPunctuation(words))
+        pieces = [piece for sentence in sentences for piece in self.splitter.FitUtterance(sentence)]
         texts = CutText(line.text, [sum(len(CompactText(word.text)) for word in piece) for piece in pieces])
 
         lines : list[TranscriptionSegment] = []

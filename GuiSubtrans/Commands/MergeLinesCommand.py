@@ -59,7 +59,7 @@ class MergeLinesCommand(Command):
 
             line_update = {
                 'start': merged_line.txt_start,
-                'end': merged_line.srt_end,
+                'end': merged_line.txt_end,
                 'text': merged_line.text,
                 }
 
@@ -93,7 +93,7 @@ class MergeLinesCommand(Command):
                 translated_line = translated_by_number.get(line.number)
                 line_update = {
                     'start': line.txt_start,
-                    'end': line.srt_end,
+                    'end': line.txt_end,
                     'text': line.text,
                     'translation': translated_line.text if translated_line else None,
                 }

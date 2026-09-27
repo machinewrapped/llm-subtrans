@@ -1,4 +1,4 @@
-from PySide6.QtCore import Qt
+from PySide6.QtCore import QSize, Qt
 
 from GuiSubtrans.Commands.MergeLinesCommand import MergeLinesCommand
 from GuiSubtrans.GuiSubtitleTestCase import GuiSubtitleTestCase
@@ -82,3 +82,34 @@ class SubtitleListModelTests(GuiSubtitleTestCase):
             [(1, 1), (1, 2), (2, 2)],
             proxy.selected_batch_numbers,
         )
+
+    def test_size_hint_follows_item_width(self) -> None:
+        """Row heights must be recalculated for the available width, since text wraps differently."""
+        viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts([[2]])
+        proxy = SubtitleListModel(viewmodel)
+        proxy.ShowSelection(ProjectSelection())
+
+        line_item = proxy.data(proxy.index(0, 0), Qt.ItemDataRole.UserRole)
+        self.assertLoggedIsInstance("first row item", line_item, LineItem)
+        if isinstance(line_item, LineItem):
+            line_item.Update({ 'text': " ".join(["A long subtitle line that will wrap when the row is narrow."] * 3) })
+
+        self.assertLoggedTrue("setting a new width reports a change", proxy.SetItemWidth(1600))
+        wide_size = self._row_size(proxy, 0)
+        self.assertLoggedEqual("size hint uses the item width", 1600, wide_size.width())
+        self.assertLoggedGreater("size hint was cached", len(proxy.size_map), 0)
+
+        self.assertLoggedFalse("setting the same width reports no change", proxy.SetItemWidth(1600))
+        self.assertLoggedFalse("ignores an invalid width", proxy.SetItemWidth(0))
+        self.assertLoggedGreater("cache kept when width is unchanged", len(proxy.size_map), 0)
+
+        self.assertLoggedTrue("setting a narrower width reports a change", proxy.SetItemWidth(400))
+        self.assertLoggedEqual("cache discarded when width changes", 0, len(proxy.size_map))
+
+        narrow_size = self._row_size(proxy, 0)
+        self.assertLoggedGreater("narrow row is taller than wide row", narrow_size.height(), wide_size.height())
+
+    def _row_size(self, proxy : SubtitleListModel, row : int) -> QSize:
+        size = proxy.data(proxy.index(row, 0), Qt.ItemDataRole.SizeHintRole)
+        self.assertLoggedIsInstance("row size hint", size, QSize)
+        return size if isinstance(size, QSize) else QSize()

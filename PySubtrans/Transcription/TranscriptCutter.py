@@ -4,14 +4,14 @@ from collections import Counter
 from datetime import timedelta
 from typing import NamedTuple
 
-from PySubtrans.Helpers.Speech import (SENTENCE_END_CHARS, SPOKEN_CHAR, EstimateSpeechSeconds, NominalSecondsPerChar,
+from PySubtrans.Helpers.Speech import (SPOKEN_CHAR, EndsSentence, EstimateSpeechSeconds, NominalSecondsPerChar,
                                        SentenceEnds, SentenceRanges)
 from PySubtrans.Helpers.Text import CompactText
 from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 from PySubtrans.Transcription.UtteranceSplitter import UtteranceSplitter
 from PySubtrans.Transcription.WordAlignment import (AlignedWord, AlignWords, AssignToRanges, CutPoints,
-                                                    SplitAtSpeakerChanges, WordCoverage)
+                                                    SplitAtSpeakerChanges, TimedSentenceRanges, WordCoverage)
 from PySubtrans.Transcription.WordTiming import WordTiming
 
 # A spoken word lasting under this fraction of its estimate has been squeezed by the aligner, and is not used for timing
@@ -103,12 +103,13 @@ class TranscriptCutter:
 
     def _ranges(self, text : str, aligned : list[AlignedWord]) -> list[tuple[int, int]]:
         """Where the transcript is cut into parts."""
-        # Without matched words no word can divide a sentence, so any full stop ends a part
+        # Without matched words only the punctuation can divide the transcript
         if not aligned:
             return SentenceRanges(text, SentenceEnds.ALL)
 
-        if any(char in SENTENCE_END_CHARS for char in text):
-            return SplitAtSpeakerChanges(text, SentenceRanges(text), aligned)
+        sentences = TimedSentenceRanges(text, aligned)
+        if len(sentences) > 1 or EndsSentence(text):
+            return SplitAtSpeakerChanges(text, sentences, aligned)
 
         return self._pause_ranges(text, aligned)
 

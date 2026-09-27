@@ -56,22 +56,21 @@ class PostprocessTranslationsCommand(Command):
             if not selected_lines.issubset(found_lines):
                 raise CommandError(_("Some selected lines were not found"), command=self)
 
-            # Validate and post-process every batch before mutating any of them, so a
+            # Post-process every batch before mutating any of them, so a
             # failure part-way through does not leave some batches changed with no undo data.
+            # Untranslated lines are skipped, e.g. lines emptied by filler word removal.
             processed_batches : list[tuple[SubtitleBatch, list[SubtitleLine]]] = []
             for batch in batches:
-                original_selected_lines = [line for line in batch.originals if line.number in selected_lines]
-                lines_to_process = [line for line in batch.translated if line.number in selected_lines]
+                lines_to_process = [
+                    line for line in batch.translated
+                    if line.number in selected_lines and line.text is not None
+                ]
 
-                if (
-                    len(lines_to_process) != len(original_selected_lines)
-                    or any(line.text is None for line in lines_to_process)
-                ):
-                    raise CommandError(_(
-                        "Some selected lines in scene {scene} batch {batch} are not translated"
-                    ).format(scene=batch.scene, batch=batch.number), command=self)
+                if lines_to_process:
+                    processed_batches.append((batch, processor.PostprocessSubtitles(lines_to_process)))
 
-                processed_batches.append((batch, processor.PostprocessSubtitles(lines_to_process)))
+            if not processed_batches:
+                raise CommandError(_("No translated lines selected to post-process"), command=self)
 
             for batch, processed_lines in processed_batches:
                 model_update : ModelUpdate = self.AddModelUpdate()

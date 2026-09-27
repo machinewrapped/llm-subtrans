@@ -95,20 +95,21 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
         self.assertLoggedEqual("detected format", ".ass", project.subtitles.file_format)
         self.assertLoggedEqual("line count", 1, project.subtitles.linecount)
 
-    def test_ProjectFileRoundtripPreservesHandler(self):
-        
+    def test_ProjectFileRoundtrip(self):
+        """A project file keeps its subtitle format and the cumulative translation cost."""
         srt_content = "1\n00:00:01,000 --> 00:00:02,000\nHello World\n"
         path = self._create_temp_file(srt_content, ".srt")
-        
+
         project = SubtitleProject()
         project.InitialiseProject(path)
-        
+        project.subtitles.AddTranslationCost(0.0046)
+
         self.assertLoggedEqual("initial format", ".srt", project.subtitles.file_format)
-        
+
         # Set outputpath so file handler can be restored on load
         project_path = path.replace('.srt', '.subtrans')
         project.subtitles.outputpath = path.replace('.srt', '_translated.srt')
-        
+
         project.WriteProjectToFile(project_path, encoder_class=SubtitleEncoder)
         self.addCleanup(os.remove, project_path)
         
@@ -121,6 +122,7 @@ Dialogue: 0,0:00:01.00,0:00:03.00,Default,,0,0,0,,Hello World!
             '.srt',
             reopened_project.subtitles.file_format,
         )
+        self.assertLoggedEqual("reopened translation cost", 0.0046, reopened_project.subtitles.translation_cost)
 
     def test_SrtHandlerBasicFunctionality(self):
         

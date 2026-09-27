@@ -24,7 +24,7 @@ class BatchItem(ViewModelItem):
         self.lines: dict[int, LineItem] = {}
         self.batch_model: dict[str, Any] = {
             'start': batch.txt_start,
-            'end': batch.srt_end,
+            'end': batch.txt_end,
             'summary': batch.summary,
             'errors': self._get_errors(batch.errors),
             'translated': batch.translation is not None

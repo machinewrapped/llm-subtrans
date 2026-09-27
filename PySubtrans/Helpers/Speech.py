@@ -29,8 +29,7 @@ class SentenceEnds(Enum):
     Which punctuation ends a sentence.
 
     STRONG is question and exclamation marks, CJK full stops, ellipses and line breaks.
-    Text with word timings only splits at full stops when a part is too long (see UtteranceSplitter).
-    ALL adds full stops, other than after initials or dotted abbreviations, for text with no word timings to divide it.
+    ALL adds full stops, other than after initials or dotted abbreviations.
     """
     STRONG = 'strong'
     ALL = 'all'
@@ -58,6 +57,13 @@ def IsSpoken(text : str) -> bool:
     return bool(SPOKEN_CHAR.search(text))
 
 
+def EndsSentence(text : str) -> bool:
+    """Whether a word, with any punctuation attached, ends a sentence, full stops included."""
+    # Closing quotes and brackets can follow the sentence end
+    text = CLOSING_CHARS.sub('', text)
+    return bool(text) and IsSentenceEnd(text, len(text) - 1, SentenceEnds.ALL)
+
+
 def IsSentenceEnd(text : str, index : int, ends : SentenceEnds = SentenceEnds.STRONG) -> bool:
     """Whether the character at index ends a sentence."""
     if text[index] in SENTENCE_END_CHARS:
@@ -69,6 +75,10 @@ def IsSentenceEnd(text : str, index : int, ends : SentenceEnds = SentenceEnds.ST
     # A full stop counts only where the text breaks after it, so decimals do not
     if index + 1 < len(text) and not CLOSING_CHARS.match(text[index + 1]):
         return False
+
+    # Full stops typed as an ellipsis end a sentence, like …
+    if text.endswith('...', 0, index + 1):
+        return True
 
     return not _is_abbreviation(text, index)
 
@@ -83,7 +93,9 @@ def _is_abbreviation(text : str, index : int) -> bool:
     letters = word.lstrip(OPENING_PUNCTUATION)
 
     # Initials and dotted abbreviations, such as J. or U.S.A.
-    return (len(letters) == 1 and letters.isalpha()) or '.' in letters
+    # A single syllabic character is a whole word, such as Korean 중., not an initial
+    is_initial = len(letters) == 1 and letters.isalpha() and not SYLLABIC_CHAR.match(letters)
+    return is_initial or '.' in letters
 
 
 def SentenceRanges(text : str, ends : SentenceEnds = SentenceEnds.STRONG) -> list[tuple[int, int]]:

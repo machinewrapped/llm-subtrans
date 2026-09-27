@@ -7,6 +7,11 @@ from PySubtrans.Helpers.Resources import GetConfigDir, GetResourcePath
 
 linesep = '\n'
 
+DEFAULT_INSTRUCTIONS_FILE = "instructions.txt"
+
+# Variant of the default instructions for subtitles produced by speech recognition
+TRANSCRIBED_INSTRUCTIONS_FILE = "instructions (transcribed).txt"
+
 def LoadInstructions(instruction_file : str) -> Instructions:
     """
     Load instruction file with flexible path resolution:
@@ -181,4 +186,4 @@ def GetInstructionsFiles() -> list[str]:
     instructions_map.update({ os.path.basename(file).lower(): file for file in user_instructions })
 
     # Sort 'instructions.txt' to the top of the list followed by other names case-insensitive
-    return sorted(list(instructions_map.values()), key=lambda x: (x.lower() != 'instructions.txt', x.lower()))
+    return sorted(list(instructions_map.values()), key=lambda x: (x.lower() != DEFAULT_INSTRUCTIONS_FILE, x.lower()))

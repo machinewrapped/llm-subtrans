@@ -13,6 +13,7 @@ from PySide6.QtWidgets import QApplication, QDialog, QMainWindow
 from GuiSubtrans.Commands.SaveSubtitleFile import SaveSubtitleFile
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
 from GuiSubtrans.GuiInterface import GuiInterface
+from PySubtrans.Helpers.InstructionsHelpers import TRANSCRIBED_INSTRUCTIONS_FILE
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
@@ -126,6 +127,16 @@ class TestTranscriptionIntegration(LoggedTestCase):
             self.gui.ShowTranscriptionDialog()
         self.assertLoggedEqual('accepted model installed once', 1, set_model.call_count)
         self.assertLoggedEqual('partial acceptance clears history', 0, len(self.gui.command_queue.undo_stack))
+
+    def test_accepted_project_prefers_transcribed_instructions(self) -> None:
+        """Project settings for a transcription are opened with the transcribed instructions preferred."""
+        dialog = _DialogStub(self._subtitles(), QDialog.DialogCode.Accepted)
+        with patch('GuiSubtrans.GuiInterface.TranscriptionDialog', return_value=dialog), \
+                patch.object(self.gui, 'ShowNewProjectSettings') as show_settings:
+            self.gui.ShowTranscriptionDialog()
+        self.assertLoggedEqual('project settings shown once', 1, show_settings.call_count)
+        self.assertLoggedEqual('transcribed instructions preferred', TRANSCRIBED_INSTRUCTIONS_FILE,
+                               show_settings.call_args.kwargs.get('preferred_instruction_file'))
 
     def test_discarded_dialog_preserves_current_model(self) -> None:
         dialog = _DialogStub(self._subtitles(), QDialog.DialogCode.Rejected)

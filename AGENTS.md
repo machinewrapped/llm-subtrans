@@ -31,10 +31,13 @@ A git worktree has no virtual environment of its own. Link `envsubtrans` from th
 - Windows: `cmd /c mklink /J envsubtrans <main-worktree>\envsubtrans` (a junction, no admin rights needed)
 - Linux/Mac: `ln -s <main-worktree>/envsubtrans envsubtrans`
 
-**IMPORTANT** Remove the link on its own before cleaning up or archiving the worktree. A recursive delete follows the link and empties the main worktree's `envsubtrans`, destroying the shared environment.
-- Windows: `cmd /c rmdir <worktree>\envsubtrans` (no `/s`), never `Remove-Item -Recurse`
-- Linux/Mac: `rm <worktree>/envsubtrans` (no `-r`, no trailing slash)
-- Check the link is gone and `<main-worktree>/envsubtrans` is intact, then run `git worktree remove`
+**IMPORTANT** The agent that created the link removes it once the work is committed and pushed; don't leave it for the user. Remove it before any cleanup or archiving of the worktree, using the full absolute path. These commands remove the link only if it is one, and never touch its contents:
+- Windows (PowerShell): `$link = Get-Item <worktree>\envsubtrans -Force; if ($link.LinkType -eq 'Junction') { $link.Delete() }`
+- Linux/Mac: `[ -L <worktree>/envsubtrans ] && rm <worktree>/envsubtrans`
+
+Check the main worktree's `envsubtrans` is intact afterwards.
+
+NEVER use `rmdir /s`, `Remove-Item`, `rm -r` or any other recursive delete on the link. PowerShell's `rmdir` is an alias for `Remove-Item`. A recursive delete follows the link and empties the main worktree's `envsubtrans`, destroying the shared environment.
 
 ## Code Style
 **🚨 CRITICAL RULE: NEVER add imports in the middle of functions or methods - imports MUST be at the top of the file. Exceptions may be made for lazy-loading expensive SDKs but must first be justified, approved and documented.**

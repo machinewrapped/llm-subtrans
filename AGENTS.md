@@ -28,12 +28,12 @@ Before conducting exploratory searches of the code base, consult `docs/architect
 
 ## Worktrees
 A git worktree has no virtual environment of its own. Link `envsubtrans` from the main worktree before running tests or committing, otherwise the commands above and the pre-commit hook fail:
-- Windows: `cmd /c mklink /J envsubtrans <main-worktree>\envsubtrans` (a junction, no admin rights needed)
-- Linux/Mac: `ln -s <main-worktree>/envsubtrans envsubtrans`
+- Windows: `cmd /c mklink /J envsubtrans "<main-worktree>\envsubtrans"` (a junction, no admin rights needed)
+- Linux/Mac: `ln -s "<main-worktree>/envsubtrans" envsubtrans`
 
-**IMPORTANT** The agent that created the link removes it once the work is committed and pushed; don't leave it for the user. Remove it before any cleanup or archiving of the worktree, using the full absolute path. These commands remove the link only if it is one, and never touch its contents:
-- Windows (PowerShell): `$link = Get-Item <worktree>\envsubtrans -Force; if ($link.LinkType -eq 'Junction') { $link.Delete() }`
-- Linux/Mac: `[ -L <worktree>/envsubtrans ] && rm <worktree>/envsubtrans`
+**IMPORTANT** The agent that created the link removes it once the work is committed and pushed; don't leave it for the user. Remove it before any cleanup or archiving of the worktree, using the full absolute path in quotes, since it may contain spaces. These commands remove the link only if it is one, and never touch its contents:
+- Windows (PowerShell): `$link = Get-Item -LiteralPath '<worktree>\envsubtrans' -Force; if ($link.LinkType -eq 'Junction') { $link.Delete() }`
+- Linux/Mac: `[ -L "<worktree>/envsubtrans" ] && rm "<worktree>/envsubtrans"`
 
 Check the main worktree's `envsubtrans` is intact afterwards.
 

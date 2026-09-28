@@ -3,7 +3,9 @@ import logging
 from typing import Any
 import regex
 
+from PySubtrans.Helpers.LineBreaks import SplitsSentence
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Speech import DEFAULT_ABBREVIATIONS
 from PySubtrans.SubtitleLine import SubtitleLine
 
 _whitespace_collapse = regex.compile("\n\n+")
@@ -116,7 +118,8 @@ def FindBestSplitIndex(lines : list[SubtitleLine], min_size : int = 1) -> int|No
 
     return best_index
 
-def FindSplitPoint(line: SubtitleLine, split_sequences: list[regex.Pattern[Any]], min_duration: timedelta, min_split_chars: int) -> int|None:
+def FindSplitPoint(line: SubtitleLine, split_sequences: list[regex.Pattern[Any]], min_duration: timedelta, min_split_chars: int,
+                   abbreviations : frozenset[str] = DEFAULT_ABBREVIATIONS) -> int|None:
     """
     Find the optimal split point for a subtitle.
 
@@ -125,7 +128,8 @@ def FindSplitPoint(line: SubtitleLine, split_sequences: list[regex.Pattern[Any]]
     Break at the occurence that is as close to the middle as possible.
     Neither side of the split should be shorter than the minimum line duration
     """
-    line_length : int = len(line.text or "")
+    text : str = line.text or ""
+    line_length : int = len(text)
     start_index : int = min_split_chars
     end_index : int = line_length - min_split_chars
     if end_index <= start_index:
@@ -134,7 +138,7 @@ def FindSplitPoint(line: SubtitleLine, split_sequences: list[regex.Pattern[Any]]
     middle_index = line_length // 2
 
     for priority, seq in enumerate(split_sequences, start=0):
-        matches : list[regex.Match[Any]] = list(seq.finditer(line.text)) if line.text else []
+        matches : list[regex.Match[Any]] = [match for match in seq.finditer(text) if not SplitsSentence(text, match, abbreviations)]
         if not matches:
             continue
 

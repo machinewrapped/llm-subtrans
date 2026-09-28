@@ -4,7 +4,7 @@ from enum import Enum
 
 import regex
 
-from PySubtrans.Helpers.Speech import SPOKEN_CHAR, IsSentenceEnd, SentenceEnds, SentenceRanges
+from PySubtrans.Helpers.Speech import DEFAULT_ABBREVIATIONS, SPOKEN_CHAR, IsSentenceEnd, SentenceEnds, SentenceRanges
 from PySubtrans.Transcription.WordTiming import WordTiming
 
 # Punctuation that opens what follows it, such as Spanish question marks, quotes and brackets
@@ -88,7 +88,8 @@ def AssignToRanges(text : str, ranges : list[tuple[int, int]], aligned : list[Al
     return assigned
 
 
-def TimedSentenceRanges(text : str, aligned : list[AlignedWord]) -> list[tuple[int, int]]:
+def TimedSentenceRanges(text : str, aligned : list[AlignedWord],
+                        abbreviations : frozenset[str] = DEFAULT_ABBREVIATIONS) -> list[tuple[int, int]]:
     """
     Ranges of the transcript ending at sentence punctuation, full stops included.
     A full stop with a timed word starting straight after it also ends a sentence, since the words show a break the spacing does not.
@@ -97,7 +98,7 @@ def TimedSentenceRanges(text : str, aligned : list[AlignedWord]) -> list[tuple[i
     word_starts = {member.start for member in aligned}
     ranges : list[tuple[int, int]] = []
 
-    for start, end in SentenceRanges(text, SentenceEnds.ALL):
+    for start, end in SentenceRanges(text, SentenceEnds.ALL, abbreviations):
         for index in range(start, end - 1):
             if text[index] != '.' or index + 1 not in word_starts:
                 continue
@@ -106,8 +107,8 @@ def TimedSentenceRanges(text : str, aligned : list[AlignedWord]) -> list[tuple[i
             if following.islower() or following.isdigit():
                 continue
 
-            # Judged from the last cut as if the text broke after the full stop, so initials and dotted abbreviations still do not end a sentence
-            if IsSentenceEnd(text[start:index + 1], index - start, SentenceEnds.ALL):
+            # Judged from the last cut as if the text broke after the full stop, so abbreviations and initials still do not end a sentence
+            if IsSentenceEnd(text[start:index + 1], index - start, SentenceEnds.ALL, abbreviations):
                 ranges.append((start, index + 1))
                 start = index + 1
 

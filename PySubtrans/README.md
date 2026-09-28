@@ -343,6 +343,7 @@ A provider can be constructed once and then used to initalise multiple `Subtitle
 - `normalise_dialog_tags`: If one line of a multiline subtitle has a dialog marker, add it to the other(s)
 - `remove_filler_words`: Remove specified filler words from text
 - `filler_words`: Comma-separated list of filler words to remove (err, umm, ah, etc.)
+- `abbreviations`: Comma-separated list of titles whose full stop does not end a sentence (Mr, Dr, Mme, etc.), so lines are not split or broken after them. Also used when transcription divides text into sentences. Matching is case-sensitive. List only titles that come before a name, since suffixes such as Jr. can end a sentence. Initials (J.) and dotted abbreviations (U.S.A.) are always recognised
 - `full_width_punctuation`: Ensure full-width punctuation is used in Asian languages
 - `convert_wide_dashes`: Convert wide dashes (emdash) to standard dashes (an anti-GPT pill)
 

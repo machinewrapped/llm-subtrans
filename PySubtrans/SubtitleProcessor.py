@@ -15,7 +15,7 @@ from PySubtrans.Helpers.Dialog import (
 from PySubtrans.Helpers.FillerWords import CompileFillerWordsPattern, RemoveFillerWords
 from PySubtrans.Helpers.LineBreaks import split_sequences, break_sequences, BreakLongLine
 from PySubtrans.Helpers.Script import EnsureFullWidthPunctuation
-from PySubtrans.Helpers.Speech import SENTENCE_END_CHARS
+from PySubtrans.Helpers.Speech import DEFAULT_ABBREVIATIONS, SENTENCE_END_CHARS, ParseAbbreviations
 from PySubtrans.Helpers.Text import ConvertWhitespaceBlocksToNewlines
 from PySubtrans.Options import SettingsType
 from PySubtrans.SettingsType import SettingsType
@@ -68,6 +68,9 @@ class SubtitleProcessor:
 
         filler_words = settings.get_list('filler_words', [])
         self.filler_words_pattern: regex.Pattern[Any]|None = CompileFillerWordsPattern(filler_words) if self.remove_filler_words else None
+
+        # Full stops after these do not end a sentence, so lines are not split or broken there
+        self.abbreviations : frozenset[str] = ParseAbbreviations(settings.get_list('abbreviations', sorted(DEFAULT_ABBREVIATIONS)))
 
         self.split_by_duration: bool = self.max_line_duration.total_seconds() > 0.0
 
@@ -216,7 +219,8 @@ class SubtitleProcessor:
         min_length = self.min_single_line_length
         break_sequences = self._compiled_break_sequences
         if break_sequences:
-            text = BreakLongLine(text, max_line_length=max_length, min_line_length=min_length, break_sequences=break_sequences)
+            text = BreakLongLine(text, max_line_length=max_length, min_line_length=min_length, break_sequences=break_sequences,
+                                 abbreviations=self.abbreviations)
         return text
 
     def _split_line_by_duration(self, line: SubtitleLine) -> list[SubtitleLine]:
@@ -245,7 +249,8 @@ class SubtitleProcessor:
                 result.append(current_line)
                 continue
 
-            split_point = FindSplitPoint(current_line, self._compiled_split_sequences, min_duration=self.min_line_duration, min_split_chars=self.min_split_chars)
+            split_point = FindSplitPoint(current_line, self._compiled_split_sequences, min_duration=self.min_line_duration,
+                                         min_split_chars=self.min_split_chars, abbreviations=self.abbreviations)
             if split_point is None:
                 result.append(current_line)
                 continue

@@ -143,6 +143,12 @@ class TestTextHelpers(LoggedTestCase):
          "Supercalifragilisticexpialidocioussupercalifragilisticexpialidocious"),
         # Among unbalanced fallback candidates from different tiers, the one closest to the middle wins, not the highest-priority tier
         ("Hi. " + "x" * 40 + ", " + "y" * 40, 40, 4, "Hi. " + "x" * 40 + ",\n" + "y" * 40),
+        # A full stop after a title, initial or dotted abbreviation does not end a sentence, so the line is not broken there
+        ("He used Mr. Chu to get you to steal that silver box.", 44, 8, "He used Mr. Chu to get you\nto steal that silver box."),
+        ("So, Mr. Yang, when did you receive this note?", 44, 8, "So, Mr. Yang,\nwhen did you receive this note?"),
+        ("A letter was addressed to J. Smith, who never read it.", 40, 4, "A letter was addressed to J. Smith,\nwho never read it."),
+        ("They all moved back to the U.S.A. when the war ended.", 40, 4, "They all moved back to the\nU.S.A. when the war ended."),
+        ("Dr. Smith arrived. He sat down in the chair by the window.", 40, 4, "Dr. Smith arrived.\nHe sat down in the chair by the window."),
     ]
 
     def test_BreakLongLines(self):

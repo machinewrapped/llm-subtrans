@@ -17,6 +17,7 @@ from PySubtrans.Transcription.Providers.Provider_Muse import (
 )
 from PySubtrans.Transcription.Providers.Clients.MuseTranscriptionClient import (
     TURN_SPEECH_MULTIPLE,
+    MuseTranscriptionClient,
     _parse_muse_payload,
 )
 
@@ -219,6 +220,25 @@ class TestMuseTranscription(LoggedTestCase):
 
         self.assertLoggedEqual("texts", ["Wait.", "I know where he went."], [part.text for part in parts])
         self.assertLoggedEqual("last ends with the turn", timedelta(seconds=30.0), parts[1].end)
+
+    def test_titles_do_not_divide_a_turn(self):
+        """A turn is divided where its sentences end, not at the full stop after a listed abbreviation."""
+        payload = {'turns': [{'transcript': 'Dr. Smith arrived. He sat down.', 'startMs': 0, 'endMs': 6000}]}
+        _text, parts = _parse_muse_payload(payload)
+
+        self.assertLoggedEqual("texts", ["Dr. Smith arrived.", "He sat down."], [part.text for part in parts])
+
+    def test_client_reads_abbreviations_setting(self):
+        """The client takes its abbreviations from the settings, and the defaults when none are given."""
+        provider = MuseTranscriptionProvider(SettingsType({'api_key': 'k'}))
+        configured = provider.GetTranscriptionClient(SettingsType({'abbreviations': "Sra"}))
+        default = provider.GetTranscriptionClient(SettingsType())
+
+        self.assertLoggedIsInstance("client type", configured, MuseTranscriptionClient)
+        self.assertLoggedIsInstance("client type", default, MuseTranscriptionClient)
+        assert isinstance(configured, MuseTranscriptionClient) and isinstance(default, MuseTranscriptionClient)  # Type narrowing for PyLance
+        self.assertLoggedEqual("configured", frozenset({'Sra'}), configured.abbreviations)
+        self.assertLoggedIn("default", 'Dr', default.abbreviations)
 
     def test_short_turn_shares_its_span_between_sentences(self):
         """A turn too short for its sentences divides its span by their characters."""

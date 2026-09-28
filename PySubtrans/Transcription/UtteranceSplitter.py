@@ -54,7 +54,7 @@ class UtteranceSplitter:
 
         return (gap >= self.settings.EligibleGap(previous.speaker, word.speaker)
                 or speaker_changed
-                or EndsSentence(previous.text))
+                or EndsSentence(previous.text, self.settings.abbreviations))
 
     def SplitUtterances(self, words : list[WordTiming]) -> list[list[WordTiming]]:
         """Cut words at hard boundaries, regardless of line length."""
@@ -79,7 +79,7 @@ class UtteranceSplitter:
 
         for word in words:
             current.append(word)
-            if EndsSentence(word.text):
+            if EndsSentence(word.text, self.settings.abbreviations):
                 sentences.append(current)
                 current = []
 
@@ -124,7 +124,7 @@ class UtteranceSplitter:
             centrality = 1.0 - abs(position - half_span) / half_span if half_span > 0.0 else 1.0
             score = (pause + PAUSE_SCORE_FLOOR) * max(0.0, centrality)
 
-            if EndsSentence(previous.text):
+            if EndsSentence(previous.text, self.settings.abbreviations):
                 score += SENTENCE_END_BONUS
             elif previous.text and previous.text[-1] in CLAUSE_END_CHARS:
                 score += CLAUSE_END_BONUS

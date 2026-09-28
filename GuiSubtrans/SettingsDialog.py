@@ -87,6 +87,7 @@ class SettingsDialog(QDialog):
             'min_single_line_length': (int, _("Minimum length of a single line of subtitles")),
             'remove_filler_words': (bool, _("Remove filler_words and filler words from subtitles")),
             'filler_words': (str, _("Comma-separated list of filler_words to remove")),
+            'abbreviations': (str, _("Comma-separated list of titles whose full stop does not end a sentence, such as Mr or Dr (case-sensitive)")),
         },
         'Advanced': {
             'max_threads': (int, _("Maximum number of simultaneous translation threads for fast translation")),

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from PySubtrans.Helpers.Speech import DEFAULT_ABBREVIATIONS
 from PySubtrans.Transcription.WordAlignment import WordCoverage
 
 # Widest gap that can fall within a line when the speaker is unknown or changes
@@ -31,6 +32,7 @@ class LineSettings:
     min_gap : float = DEFAULT_MIN_GAP_SECONDS
     word_coverage : WordCoverage = WordCoverage.COMPLETE
     timing_correction_factor : float = DEFAULT_TIMING_CORRECTION_FACTOR
+    abbreviations : frozenset[str] = DEFAULT_ABBREVIATIONS
 
     def EligibleGap(self, first_speaker : str|None, second_speaker : str|None) -> float:
         """The widest gap that still leaves two lines eligible to be one."""

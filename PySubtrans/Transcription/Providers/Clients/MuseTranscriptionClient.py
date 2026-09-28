@@ -3,7 +3,8 @@ from datetime import timedelta
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import TryParseNonNegative
-from PySubtrans.Helpers.Speech import EstimateSpeechSeconds, SentenceEnds, SentenceRanges
+from PySubtrans.Helpers.Speech import (DEFAULT_ABBREVIATIONS, EstimateSpeechSeconds, ParseAbbreviations, SentenceEnds,
+                                       SentenceRanges)
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
@@ -47,6 +48,11 @@ class MuseTranscriptionClient(TranscriptionClient):
         return self.settings.get_bool('diarize', False)
 
     @property
+    def abbreviations(self) -> frozenset[str]:
+        """Abbreviations whose full stop does not end a sentence, when a turn is divided into sentences."""
+        return ParseAbbreviations(self.settings.get_list('abbreviations', sorted(DEFAULT_ABBREVIATIONS)))
+
+    @property
     def supports_timestamps(self) -> bool:
         """Turns carry start and end offsets (DIARIZATION is always requested)."""
         return True
@@ -59,7 +65,7 @@ class MuseTranscriptionClient(TranscriptionClient):
     def _transcribe_chunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
         payload = self._post(audio_bytes)
 
-        text, parts = _parse_muse_payload(payload, include_speakers=self.diarize)
+        text, parts = _parse_muse_payload(payload, include_speakers=self.diarize, abbreviations=self.abbreviations)
 
         result = TranscriptionResult(text=text, language=self.language, parts=parts)
         return self._attach_usage(result, payload)
@@ -126,7 +132,8 @@ class MuseTranscriptionClient(TranscriptionClient):
         return f"{hint}: {detail}"
 
 
-def _parse_muse_payload(payload : dict, chunk_seconds : float|None = None, include_speakers : bool = True) -> tuple[str, list[TranscriptionSegment]]:
+def _parse_muse_payload(payload : dict, chunk_seconds : float|None = None, include_speakers : bool = True,
+                        abbreviations : frozenset[str] = DEFAULT_ABBREVIATIONS) -> tuple[str, list[TranscriptionSegment]]:
     """
     Extract (text, parts) from a Muse Voice Transcribe response.
 
@@ -171,7 +178,7 @@ def _parse_muse_payload(payload : dict, chunk_seconds : float|None = None, inclu
             end = start + speech if following is None else min(start + speech, following)
 
         speaker = entry.get('speaker') if include_speakers else None
-        sentences = [entry_text[first:last].strip() for first, last in SentenceRanges(entry_text, SentenceEnds.ALL)]
+        sentences = [entry_text[first:last].strip() for first, last in SentenceRanges(entry_text, SentenceEnds.ALL, abbreviations)]
         sentences = [sentence for sentence in sentences if sentence]
         for sentence, (sentence_start, sentence_end) in _place_sentences(sentences, start, end):
             parts.append(TranscriptionSegment(

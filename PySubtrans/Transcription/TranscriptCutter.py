@@ -105,10 +105,10 @@ class TranscriptCutter:
         """Where the transcript is cut into parts."""
         # Without matched words only the punctuation can divide the transcript
         if not aligned:
-            return SentenceRanges(text, SentenceEnds.ALL)
+            return SentenceRanges(text, SentenceEnds.ALL, self.settings.abbreviations)
 
-        sentences = TimedSentenceRanges(text, aligned)
-        if len(sentences) > 1 or EndsSentence(text):
+        sentences = TimedSentenceRanges(text, aligned, self.settings.abbreviations)
+        if len(sentences) > 1 or EndsSentence(text, self.settings.abbreviations):
             return SplitAtSpeakerChanges(text, sentences, aligned)
 
         return self._pause_ranges(text, aligned)

@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Speech import DEFAULT_ABBREVIATIONS, ParseAbbreviations
 from PySubtrans.Helpers.Time import SpanLabel
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
@@ -72,7 +73,8 @@ class TranscriptionCoordinator:
             min_gap=min_gap if min_gap is not None else DEFAULT_MIN_GAP_SECONDS,
             word_coverage=provider.word_coverage,
             timing_correction_factor=line_settings.get_float('timing_correction_factor')
-                or DEFAULT_TIMING_CORRECTION_FACTOR))
+                or DEFAULT_TIMING_CORRECTION_FACTOR,
+            abbreviations=ParseAbbreviations(self.settings.get_list('abbreviations', sorted(DEFAULT_ABBREVIATIONS)))))
 
         self.events : TranscriptionEvents = TranscriptionEvents()
         self._active_client : TranscriptionClient|None = None

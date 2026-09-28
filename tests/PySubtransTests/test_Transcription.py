@@ -12,7 +12,7 @@ from unittest.mock import patch
 
 import httpx
 
-from PySubtrans.Helpers.Speech import EndsSentence, EstimateSpeechSeconds, SentenceEnds, SentenceRanges
+from PySubtrans.Helpers.Speech import EndsSentence, EstimateSpeechSeconds, ParseAbbreviations, SentenceEnds, SentenceRanges
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Text import SanitiseForFilename
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
@@ -27,7 +27,7 @@ from PySubtrans.Transcription.LineMerger import MIN_TIMING_CORRECTION
 from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.SilenceStream import SilenceStream
 from PySubtrans.Transcription.WordTiming import WordTiming
-from PySubtrans.Transcription.TranscriptionCapture import LoadCaptureLineSettings, LoadCaptureProvider
+from PySubtrans.Transcription.TranscriptionCapture import LoadCaptureLineSettings, LoadCaptureProvider, SerializeLineSettings
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator, TranscriptionStatus
 from PySubtrans.Transcription.TranscriptionLines import MIN_WORD_CAP_SECONDS, WORD_CAP_MULTIPLE, TranscriptionLineBuilder
@@ -1204,6 +1204,13 @@ class TestDerivedParts(LoggedTestCase):
                                        text=text, language="Chinese", words=words)
         return (builder or _default_builder()).LinesForSegment(segment)
 
+    def test_titles_do_not_divide_a_transcript(self):
+        """A transcript is not cut at the full stop after a listed abbreviation, only where its sentences end."""
+        words = _uniform_words(["Dr", "Smith", "arrived", "He", "sat", "down"], seconds_each=0.4)
+        lines = self._lines("Dr. Smith arrived. He sat down.", words)
+
+        self.assertLoggedEqual("texts", ["Dr. Smith arrived.", "He sat down."], [line.text for line in lines])
+
     def test_transcript_characters_missing_from_the_words_are_kept(self):
         """The transcript supplies the text, including characters the words dropped."""
         words = [_word("杀", 0.0, 0.2), _word("精", 0.2, 0.4), _word("细", 0.6, 0.8), _word("佬", 0.8, 1.0)]
@@ -1276,6 +1283,7 @@ class TestDerivedParts(LoggedTestCase):
         cases = {
             "No hay dinero.Adelante.Hola.": (["No", "hay", "dinero", "Adelante", "Hola"], ["No hay dinero.", "Adelante.", "Hola."]),
             "Llegó de U.S.A. ayer.": (["Llegó", "de", "U", "S", "A", "ayer"], ["Llegó de U.S.A. ayer."]),
+            "Llamé al Dr.García ayer.": (["Llamé", "al", "Dr", "García", "ayer"], ["Llamé al Dr.García ayer."]),
             "It costs 3.5 dollars.": (["It", "costs", "3", "5", "dollars"], ["It costs 3.5 dollars."]),
             "Visit example.com today.": (["Visit", "example", "com", "today"], ["Visit example.com today."]),
             "확인했습니다.현재 위치는 여기.": (["확인했습니다", "현재", "위치는", "여기"], ["확인했습니다.", "현재 위치는 여기."]),
@@ -1415,11 +1423,45 @@ class TestDerivedParts(LoggedTestCase):
 
     def test_words_that_end_sentences(self):
         """A word ends a sentence at any sentence punctuation, allowing for closing quotes, but not at initials."""
-        cases = {"done.": True, 'done."': True, "why?": True, "중.": True, "so...": True,
-                 "J.": False, "U.S.A": False, "3.5": False, "well,": False, "": False}
+        cases = {"done.": True, 'done."': True, "why?": True, "중.": True, "so...": True, "Hi.": True,
+                 "J.": False, "U.S.A": False, "Dr.": False, "3.5": False, "well,": False, "": False}
 
         for word, expected in cases.items():
             self.assertLoggedEqual("ends sentence", expected, EndsSentence(word), input_value=word)
+
+    def test_listed_abbreviations_do_not_end_sentences(self):
+        """A full stop after a listed abbreviation does not end a sentence, but one after an unlisted word does."""
+        cases = {
+            "Dr. Smith arrived. He sat down.": ["Dr. Smith arrived.", "He sat down."],
+            "(Mrs. Lee) waved.": ["(Mrs. Lee) waved."],
+            "Mme. Blanc est partie.": ["Mme. Blanc est partie."],
+            "El Sr. García llegó. Se sentó.": ["El Sr. García llegó.", "Se sentó."],
+            "I met John Smith Jr. He left.": ["I met John Smith Jr.", "He left."],
+            "Hi. Wait. Choi.": ["Hi.", "Wait.", "Choi."],
+        }
+
+        for text, expected in cases.items():
+            self.assertLoggedEqual("sentences", expected,
+                                   [text[start:end].strip() for start, end in SentenceRanges(text, SentenceEnds.ALL)],
+                                   input_value=text)
+
+    def test_abbreviations_can_be_configured(self):
+        """The abbreviations come from a setting, so other languages can list their own and an empty list recognises none."""
+        spanish = ParseAbbreviations("Sra., Sr")
+        self.assertLoggedEqual("parsed", frozenset({'Sra', 'Sr'}), spanish)
+
+        text = "La Sra. García llegó. Se sentó."
+        self.assertLoggedEqual("listed", ["La Sra. García llegó.", "Se sentó."],
+                               [text[start:end].strip() for start, end in SentenceRanges(text, SentenceEnds.ALL, spanish)])
+
+        text = "Dr. Smith arrived."
+        self.assertLoggedEqual("none listed", ["Dr.", "Smith arrived."],
+                               [text[start:end].strip() for start, end in SentenceRanges(text, SentenceEnds.ALL, frozenset())])
+        self.assertLoggedEqual("initials still recognised", 1, len(SentenceRanges("J. Smith arrived.", SentenceEnds.ALL, frozenset())))
+
+        text = "DR. SMITH ARRIVED."
+        self.assertLoggedEqual("case-sensitive", 2, len(SentenceRanges(text, SentenceEnds.ALL)))
+        self.assertLoggedEqual("listed in capitals", 1, len(SentenceRanges(text, SentenceEnds.ALL, ParseAbbreviations("Dr, DR"))))
 
     def test_transcript_without_words_is_cut_at_full_stops(self):
         """With no words to divide it, a transcript is cut at full stops, and its sentences spread across the chunk."""
@@ -1769,6 +1811,21 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
         self.assertLoggedTrue("capture written to named file", captured, input_value=expected_path)
         self.assertLoggedEqual("recorded provider", provider.name, recorded_provider)
+
+    def test_capture_without_abbreviations_loads_its_settings(self):
+        """A capture from before abbreviations were recorded keeps its other settings, with the default abbreviations."""
+        settings = LineSettings(max_line_chars=80, max_line_seconds=5.0, timing_correction_factor=0.6)
+        data = SerializeLineSettings(settings)
+        del data['abbreviations']
+
+        with tempfile.TemporaryDirectory() as folder:
+            capture_path = os.path.join(folder, "capture.json")
+            with open(capture_path, 'w', encoding='utf-8') as file:
+                json.dump({'provider': 'Gemini', 'media': None, 'line_settings': data, 'segments': []}, file)
+
+            recorded = LoadCaptureLineSettings(capture_path)
+
+        self.assertLoggedEqual("recorded settings", settings, recorded)
 
     def test_capture_without_line_settings_loads_none(self):
         """A capture from before line settings were recorded still loads, with none to replay."""

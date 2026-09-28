@@ -26,6 +26,9 @@ CAPTURE_PATH_ENV = 'TRANSCRIPTION_CAPTURE_PATH'
 CAPTURE_PATH_SETTING = 'transcription_capture_path'
 CAPTURE_EXTENSION = '.json'
 
+# Line settings that captures from before they were added do not record
+LATER_LINE_SETTINGS = frozenset({'abbreviations'})
+
 
 def CapturePath(settings : SettingsType|None = None) -> str|None:
     """The configured capture destination, or None when capture is not requested."""
@@ -94,17 +97,24 @@ def SerializeLineSettings(settings : LineSettings) -> dict[str, Any]:
     """Line settings as plain JSON-safe data."""
     data = asdict(settings)
     data['word_coverage'] = settings.word_coverage.value
+    data['abbreviations'] = sorted(settings.abbreviations)
     return data
 
 
 def DeserializeLineSettings(data : dict[str, Any]) -> LineSettings|None:
-    """Rebuild line settings from captured data, or None if a field is missing."""
+    """
+    Rebuild line settings from captured data, or None if a field is missing.
+    Settings added since captures began recording them may be missing, and take their defaults.
+    """
     names = {field.name for field in fields(LineSettings)}
-    if not names.issubset(data):
+    if not (names - LATER_LINE_SETTINGS).issubset(data):
         return None
 
-    values = {name: data[name] for name in names}
+    values = {name: data[name] for name in names if name in data}
     values['word_coverage'] = WordCoverage(values['word_coverage'])
+    if 'abbreviations' in values:
+        values['abbreviations'] = frozenset(values['abbreviations'])
+
     return LineSettings(**values)
 
 

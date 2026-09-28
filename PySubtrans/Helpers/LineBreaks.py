@@ -1,6 +1,9 @@
+from typing import Any
+
 import regex
 
 from PySubtrans.Helpers.Dialog import dialog_marker
+from PySubtrans.Helpers.Speech import DEFAULT_ABBREVIATIONS, IsSentenceEnd, SentenceEnds
 
 priority_break_sequences = [
     regex.escape(dialog_marker),  # Dialog marker
@@ -32,7 +35,16 @@ split_sequences = [
     r" {3,}"  # Three or more spaces
 ]
 
-def FindBreakPoint(text : str, break_sequences: list[regex.Pattern], max_line_length : int, min_line_length : int) -> int|None:
+def SplitsSentence(text : str, match : regex.Match[Any], abbreviations : frozenset[str]) -> bool:
+    """
+    Whether a match starts at a full stop that does not end a sentence, such as after Dr., J. or U.S.A.
+    Breaking after it would divide a sentence.
+    """
+    index = match.start()
+    return text[index] == '.' and not IsSentenceEnd(text, index, SentenceEnds.ALL, abbreviations)
+
+def FindBreakPoint(text : str, break_sequences: list[regex.Pattern], max_line_length : int, min_line_length : int,
+                   abbreviations : frozenset[str] = DEFAULT_ABBREVIATIONS) -> int|None:
     """
     Find the optimal break point for a long line
     """
@@ -50,7 +62,7 @@ def FindBreakPoint(text : str, break_sequences: list[regex.Pattern], max_line_le
     fallbacks : list[int] = []
 
     for priority, seq in enumerate(break_sequences, start=1):
-        matches = list(seq.finditer(text))
+        matches = [match for match in seq.finditer(text) if not SplitsSentence(text, match, abbreviations)]
         if not matches:
             continue
 
@@ -74,7 +86,8 @@ def FindBreakPoint(text : str, break_sequences: list[regex.Pattern], max_line_le
 
     return None
 
-def BreakLongLine(text : str, max_line_length : int, min_line_length : int, break_sequences: list[regex.Pattern]) -> str:
+def BreakLongLine(text : str, max_line_length : int, min_line_length : int, break_sequences: list[regex.Pattern],
+                  abbreviations : frozenset[str] = DEFAULT_ABBREVIATIONS) -> str:
     """
     Add line breaks to long single lines
     """
@@ -85,7 +98,7 @@ def BreakLongLine(text : str, max_line_length : int, min_line_length : int, brea
     if '\n' in text:
         return text
 
-    break_index = FindBreakPoint(text, break_sequences, max_line_length, min_line_length)
+    break_index = FindBreakPoint(text, break_sequences, max_line_length, min_line_length, abbreviations)
     if break_index:
         text = text[:break_index].strip() + '\n' + text[break_index:].strip()
 

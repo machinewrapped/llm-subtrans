@@ -12,6 +12,7 @@ from PySubtrans.Instructions import Instructions, default_user_prompt
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Resources import GetConfigDir, GetSettingsPath
 from PySubtrans.Helpers.FillerWords import standard_filler_words
+from PySubtrans.Helpers.Speech import STANDARD_ABBREVIATIONS
 from PySubtrans.ProviderSettingsView import ProviderSettingsView
 from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.version import __version__
@@ -86,6 +87,7 @@ default_settings = {
     'normalise_dialog_tags': env_bool('NORMALISE_DIALOG_TAGS', True),
     'remove_filler_words': env_bool('REMOVE_FILLER_WORDS', True),
     'filler_words': standard_filler_words,
+    'abbreviations': STANDARD_ABBREVIATIONS,
     'substitution_mode': env_str('SUBSTITUTION_MODE', "Auto"),
     'whitespaces_to_newline' : env_bool('WHITESPACES_TO_NEWLINE', False),
     'full_width_punctuation': env_bool('FULL_WIDTH_PUNCTUATION', False),

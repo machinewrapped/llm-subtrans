@@ -109,6 +109,8 @@ class TestSubtitles(LoggedTestCase):
         ("15\n00:01:06,000 --> 00:01:10,000\nThey say, \"We should not! Split a quotation!\"", "They say,"),
         ("16\n00:01:11,000 --> 00:01:15,000\nWe can split <i>a block in tags, if they do not match</b>", "We can split <i>a block in tags,"),
         ("17\n00:01:16,000 --> 00:01:20,000\nWe shouldn't split the number 500,000 even if there is a comma in the middle.", "We shouldn't split the number 500,000 even if there is a comma in the middle."),
+        ("18\n00:01:21,000 --> 00:01:31,000\nWe sent for the doctor, Dr. Smith. He came.", "We sent for the doctor, Dr. Smith."),
+        ("19\n00:01:26,000 --> 00:01:30,000\nThe letter went to Mrs. J. Smith of the U.S.A. and got lost.", "The letter went to Mrs. J. Smith of the U.S.A. and got lost."),
     ]
 
     def test_FindSplitPoint(self):
@@ -261,6 +263,10 @@ class SubtitleProcessorTests(LoggedTestCase):
             [ "12\n00:27:25,910 --> 00:27:27,000\n啊！" ]),
         ([example_line_16], { 'remove_filler_words': True, 'filler_words': standard_filler_words, 'normalise_dialog_tags': True },
             [ "13\n00:27:28,000 --> 00:27:30,000\n- I'm here.\n- Where?" ]),
+        # A configured title that is not in the defaults is not treated as a sentence end when breaking lines
+        (["14\n00:27:31,000 --> 00:27:35,000\nHo visto arrivare molto tardi il Sig. Rossi con suo figlio."],
+            { 'break_long_lines': True, 'max_single_line_length': 30, 'min_single_line_length': 10, 'abbreviations': "Sig" },
+            [ "14\n00:27:31,000 --> 00:27:35,000\nHo visto arrivare molto tardi\nil Sig. Rossi con suo figlio." ]),
     ]
 
     def test_Postprocess(self):

@@ -28,7 +28,7 @@ import regex
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from PySubtrans.Helpers.Speech import EstimateSpeechSeconds
+from PySubtrans.Helpers.Speech import DEFAULT_ABBREVIATIONS, EstimateSpeechSeconds, ParseAbbreviations
 from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
@@ -52,6 +52,7 @@ def BuildLines(segments : list[TranscriptionSegment], **overrides) -> list[Trans
         'min_line_seconds': options.get_float('min_line_duration') or 0.8,
         'max_newlines': options.get_int('max_newlines') or 2,
         'min_gap': options.get_float('min_gap') or 0.05,
+        'abbreviations': ParseAbbreviations(options.get_list('abbreviations', sorted(DEFAULT_ABBREVIATIONS))),
     }
     settings.update({key: value for key, value in overrides.items() if value is not None})
 

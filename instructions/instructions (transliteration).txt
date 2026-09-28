@@ -60,6 +60,18 @@ Use the available information to add a short synopsis of the current scene in a 
 Do not guess or improvise if the context is unclear, just summarise the dialogue.
 
 
+### terminology_instructions
+If a terminology reference is provided, use those romanizations consistently.
+
+After transliteration, add a <terminology> block listing any key terms from the source subtitles that
+require a fixed romanization — e.g. character names, titles, organisations, locations, unique objects,
+or cultural and technical concepts. Omit common words and terminology that was provided as context.
+
+Format each entry as one 'original::romanization' pair per line, e.g.
+<terminology>
+変わりゆく時代::Kawariyuku jidai
+</terminology>
+
 ### retry_instructions
 There was an issue with the previous transliteration.
 

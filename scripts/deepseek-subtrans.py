@@ -1,23 +1,22 @@
-import os
 import logging
+import os
 
 from check_imports import check_required_imports
-check_required_imports(['PySubtitle'])
+check_required_imports(['PySubtrans'])
 
 from scripts.subtrans_common import (
     InitLogger,
     CreateArgParser,
     CreateOptions,
-    CreateTranslator,
     CreateProject,
+    TranslateProject,
 )
 
-from PySubtitle.Options import Options
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
+
+from PySubtrans.Providers.Provider_DeepSeek import DeepSeekProvider
 
 provider = "DeepSeek"
-default_model = os.getenv('DEEPSEEK_MODEL') or "deepseek-chat"
+default_model = os.getenv('DEEPSEEK_MODEL') or DeepSeekProvider.default_model
 
 parser = CreateArgParser(f"Translates subtitles using an DeepSeek model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your DeepSeek API Key (https://platform.deepseek.com/api_keys)")
@@ -28,26 +27,15 @@ args = parser.parse_args()
 logger_options = InitLogger("deepseek-subtrans", args.debug)
 
 try:
-    options : Options = CreateOptions(
+    options = CreateOptions(
         args,
         provider,
         api_base=args.apibase,
         model=args.model or default_model
     )
-
-    # Create a project for the translation
-    project : SubtitleProject = CreateProject(options, args)
-
-    # Create a translator with the provided options
-    translator : SubtitleTranslator = CreateTranslator(options)
-
-    # Translate the subtitles
-    project.TranslateSubtitles(translator)
-
-    if project.use_project_file:
-        logging.info(f"Writing project data to {str(project.projectfile)}")
-        project.SaveProjectFile()
+    project = CreateProject(options, args)
+    TranslateProject(project, options, verbose=args.verbose, preview=args.preview)
 
 except Exception as e:
-    print("Error:", e)
+    logging.error(f"Error during subtitle translation: {e}")
     raise

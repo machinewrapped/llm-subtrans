@@ -1,25 +1,140 @@
 import os
 import logging
+import sys
 
 from argparse import ArgumentParser, Namespace
-from dataclasses import dataclass
+from contextlib import contextmanager
+from dataclasses import dataclass, field
 
-from PySubtitle.Helpers import GetOutputPath
-from PySubtitle.Helpers.Parse import ParseNames
-from PySubtitle.Options import Options, config_dir
-from PySubtitle.Substitutions import Substitutions
-from PySubtitle.SubtitleFormatRegistry import SubtitleFormatRegistry
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
-from PySubtitle.TranslationProvider import TranslationProvider
+from PySubtrans.Helpers import GetOutputPath
+from PySubtrans.Helpers.Localization import _
+from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames, TryParseNonNegative
+from PySubtrans import SaveSettings, batch_subtitles, init_options, init_translator, preprocess_subtitles
+from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir
+from PySubtrans.Options import Options
+from PySubtrans.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.Substitutions import Substitutions
+from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
+from PySubtrans.SubtitleProject import SubtitleProject
 
 @dataclass
 class LoggerOptions():
     file_handler: logging.FileHandler|None
     log_path: str
 
+
+class _HttpxRequestLogFilter(logging.Filter):
+    """Demote HTTPX's per-request status messages to DEBUG."""
+
+    def filter(self, record: logging.LogRecord) -> bool:
+        """Keep request tracing available in debug logs without showing it normally."""
+        if record.name == 'httpx' and record.getMessage().startswith('HTTP Request:'):
+            record.levelno = logging.DEBUG
+            record.levelname = logging.getLevelName(logging.DEBUG)
+        return True
+
+
+_HTTPX_REQUEST_LOG_FILTER = _HttpxRequestLogFilter()
+
+
+@dataclass
+class TokenUsage():
+    """Accumulated token usage across all translated batches."""
+    prompt_tokens: int = field(default=0)
+    output_tokens: int = field(default=0)
+    cost: float|None = field(default=None)
+
+    def Add(self, content : dict) -> None:
+        """Add token counts from a translation response content dict."""
+        self.prompt_tokens += content.get('prompt_tokens') or 0
+        self.output_tokens += content.get('output_tokens') or 0
+
+    def AddCost(self, cost : float|str|None) -> None:
+        """Add a provider-reported response cost."""
+        reported_cost = cost
+        if isinstance(reported_cost, str):
+            reported_cost = reported_cost.removeprefix('$').strip()
+        parsed_cost = TryParseNonNegative(reported_cost)
+        if parsed_cost is not None:
+            self.cost = (self.cost or 0.0) + parsed_cost
+
+    @property
+    def has_data(self) -> bool:
+        return self.prompt_tokens > 0 or self.output_tokens > 0
+
+    @property
+    def total_tokens(self) -> int:
+        return self.prompt_tokens + self.output_tokens
+
+
+class TranslationProgressLogger():
+    """
+    Connects to SubtitleTranslator events and logs batch-level progress to the console.
+
+    Attach before calling TranslateSubtitles and detach (or use the context manager)
+    afterwards so that the event subscriptions are cleaned up properly.
+    """
+
+    def __init__(self, verbose : bool = False) -> None:
+        self._verbose = verbose
+        self._total_lines : int = 0
+        self._processed_lines : int = 0
+        self.token_usage : TokenUsage = TokenUsage()
+
+    @contextmanager
+    def Track(self, translator : SubtitleTranslator):
+        """Context manager that attaches/detaches progress tracking around a translation."""
+        self._attach(translator)
+        try:
+            yield self
+        finally:
+            self._detach(translator)
+
+    def _attach(self, translator : SubtitleTranslator) -> None:
+        self._total_lines = 0
+        self._processed_lines = 0
+        self.token_usage = TokenUsage()
+        translator.events.preprocessed.connect(self._on_preprocessed)
+        translator.events.batch_translated.connect(self._on_batch_translated)
+        translator.events.translation_cost.connect(self._on_translation_cost)
+
+    def _detach(self, translator : SubtitleTranslator) -> None:
+        translator.events.preprocessed.disconnect(self._on_preprocessed)
+        translator.events.batch_translated.disconnect(self._on_batch_translated)
+        translator.events.translation_cost.disconnect(self._on_translation_cost)
+
+    def _on_preprocessed(self, _sender, scenes : list) -> None:
+        self._total_lines = sum(scene.linecount for scene in scenes)
+
+    def _on_batch_translated(self, _sender, batch) -> None:
+        self._processed_lines += batch.size
+        label = f"{batch.scene}.{batch.number}"
+
+        pct = f"{100 * self._processed_lines // self._total_lines}%" if self._total_lines else ""
+        progress = f"{self._processed_lines}/{self._total_lines} lines{f' ({pct})' if pct else ''}"
+
+        if self._verbose and batch.translation:
+            content = batch.translation.content
+            prompt = content.get('prompt_tokens') or 0
+            output = content.get('output_tokens') or 0
+            token_info = f" [{prompt} in / {output} out tokens]"
+            self.token_usage.Add(content)
+        else:
+            token_info = ""
+            if batch.translation:
+                self.token_usage.Add(batch.translation.content)
+
+        cost_info = f" [${batch.translation.cost:.4f}]" if batch.translation and batch.translation.cost is not None else ""
+
+        logging.info("Translated batch %s: %s%s%s", label, progress, token_info, cost_info)
+
+    def _on_translation_cost(self, _sender, cost : float|None) -> None:
+        """Accumulate every billed response, including retries and split requests."""
+        self.token_usage.AddCost(cost)
+
 def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
     """ Initialise the logger with a file handler and return the path to the log file """
+    config_dir = GetConfigDir()
     log_path = os.path.join(config_dir, f"{logfilename}.log")
     file_handler = None
 
@@ -29,14 +144,27 @@ def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
         level_name = os.getenv('LOG_LEVEL', 'INFO').upper()
         logging_level = getattr(logging, level_name, logging.INFO)
 
-    # Create console logger
-    try:
-        logging.basicConfig(format='%(levelname)s: %(message)s', encoding='utf-8', level=logging_level)
-        logging.info("Initialising log")
+    # Configure the root logger level and add a console handler unconditionally.
+    # logging.basicConfig() is a no-op when handlers already exist (e.g. because an
+    # imported SDK such as google.genai or openai added one during import), so we
+    # set up the StreamHandler explicitly instead.
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging_level)
+    logging.getLogger('httpx').addFilter(_HTTPX_REQUEST_LOG_FILTER)
 
-    except Exception as e:
-        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging_level)
-        logging.info("Unable to write to utf-8 log, falling back to default encoding")
+    try:
+        console_handler = logging.StreamHandler()
+        console_handler.stream = open(sys.stderr.fileno(), mode='w', encoding='utf-8', closefd=False)
+        init_message = "Initialising log"
+    except Exception:
+        console_handler = logging.StreamHandler()
+        init_message = "Unable to write to utf-8 log, falling back to default encoding"
+
+    console_handler.setLevel(logging_level)
+    console_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
+    root_logger.addHandler(console_handler)
+
+    logging.info(init_message)
 
     if debug:
         logging.debug("Debug logging enabled")
@@ -55,10 +183,25 @@ def InitLogger(logfilename: str, debug: bool = False) -> LoggerOptions:
 
     return LoggerOptions(file_handler=file_handler, log_path=log_path)
 
+_RENAMED_ARGS = {
+    '--target_language': '--target-language',
+}
+
+def _warn_renamed_args() -> None:
+    """Warn and correct any legacy underscore-form arg names passed on the command line."""
+    for i, arg in enumerate(sys.argv):
+        name = arg.split('=', 1)[0]
+        if name in _RENAMED_ARGS:
+            new_name = _RENAMED_ARGS[name]
+            print(f"Warning: {name} is deprecated, use {new_name}", file=sys.stderr)
+            sys.argv[i] = arg.replace(name, new_name, 1)
+
 def CreateArgParser(description : str) -> ArgumentParser:
     """
     Create new arg parser and parse shared command line arguments between models
     """
+    ConfigureConfigDirFromArguments()
+    _warn_renamed_args()
     pre_parser = ArgumentParser(add_help=False)
     pre_parser.add_argument('--list-formats', action='store_true')
     pre_args, _ = pre_parser.parse_known_args()
@@ -70,9 +213,10 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('input', help=input_help)
     parser.add_argument('-o', '--output', help="Output subtitle file path; format inferred from extension")
     parser.add_argument('--list-formats', action='store_true', help="List supported subtitle formats and exit")
-    parser.add_argument('-l', '--target_language', type=str, default=None, help="The target language for the translation")
+    parser.add_argument('-l', '--target-language', type=str, default=None, help="The target language for the translation")
     parser.add_argument('--batchthreshold', type=float, default=None, help="Number of seconds between lines to consider for batching")
     parser.add_argument('--debug', action='store_true', help="Run with DEBUG log level")
+    parser.add_argument('--verbose', action='store_true', help="Log detailed progress and token usage for each batch")
     parser.add_argument('--description', type=str, default=None, help="A brief description of the film to give context")
     parser.add_argument('--addrtlmarkers', action='store_true', help="Add RTL markers to translated lines if they contains primarily right-to-left script")
     parser.add_argument('--includeoriginal', action='store_true', help="Include the original text in the translated subtitles")
@@ -94,10 +238,18 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--reparse', action='store_true', help="Reparse previous translation responses, reconstructing the translated subtitles")
     parser.add_argument('--reload', action='store_true', help="Reload the subtitles from the original file, ignoring existing subtitles in the project file")
     parser.add_argument('--ratelimit', type=int, default=None, help="Maximum number of batches per minute to process")
+    parser.add_argument('--proxy', type=str, default=None, help="Proxy URL (e.g., http://127.0.0.1:8888 or socks5://127.0.0.1:1080)")
+    parser.add_argument('--proxycert', type=str, default=None, help="Path to a custom certificate bundle (PEM) to use for SSL verification")
     parser.add_argument('--scenethreshold', type=float, default=None, help="Number of seconds between lines to consider a new scene")
     parser.add_argument('--substitution', action='append', type=str, default=None, help="A pair of strings separated by ::, to subsitute in source or translation")
     parser.add_argument('--temperature', type=float, default=0.0, help="A higher temperature increases the random variance of translations.")
+    parser.add_argument('--autosplit', action='store_true', default=None, help="Split batches that fail validation in half and retry each half separately")
+    parser.add_argument('--build-terminology-map', action='store_true', default=None, help="Build and use a terminology map during translation")
+    parser.add_argument('--terminology', action='append', type=str, default=None, help="Seed entry for the terminology map as SOURCE::TRANSLATION, or a path to a file of such pairs.")
+    parser.add_argument('--terminology-file', dest='terminology_file', type=str, default=None, help="Path to a key::value file to seed from and save the terminology map to after translation")
     parser.add_argument('--writebackup', action='store_true', help="Write a backup of the project file when it is loaded (if it exists)")
+    parser.add_argument('--portable', action='store_true', help="Store settings and logs in the .settings directory in the current directory")
+    parser.add_argument('--configpath', type=str, default=None, help="Store settings and logs in the specified directory")
     return parser
 
 def HandleFormatListing(args: Namespace) -> None:
@@ -112,13 +264,17 @@ def HandleFormatListing(args: Namespace) -> None:
 
 def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
     """ Create options with additional arguments """
-    options = {
+    if getattr(args, 'proxycert', None):
+        os.environ['SSL_CERT_FILE'] = args.proxycert
+        logging.info(f"Using custom SSL certificate bundle: {args.proxycert}")
+
+    settings = {
         'api_key': args.apikey,
         'description': args.description,
         'include_original': args.includeoriginal,
         'add_right_to_left_markers': args.addrtlmarkers,
         'instruction_args': args.instruction,
-        'instruction_file': args.instructionfile,
+        'instruction_file': args.instructionfile or "instructions.txt",
         'substitution_mode': "Partial Words" if args.matchpartialwords else "Auto",
         'max_batch_size': args.maxbatchsize,
         'max_context_summaries': args.maxsummaries,
@@ -133,45 +289,30 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'reparse': args.reparse,
         'retranslate': args.retranslate,
         'reload': args.reload,
-        'provider': provider,
         'rate_limit': args.ratelimit,
+        'proxy': getattr(args, 'proxy', None),
         'scene_threshold': args.scenethreshold,
         'substitutions': Substitutions.Parse(args.substitution),
         'target_language': args.target_language,
         'temperature': args.temperature,
+        'autosplit_on_error': args.autosplit,
+        'build_terminology_map': args.build_terminology_map or bool(getattr(args, 'terminology_file', None)),
+        'terminology_file': getattr(args, 'terminology_file', None),
         'write_backup': args.writebackup,
     }
 
     # Adding optional new keys from kwargs
-    for key, value in kwargs.items():
-        options[key] = value
+    settings.update(kwargs)
 
-    return Options(options)
-
-def CreateTranslator(options : Options) -> SubtitleTranslator:
-    """
-    Initialise a subtitle translator with the provided options
-    """
-    translation_provider = TranslationProvider.get_provider(options)
-    if not translation_provider:
-        raise ValueError(f"Unable to create translation provider {options.provider}")
-
-    if not translation_provider.ValidateSettings():
-        logging.error(f"Provider settings are not valid: {translation_provider.validation_message}")
-        raise ValueError(f"Invalid settings for provider {options.provider}")
-
-    logging.info(f"Using translation provider {translation_provider.name}")
-
-    # Load the instructions
-    options.InitialiseInstructions()
-
-    return SubtitleTranslator(options, translation_provider)
+    # Use PySubtrans init_options for proper instruction file handling
+    return init_options(provider=provider, **settings)
 
 def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     """
     Initialise a subtitle project with the provided arguments
     """
     project = SubtitleProject(persistent=options.use_project_file)
+    project.save_settings = SaveSettings(options)
 
     project.InitialiseProject(args.input, args.output)
 
@@ -181,8 +322,59 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
 
     project.UpdateProjectSettings(options)
 
+    terminology_file = getattr(args, 'terminology_file', None)
+    if terminology_file and os.path.exists(terminology_file):
+        file_seed = ParseKeyValuePairsOrFiles([terminology_file])
+        if file_seed:
+            logging.info(f"Loaded {len(file_seed)} term(s) from {terminology_file}")
+            project.subtitles.terminology_map = {**file_seed, **project.subtitles.terminology_map}
+
+    if getattr(args, 'terminology', None):
+        cli_seed = ParseKeyValuePairsOrFiles(args.terminology)
+        project.subtitles.terminology_map = {**project.subtitles.terminology_map, **cli_seed}
+
+    subtitles = project.subtitles
+
+    if not subtitles or not subtitles.originals:
+        raise ValueError(_("Subtitle file contains no translatable content"))
+
+    if options.get_bool('preprocess_subtitles'):
+        preprocess_subtitles(subtitles, options)
+
+    scene_threshold = options.get_float('scene_threshold')
+    min_batch_size = options.get_int('min_batch_size')
+    max_batch_size = options.get_int('max_batch_size')
+
+    missing_params = [
+        name for name, value in (
+            ("scene_threshold", scene_threshold),
+            ("min_batch_size", min_batch_size),
+            ("max_batch_size", max_batch_size),
+        ) if not value # 0 is not valid for any of these
+    ]
+
+    if missing_params:
+        raise ValueError(f"The following parameter(s) must be defined: {', '.join(missing_params)}")
+
+    if scene_threshold and min_batch_size and max_batch_size:
+        batch_subtitles(
+            subtitles,
+            scene_threshold=scene_threshold,
+            min_batch_size=min_batch_size,
+            max_batch_size=max_batch_size,
+            prevent_overlap=options.get_bool('prevent_overlapping_times'),
+            min_gap=options.get_float('min_gap', 0.05) or 0.0,
+        )
+
+    scene_count = subtitles.scenecount
+    if scene_count < 1:
+        raise ValueError(_("No scenes were created from the subtitles"))
+
+    batch_count = sum(len(scene.batches) for scene in subtitles.scenes)
+    logging.info(f"Created {scene_count} scenes and {batch_count} batches for translation")
+
     if not args.output:
-        output_path = GetOutputPath(project.subtitles.sourcepath, project.subtitles.target_language or options.provider, project.subtitles.file_format)
+        output_path = GetOutputPath(project.subtitles.sourcepath, project.target_language or options.provider, project.subtitles.file_format)
         if output_path:
             project.subtitles.outputpath = output_path
 
@@ -190,3 +382,79 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     logging.info(f"Output path will be: {project.subtitles.outputpath}")
 
     return project
+
+def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_error : bool = False, token_usage : TokenUsage|None = None) -> None:
+    """Log a clear completion summary for the translation run."""
+    subtitles = project.subtitles
+    if not subtitles:
+        logging.error("Translation status: no subtitles loaded")
+        return
+
+    total_lines : int = subtitles.linecount
+    translated_lines : int = len(subtitles.translated) if subtitles.translated else 0
+
+    if has_error:
+        if preview:
+            logging.error("Translation status: preview failed")
+        elif translated_lines > 0:
+            logging.warning(f"Translation status: failed after partial progress ({translated_lines}/{total_lines} lines translated)")
+        else:
+            logging.error(f"Translation status: failed (0/{total_lines} lines translated)")
+        return
+
+    if preview:
+        logging.info("Translation status: preview completed (no translation was requested)")
+        return
+
+    if project.all_translated:
+        logging.info(f"Translation status: completed ({translated_lines}/{total_lines} lines translated)")
+    elif translated_lines > 0:
+        logging.warning(f"Translation status: incomplete ({translated_lines}/{total_lines} lines translated)")
+    else:
+        logging.error(f"Translation status: failed (0/{total_lines} lines translated)")
+
+    if token_usage and token_usage.has_data:
+        logging.info(f"Token usage: {token_usage.prompt_tokens} in / {token_usage.output_tokens} out ({token_usage.total_tokens} total)")
+
+    if token_usage and token_usage.cost is not None:
+        logging.info(f"Translation cost: ${token_usage.cost:.4f}")
+
+def _save_terminology_file(path : str, terminology_map : dict[str, str]) -> None:
+    """Write terminology map to a key::value text file."""
+    try:
+        os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+        sorted_terms = dict(sorted(terminology_map.items()))
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(FormatKeyValuePairs(sorted_terms))
+        logging.info(f"Saved {len(terminology_map)} term(s) to {path}")
+    except Exception as e:
+        logging.warning(_("Unable to save terminology file '{path}': {error}").format(path=path, error=e))
+
+def TranslateProject(project : SubtitleProject, options : Options, verbose : bool = False, preview : bool = False) -> None:
+    """
+    Translate a prepared project, logging progress and final status.
+
+    Creates the translator, attaches progress tracking, runs the translation,
+    saves the project file if needed, and logs the completion status.
+    Callers only need to handle errors raised before the project is ready.
+    """
+    progress_logger : TranslationProgressLogger = TranslationProgressLogger(verbose=verbose)
+    translator : SubtitleTranslator = init_translator(options, terminology_map=project.subtitles.terminology_map)
+
+    try:
+        with progress_logger.Track(translator):
+            project.TranslateSubtitles(translator)
+
+        if project.use_project_file:
+            project.UpdateProjectFile()
+
+        terminology_file = options.get_str('terminology_file')
+        if terminology_file and project.subtitles and project.subtitles.terminology_map:
+            _save_terminology_file(terminology_file, project.subtitles.terminology_map)
+
+        LogTranslationStatus(project, preview=preview, token_usage=progress_logger.token_usage)
+
+    except Exception:
+        LogTranslationStatus(project, preview=preview, has_error=True, token_usage=progress_logger.token_usage)
+        raise
+

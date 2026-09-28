@@ -2,6 +2,9 @@
 """
 One-stop localization workflow for LLM-Subtrans.
 
+Install the required gettext tools first, e.g.
+https://mlocati.github.io/articles/gettext-iconv-windows.html
+
 Runs the end-to-end flow:
     1) Extract translatable strings -> locales/gui-subtrans.pot
     2) Merge POT into every locale's PO and compile MO catalogs
@@ -30,13 +33,13 @@ try:
 except ImportError:
     print("Warning: python-dotenv not available; environment variables from .env file will not be loaded.")
 
-# Model to use for auto-translation
-free_translation_model = os.getenv('FREE_TRANSLATION_MODEL', 'moonshotai/kimi-k2:free')     # Free but may be rate-limited
-paid_translation_model = os.getenv('PAID_TRANSLATION_MODEL', 'google/gemini-2.5-flash')              # Fast and reliable but not free
+# Model to use for auto-translation - let OpenRouter choose
+free_translation_model = os.getenv('FREE_TRANSLATION_MODEL', 'openrouter/free')
+paid_translation_model = os.getenv('PAID_TRANSLATION_MODEL', 'openrouter/auto')
 
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-from PySubtitle.Helpers.Localization import get_available_locales
+from PySubtrans.Helpers.Localization import get_available_locales
 
 # Optional: use Babel to determine plural forms for locales
 try:
@@ -50,6 +53,9 @@ except Exception:
 LOCALES_DIR = os.path.join(base_path, 'locales')
 POT_PATH = os.path.join(LOCALES_DIR, 'gui-subtrans.pot')
 
+# Maximum number of strings to send in a single translation API request
+TRANSLATION_BATCH_SIZE = 50
+
 
 def get_locale_english_name(lang: str) -> str:
     """Get the English display name for a language code."""
@@ -62,37 +68,16 @@ def get_locale_english_name(lang: str) -> str:
         return lang
 
 
-def auto_translate_strings(untranslated: dict[str,str], target_language: str, paid: bool = False) -> dict[str,str]:
-    """Call OpenRouter API to translate untranslated strings."""
-    api_key = os.getenv('OPENROUTER_API_KEY')
-    if not api_key:
-        print("Warning: OPENROUTER_API_KEY not found in environment variables")
-        return {}
-    
-    if not untranslated:
-        return {}
-    
-    language_name = get_locale_english_name(target_language)
-    
-    # Prepare request
-    headers = {
-        'Authorization': f'Bearer {api_key}',
-        'Content-Type': 'application/json',
-        'HTTP-Referer': 'https://github.com/machinewrapped/llm-subtrans',
-        'X-Title': 'LLM-Subtrans'
-    }
-    
-    # Create the prompt
+def _translate_batch(batch: dict[str,str], target_language: str, language_name: str, headers: dict[str,str], model: str) -> dict[str,str]:
+    """Translate a single batch of strings via the OpenRouter API."""
     prompt = '\n'.join([
         f"Populate translations in {language_name} for these UI strings and messages.",
         "String formatting tags in curly braces must be preserved.",
         "Settings keys such as `api_key` or `server_address` should be given human-readable translations like `API Key` and `Server Address`.",
         "Return only a valid JSON dictionary with the same keys with the translations as values:\n\n",
-        json.dumps(untranslated, ensure_ascii=False, indent=2)
+        json.dumps(batch, ensure_ascii=False, indent=2)
     ])
 
-    model = paid_translation_model if paid else free_translation_model
-    
     request_body = {
         'model': model,
         'messages': [
@@ -103,57 +88,101 @@ def auto_translate_strings(untranslated: dict[str,str], target_language: str, pa
         ],
         'temperature': 0.3
     }
-    
+
     try:
-        print(f"Calling OpenRouter API to translate {len(untranslated)} strings to {language_name}...")
-        
+        print(f"  Calling OpenRouter API to translate {len(batch)} strings to {language_name}...")
+
         with httpx.Client(timeout=300) as client:
             response = client.post(
                 'https://openrouter.ai/api/v1/chat/completions',
                 headers=headers,
                 json=request_body
             )
-            
+
             if response.is_error:
                 print(f"OpenRouter API error: {response.status_code} - {response.text}")
                 return {}
-            
+
             result = response.json()
-            
+
             if 'choices' not in result or not result['choices']:
                 print("No choices returned from OpenRouter API")
                 return {}
-            
+
             content = result['choices'][0]['message']['content']
-            
+
+            if not content:
+                print("Empty response content from OpenRouter API")
+                return {}
+
             # Extract JSON from response (model might add prologue/epilogue)
             try:
-                # Try to find JSON in the response
                 json_start = content.find('{')
                 json_end = content.rfind('}') + 1
-                
+
                 if json_start != -1 and json_end > json_start:
                     json_content = content[json_start:json_end]
                     translations = json.loads(json_content)
-                    
+
                     if isinstance(translations, dict):
-                        # Filter out empty translations
                         valid_translations = {k: v for k, v in translations.items() if v and v.strip()}
-                        print(f"Successfully translated {len(valid_translations)} strings")
+                        print(f"  Successfully translated {len(valid_translations)} strings")
                         return valid_translations
-                    
+
             except json.JSONDecodeError as e:
                 print(f"Failed to parse JSON from OpenRouter response: {e}")
                 print(f"Response content: {content[:500]}...")
-            
+
             return {}
-            
+
     except httpx.RequestError as e:
         print(f"Request error calling OpenRouter API: {e}")
         return {}
     except Exception as e:
         print(f"Unexpected error calling OpenRouter API: {e}")
         return {}
+
+
+def auto_translate_strings(untranslated: dict[str,str], target_language: str, paid: bool = False) -> dict[str,str]:
+    """Call OpenRouter API to translate untranslated strings, batching large requests."""
+    api_key = os.getenv('OPENROUTER_API_KEY')
+    if not api_key:
+        print("Warning: OPENROUTER_API_KEY not found in environment variables", file=sys.stderr)
+        return {}
+
+    if not untranslated:
+        return {}
+
+    language_name = get_locale_english_name(target_language)
+    model = paid_translation_model if paid else free_translation_model
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json',
+    }
+
+    # Split into batches to avoid exceeding token limits
+    items = list(untranslated.items())
+    all_translations: dict[str,str] = {}
+    num_batches = (len(items) + TRANSLATION_BATCH_SIZE - 1) // TRANSLATION_BATCH_SIZE
+
+    for batch_idx in range(num_batches):
+        start = batch_idx * TRANSLATION_BATCH_SIZE
+        end = start + TRANSLATION_BATCH_SIZE
+        batch = dict(items[start:end])
+
+        if num_batches > 1:
+            print(f"Batch {batch_idx + 1}/{num_batches} ({len(batch)} strings)")
+
+        batch_result = _translate_batch(batch, target_language, language_name, headers, model)
+        all_translations.update(batch_result)
+
+        # Rate-limit pause between batches (not after the last one)
+        if batch_idx < num_batches - 1:
+            time.sleep(3)
+
+    print(f"Translated {len(all_translations)}/{len(untranslated)} strings total for {language_name}")
+    return all_translations
 
 
 def get_plural_forms(lang: str) -> str|None:
@@ -354,32 +383,35 @@ def run_cmd(cmd: list[str]) -> None:
         subprocess.check_call(cmd)
     except FileNotFoundError:
         # gettext utils may be missing; skip gracefully
-        print(f"Skipping: {' '.join(cmd)} (tool not found)")
+        print(f"ERROR: Skipping command due to missing tool: {' '.join(cmd)}", file=sys.stderr)
+        print(f"       Please install gettext utilities to enable this functionality.", file=sys.stderr)
     except subprocess.CalledProcessError as e:
-        print(f"Command failed: {' '.join(cmd)} -> {e}")
+        print(f"ERROR: Command failed: {' '.join(cmd)}", file=sys.stderr)
+        print(f"       Exit code: {e.returncode}", file=sys.stderr)
 
 
 def run_extract_strings() -> None:
     """Run scripts/extract_strings.py to refresh POT (and English PO)."""
     script = os.path.join(base_path, 'scripts', 'extract_strings.py')
     if not os.path.exists(script):
-        print(f"extract_strings.py not found at {script}")
+        print(f"ERROR: extract_strings.py not found at {script}", file=sys.stderr)
         return
     try:
         subprocess.check_call([sys.executable, script])
     except subprocess.CalledProcessError as e:
+        print(f"ERROR: extract_strings.py failed with exit code {e.returncode}", file=sys.stderr)
         raise Exception(f"extract_strings.py failed: {e}")
 
 
 def merge_and_compile(languages: list[str]|None = None):
     if not os.path.exists(POT_PATH):
-        print(f"POT not found at {POT_PATH}. Run extract_strings.py first.")
+        print(f"ERROR: POT not found at {POT_PATH}. Run extract_strings.py first.", file=sys.stderr)
         return
 
     # Get available languages dynamically
     languages = languages or get_available_locales()
     if not languages:
-        print("No locales found. Please ensure locale directories exist in the locales folder.")
+        print("ERROR: No locales found. Please ensure locale directories exist in the locales folder.", file=sys.stderr)
         return
 
     for lang in languages:
@@ -396,21 +428,21 @@ def merge_and_compile(languages: list[str]|None = None):
             if clean_po_file(po_path):
                 print(f"Normalized msgid wrapping: {po_path}")
         except Exception as e:
-            print(f"Warning: could not clean {po_path}: {e}")
+            print(f"WARNING: could not clean {po_path}: {e}", file=sys.stderr)
 
         # Ensure header completeness (Plural-Forms, etc.)
         try:
             if ensure_header_fields(po_path, lang):
                 print(f"Updated header fields: {po_path}")
         except Exception as e:
-            print(f"Warning: could not ensure header fields for {po_path}: {e}")
+            print(f"WARNING: could not ensure header fields for {po_path}: {e}", file=sys.stderr)
 
         # Fix any msgid/msgstr trailing \n parity issues that cause msgfmt fatal errors
         try:
             if fix_newline_parity(po_path):
                 print(f"Fixed newline parity: {po_path}")
         except Exception as e:
-            print(f"Warning: could not fix newline parity for {po_path}: {e}")
+            print(f"WARNING: could not fix newline parity for {po_path}: {e}", file=sys.stderr)
 
         # Compile MO (msgfmt)
         run_cmd(['msgfmt', '-o', mo_path, po_path])
@@ -655,7 +687,7 @@ def _parse_translations_file(path: str) -> dict[str,str]:
     except FileNotFoundError:
         return {}
     except Exception as e:
-        print(f"Warning: could not parse manual translations in {path}: {e}")
+        print(f"Warning: could not parse manual translations in {path}: {e}", file=sys.stderr)
         return {}
 
 

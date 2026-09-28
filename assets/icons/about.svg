@@ -1,8 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 24 24" width="24" height="24"
-     fill="none" stroke="#000" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
-     xmlns="http://www.w3.org/2000/svg">
-  <circle cx="12" cy="12" r="10" fill="#fff"/>
-  <line x1="12" y1="11" x2="12" y2="16"/>
-  <circle cx="12" cy="8" r="1.2" fill="#000" stroke="none"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+     fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <circle cx="12" cy="12" r="9" fill="white"/><path d="M12 11v6"/><circle cx="12" cy="7.5" r="1" fill="black" stroke="none"/>
 </svg>

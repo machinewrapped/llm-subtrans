@@ -84,6 +84,18 @@ Tu doit parler avec elle avant qu’il sera trop tard
 Improvement>
 Tu dois lui parler avant qu’il ne soit trop tard.
 
+### terminology_instructions
+If a terminology reference is provided, use those canonical forms consistently.
+
+After improvement, add a <terminology> block listing any key terms from the subtitles that
+require a fixed canonical form — e.g. character names, titles, organisations, locations, unique objects,
+or cultural and technical concepts. Omit common words and terminology that was provided as context.
+
+Format each entry as one 'term::canonical form' pair per line, e.g.
+<terminology>
+John::John Smith
+</terminology>
+
 ### retry_instructions
 There was an issue with the previous subtitles.
 

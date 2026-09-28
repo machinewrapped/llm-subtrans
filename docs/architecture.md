@@ -1,223 +1,144 @@
 # LLM-Subtrans Architecture
 
-```mermaid
+~~~mermaid
 graph TD
-    Scripts[scripts] --> GUI[GUI]
-    Scripts --> PySubtitle[PySubtitle]
-    GUI --> PySubtitle
-```
+    Scripts[scripts] --> GuiSubtrans[GuiSubtrans]
+    Scripts --> PySubtrans[PySubtrans]
+    GuiSubtrans --> PySubtrans
+~~~
 
-This document helps developers understand where to find code and how components interact when working on the codebase.
+This guide maps the main components, where they live, and how they connect.
+
+## Contents
+
+- [System Overview](#system-overview)
+- [Entry Points](#entry-points)
+- [Module Structure](#module-structure)
+- [Data Organization](#data-organization)
+- [Translation Architecture](#translation-architecture)
+- [Transcription Pipeline](#transcription-pipeline)
+- [Command-Line Architecture](#command-line-architecture)
+- [Settings Management](#settings-management)
+- [GUI Architecture](#gui-architecture)
+- [Extending the System](#extending-the-system)
+
+## System Overview
+
+Supports translating subtitle files and transcribing subtitles from video/audio. The GUI and command-line tools share the `PySubtrans` core, which also ships as a pip package.
+
+**Subtitle translation:** Pluggable format support via `SubtitleFormatRegistry`. `Subtitles` contains `SubtitleLine` data split into Scenes and Batches. `SubtitleTranslator` prepares each batch then sends requests via a `TranslationClient` from the selected `TranslationProvider`.
+
+**Media transcription:** `AudioExtractor` and `AudioChunker` prepare audio for processing. `TranscriptionCoordinator` calls the selected `TranscriptionClient` for each chunk, then `TranscriptionLineBuilder` assembles the returned text and timing information into subtitle lines.
+
+**The GUI** adds project controls and background command execution around the core. Its view model keeps the scene, batch, and line views in sync as commands complete; see [gui-architecture.md](gui-architecture.md).
+
+**Options and settings** are stored in a `SettingsType` dictionary, with project- and provider-specific values layered on to application-wide settings.
 
 ## Entry Points
 
 | Script | Purpose |
 |--------|---------|
-| `scripts/gui-subtrans.py` | Launches GUI, loads persistent settings, initializes translation providers |
-| `scripts/llm-subtrans.py` | CLI translator - loads subtitle file, translates using specified provider/model, saves results |
+| `scripts/gui-subtrans.py` | Launches the GUI, loads persistent settings, and initializes providers |
+| `scripts/llm-subtrans.py` | Translates a subtitle file using the selected provider and model |
+| `scripts/transcribe.py` | Transcribes media through the shared transcription coordinator |
 
 ## Module Structure
 
-### PySubtitle (Core Engine)
-Contains all subtitle processing, translation logic, and project management. This is where you'll find:
-- Translation algorithms and providers
-- Project state management
-- Settings and configuration
-- File format support and parsing
+### PySubtrans (Core Engine)
 
-**Key Classes:**
-- `SubtitleProject` – main orchestrator managing translation sessions
-- `Subtitles`, `SubtitleScene`, `SubtitleBatch` – hierarchical organization splitting files into manageable translation units
-- `SubtitleLine` – represents individual subtitles with timing, text, and translation data
-- `SubtitleTranslator` – executes translation jobs, handles retries and errors
-- `TranslationProvider` – base class for pluggable backends (OpenAI, Anthropic, etc.)
-- `Options` – centralized settings management
+`PySubtrans/` contains subtitle data and project management, translation, transcription, settings, and format handling.
+
+**Key classes:**
+
+- `Subtitles`, `SubtitleScene`, `SubtitleBatch`, `SubtitleLine` - subtitle data and its hierarchy
+- `SubtitleProject` - project lifecycle and persistence
+- `SubtitleTranslator` - translation orchestration
+- `TranslationProvider` - translation service integration
+- `SubtitleBuilder` - construction of subtitle structures
+- `SubtitleEditor` - subtitle mutations
+
+### Shared Helpers
+
+`PySubtrans/Helpers/` contains reusable utilities. Check here before adding a utility; an existing solution or a natural home for shared functionality may already exist.
+
+- `Text` - general text utilities: whitespace and punctuation normalisation, content comparison, and filename sanitising.
+- `Script` - script-aware rules: token joining (`JoinWords` / `NeedsSpace` handle CJK vs Latin spacing), full-width punctuation, and RTL detection.
+- `LineBreaks` - break/split sequences and finding the best point to break a long line.
+- `Dialog` - dialog markers: splitting dialog onto separate lines, normalising markers, and removing empty rows.
+- `FillerWords` - the default filler words and their removal.
+- `ResponseText` - xml-like tag extraction from translation responses, and summary cleanup.
+- `Time` - `timedelta` parsing and formatting, including SRT timestamps and time span labels.
+- `Speech` - how long text takes to say, by script, and where its sentences end.
+- `Parse` - key/value pairs, name lists, numeric coercion, and retry-delay/error-message extraction from provider responses.
+- `SubtitleHelpers` - operations that need `SubtitleLine`: insert-or-replace by number, merging lines, and merging translations back onto originals.
+- `ContextHelpers` - assembles batch context and history for translation prompts.
+- `Localization` - the `_()` and `tr()` gettext wrappers plus locale discovery.
+- `Languages` - language name and BCP-47 tag resolution via Babel locales.
+- `InstructionsHelpers` - loading and saving instruction files from bundled resources or the user config directory.
+- `Resources` - config directory and resource path resolution, handling portable and frozen builds.
+- `TestCases` / `Tests` - `LoggedTestCase`, `SubtitleTestCase`, the `assertLogged*` assertions, dummy subtitle/provider builders, and `skip_if_debugger_attached`.
+- `Color`, `Version`, `__init__` - smaller utilities for colour serialisation, version comparison, input/output path derivation, and enum value naming.
 
 ### Subtitle Format Handling
-Subtitle files are processed through a pluggable system:
-- `SubtitleFileHandler` implementations read and write specific formats while exposing a common interface.
-- `SubtitleFormatRegistry` discovers handlers in `PySubtitle/Formats/` and maps file extensions to the appropriate handler based on priority.
-- `SubtitleProject` uses the registry to detect formats from filenames and can convert subtitles when the output extension differs from the source.
-CLI tools expose `--list-formats` to enumerate supported extensions.
 
-### GUI (User Interface)
-PySide6-based interface using MVVM pattern. Work here for UI features, dialogs, and user interactions.
-
-### Key Classes
-- `ProjectDataModel` – State management and synchronization layer
-- `ProjectViewModel` – Qt model mapping project data to UI views (scenes → batches → lines)
-- `CommandQueue` – executes operations asynchronously with undo/redo support
-- `GUI/Widgets/*` - Various custom widgets for forms, editors, and views
+`PySubtrans/Formats/` contains `SubtitleFileHandler` implementations. `SubtitleFormatRegistry` selects a handler by file extension and priority; `SubtitleProject` uses it to load, save, and convert subtitle files.
 
 ## Data Organization
 
-**SubtitleProject** manages translation sessions, loading subtitle files and saving/loading `.subtrans` project files (JSON format containing subtitles, translations, and metadata).
+`Subtitles` contains `SubtitleScene`s, which group `SubtitleBatch`es, which contain `SubtitleLine`s. Scenes and batches are the units used to organize subtitle files for translation.
 
-### Data Hierarchy
-- `Subtitles` – top-level container with subtitle content and metadata
-- `SubtitleScene` – a time-sliced section of subtitles, grouped into batches
-- `SubtitleBatch` – groups of lines within a scene, split into chunks for translation
-- `SubtitleLine` – individual subtitle with index, timing, text and metadata
+`SubtitleBatcher` divides subtitles into scenes and batches. `SubtitleBuilder` constructs subtitle structures. `SubtitleProject` coordinates loading, saving, and project settings. Use `SubtitleEditor` for subtitle mutations so thread-safety and locking are handled consistently.
 
-## Translation Process
+## Translation Architecture
 
-**SubtitleTranslator** manages the translation pipeline:
-- Splits `Subtitles` into scenes and batches for processing
-- Builds prompts with context for each batch
-- Delegates to `TranslationProvider` clients for API calls
-- Applies substitutions and merges results back into subtitle data
-- Handles retries, error management, and post-processing
-- Emits `TranslationEvents` with progress updates
+`SubtitleTranslator` builds context-rich requests for subtitle batches, coordinates provider clients and response parsing, handles retries and post-processing, and emits `TranslationEvents`.
 
-### TranslationProvider System
-- Pluggable base class with providers in `PySubtitle/Providers/` that auto-register
-- Each provider exposes available models and creates an appropriate `TranslationClient`
-- `TranslationClient` handles API communication specifics (authentication, request format, parsing)
-- The provider can also provide a custom `TranslationParser` if a non-standard response format is expected
-   
+Translation providers live in `PySubtrans/Providers/`; their clients are in `PySubtrans/Providers/Clients/`. `TranslationPrompt` prepares requests, and `TranslationParser` maps responses back to subtitle lines.
+
+For provider registration, model discovery, streaming, and provider-specific settings, see [translation-provider-integration.md](translation-provider-integration.md).
+
+## Transcription Pipeline
+
+Media transcription lives in `PySubtrans/Transcription/`:
+
+- `AudioExtractor` and `AudioChunker` read media audio and plan chunks.
+- `TranscriptionProvider` and `TranscriptionClient` provide pluggable speech-to-text backends in `PySubtrans/Transcription/Providers/`.
+- `TranscriptionLineBuilder` assembles timed subtitle lines. `TranscriptCutter`, `UtteranceSplitter`, `WordAlignment`, and `LineMerger` support segmentation, timing, and line assembly.
+- `TranscriptionCoordinator` plans chunks, calls the selected provider client, applies the resume/abort/failure policy, returns a `TranscriptionOutcome`, and emits progress, audio-progress, and segment events. Expected failures are reported in the outcome.
+
+The CLI at `scripts/transcribe.py` and the GUI's `TranscribeMediaCommand` use the same coordinator. For capture and replay tools used to tune line assembly, see [transcription-tuning.md](transcription-tuning.md). `Provider_QwenLocal` runs Torch and the Qwen runtime from an external environment that the packaged build does not bundle; see [torch-packaging.md](torch-packaging.md) for packaging details.
+
 ## Command-Line Architecture
 
-The command-line interface provides simple synchronous processing of a source file.
+The translation CLI processes a source file synchronously:
 
-1. **Argument parsing** – allows configuration via command line arguments.
-2. **Options creation** – Parsed arguments and environment variables are merged to produce an `Options` instance that configures the translation flow.
-3. **Project initialization** – `CreateProject` loads the source subtitles and optionally reads/writes a project file.
-4. **Translation invocation** – `CreateTranslator` constructs a `SubtitleTranslator` with the provided options to perform the translation process
-5. **Completion** the resulting translation is saved, and the optional project file is updated.
+1. Parses command-line arguments.
+2. Merges arguments and environment variables into an `Options` instance.
+3. Uses `CreateProject` to load subtitles and prepare a `SubtitleTranslator`, optionally reading or writing a project file.
+4. Saves the translation and updates the optional project file.
+
+## Settings Management
+
+Settings use a layered system:
+
+- `SettingsType` is a typed settings container with getters such as `get_str`, `get_int`, and `get_bool`.
+- `PySubtrans.Options` provides application defaults, loads `settings.json`, imports environment and command-line values, and supports project- and provider-specific settings.
 
 ## GUI Architecture
 
-The GUI is built using PySide6 and follows a Model-View-ViewModel (MVVM) like pattern.
+The PySide6 GUI connects **MainWindow** and **GuiInterface** to project actions, a **CommandQueue**, and the active **ProjectDataModel**. **ModelView** presents the project tree, selected content, and project settings. Queued model updates are applied on the GUI thread before Qt views refresh.
 
-### ProjectDataModel
-This class acts as a bridge between the core `SubtitleProject` and the `ProjectViewModel`. It holds the current project, the project options, and the current translation provider. It's responsible for creating the `ProjectViewModel` and for applying updates to it.
-
-### ProjectViewModel
-A custom `QStandardItemModel` that serves as the source for the various views in the GUI. It holds a tree of `SceneItem`, `BatchItem`, and `LineItem` objects, which mirror the structure of the `Subtitles` data.
-
-It has an update queue to handle asynchronous updates, ensuring that the GUI is updated in a thread-safe manner.
-
-### Views
-The GUI is composed of several views, such as the `ScenesView`, `SubtitleView`, and `LogWindow`, which are all subclasses of `QWidget`. 
-
-These views are responsible for displaying the data from the `ProjectViewModel` and for handling user input.
-
-### Command Queue
-GUI operations use the Command pattern for background execution and undo/redo support:
-
-- **`CommandQueue`** – executes commands on background `QThreadPool`, manages concurrency and synchronisation
-- **Commands** – in `GUI/Commands/`, encapsulate operations (translation, file I/O, etc.)
-- **Undo/Redo** – maintained via `undo_stack` and `redo_stack`
-
-## Settings Management
-Application settings are managed by the `PySubtitle.Options` class. This class is responsible for:
-
-- Loading settings from a `settings.json` file.
-- Loading settings from environment variables.
-- Providing default values for all settings.
-- Provides typed getters (`get_str`, `get_int`, `get_bool`) and convenience properties
-- Supports project-specific and provider-specific settings
-
-## GUI Widget Architecture
-
-### The `ModelView`
-The central widget for displaying project data is the `GUI.Widgets.ModelView`. It is a container widget that uses a `QSplitter` to arrange three main components:
-
-#### `ProjectSettings`
-A form for editing project-specific settings. It is displayed when the user clicks on the "Settings" button in the `ProjectToolbar`.
-
-#### ScenesView
-A `QTreeView` that displays the scenes and batches from the `ProjectViewModel`. This lets users view the high level status of a translation job.
-
-#### ContentView
-A container widget that dynamically adapts based on the selected scene(s) and batch(es), to show:
-
-**`SubtitleView`** individual lines, aligning original and translated content.
-
-**`SelectionView`** provides contextual information and actions.
-
-#### Editors and Dialogs
-`GUI.Widgets.Editors` contains various widgets for editing scenes, batches, and individual subtitle lines, shown when a user double-clicks on an item in the `ScenesView` or `SubtitleView`. 
-
-### Settings Dialog Architecture
-
-`SettingsDialog` provides access to the global and provider-specific configuration settings.
-
-#### Schema-driven UI
-The structure of the `SettingsDialog` is defined by the `SECTIONS` dictionary, which defines the tabs and their contents as a nested dictionary of setting keys and their types along with an optional tooltip. e.g.
-
-```python
-'General': {
-    'ui_language': (str, _("The language of the application interface")),
-    'target_language': (str, _("The default language to translate the subtitles to")),
-    # ...
-},
-```
-
-This structure is used to build the form, with the `OptionsWidgets.CreateOptionWidget` factory function creating an appropriate widget for each setting based on its type.
-
-#### Conditional visibility
-Settings can be conditionally visible on other settings, using a data-driven system defined by the `VISIBILITY_DEPENDENCIES` property.
-
-#### Provider pluggability
-The "Provider Settings" tab dynamically populates with options specific to the selected translation provider. Each provider defines its own settings schema via a virtual `GetOptions` method, which is then used to populate the form.
-
-## Real-time UI Updates
-Translation operations can take minutes, but users need feedback and the ability to continue working.
-
-### ModelUpdate Pattern
-Commands can send incremental UI updates during execution via `ModelUpdate` objects.
-
-For example, `TranslateSceneCommand` subscribes to `SubtitleTranslator` events. Each time a batch completes, it emits a `ModelUpdate` with the translation data.
-
-1. Command creates `ModelUpdate` and sends to `ProjectDataModel`
-2. `ProjectDataModel` queues update and emits `updatesPending` signal  
-3. `ProjectViewModel.ProcessUpdates()` applies changes on main thread
-4. Views automatically reflect updated data through Qt's model/view system
-
-This pattern enables real-time feedback during long operations while maintaining thread safety and separation between business logic and UI.
-
-## Translation Provider Architecture
-The application supports multiple translation services through a provider system.
-
-### TranslationProvider (Configuration Layer)
-Each `TranslationProvider` subclass serves as the registry entry for a translation service and offers:
-
-- **`available_models`**: property containing available models that can be selected
-- **GetTranslationClient**: creates an appropriate client for API communication
-- **GetOptions**: Defines provider-specific options (API key, endpoints, etc.)
-
-### TranslationClient (Communication Layer)  
-The `TranslationClient` defines the API communication interface:
-
-- **`BuildTranslationPrompt()`** – constructs the prompt sent to the translation service
-- **`RequestTranslation()`** – handles the API call and returns a `Translation` object
-- **`GetParser()`** – returns a `TranslationParser` to extract translated text from the response
-
-### Adding New Providers
-Dynamic discovery: drop a new module in `PySubtitle/Providers/` with a `TranslationProvider` subclass, and it automatically registers at startup. No other code changes needed - the provider and its settings will be added to `SettingsDialog`.
-
-### Prompt Construction and Response Parsing
-The specific format for translation requests can vary by provider and responses can be inconsistent, so two helper classes exist to manage the differences between capabilities and expectations.
-
-**`TranslationPrompt`** builds context-rich prompts by combining:
-- User instructions and translation guidelines
-- Subtitle lines to be translated  
-- Scene/batch summaries and character information for context
-- Configurable templates
-
-**`TranslationParser`** extracts translations from LLM responses:
-- Uses multiple regex patterns to attempt to extract translated lines from the response
-- Matches extracted translations back to source subtitle lines
-- Extracts additional metadata
-- Validates results (line length, formatting rules) and triggers retries if needed
+See [gui-architecture.md](gui-architecture.md) for the command queue and view-update path. [translation-flow.md](translation-flow.md) has the translation-specific sequence diagrams.
 
 ## Extending the System
 
-- **New file formats** → `PySubtitle/` (add file handler, extend `SubtitleFileHandler`)
-- **Translation providers** → `PySubtitle/Providers/` (subclass `TranslationProvider` and `TranslationClient`)  
-- **GUI features** → `GUI/Widgets/` (new views/dialogs), `GUI/Commands/` (new operations)
-- **Settings** → update `Options` schema, add to `SettingsDialog.SECTIONS`
-- **Background operations** → implement `Command` pattern in `GUI/Commands/` for thread safety and undo support
+| To add... | Start in... |
+|-----------|-------------|
+| A subtitle format | `PySubtrans/Formats/`; implement `SubtitleFileHandler` and register it |
+| A translation provider | `PySubtrans/Providers/`; see [translation-provider-integration.md](translation-provider-integration.md) |
+| A transcription provider | `PySubtrans/Transcription/Providers/`; implement `TranscriptionProvider` and `TranscriptionClient` |
+| A GUI feature | `GuiSubtrans/Widgets/` for views, `GuiSubtrans/Commands/` for operations |
+| A setting | `Options` and `SettingsDialog` |
+| A background operation | `GuiSubtrans/Commands/`; use the `Command` pattern |
 
-**Key principle:** All operations that modify project data must go through the `CommandQueue` to maintain thread safety and undo/redo functionality.
+Project data changes should go through `CommandQueue` in the GUI, and subtitle mutations should use `SubtitleEditor`.

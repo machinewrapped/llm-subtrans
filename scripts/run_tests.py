@@ -3,15 +3,20 @@ import logging
 import importlib.util
 import sys
 import argparse
+import json
+import subprocess
+import warnings
 from datetime import datetime
 from types import ModuleType
 
 import unittest
 
+import regex
+
 base_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, base_path)
 
-from PySubtitle.Helpers.Tests import create_logfile, end_logfile, separator
+from PySubtrans.Helpers.Tests import ReportBlockedTempFailures, create_logfile, end_logfile, separator
 from tests.unit_tests import discover_tests
 
 total_run = 0
@@ -23,10 +28,14 @@ summary_lines = [
     "Test Summary:"
 ]
 
-def format_summary_line(label: str, run: int, failures: int, errors: int, skipped: int, ok: bool) -> str:
-    return f"  {label:<10}: run: {run:>3} failures: {failures:>3} errors: {errors:>3} skipped: {skipped:>3} status={'OK ' if ok else 'FAIL'}"
+# Emitted by tests/integration_tests.py once per suite
+suite_result_pattern = regex.compile(r"SUITE RESULT: (?P<label>[^|]+?) \| (?P<counts>.*)")
+suite_count_pattern = regex.compile(r"(\w+)=(\d+)")
 
-logging.getLogger().setLevel(logging.DEBUG)
+def format_summary_line(label: str, run: int, failures: int, errors: int, skipped: int, ok: bool) -> str:
+    return f"  {label:<16} | run: {run:>3} | failures: {failures:>3} | errors: {errors:>3} | skipped: {skipped:>3} | status={'OK ' if ok else 'FAIL'}"
+
+logging.getLogger().setLevel(logging.INFO)
 console_handler = logging.StreamHandler(sys.stdout)
 console_handler.setLevel(logging.WARNING)  # Only show warnings and above on console
 console_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
@@ -34,8 +43,174 @@ console_handler.setFormatter(logging.Formatter('%(levelname)s: %(message)s'))
 if console_handler not in logging.getLogger().handlers:
     logging.getLogger().addHandler(console_handler)
 
+def _check_pyright_available() -> bool:
+    """Check if pyright is available in the current Python environment."""
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pyright", "--version"],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        return result.returncode == 0
+    except (subprocess.SubprocessError, FileNotFoundError, OSError):
+        return False
+
+def _run_pyright(base_path: str) -> tuple[bool, dict|None]:
+    """Run pyright and return (success, json_result)."""
+    try:
+        result = subprocess.run(
+            [sys.executable, "-m", "pyright", "--outputjson", base_path],
+            capture_output=True,
+            text=True,
+            timeout=300,  # 5 minutes
+            cwd=base_path
+        )
+
+        json_output = json.loads(result.stdout)
+        logging.debug("Pyright output:")
+        logging.debug(result.stdout)
+
+        return (True, json_output)
+
+    except subprocess.TimeoutExpired:
+        logging.error("Pyright execution timed out after 5 minutes")
+        return (False, None)
+    except json.JSONDecodeError as e:
+        logging.error(f"Failed to parse pyright JSON output: {e}")
+        return (False, None)
+    except Exception as e:
+        logging.error(f"Error running pyright: {e}")
+        return (False, None)
+
+def _parse_pyright_results(json_output: dict) -> dict:
+    """Extract metrics from pyright JSON output."""
+    summary = json_output.get('summary', {})
+
+    errors = summary.get('errorCount', 0)
+    warnings = summary.get('warningCount', 0)
+    files_analyzed = summary.get('filesAnalyzed', 0)
+
+    return {
+        'files_analyzed': files_analyzed,
+        'errors': errors,
+        'warnings': warnings,
+        'ok': (errors == 0)
+    }
+
+def _log_pyright_diagnostics(json_output: dict, max_errors: int = 20):
+    """Log detailed diagnostics from pyright output, limited to first N errors."""
+    diagnostics = json_output.get('generalDiagnostics', [])
+
+    if not diagnostics:
+        logging.info("No type errors found")
+        return
+
+    for diag in diagnostics[:max_errors]:
+        severity = diag.get('severity', 'unknown')
+        file_path = diag.get('file', 'unknown')
+        message = diag.get('message', 'unknown error')
+        line = diag.get('range', {}).get('start', {}).get('line', 0) + 1
+
+        log_msg = f"  {file_path}:{line} - {severity}: {message}"
+
+        if severity == 'error':
+            logging.error(log_msg)
+        elif severity == 'warning':
+            logging.warning(log_msg)
+        else:
+            logging.info(log_msg)
+
+    if len(diagnostics) > max_errors:
+        remaining = len(diagnostics) - max_errors
+        logging.info(f"  ... and {remaining} more diagnostic messages (see full log)")
+
+def run_type_checking(results_path: str) -> bool:
+    """Run pyright type checking on the codebase.
+
+    Checks if pyright is available, runs type checking if found, and reports
+    results. Returns True if type checking passed (or was skipped), else False.
+    """
+    log_file = create_logfile(results_path, "type_checking.log")
+
+    start_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
+    logging.info(separator)
+    logging.info("Running type checking at " + start_stamp)
+    logging.info(separator)
+
+    # Check if pyright is available
+    if not _check_pyright_available():
+        logging.warning("Pyright is not available - skipping type checking")
+        logging.info("To enable type checking, install pyright: pip install pyright")
+        logging.info(separator)
+        end_logfile(log_file)
+
+        summary_lines.append("  Type Check : SKIPPED (pyright not available)")
+        return True
+
+    logging.info("Pyright is available, running type check...")
+
+    # Run pyright
+    success, json_output = _run_pyright(base_path)
+
+    if not success or json_output is None:
+        logging.error("Failed to run pyright type checking")
+        end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
+        logging.info(separator)
+        logging.error("Type checking failed to execute at " + end_stamp)
+        logging.info(separator)
+        end_logfile(log_file)
+
+        summary_lines.append("  Type Check : ERROR (execution failed)")
+        return False
+
+    # Parse results
+    results = _parse_pyright_results(json_output)
+
+    # Log summary
+    logging.info(f"Files analyzed: {results['files_analyzed']}")
+    logging.info(f"Errors: {results['errors']}")
+    logging.info(f"Warnings: {results['warnings']}")
+
+    # Log detailed diagnostics
+    if results['errors'] > 0 or results['warnings'] > 0:
+        logging.info(separator)
+        logging.info("Diagnostic messages:")
+        _log_pyright_diagnostics(json_output)
+
+    # Update global counters
+    global total_run, total_errors
+    total_run += results['files_analyzed']
+    total_errors += results['errors']
+
+    # Add to summary
+    summary_lines.append(
+        format_summary_line(
+            'Type Check',
+            results['files_analyzed'],
+            0,  # failures
+            results['errors'],
+            0,  # skipped
+            results['ok']
+        )
+    )
+
+    if results['warnings'] > 0:
+        summary_lines.append(f"             (with {results['warnings']} warnings)")
+
+    end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
+    logging.info(separator)
+    if results['ok']:
+        logging.info("Completed type checking successfully at " + end_stamp)
+    else:
+        logging.error("Completed type checking with errors at " + end_stamp)
+    logging.info(separator)
+
+    end_logfile(log_file)
+    return results['ok']
+
 def run_unit_tests(results_path: str) -> bool:
-    """Run all unit tests in PySubtitle.UnitTests and GUI.UnitTests.
+    """Run all unit tests in PySubtrans.UnitTests and GuiSubtrans.UnitTests.
 
     Executes the two logical suites separately so we always see both sets of
     results even if the first has failures. Returns True if all tests across
@@ -52,11 +227,13 @@ def run_unit_tests(results_path: str) -> bool:
     
     py_tests, gui_tests = discover_tests(base_path, separate_suites=True)
     
-    logging.info("Running PySubtitle unit tests...")
+    logging.info("Running PySubtrans unit tests...")
     py_result = runner.run(py_tests)
+    ReportBlockedTempFailures('PySubtrans', py_result)
 
-    logging.info("Running GUI unit tests...")
+    logging.info("Running GuiSubtrans unit tests...")
     gui_result = runner.run(gui_tests)
+    ReportBlockedTempFailures('GuiSubtrans', gui_result)
 
     def summarize(label: str, result: unittest.TestResult) -> dict:
         return {
@@ -70,8 +247,8 @@ def run_unit_tests(results_path: str) -> bool:
 
 
     global total_run, total_failures, total_errors, total_skipped
-    py_summary = summarize('PySubtitle', py_result)
-    gui_summary = summarize('GUI', gui_result)
+    py_summary = summarize('PySubtrans', py_result)
+    gui_summary = summarize('GuiSubtrans', gui_result)
 
     total_run = py_summary['run'] + gui_summary['run']
     total_failures = py_summary['failures'] + gui_summary['failures']
@@ -80,8 +257,8 @@ def run_unit_tests(results_path: str) -> bool:
     overall_success = (total_failures == 0 and total_errors == 0)
 
     summary_lines.extend([
-        format_summary_line('PySubtitle', py_summary['run'], py_summary['failures'], py_summary['errors'], py_summary['skipped'], py_summary['ok']),
-        format_summary_line('GUI', gui_summary['run'], gui_summary['failures'], gui_summary['errors'], gui_summary['skipped'], gui_summary['ok'])
+        format_summary_line('PySubtrans', py_summary['run'], py_summary['failures'], py_summary['errors'], py_summary['skipped'], py_summary['ok']),
+        format_summary_line('GuiSubtrans', gui_summary['run'], gui_summary['failures'], gui_summary['errors'], gui_summary['skipped'], gui_summary['ok'])
     ])
 
     end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
@@ -94,6 +271,103 @@ def run_unit_tests(results_path: str) -> bool:
 
     end_logfile(log_file)
     return overall_success
+
+
+def run_script_tests(results_path: str) -> bool:
+    """Run the tests for developer tools in scripts/, which are not part of the PySubtrans package."""
+    log_file = create_logfile(results_path, "script_tests.log")
+
+    logging.info(separator)
+    logging.info("Running script tests at " + datetime.now().strftime("%Y-%m-%d at %H:%M"))
+    logging.info(separator)
+
+    suite = unittest.TestLoader().discover(os.path.join(base_path, 'tests', 'ScriptTests'), pattern='test_*.py', top_level_dir=base_path)
+    result = unittest.runner.TextTestRunner(verbosity=1).run(suite)
+
+    global total_run, total_failures, total_errors, total_skipped
+    skipped = len(result.skipped)
+    total_run += result.testsRun
+    total_failures += len(result.failures)
+    total_errors += len(result.errors)
+    total_skipped += skipped
+
+    summary_lines.append(format_summary_line('Scripts', result.testsRun, len(result.failures), len(result.errors), skipped, result.wasSuccessful()))
+
+    end_logfile(log_file)
+    return result.wasSuccessful()
+
+
+def run_integration_tests(results_path: str) -> bool:
+    """Run the integration test suite in a separate Python process.
+
+    Integration tests must run outside this process because the unit-test
+    runner installs an import guard that rejects concrete provider imports.
+    """
+    log_file = create_logfile(results_path, "integration_tests_runner.log")
+
+    start_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
+    logging.info(separator)
+    logging.info("Running integration tests at " + start_stamp)
+    logging.info(separator)
+
+    integration_script = os.path.join(base_path, "tests", "integration_tests.py")
+
+    # Collect the result lines from stdout.
+    # unittest progress goes to stderr, which is left unpiped so it stays live.
+    suite_results : list[tuple[str, dict[str, int]]] = []
+    try:
+        with subprocess.Popen(
+            [sys.executable, integration_script],
+            cwd=base_path,
+            stdout=subprocess.PIPE,
+            text=True,
+            errors="replace"
+        ) as process:
+            assert process.stdout is not None
+            for line in process.stdout:
+                sys.stdout.write(line)
+                sys.stdout.flush()
+                match = suite_result_pattern.fullmatch(line.rstrip())
+                if match:
+                    counts = {name: int(count) for name, count in suite_count_pattern.findall(match['counts'])}
+                    suite_results.append((match['label'], counts))
+
+        integration_failed = process.returncode != 0
+    except (OSError, subprocess.SubprocessError) as error:
+        logging.error(f"Failed to start integration tests: {error}")
+        integration_failed = True
+
+    global total_run, total_failures, total_errors, total_skipped
+
+    for label, counts in suite_results:
+        if not counts:
+            summary_lines.append(f"  {label:<16} | SKIPPED")
+            continue
+
+        failures, errors = counts.get('failures', 0), counts.get('errors', 0)
+        total_run += counts.get('run', 0)
+        total_failures += failures
+        total_errors += errors
+        total_skipped += counts.get('skipped', 0)
+        summary_lines.append(format_summary_line(label, counts.get('run', 0), failures, errors, counts.get('skipped', 0), failures == 0 and errors == 0))
+
+    # Count a failure no suite reported, e.g. a crash before a suite completed
+    reported_failure = any(counts.get('failures', 0) or counts.get('errors', 0) for _label, counts in suite_results)
+    if integration_failed and not reported_failure:
+        total_run += 1
+        total_failures += 1
+        summary_lines.append(format_summary_line('Integration run', 1, 1, 0, 0, False))
+
+    end_stamp = datetime.now().strftime("%Y-%m-%d at %H:%M")
+    logging.info(separator)
+    if integration_failed:
+        logging.error("Completed integration tests with failures at " + end_stamp)
+    else:
+        logging.info("Completed integration tests successfully at " + end_stamp)
+    logging.info(separator)
+
+    end_logfile(log_file)
+    return not integration_failed
 
 
 def run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=None):
@@ -129,7 +403,11 @@ def run_functional_tests(tests_directory, subtitles_directory, results_directory
         if hasattr(module, 'run_tests'):
             test_files_run += 1
             try:
-                module.run_tests(subtitles_directory, results_directory)
+                # Real-world test files contain fields pysubs2 can't parse and replaces with defaults.
+                # Filter by origin rather than class, since pysubs2.warnings only exists in newer releases.
+                with warnings.catch_warnings():
+                    warnings.filterwarnings("ignore", category=UserWarning, module=r"pysubs2\.formats\.substation")
+                    module.run_tests(subtitles_directory, results_directory)
             except Exception as e:
                 logging.error(f"Error running tests in {filename}: {e}")
                 summary_lines.append(f"Tests in {filename} failed")
@@ -150,7 +428,7 @@ if __name__ == "__main__":
 
     scripts_directory = os.path.dirname(os.path.abspath(__file__))
     root_directory = os.path.dirname(scripts_directory)
-    tests_directory = os.path.join(root_directory, 'tests')
+    tests_directory = os.path.join(root_directory, 'tests', 'functional')
     subtitles_directory = os.path.join(root_directory, 'test_subtitles')
     results_directory =  os.path.join(root_directory, 'test_results')
     test_name = args.test
@@ -160,8 +438,23 @@ if __name__ == "__main__":
 
     create_logfile(results_directory, "run_tests.log")
 
-    overall_success : bool = run_unit_tests(results_directory)
+    # Run type checking first (fail fast on type errors)
+    overall_success : bool = run_type_checking(results_directory)
 
+    # Only run unit tests if type checking passed
+    if overall_success:
+        overall_success = run_unit_tests(results_directory)
+
+    # Script tests cover developer tools outside the package, so they run here but not in the unit runner
+    if overall_success:
+        overall_success = run_script_tests(results_directory)
+
+    # Only run integration tests if unit tests passed. The integration suite
+    # runs in its own process so provider imports cannot leak into unit tests.
+    if overall_success:
+        overall_success = run_integration_tests(results_directory)
+
+    # Only run functional tests if the preceding suites passed
     if overall_success:
         func_run, func_failed = run_functional_tests(tests_directory, subtitles_directory, results_directory, test_name=test_name)
         overall_success = (func_failed == 0)

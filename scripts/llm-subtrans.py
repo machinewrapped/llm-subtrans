@@ -1,19 +1,17 @@
 import logging
 
 from check_imports import check_required_imports
-check_required_imports(['PySubtitle'])
+check_required_imports(['PySubtrans'])
 
 from scripts.subtrans_common import (
     InitLogger,
     CreateArgParser,
     CreateOptions,
-    CreateTranslator,
     CreateProject,
+    TranslateProject,
 )
 
-from PySubtitle.Options import Options
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
+
 
 # Parse command line arguments
 parser = CreateArgParser("Translates subtitles using OpenRouter or a custom AI model server")
@@ -33,15 +31,15 @@ logger_options = InitLogger("llm-subtrans", args.debug)
 
 try:
     if provider == "OpenRouter":
-        options : Options = CreateOptions(
+        options = CreateOptions(
             args,
             provider,
             api_key=args.apikey,
             model=args.model,
-            use_default_model=args.auto
+            use_default_model=args.auto,
         )
     else:
-        options : Options = CreateOptions(
+        options = CreateOptions(
             args,
             provider,
             api_key=args.apikey,
@@ -49,21 +47,12 @@ try:
             model=args.model,
             server_address=args.server,
             supports_conversation=args.chat,
-            supports_system_messages=args.systemmessages
+            supports_system_messages=args.systemmessages,
         )
 
-    # Create a project for the translation
-    project : SubtitleProject = CreateProject(options, args)
-
-    # Create a translator with the provided options
-    translator : SubtitleTranslator = CreateTranslator(options)
-
-    project.TranslateSubtitles(translator)
-
-    if project.use_project_file:
-        logging.info(f"Writing project data to {str(project.projectfile)}")
-        project.SaveProjectFile()
+    project = CreateProject(options, args)
+    TranslateProject(project, options, verbose=args.verbose, preview=args.preview)
 
 except Exception as e:
-    print("Error:", e)
+    logging.error(f"Error during subtitle translation: {e}")
     raise

@@ -26,22 +26,25 @@ LOCALES_DIR = os.path.join(REPO_ROOT, 'locales')
 POT_PATH = os.path.join(LOCALES_DIR, 'gui-subtrans.pot')
 
 INCLUDE_DIRS = (
-    'GUI',
-    'PySubtitle',
+    'GuiSubtrans',
+    'PySubtrans',
     'scripts',
 )
 EXCLUDE_DIRS = (
     'locales',
-    'PySubtitle/UnitTests',
-    'GUI/UnitTests',
     'tests',
     'assets',
     'theme',
-    'PySubtitleHooks',
+    'hooks-subtrans',
 )
 
 # Global store of setting keys discovered during extraction
 SETTING_KEYS: set[str] = set()
+
+# Provider base classes whose __init__ defines settings shared by every provider of that kind
+PROVIDER_BASE_FILES = (
+    os.path.join('PySubtrans', 'Transcription', 'TranscriptionProvider.py'),
+)
 
 
 def ensure_parent(path: str):
@@ -84,13 +87,13 @@ class SettingKeyExtractor:
         return self.setting_keys.copy()
     
     def _extract_options_keys(self, entries: dict[tuple[str|None, str], list[tuple[str, int]]]):
-        """Extract setting keys from PySubtitle/Options.py default_settings dictionary"""
-        options_path = os.path.join(REPO_ROOT, 'PySubtitle', 'Options.py')
+        """Extract setting keys from PySubtrans/Options.py default_settings dictionary"""
+        options_path = os.path.join(REPO_ROOT, 'PySubtrans', 'Options.py')
         
         try:
             with open(options_path, 'r', encoding='utf-8') as f:
                 source = f.read()
-            tree = ast.parse(source, filename='PySubtitle/Options.py')
+            tree = ast.parse(source, filename='PySubtrans/Options.py')
             
             found_default_settings = False
             for node in ast.walk(tree):
@@ -115,7 +118,7 @@ class SettingKeyExtractor:
                             setting_key = key_node.value
                             self.setting_keys.add(setting_key)
                             key = (None, setting_key)
-                            entries.setdefault(key, []).append(('PySubtitle/Options.py', key_node.lineno))
+                            entries.setdefault(key, []).append(('PySubtrans/Options.py', key_node.lineno))
                             keys_extracted += 1
                     
                     print(f"Extracted {keys_extracted} setting keys from Options.py")
@@ -132,25 +135,41 @@ class SettingKeyExtractor:
             raise Exception(f"Could not extract setting keys from Options.py: {e}")
     
     def _extract_provider_keys(self, entries: dict[tuple[str|None, str], list[tuple[str, int]]]):
-        """Extract setting keys from all translation providers"""
-        providers_dir = os.path.join(REPO_ROOT, 'PySubtitle', 'Providers')
-        provider_files = [f for f in os.listdir(providers_dir) if f.startswith('Provider_') and f.endswith('.py')]
-        
-        print(f"Found {len(provider_files)} provider files: {provider_files}")
-        
-        for provider_file in provider_files:
-            provider_path = os.path.join(providers_dir, provider_file)
-            
-            try:
-                static_keys = self._extract_provider_settings_static(provider_path)
-                self.setting_keys.update(static_keys)
-                
-                for key in static_keys:
-                    entry_key = (None, key)
-                    entries.setdefault(entry_key, []).append((f'PySubtitle/Providers/{provider_file}', 0))
-                    
-            except Exception as e:
-                raise Exception(f"Could not extract settings from {provider_file}: {e}")
+        """Extract setting keys from all translation and transcription providers, and the base classes they share"""
+        for base_file in PROVIDER_BASE_FILES:
+            base_keys = self._extract_provider_settings_static(os.path.join(REPO_ROOT, base_file))
+            if not base_keys:
+                raise Exception(f"No setting keys found in {base_file}")
+
+            self.setting_keys.update(base_keys)
+            for key in base_keys:
+                entries.setdefault((None, key), []).append((base_file.replace('\\', '/'), 0))
+
+        provider_dirs = [
+            os.path.join(REPO_ROOT, 'PySubtrans', 'Providers'),
+            os.path.join(REPO_ROOT, 'PySubtrans', 'Transcription', 'Providers'),
+        ]
+        for providers_dir in provider_dirs:
+            if not os.path.isdir(providers_dir):
+                continue
+            provider_files = [f for f in os.listdir(providers_dir) if f.startswith('Provider_') and f.endswith('.py')]
+
+            print(f"Found {len(provider_files)} provider files in {providers_dir}: {provider_files}")
+
+            for provider_file in provider_files:
+                provider_path = os.path.join(providers_dir, provider_file)
+                rel_dir = os.path.relpath(providers_dir, REPO_ROOT).replace('\\', '/')
+
+                try:
+                    static_keys = self._extract_provider_settings_static(provider_path)
+                    self.setting_keys.update(static_keys)
+
+                    for key in static_keys:
+                        entry_key = (None, key)
+                        entries.setdefault(entry_key, []).append((f'{rel_dir}/{provider_file}', 0))
+
+                except Exception as e:
+                    raise Exception(f"Could not extract settings from {provider_file}: {e}")
     
     def _extract_provider_settings_static(self, provider_path: str) -> set[str]:
         """Statically parse provider __init__ method to extract setting keys"""
@@ -166,6 +185,19 @@ class SettingKeyExtractor:
                     node.name == '__init__'):
                     
                     for child in ast.walk(node):
+                        # Transcription providers build their settings with SettingsType({...}) or extend them with SettingsType(self.settings | {...})
+                        if (isinstance(child, ast.Call) and
+                            isinstance(child.func, ast.Name) and
+                            child.func.id == 'SettingsType' and
+                            child.args):
+                            settings_node = child.args[0]
+                            if isinstance(settings_node, ast.BinOp):
+                                settings_node = settings_node.right
+                            if isinstance(settings_node, ast.Dict):
+                                for key_node in settings_node.keys:
+                                    if isinstance(key_node, ast.Constant) and isinstance(key_node.value, str):
+                                        keys.add(key_node.value)
+
                         if (isinstance(child, ast.Call) and
                             isinstance(child.func, ast.Attribute) and
                             child.func.attr == '__init__' and

@@ -1,23 +1,21 @@
-import os
 import logging
+import os
 
 from check_imports import check_required_imports
-check_required_imports(['PySubtitle', 'google.genai', 'google.api_core'], 'gemini')
+check_required_imports(['PySubtrans', 'google.genai', 'google.api_core'], 'gemini')
 
 from scripts.subtrans_common import (
     InitLogger,
     CreateArgParser,
     CreateOptions,
-    CreateTranslator,
     CreateProject,
+    TranslateProject,
 )
 
-from PySubtitle.Options import Options
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
+from PySubtrans.Providers.Provider_Gemini import GeminiProvider
 
 provider = "Gemini"
-default_model = os.getenv('GEMINI_MODEL') or "Gemini 2.0 Flash"
+default_model = os.getenv('GEMINI_MODEL') or GeminiProvider.default_model
 
 parser = CreateArgParser(f"Translates subtitles using a Google Gemini model")
 parser.add_argument('-k', '--apikey', type=str, default=None, help=f"Your Gemini API Key (https://makersuite.google.com/app/apikey)")
@@ -27,21 +25,10 @@ args = parser.parse_args()
 logger_options = InitLogger("gemini-subtrans", args.debug)
 
 try:
-    options : Options = CreateOptions(args, provider, model=args.model or default_model)
-
-    # Create a project for the translation
-    project : SubtitleProject = CreateProject(options, args)
-
-    # Create a translator with the provided options
-    translator : SubtitleTranslator = CreateTranslator(options)
-
-    # Translate the subtitles
-    project.TranslateSubtitles(translator)
-
-    if project.use_project_file:
-        logging.info(f"Writing project data to {str(project.projectfile)}")
-        project.SaveProjectFile()
+    options = CreateOptions(args, provider, model=args.model or default_model)
+    project = CreateProject(options, args)
+    TranslateProject(project, options, verbose=args.verbose, preview=args.preview)
 
 except Exception as e:
-    print("Error:", e)
+    logging.error(f"Error during subtitle translation: {e}")
     raise

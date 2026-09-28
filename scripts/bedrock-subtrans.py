@@ -2,18 +2,16 @@ import os
 import logging
 
 from check_imports import check_required_imports
-check_required_imports(['PySubtitle', 'boto3'], 'bedrock')
+check_required_imports(['PySubtrans', 'boto3'], 'bedrock')
 
 from scripts.subtrans_common import (
     InitLogger,
     CreateArgParser,
     CreateOptions,
-    CreateTranslator,
     CreateProject,
+    TranslateProject,
 )
-from PySubtitle.Options import Options
-from PySubtitle.SubtitleProject import SubtitleProject
-from PySubtitle.SubtitleTranslator import SubtitleTranslator
+
 
 provider = "Bedrock"
 
@@ -32,7 +30,7 @@ args = parser.parse_args()
 logger_options = InitLogger("bedrock-subtrans", args.debug)
 
 try:
-    options: Options = CreateOptions(
+    options = CreateOptions(
         args,
         provider,
         access_key=args.accesskey or access_key,
@@ -41,22 +39,11 @@ try:
         model=args.model,
     )
 
-    # Validate that required Bedrock options are provided
     if not options.get('access_key') or not options.get('secret_access_key') or not options.get('aws_region') or not options.get('model'):
         raise ValueError("AWS Access Key, Secret Key, Region, and Model ID must be specified.")
 
-    # Create a project for the translation
-    project: SubtitleProject = CreateProject(options, args)
-
-    # Create a translator with the provided options
-    translator: SubtitleTranslator = CreateTranslator(options)
-
-    # Translate the subtitles
-    project.TranslateSubtitles(translator)
-
-    if project.use_project_file:
-        logging.info(f"Writing project data to {str(project.projectfile)}")
-        project.SaveProjectFile()
+    project = CreateProject(options, args)
+    TranslateProject(project, options, verbose=args.verbose, preview=args.preview)
 
 except Exception as e:
     logging.error(f"Error during subtitle translation: {e}")

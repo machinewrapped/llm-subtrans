@@ -17,7 +17,7 @@ If you detect obvious errors in the input, correct them in the translation using
 
 If the input contains profanity, use equivalent profanity in the translation.
 
-At the end you should add <summary> and <scene> tags with information about the translation:
+Add <summary> and <scene> tags before the translated subtitles, with information about the translation in the target language:
 
 <summary>A one or two line synopsis of the current batch.</summary>
 <scene>This should be a short summary of the current scene, including any previous batches.</scene>
@@ -83,3 +83,14 @@ There was an issue with the previous translation.
 Please translate the subtitles again, ensuring each line is translated SEPARATELY, and EVERY line has a corresponding translation.
 
 Do NOT merge lines together in the translation, as this leads to incorrect timings and confusion for the reader.
+
+### terminology_instructions
+If a terminology reference is provided, use those translations consistently.
+
+After translation, add a <terminology> block listing any terminology from the source subtitles that require a consistent translation,
+e.g. character names, nicknames, titles, organisations, locations, unique objects, or uncommon cultural and technical concepts.
+
+Format each entry as one 'original::translation' pair per line, e.g.
+<terminology>
+Source Language::目標語言
+</terminology>

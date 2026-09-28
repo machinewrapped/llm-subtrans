@@ -2,6 +2,57 @@
 # Enable error handling
 set -e
 
+portable_install=false
+config_path=""
+if [ "$#" -gt 0 ]; then
+    case "$1" in
+        --portable)
+            [ "$#" -eq 1 ] || { echo "Usage: ./install.sh [--portable | --configpath PATH]"; exit 1; }
+            portable_install=true
+            ;;
+        --configpath)
+            [ "$#" -eq 2 ] || { echo "Usage: ./install.sh [--portable | --configpath PATH]"; exit 1; }
+            config_path=$2
+            ;;
+        *)
+            echo "Usage: ./install.sh [--portable | --configpath PATH]"
+            exit 1
+            ;;
+    esac
+fi
+
+if [ "$portable_install" = true ]; then
+    echo
+    echo "========================================"
+    echo "Portable configuration mode enabled"
+    echo "Settings and logs will be stored in .settings"
+    echo "========================================"
+elif [ -n "$config_path" ]; then
+    echo
+    echo "========================================"
+    echo "Custom configuration mode enabled"
+    echo "Settings and logs will be stored in: $config_path"
+    echo "========================================"
+fi
+
+function set_env_var() {
+    # Write NAME=value to .env, replacing any existing NAME entry
+    local name=$1
+    local value=$2
+
+    if [ -f ".env" ]; then
+        sed -i.bak "/^${name}=/d" .env
+        rm -f .env.bak
+
+        # Terminate an unterminated last line so the new entry is not merged into it
+        if [ -n "$(tail -c 1 .env)" ]; then
+            echo >> .env
+        fi
+    fi
+
+    printf '%s=%s\n' "$name" "$value" >> .env
+}
+
 function install_provider() {
     local provider=$1
     local api_key_var_name=$2
@@ -13,20 +64,12 @@ function install_provider() {
 
     # Only update .env if user entered a new API key
     if [ -n "$api_key" ]; then
-        if [ -f ".env" ]; then
-            sed -i.bak "/^${api_key_var_name}_API_KEY=/d" .env
-            rm -f .env.bak
-        fi
-        echo "${api_key_var_name}_API_KEY=$api_key" >> .env
+        set_env_var "${api_key_var_name}_API_KEY" "$api_key"
     fi
 
     # Set as default provider if requested
     if [ "$set_as_default" = "set_default" ]; then
-        if [ -f ".env" ]; then
-            sed -i.bak "/^PROVIDER=/d" .env
-            rm -f .env.bak
-        fi
-        echo "PROVIDER=$provider" >> .env
+        set_env_var PROVIDER "$provider"
     fi
 
     if [ -n "$extra_name" ]; then
@@ -45,24 +88,20 @@ function install_bedrock() {
     read -p "Enter your AWS Secret Access Key: " secret_key
     read -p "Enter your AWS Region (e.g., us-east-1): " region
 
-    if [ -f ".env" ]; then
-        # Remove existing provider settings
-        sed -i.bak "/^AWS_ACCESS_KEY_ID=/d" .env
-        sed -i.bak "/^AWS_SECRET_ACCESS_KEY=/d" .env
-        sed -i.bak "/^AWS_REGION=/d" .env
-        sed -i.bak "/^PROVIDER=/d" .env
-        rm -f .env.bak
-    fi
-
-    echo "PROVIDER=Bedrock" >> .env
-    echo "AWS_ACCESS_KEY_ID=$access_key" >> .env
-    echo "AWS_SECRET_ACCESS_KEY=$secret_key" >> .env
-    echo "AWS_REGION=$region" >> .env
+    set_env_var PROVIDER "Bedrock"
+    set_env_var AWS_ACCESS_KEY_ID "$access_key"
+    set_env_var AWS_SECRET_ACCESS_KEY "$secret_key"
+    set_env_var AWS_REGION "$region"
 
     extras+=("bedrock")
     scripts_to_generate+=("bedrock-subtrans")
 
     echo "Bedrock setup complete. Default provider set to Bedrock."
+}
+
+function install_qwen_local() {
+    # qwen-asr is installed separately after GPU torch detection -- do not add to extras
+    :
 }
 
 if [ ! -d "scripts" ]; then
@@ -100,11 +139,8 @@ if [ -d "envsubtrans" ]; then
     fi
 fi
 
-python3 -m venv envsubtrans
-source envsubtrans/bin/activate
-
 extras=()
-scripts_to_generate=("llm-subtrans")
+scripts_to_generate=("llm-subtrans" "batch-translate" "transcribe")
 
 echo "Select installation type:"
 echo "1 = Install with GUI"
@@ -119,16 +155,26 @@ else
     scripts_to_generate+=("gui-subtrans")
 fi
 
+if [ -n "$config_path" ]; then
+    mkdir -p "$config_path"
+elif [ "$portable_install" = true ]; then
+    mkdir -p .settings
+fi
+
+if [ "$portable_install" = true ] && [ -f ".env" ]; then
+    sed -i.bak '/^LLM_SUBTRANS_CONFIG_PATH=/d' .env
+    rm -f .env.bak
+fi
+
+if [ -n "$config_path" ]; then
+    set_env_var LLM_SUBTRANS_CONFIG_PATH "$config_path"
+fi
+
 # Optional: configure OpenRouter API key
 echo "Optional: Configure OpenRouter API key (default provider)"
 read -p "Enter your OpenRouter API Key (optional): " openrouter_key
 if [ -n "$openrouter_key" ]; then
-    if [ -f ".env" ]; then
-        # Remove any existing OpenRouter API key
-        sed -i.bak "/^OPENROUTER_API_KEY=/d" .env
-        rm -f .env.bak
-    fi
-    echo "OPENROUTER_API_KEY=$openrouter_key" >> .env
+    set_env_var OPENROUTER_API_KEY "$openrouter_key"
 fi
 
 echo "Select additional providers to install:"
@@ -177,6 +223,32 @@ case $provider_choice in
         ;;
 esac
 
+echo
+while true; do
+    read -p "Install local transcription? (y/n): " install_transcription
+
+    case $install_transcription in
+        y|Y)
+            install_qwen_local
+            break
+            ;;
+        n|N)
+            echo "No local transcription selected."
+            break
+            ;;
+        *)
+            echo "Please enter y or n."
+            ;;
+    esac
+done
+
+if [ ! -d "envsubtrans" ]; then
+    echo
+    echo "Creating virtual environment..."
+    python3 -m venv --upgrade-deps envsubtrans
+fi
+
+source envsubtrans/bin/activate
 
 install_target="."
 if [ ${#extras[@]} -gt 0 ]; then
@@ -188,6 +260,40 @@ else
 fi
 
 pip install --upgrade -e "$install_target"
+
+# Qt no longer ships bundled fonts; create the expected directory so Qt's font
+# discovery does not emit a warning when running headless (offscreen) tests.
+qt_fonts_dir=$(python3 -c "import PySide6, os; print(os.path.join(os.path.dirname(PySide6.__file__), 'lib', 'fonts'))" 2>/dev/null || true)
+[ -n "$qt_fonts_dir" ] && mkdir -p "$qt_fonts_dir"
+
+if [ "$install_transcription" = "y" ] || [ "$install_transcription" = "Y" ]; then
+    echo
+    echo "Detecting GPU hardware and installing torch..."
+    ./envsubtrans/bin/python scripts/install_torch.py
+    torch_exit=$?
+
+    if [ $torch_exit -eq 2 ]; then
+        echo
+        echo "Warning: torch installation encountered an error."
+        echo "Skipping local transcription; cloud transcription remains available."
+    else
+        echo
+        echo "Installing local transcription package..."
+        if ! ./envsubtrans/bin/python scripts/install_qwen_runtime.py; then
+            echo "Failed to install the Qwen runtime."
+        elif [ $torch_exit -eq 1 ]; then
+            echo
+            echo "No GPU-accelerated torch variant was detected."
+            echo "CPU inference is disabled by default. Enable allow_cpu_fallback in Qwen Local advanced settings to consent to slow CPU inference."
+            echo "For GPU acceleration, install the hardware-appropriate PyTorch build from:"
+            echo "  https://pytorch.org/get-started/locally/"
+        else
+            echo
+            echo "Local transcription installed successfully with GPU support."
+        fi
+    fi
+    echo
+fi
 
 for script in "${scripts_to_generate[@]}"; do
     scripts/generate-cmd.sh "$script"

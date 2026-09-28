@@ -1,10 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-
-    <!-- Tray enlarged and lowered to align with bigger play/stop icons -->
-    <rect x="4" y="15" width="16" height="5" rx="2" ry="2" fill="white" stroke="black"/>
-    <!-- Downward arrow enlarged: spans from near top to just above the tray -->
-    <line x1="12" y1="4" x2="12" y2="12" stroke="black"/>
-    <polyline points="9 9 12 12 15 9" fill="none" stroke="black"/>
-    
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+     fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M12 3v11m-4-4 4 4 4-4M4 15v4a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-4"/>
 </svg>

@@ -1,0 +1,415 @@
+import logging
+import unittest
+import regex
+from datetime import timedelta
+
+from PySubtrans.SubtitleLine import SubtitleLine
+from PySubtrans.Helpers.FillerWords import standard_filler_words
+from PySubtrans.Helpers.LineBreaks import split_sequences
+from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import log_info
+from PySubtrans.Helpers.SubtitleHelpers import MergeSubtitles, MergeTranslations, FindSplitPoint, GetProportionalDuration
+from PySubtrans.SubtitleProcessor import SubtitleProcessor
+from PySubtrans.SubtitleBatcher import SubtitleBatcher
+from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
+from PySubtrans.SettingsType import SettingsType
+from PySubtrans.Subtitles import SaveSettings, Subtitles
+
+
+class TestSubtitles(LoggedTestCase):
+
+    example_line_1 = SubtitleLine("1\n00:00:01,000 --> 00:00:02,000\nThis is line 1")
+    example_line_2 = SubtitleLine("2\n00:00:02,500 --> 00:00:03,500\nThis is line 2")
+    example_line_3 = SubtitleLine("3\n00:00:04,000 --> 00:00:06,200\nThis is line 3")
+    example_line_4 = SubtitleLine("4\n00:00:06,500 --> 00:00:07,500\nThis is line 4")
+    example_line_5 = SubtitleLine("5\n00:00:08,000 --> 00:00:09,500\nThis is line 5.\nThis is line 5 continued")
+    example_line_11 = SubtitleLine("11\n00:00:10,000 --> 00:00:11,000\nThis is line 11, which is a bit longer!")
+    alternative_line_1 = SubtitleLine("1\n00:00:01,000 --> 00:00:02,000\nThis is an alternative line 1")
+    alternative_line_2 = SubtitleLine("2\n00:00:02,500 --> 00:00:03,500\nThis is an alternative line 2")
+
+    merge_subtitles_cases = [
+        (
+            [ example_line_1, example_line_2 ],
+            SubtitleLine("1\n00:00:01,000 --> 00:00:03,500\nThis is line 1\nThis is line 2")
+        ),
+        (
+            [ example_line_1, example_line_2, example_line_3 ],
+            SubtitleLine("1\n00:00:01,000 --> 00:00:06,200\nThis is line 1\nThis is line 2\nThis is line 3")
+        ),
+        (
+            [ example_line_11 ],
+            SubtitleLine("11\n00:00:10,000 --> 00:00:11,000\nThis is line 11, which is a bit longer!")
+        ),
+        (
+            [ example_line_4, example_line_5 ],
+            SubtitleLine("4\n00:00:06,500 --> 00:00:09,500\nThis is line 4\nThis is line 5.\nThis is line 5 continued")
+        )
+    ]
+
+    def test_MergeSubtitles(self):
+        for source, expected in self.merge_subtitles_cases:
+            with self.subTest(source=source):
+                lines = [SubtitleLine(line) for line in source]
+                expected_line = SubtitleLine(expected)
+                result = MergeSubtitles(lines)
+                self.assertLoggedEqual(
+                    "merged subtitles",
+                    expected_line,
+                    result,
+                    input_value=lines,
+                )
+
+    merge_translation_cases = [
+        (
+            [ example_line_1, example_line_2 ],
+            [ example_line_3, example_line_4 ],
+            [ example_line_1, example_line_2, example_line_3, example_line_4 ]
+        ),
+        (
+            [ example_line_1, example_line_2 ],
+            [ example_line_1, example_line_3 ],
+            [ example_line_1, example_line_2, example_line_3 ]
+        ),
+        (
+            [ example_line_1, example_line_2 ],
+            [ alternative_line_1, example_line_3 ],
+            [ alternative_line_1, example_line_2, example_line_3 ]
+        ),
+        (
+            [ example_line_1, example_line_2 ],
+            [ alternative_line_1, alternative_line_2 ],
+            [ alternative_line_1, alternative_line_2 ]
+        )
+    ]
+
+    def test_MergeTranslations(self):
+        for group_1, group_2, expected in self.merge_translation_cases:
+            with self.subTest(group_1=group_1, group_2=group_2):
+                merged_lines = MergeTranslations(group_1, group_2)
+                self.assertLoggedSequenceEqual(
+                    f"merged {len(group_1)} and {len(group_2)} lines",
+                    expected,
+                    merged_lines,
+                )
+
+    split_point_cases = [
+        ("1\n00:00:01,000 --> 00:00:05,000\nThis is a test subtitle, break after comma.", "This is a test subtitle,"),
+        ("2\n00:00:06,000 --> 00:00:10,000\nSecond test subtitle. Break after period.", "Second test subtitle."),
+        ("3\n00:00:11,000 --> 00:00:15,000\nThird test subtitle! Break after exclamation mark.", "Third test subtitle!"),
+        ("4\n00:00:16,000 --> 00:00:20,000\nFourth test subtitle? Break after question mark.", "Fourth test subtitle?"),
+        ("5\n00:00:21,000 --> 00:00:25,000\nFifth test subtitle... Break after ellipsis.", "Fifth test subtitle..."),
+        ("6\n00:00:26,000 --> 00:00:30,000\nSixth test subtitle.\nBreak after newline.", "Sixth test subtitle."),
+        ("7\n00:00:31,000 --> 00:00:35,000\nSeventh test subtitle.\nBreak after newline, not after the comma even if it is closer to the middle of the line.", "Seventh test subtitle."),
+        ("8\n00:00:36,000 --> 00:00:40,000\nEighth test subtitle, break after second comma, because it is closer to the middle.", "Eighth test subtitle, break after second comma,"),
+        ("9\n00:00:36,000 --> 00:00:40,000\nNinth test subtitle. Break after the period, not the comma even if it is closer to the middle.", "Ninth test subtitle."),
+        ("10\n00:00:41,000 --> 00:00:45,000\nTenth test subtitle, <i>We should not split here, even though there is a comma in the italic block.</i>", "Tenth test subtitle,"),
+        ("11\n00:00:46,000 --> 00:00:50,000\nEleventh test subtitle！Break after full-width exclamation mark.", "Eleventh test subtitle！"),
+        ("12\n00:00:51,000 --> 00:00:55,000\nTwelfth test subtitle.    Break after three spaces.", "Twelfth test subtitle."),
+        ("13\n00:00:56,000 --> 00:01:00,000\n\"Is this the 13th subtitle?\" Break after the quote.", "\"Is this the 13th subtitle?\""),
+        ("15\n00:01:06,000 --> 00:01:10,000\nThey say, \"We should not! Split a quotation!\"", "They say,"),
+        ("16\n00:01:11,000 --> 00:01:15,000\nWe can split <i>a block in tags, if they do not match</b>", "We can split <i>a block in tags,"),
+        ("17\n00:01:16,000 --> 00:01:20,000\nWe shouldn't split the number 500,000 even if there is a comma in the middle.", "We shouldn't split the number 500,000 even if there is a comma in the middle."),
+        ("18\n00:01:21,000 --> 00:01:31,000\nWe sent for the doctor, Dr. Smith. He came.", "We sent for the doctor, Dr. Smith."),
+        ("19\n00:01:26,000 --> 00:01:30,000\nThe letter went to Mrs. J. Smith of the U.S.A. and got lost.", "The letter went to Mrs. J. Smith of the U.S.A. and got lost."),
+    ]
+
+    def test_FindSplitPoint(self):
+        split_patterns = [regex.compile(sequence) for sequence in split_sequences]
+
+        min_duration = timedelta(seconds=1)
+        min_split_chars = 3
+
+        for source, first_part in self.split_point_cases:
+            with self.subTest(source=source):
+                line = SubtitleLine(source)
+                if not line or not line.text:
+                    self.fail("Could not parse subtitle line")
+
+                break_point = FindSplitPoint(line, split_patterns, min_duration, min_split_chars)
+                result = line.text[:break_point].strip()
+                self.assertLoggedEqual("split point text", first_part, result, input_value=line)
+
+    proportional_duration_cases = [
+        (example_line_1, 6, timedelta(seconds=0.5), timedelta(seconds=0.5)),
+        (example_line_2, 4, timedelta(seconds=0.8), timedelta(seconds=0.8)),
+        (example_line_3, 10, timedelta(seconds=0.75), timedelta(seconds=1.0, microseconds=571429)),
+        (example_line_3, 14, timedelta(seconds=0.75), timedelta(seconds=2.0, microseconds=200000)),
+        (example_line_5, 8, timedelta(seconds=0.6), timedelta(seconds=0.6)),
+        (example_line_5, 25, timedelta(seconds=0.6), timedelta(microseconds=937500))
+    ]
+
+    def test_GetProportionalDuration(self):
+        for line, characters, min_duration, expected_duration in self.proportional_duration_cases:
+            with self.subTest(line=line, characters=characters):
+                result = GetProportionalDuration(line, characters, min_duration=min_duration)
+                self.assertLoggedEqual(
+                    "proportional duration",
+                    expected_duration,
+                    result,
+                    input_value=(line.text, characters, min_duration.total_seconds()),
+                )
+
+class SubtitleProcessorTests(LoggedTestCase):
+    example_line_1 = "1\n00:00:01,000 --> 00:00:02,000\nThis is line 1"
+    example_line_2 = "2\n00:00:02,500 --> 00:00:03,500\nThis is line 2"
+    example_line_3 = "3\n00:00:31,000 --> 00:00:35,000\nThird test subtitle.\nBreak after newline, not after the comma even though it is central."
+    example_line_4 = "4\n00:00:36,000 --> 00:00:40,000\nFourth test subtitle, break after second comma, because it is closer to the middle."
+    example_line_5 = "5\n00:00:42,000 --> 00:00:46,000\nFifth test subtitle. Break after the period, not the comma even if it is closer to the middle."
+    example_line_6 = "6\n00:00:42,000 --> 00:00:50,000\nSixth test subtitle, Break after the period, and again after the comma."
+    example_line_7 = "7\n00:00:50,000 --> 00:00:55,000\nSeventh test subtitle, <i>We should not split here, even though there is a comma in the italic block.</i>"
+    example_line_8 = "8\n00:00:55,000 --> 00:01:00,000\nBreak this! But not at the exclamation mark because it would be too unbalanced."
+    example_line_9 = "9\n00:01:00,000 --> 00:01:05,000\nUmm, this subtitle has some, err, filler words that should be removed."
+    example_line_10 = "227\n00:22:53,260 --> 00:23:01,472\n不过，满清对浙江很注意，派过去的都是他们的能源，你处处有性命之忧,"
+    example_line_11 = "345\n00:49:03,294 --> 00:49:06,005\nNo escape\u2014I have one condition"
+    example_line_12 = "1\n00:00:10,000 --> 00:00:11,000\nFirst part"
+    example_line_13 = "2\n00:00:11,200 --> 00:00:11,500\nsecond part"
+    example_line_14 = "2\n00:00:11,800 --> 00:00:12,100\nsecond part"
+    example_line_15 = "12\n00:27:25,910 --> 00:27:27,000\n- 啊！\n- Ah!"
+    example_line_16 = "13\n00:27:28,000 --> 00:27:30,000\n- Um.\n- I'm here.\n- Where?"
+
+    preprocess_cases = [
+        ([example_line_1, example_line_2], {}, [example_line_1, example_line_2]),  # No changes
+        ([example_line_3, example_line_4], { "max_line_duration": 3.5, "min_line_duration": 1.0 },
+            [
+                "3\n00:00:31,000 --> 00:00:31,904\nThird test subtitle.",
+                "4\n00:00:31,954 --> 00:00:35,000\nBreak after newline, not after the comma even though it is central.",
+                "5\n00:00:36,000 --> 00:00:38,263\nFourth test subtitle, break after second comma,",
+                "6\n00:00:38,313 --> 00:00:40,000\nbecause it is closer to the middle.",
+            ]),
+        ([example_line_5], { "max_line_duration": 3.5, "min_line_duration": 1.0 },
+            [
+                "5\n00:00:42,000 --> 00:00:42,843\nFifth test subtitle.",
+                "6\n00:00:42,893 --> 00:00:46,000\nBreak after the period, not the comma even if it is closer to the middle."
+            ]),
+        ([example_line_6], { "max_line_duration": 3, "min_line_duration": 1.0 },
+            [
+                "6\n00:00:42,000 --> 00:00:44,346\nSixth test subtitle,",
+                "7\n00:00:44,396 --> 00:00:47,020\nBreak after the period,",
+                "8\n00:00:47,070 --> 00:00:50,000\nand again after the comma."
+            ]),
+        ([example_line_7], { "max_line_duration": 3.5, "min_line_duration": 1.0 },
+            [
+                "7\n00:00:50,000 --> 00:00:51,045\nSeventh test subtitle,",
+                "8\n00:00:51,095 --> 00:00:55,000\n<i>We should not split here, even though there is a comma in the italic block.</i>"
+            ]),
+        ([example_line_9], { "remove_filler_words": True, 'filler_words': standard_filler_words},
+            [
+                "9\n00:01:00,000 --> 00:01:05,000\nThis subtitle has some filler words that should be removed."
+            ]),
+        ([example_line_10],
+         { "max_line_duration": 3.5, "min_line_duration": 1.0, },
+            [
+            "227\n00:22:53,260 --> 00:22:56,196\n不过，满清对浙江很注意，",
+            "228\n00:22:56,246 --> 00:22:59,182\n派过去的都是他们的能源，",
+            "229\n00:22:59,232 --> 00:23:01,472\n你处处有性命之忧,"
+            ]),
+        ([example_line_11], { "convert_wide_dashes": True }, [ "345\n00:49:03,294 --> 00:49:06,005\nNo escape - I have one condition" ]),
+        # A brief line close on the heels of its predecessor is a fragment of it
+        ([example_line_12, example_line_13], { "merge_line_duration": 0.5, "max_gap_for_merge": 0.5 },
+            [ "1\n00:00:10,000 --> 00:00:11,500\nFirst part\nsecond part" ]),
+        # The same brief line stands alone when a real pause separates them
+        ([example_line_12, example_line_14], { "merge_line_duration": 0.5, "max_gap_for_merge": 0.5 },
+            [
+                "1\n00:00:10,000 --> 00:00:11,000\nFirst part",
+                "2\n00:00:11,800 --> 00:00:12,100\nsecond part"
+            ])
+    ]
+
+    def test_Preprocess(self):
+        for source, settings, expected in self.preprocess_cases:
+            with self.subTest(source=source, settings=settings):
+                processor = SubtitleProcessor(settings)
+                input = [SubtitleLine(line) for line in source]
+
+                result = processor.PreprocessSubtitles(input)
+                result_lines = [f"{line.number}\n{line.srt_start} --> {line.srt_end}\n{line.text}" for line in result]
+
+                self._log_expected_vs_actual(result_lines, expected)
+                self.assertSequenceEqual(result_lines, expected)
+
+    postprocess_cases = [
+        ([example_line_1, example_line_2], { "break_long_lines": True}, [example_line_1, example_line_2]),  # No changes
+        ([example_line_3, example_line_4], { 'break_long_lines': False}, [example_line_3, example_line_4]),  # No changes
+        ([example_line_3, example_line_4],
+            { 'break_long_lines': True, 'max_single_line_length': 30, 'min_single_line_length': 10 },
+            [
+                "3\n00:00:31,000 --> 00:00:35,000\nThird test subtitle.\nBreak after newline, not after the comma even though it is central.",
+                "4\n00:00:36,000 --> 00:00:40,000\nFourth test subtitle, break after second comma,\nbecause it is closer to the middle."
+            ]),
+        ([example_line_5],
+            { 'break_long_lines': True, 'max_single_line_length': 80, 'min_single_line_length': 10 },
+            [
+                "5\n00:00:42,000 --> 00:00:46,000\nFifth test subtitle.\nBreak after the period, not the comma even if it is closer to the middle."
+            ]),
+         ([example_line_7],
+            { 'break_long_lines': True, 'max_single_line_length': 30, 'min_single_line_length': 10 },
+            [
+                "7\n00:00:50,000 --> 00:00:55,000\nSeventh test subtitle,\n<i>We should not split here, even though there is a comma in the italic block.</i>"
+            ]),
+        ([example_line_8],
+            { 'break_long_lines': True, 'max_single_line_length': 44, 'min_single_line_length': 6 },
+            [
+                "8\n00:00:55,000 --> 00:01:00,000\nBreak this! But not at the exclamation\nmark because it would be too unbalanced."
+            ]),
+        ([example_line_9],
+            { 'remove_filler_words': True, 'filler_words': standard_filler_words, 'break_long_lines': True, 'max_single_line_length': 30, 'min_single_line_length': 10},
+            [
+                "9\n00:01:00,000 --> 00:01:05,000\nThis subtitle has some filler\nwords that should be removed."
+            ]),
+        (["227\n00:22:53,260 --> 00:22:56,196\n"], { }, [ "227\n00:22:53,260 --> 00:22:56,196\n"]),
+        ([example_line_11], { "convert_wide_dashes": True }, [ "345\n00:49:03,294 --> 00:49:06,005\nNo escape - I have one condition"]),
+        # A dialog row emptied by filler removal goes with its marker, leaving a single utterance
+        ([example_line_15], { 'remove_filler_words': True, 'filler_words': standard_filler_words, 'normalise_dialog_tags': True },
+            [ "12\n00:27:25,910 --> 00:27:27,000\n啊！" ]),
+        ([example_line_16], { 'remove_filler_words': True, 'filler_words': standard_filler_words, 'normalise_dialog_tags': True },
+            [ "13\n00:27:28,000 --> 00:27:30,000\n- I'm here.\n- Where?" ]),
+        # A configured title that is not in the defaults is not treated as a sentence end when breaking lines
+        (["14\n00:27:31,000 --> 00:27:35,000\nHo visto arrivare molto tardi il Sig. Rossi con suo figlio."],
+            { 'break_long_lines': True, 'max_single_line_length': 30, 'min_single_line_length': 10, 'abbreviations': "Sig" },
+            [ "14\n00:27:31,000 --> 00:27:35,000\nHo visto arrivare molto tardi\nil Sig. Rossi con suo figlio." ]),
+    ]
+
+    def test_Postprocess(self):
+        for source, settings, expected in self.postprocess_cases:
+            with self.subTest(source=source, settings=settings):
+                processor = SubtitleProcessor(settings)
+                input = [SubtitleLine(line) for line in source]
+
+                result = processor.PostprocessSubtitles(input)
+                result_lines = [f"{line.number}\n{line.srt_start} --> {line.srt_end}\n{line.text}" for line in result]
+
+                self._log_expected_vs_actual(result_lines, expected)
+                self.assertSequenceEqual(result_lines, expected)
+
+    def _log_expected_vs_actual(self, result : list[str], expected_result : list[str]):
+        log_info(',\n'.join(self._format_lines(expected_result)), prefix="===".ljust(10))
+        log_info(',\n'.join(self._format_lines(result)), prefix="-->".ljust(10))
+
+    def _format_lines(self, expected_result):
+        return [f"\"{line}\"".replace('\n', '\\n') for line in expected_result]
+
+
+class SubtitleTimingTests(LoggedTestCase):
+
+    def test_ExtendShortSubtitles(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:01,200\nabc"),
+            SubtitleLine("2\n00:00:03,000 --> 00:00:03,200\nabcdefghijkl"),
+            SubtitleLine("3\n00:00:03,900 --> 00:00:04,100\nabcdefghijkl"),
+        ]
+        subtitles = Subtitles()
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.8,
+            'seconds_per_character': 0.1,
+            'min_gap': 0.05,
+        }))
+
+        result = subtitles._extend_short_subtitles(source, save_settings)
+
+        self.assertLoggedEqual("fixed minimum duration", timedelta(seconds=1.8), result[0].end)
+        self.assertLoggedEqual("capped by next subtitle", timedelta(seconds=3.85), result[1].end)
+        self.assertLoggedEqual("dynamic final duration", timedelta(seconds=5.1), result[2].end)
+        self.assertLoggedEqual("source remains unchanged", timedelta(seconds=1.2), source[0].end)
+
+    def test_ExtendShortSubtitles_ignores_formatting_and_whitespace(self):
+        line = SubtitleLine("1\n00:00:01,000 --> 00:00:01,100\nA <i>好</i>\n👨‍👩‍👧‍👦")
+        subtitles = Subtitles()
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.0,
+            'seconds_per_character': 0.1,
+        }))
+
+        result = subtitles._extend_short_subtitles([line], save_settings)
+
+        self.assertLoggedEqual("three visible graphemes", timedelta(seconds=1.3), result[0].end)
+
+    def test_ExtendShortSubtitles_preserves_existing_overlap(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:03,000\nA long translated subtitle"),
+            SubtitleLine("2\n00:00:02,500 --> 00:00:04,000\nNext subtitle"),
+        ]
+        subtitles = Subtitles()
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 0.8,
+            'seconds_per_character': 0.1,
+            'min_gap': 0.05,
+        }))
+
+        result = subtitles._extend_short_subtitles(source, save_settings)
+
+        self.assertLoggedEqual("existing overlap remains unchanged", timedelta(seconds=3), result[0].end)
+
+    def test_ExtendShortSubtitles_ignores_frame_sized_adjustments(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:01,900\nabcdefghij"),
+            SubtitleLine("2\n00:00:02,000 --> 00:00:03,000\nNext subtitle"),
+        ]
+        save_settings = SaveSettings(SettingsType({
+            'min_line_duration': 1.0,
+            'seconds_per_character': 0.1,
+            'min_gap': 0.05,
+        }))
+
+        result = Subtitles()._extend_short_subtitles(source, save_settings)
+
+        self.assertLoggedEqual("50ms capped extension ignored", timedelta(seconds=1.9), result[0].end)
+
+    def test_BatchSubtitles_prevents_overlap_by_trimming_previous_end(self):
+        source = [
+            SubtitleLine("1\n00:00:01,000 --> 00:00:03,000\nFirst subtitle"),
+            SubtitleLine("2\n00:00:02,500 --> 00:00:02,800\nSecond subtitle"),
+            SubtitleLine("3\n00:00:02,820 --> 00:00:03,200\nThird subtitle"),
+        ]
+        batcher = SubtitleBatcher(SettingsType({
+            'prevent_overlapping_times': True,
+            'min_gap': 0.05,
+        }))
+
+        batcher.BatchSubtitles(source)
+
+        self.assertLoggedEqual("previous end trimmed", timedelta(seconds=2.45), source[0].end)
+        self.assertLoggedEqual("next start unchanged", timedelta(seconds=2.5), source[1].start)
+        self.assertLoggedEqual("non-overlapping end unchanged", timedelta(seconds=2.8), source[1].end)
+
+class SubtitleLoadTests(LoggedTestCase):
+
+    def test_LoadSubtitlesFromString_renumbers_duplicate_line_numbers(self):
+        srt_content = (
+            "1\n00:00:01,000 --> 00:00:02,000\nFirst line\n\n"
+            "2\n00:00:03,000 --> 00:00:04,000\nSecond line\n\n"
+            "2\n00:00:05,000 --> 00:00:06,000\nDuplicate line\n\n"
+        )
+        subtitles = Subtitles()
+        with self.assertLogs(level=logging.WARNING):
+            subtitles.LoadSubtitlesFromString(srt_content, SrtFileHandler())
+
+        line_numbers = [line.number for line in subtitles.originals or []]
+        self.assertLoggedSequenceEqual("renumbered lines", [1, 2, 3], line_numbers, input_value=srt_content)
+
+    def test_LoadSubtitlesFromString_renumbers_duplicates_from_start_line_number(self):
+        srt_content = (
+            "101\n00:00:01,000 --> 00:00:02,000\nFirst line\n\n"
+            "102\n00:00:03,000 --> 00:00:04,000\nSecond line\n\n"
+            "102\n00:00:05,000 --> 00:00:06,000\nDuplicate line\n\n"
+        )
+        subtitles = Subtitles()
+        with self.assertLogs(level=logging.WARNING):
+            subtitles.LoadSubtitlesFromString(srt_content, SrtFileHandler())
+
+        line_numbers = [line.number for line in subtitles.originals or []]
+        self.assertLoggedSequenceEqual("renumbered lines", [101, 102, 103], line_numbers, input_value=srt_content)
+
+    def test_LoadSubtitlesFromString_renumbers_zero_indices(self):
+        srt_content = (
+            "0\n00:00:01,000 --> 00:00:02,000\nFirst line\n\n"
+            "0\n00:00:03,000 --> 00:00:04,000\nSecond line\n\n"
+        )
+        subtitles = Subtitles()
+        with self.assertLogs(level=logging.WARNING):
+            subtitles.LoadSubtitlesFromString(srt_content, SrtFileHandler())
+
+        line_numbers = [line.number for line in subtitles.originals or []]
+        self.assertLoggedSequenceEqual("renumbered lines", [1, 2], line_numbers, input_value=srt_content)
+
+if __name__ == '__main__':
+    unittest.main()

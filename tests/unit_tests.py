@@ -3,7 +3,13 @@ import os
 import sys
 import unittest
 
-from PySubtitle.Helpers.Tests import create_logfile
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from tests.ProviderImportGuard import InstallProviderImportGuard
+
+InstallProviderImportGuard()
+
+from PySubtrans.Helpers.Tests import ReportBlockedTempFailures, create_logfile
 
 def _check_gui_dependencies() -> tuple[bool, str]:
     """Check whether PySide6 dependencies required for GUI tests are available."""
@@ -54,13 +60,13 @@ def discover_tests(base_dir=None, separate_suites=False):
     try:
         os.chdir(base_dir)
         
-        pysubtitle_dir = os.path.join(base_dir, 'PySubtitle', 'UnitTests')
-        pysubtitle_tests = discover_tests_in_directory(loader, pysubtitle_dir, base_dir)
-        
-        gui_dir = os.path.join(base_dir, 'GUI', 'UnitTests')
+        pysubtrans_dir = os.path.join(base_dir, 'tests', 'PySubtransTests')
+        pysubtitle_tests = discover_tests_in_directory(loader, pysubtrans_dir, base_dir)
+
+        guisubtrans_dir = os.path.join(base_dir, 'tests', 'GuiTests')
         gui_available, gui_dependency_error = _check_gui_dependencies()
         if gui_available:
-            gui_tests = discover_tests_in_directory(loader, gui_dir, base_dir, handle_import_errors=True)
+            gui_tests = discover_tests_in_directory(loader, guisubtrans_dir, base_dir, handle_import_errors=True)
         else:
             skip_reason = f"PySide6 unavailable: {gui_dependency_error}"
             logging.info(skip_reason)
@@ -92,12 +98,30 @@ if __name__ == '__main__':
 
     create_logfile(results_directory, "unit_tests.log")
 
-    # Run discovered tests
+    # GUI tests run first so a GUI failure stays prominent instead of being buried
+    # behind the much larger core suite, and the run stops at the first failure.
+    py_tests, gui_tests = discover_tests(separate_suites=True)
+    labelled_suites = [('GuiSubtrans', gui_tests), ('PySubtrans', py_tests)]
+
     runner = unittest.TextTestRunner(verbosity=1)
-    test_suite = discover_tests()
-    for test in test_suite:
-        result = runner.run(test)
-        if not result.wasSuccessful():
-            print("Some tests failed or had errors.")
-            sys.exit(1)
+    for index, (suite_name, test_suite) in enumerate(labelled_suites):
+        result = runner.run(test_suite)
+
+        if result.wasSuccessful():
+            continue
+
+        # Distinguish environmental failures before they are read as regressions
+        ReportBlockedTempFailures(suite_name, result)
+
+        print(f"Tests failed or had errors in the {suite_name} suite.")
+
+        # Failing fast means the remaining suites did not run - say so, rather than
+        # letting their absence look like a pass
+        remaining = labelled_suites[index + 1:]
+        if remaining:
+            names = ', '.join(name for name, _suite in remaining)
+            unrun = sum(suite.countTestCases() for _name, suite in remaining)
+            print(f"NOT RUN: {names} ({unrun} tests) - fix the {suite_name} failures and run again.")
+
+        sys.exit(1)
     

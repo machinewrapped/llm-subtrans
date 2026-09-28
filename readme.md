@@ -1,9 +1,11 @@
 # LLM-Subtrans
 LLM-Subtrans is an open source subtitle translator that uses LLMs as a translation service. It can translate subtitles between any language pairs supported by the language model.
 
-The application supports multiple subtitle formats through a pluggable system. Currently `.srt`, `.ssa`/`.ass` and `.vtt` files are supported.
+Supports multiple subtitle formats through a pluggable system (currently `.srt`, `.ssa`/`.ass` and `.vtt`).
 
-Note: LLM-Subtrans requires an active internet connection. Subtitles are sent to the provider's servers for translation, so their privacy policy applies.
+Provides transcription from video files and audio tracks, with speaker identification to improve translation accuracy, on supported models.
+
+**Note:** Subtitles and audio clips are sent to the provider's servers, so their privacy policy applies.
 
 ## Installation
 For most users the packaged release is the easiest way to use the program. Download a package from [the releases page](https://github.com/machinewrapped/llm-subtrans/releases), unzip to a folder and run `gui-subtrans`. You will be prompted for some basic settings on first run.
@@ -26,25 +28,21 @@ https://openrouter.ai/privacy
 
 [OpenRouter](https://openrouter.ai/) is a service which aggregates [models](https://openrouter.ai/models) from a wide range of providers. You will need an [OpenRouter API Key](https://openrouter.ai/settings/keys) to use the service, and a credit balance (though some quite capable models are provided free of charge).
 
-You can choose to let OpenRouter select the model automatically (the "Use Default Model" setting in the GUI or `--auto` on the command line) or you can specify a specific model. Model preferences can also be specified in the OpenRouter dashboard.
-
-Since hundreds of models are available they are grouped by model family. By default the list of available models is pulled from the "Translation" category, though this excludes many models that are perfectly capable of translation (including most free options).
+You can choose to let OpenRouter select the model automatically (the "Use Default Model" setting in the GUI or `--auto` on the command line) or you can specify a specific model.
 
 ### Google Gemini
 https://ai.google.dev/terms
 
-**Please note that regions restrictions may apply: https://ai.google.dev/available_regions**
-
-Gemini 2.5 Flash is perhaps the leading model for translation speed and fluency at time of writing, despite some censorship, and Preview models are often free to use.
+Gemini Flash is probably the leading model for translation speed and fluency, despite some censorship.
 
 You will need a Google Gemini API key from https://ai.google.dev/ or from a project created on https://console.cloud.google.com/. You must ensure that Generative AI is enabled for the api key and project.
 
-Unfortunately Gemini has some censorship and will refuse to translate content that contains certain words or phrases, even with minimal safety settings. If you hit this you will need to use another provider.
+Unfortunately Gemini will refuse to translate content that contains certain words or phrases, even with minimal safety settings. If you hit this you will need to use another provider for the batch.
 
 ### OpenAI
 https://openai.com/policies/privacy-policy
 
-You will need an OpenAI API key from https://platform.openai.com/account/api-keys to use OpenAI's GPT models. If the API key is associated with a free trial the translation speed will be *severely* restricted.
+You will need an OpenAI API key from https://platform.openai.com/account/api-keys to use OpenAI's GPT models.
 
 You can use the custom api_base parameter to access a custom OpenAI instance (or any other OpenAI-compatible endpoint, though the Custom Server option gives you more control).
 
@@ -55,9 +53,7 @@ https://platform.deepseek.com/downloads/DeepSeek%20Open%20Platform%20Terms%20of%
 
 You will need a DeepSeek API key from https://platform.deepseek.com/api_keys to use this provider.
 
-- **API Base**: You can optionally specify a custom URL, e.g. if you are hosting your own DeepSeek instance. If this is not set, the official DeepSeek API endpoint will be used.
-
-- **Model**: The default model is `deepseek-chat`, which is recommended for translation tasks. `deepseek-reasoner` may produce better results for source subtitles with OCR or transcription errors as it will spend longer trying to guess what the error is.
+- **API Base**: You can optionally specify a custom URL, e.g. if you are hosting your own DeepSeek instance.
 
 DeepSeek is quite simple to set up and offers reasonable performance at a very low price, though translation does not seem to be its strongest point.
 
@@ -74,26 +70,43 @@ https://mistral.ai/terms/
 You will need a Mistral API key from https://console.mistral.ai/api-keys/ to use this provider.
 
 - **Server URL**: If you are using a custom deployment of the Mistral API, you can specify the server URL using the `--server_url` argument.
-
 - **Model**: `mistral-large-latest` is recommended for translation. Smaller models tend to perform poorly and may not follow the system instructions well.
-
-Mistral AI is straightforward to set up, but its performance as a translator is not particularly good.
 
 ### Custom Server
 LLM-Subtrans can interface directly with any server that supports an OpenAI compatible API, including locally hosted models e.g. [LM Studio](https://lmstudio.ai/).
 
-This is mainly for research and you should not expect particularly good results from local models. LLMs derive much of their power from their size, so the small, quantized models you can run on a consumer GPU are likely to produce poor translations, fail to generate valid responses or get stuck in endless loops. If you find a model that reliably producess good results, please post about it in the Discussions area!
+You should not expect particularly good results from local models. LLMs derive much of their power from their size, so the small, quantized models you can run on a consumer GPU are likely to produce weak translations, or fail to generate valid responses.
 
-Chat and completion endpoints are supported - you should configure the settings and endpoint based on the model the server is running (e.g. instruction tuned models will probably produce better results using the completions endpoint rather than chat). The prompt template can be edited in the GUI if you are using a model that requires a particular format - make sure to include at least the {prompt} tag in the template, as this is where the subtitles that need translating in each batch will be filled in!
+Chat and completion endpoints are supported - configure the settings and endpoint based on the model the server is running. The prompt template can be edited if you are using a model that requires a particular format - make sure to include at least the {prompt} tag in the template, as this is where the subtitles that need translating in each batch will be inserted.
 
 ### Amazon Bedrock
 https://aws.amazon.com/service-terms/
 
-**Bedrock is not recommended for most users**: The setup process is complex, requiring AWS credentials, proper IAM permissions, and region configuration. Additionally, not all models on Bedrock support translation tasks or offer reliable results. Bedrock support will not be included in pre-packaged versions - if you can handle setting up AWS, you can handle installing llm-subtrans [from source](#installing-from-source).
+**Bedrock is not recommended for most users**: The setup process is complex, requiring AWS credentials, proper IAM permissions, and region configuration. Additionally, not all models on Bedrock support translation tasks or offer reliable results. Bedrock support will not be included in packaged releases - if you can handle setting up AWS, you can handle installing llm-subtrans [from source](#installing-from-source).
 
 To use Bedrock, you must:
   1. Create an **IAM user** or **role** with appropriate permissions (e.g., `bedrock:InvokeModel`, `bedrock:ListFoundationModels`).
   2. Ensure the model you wish to use is accessible in your selected AWS region and [enabled for the IAM user](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html).
+
+## Transcription
+LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...), which can then be translated with the normal workflow. This can produce better results than a text-only translation flow, with more accurate timings and speaker identification (depending on the provider).
+
+**Note**: Transcription requires `ffmpeg`/`ffprobe` to be installed and accessible.
+
+From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separate dialog for transcription. A successful result will be opened as a translation project upon completion.
+
+### Cloud transcription services
+* **OpenRouter**: Provides several speech-to-text models, e.g. the excellent MAI Transcribe 2, DeepGram and Grok.
+* **Gemini**: `gemini-3.5-transcribe` with word timestamps and speaker diarization. Very good, but brutal rate limits.
+* **Muse**: Meta `muse-voice-transcribe-1. Slow, and only provides approximate timings.
+* **OpenAI**: `whisper-1` (word timestamps) and `gpt-4o-transcribe-diarize`. Experimental support.
+
+### Local transcription
+**Qwen Local** runs Qwen3-ASR on your computer without sending audio to a transcription service. This is a beta feature.
+
+It requires a separate [PyTorch](https://pytorch.org/get-started/locally/); install suitable for your hardware. The first run downloads about 6 GB of model weights. For packaged builds, use **Set up local transcription...** in Qwen Local's settings, which installs Torch and the Qwen runtime into a separate environment. If you set up Torch with an earlier version, run the setup again and select the same environment to add the Qwen runtime. For source installs the install script will manage the dependencies.
+
+For source installs, `qwen-asr`'s own dependencies (numpy, scipy, librosa) currently require **Python 3.12+**, higher than the 3.10+ needed for the rest of the project.
 
 ## Installing from source
 If you want to use the command line tools or modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.
@@ -111,6 +124,8 @@ The easiest setup method is to run the unified installation script:
 - **MacOS/Linux**: Run `install.sh`
 
 These scripts will create a virtual environment and offer **install with GUI** or **install command line only** options, with additional options to add support for specific providers. The script will guide you through the setup and generate command scripts to launch the application.
+
+Pass `--portable` to `install.bat` or `install.sh` to create the local `.settings` directory without prompting. Use `--configpath <directory>` to configure a different settings and log directory; the installer saves that path in `.env`.
 
 During the installing process, you can choose to input an API key for each selected provider when prompted, which will be saved in a .env file so that you don't need to provide it every time you run the program. This is largely redundant if you only plan to use the GUI, as keys can be saved in the app settings.
 
@@ -166,25 +181,35 @@ During the installing process, you can choose to input an API key for each selec
     pip install -e ".[gui,openai,gemini,claude,mistral,bedrock]"   # Full install with optional providers (delete to taste)
     ```
 
+5. Optionally install `qwen-asr` for local transcription. 
+  
+  **First** install a hardware-appropriate [Torch](https://pytorch.org/get-started/locally/) version, then install the Qwen runtime.
+
+    ```sh
+    python scripts/install_torch.py
+    python scripts/install_qwen_runtime.py
+    ```
+
+    This avoids qwen pulling in a generic Torch version without hardware acceleration. The Qwen runtime script installs qwen-asr without the web frameworks its demo apps depend on. `pip install -e ".[qwen-asr]"` also works, but installs those as well.
+
 ## Usage
-The program works by dividing the subtitles up into small batches and sending each one to the translation service in turn. It is likely to take time to complete, and can potentially make many API calls for each subtitle file.
+The program works by dividing the subtitles up into batches and sending each one to the translation service in turn. 
+
+It can potentially make many API calls for each subtitle file, depending on the batch size. Speed heavily depends on the selected model.
 
 By default The translated subtitles will be written to a new file in the same directory with the target langugage appended to the original filename.
 
 ### GUI
-The [Subtrans GUI](https://github.com/machinewrapped/llm-subtrans/wiki/GUI#gui-subtrans) is the best and easiest way to use the program. After installation, launch the GUI with the `gui-subtrans` command or shell script, and hopefully the rest should be self-explanatory.
+The [Subtrans GUI](https://github.com/machinewrapped/llm-subtrans/wiki/GUI#gui-subtrans) is the best and easiest way to use the program. 
+
+After installation, launch the GUI with the `gui-subtrans` command or shell script, and hopefully the rest should be self-explanatory.
 
 See the project wiki for further details on how to use the program.
 
 ### Command Line
-
 LLM-Subtrans can be used as a console command or shell script. The install scripts create a cmd or sh file in the project root for each provider, which will take care of activating the virtual environment and calling the corresponding translation script.
 
-The most basic usage is:
 ```sh
-# List supported subtitle formats
-llm-subtrans --list-formats
-
 # Use OpenRouter with automatic model selection
 llm-subtrans --auto -l <language> <path_to_subtitle_file>
 
@@ -198,12 +223,15 @@ llm-subtrans -l <language> -o output.srt input.ass
 llm-subtrans -s <server_address> -e <endpoint> -k <api_key> -l <language> <path_to_subtitle_file>
 
 # Use specific providers
-gpt-subtrans <path_to_subtitle_file> --target_language <target_language>
-gemini-subtrans <path_to_subtitle_file> --target_language <target_language>
-claude-subtrans <path_to_subtitle_file> --target_language <target_language>
+gpt-subtrans --model gpt-5-mini --target-language <target_language> <path_to_subtitle_file>
+gemini-subtrans --model gemini-2.5-flash-latest --target-language <target_language> <path_to_subtitle_file>
+claude-subtrans --model claude-3-5-haiku-latest --target-language <target_language> <path_to_subtitle_file>
 
-# process files in different folders (the script will need editing to configure the path and provider settings)
-python3 batch_process.py
+# List supported subtitle formats
+llm-subtrans --list-formats
+
+# Batch process files in a folder tree (activate the virtual environment first)
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --apikey sk-... --language Spanish
 ```
 
 The output format is inferred from file extensions. To convert between formats, provide an output path with the desired extension.
@@ -211,6 +239,31 @@ The output format is inferred from file extensions. To convert between formats, 
 If the target language is not specified the default is English.
 
 Other options that can be specified on the command line are detailed below.
+
+#### Transcription
+
+Transcription is a separate process.
+
+```sh
+# Transcribe with the default provider (Qwen Local)
+python scripts/transcribe.py movie.mkv --language Chinese --format ass
+
+# Use a cloud provider
+python scripts/transcribe.py movie.mkv --provider OpenRouter --model microsoft/mai-transcribe-2 --apikey sk-... --language Japanese --diarize
+```
+
+Transcription options:
+- `--provider` — transcription provider (default: `Qwen Local`; use `--list-providers` to list)
+- `--language` — spoken language hint (e.g. Chinese, English)
+- `--track` — audio track index (default: 0; use `--list-tracks` to identify audio tracks in the source)
+- `--diarize` / `--no-diarize` — request speaker diarization (model-dependent)
+- `--align` / `--no-align` — word-level timestamps (default: on)
+- `--format` — output format: `srt`, `ass`, or `vtt` (default: `vtt`; `ass`/`vtt` preserve speaker labels)
+- `-o` / `--output` — output file path (defaults to alongside the media file)
+- `-s` / `--server` — server address for the provider
+- `-k` / `--apikey` — API key for cloud providers
+- `-m` / `--model` — model name
+- `--capture` — also write the provider's raw output to a JSON file, for replaying with `scripts/replay_transcription.py` (developer tool)
 
 ## Project File
 
@@ -228,6 +281,10 @@ llm-subtrans --project --auto -l <language> <path_to_subtitle_file>
 llm-subtrans --project --auto -l <language> <path_to_subtrans_file>
 llm-subtrans --project --auto -l <language> <path_to_subtitle_file>  # Project file will be detected automatically if it is in the same folder
 ```
+
+## Configuration directory
+
+The GUI and command-line tools use the platform's standard application-data directory for settings and logs. Use `--portable` to store them in a `.settings` folder in the current directory, or `--configpath <directory>` to set a specific location. An existing `.settings` directory will automatically activate portable mode.
 
 ## Format Conversion
 LLM-Subtrans is primarily a translation application, and format conversion is probably best handled by dedicated tools, but the option exists to read one format and write another.
@@ -249,7 +306,7 @@ llm-subtrans path/to/my/subtitles.srt --moviename "My Awesome Movie" --ratelimit
 
 Default values for many settings can be set in the .env file, using a NAME_IN_CAPS format. See Options.py and the various Provider_XXX files for the full list.
 
-- `-l`, `--target_language`:
+- `-l`, `--target-language`:
   The language to translate the subtitles to.
 
 - `-o`, `--output`:
@@ -272,6 +329,13 @@ Default values for many settings can be set in the .env file, using a NAME_IN_CA
 
 - `--substitution`:
   A pair of strings separated by `::`, to substitute in either source or translation, or the name of a file containing a list of such pairs.
+
+- `--build-terminology-map`:
+  Accumulates names, titles and technical terms into a terminology map that is provided to subsequent batches so that consistent translations can be used throughout.
+
+- `--terminology`:
+  Seed the terminology map with a `SOURCE::TRANSLATION` pair, or a path to a text file of such pairs. Repeatable.
+  Example: `--terminology "Alice::アリス" --terminology wonderland_locations.txt`
 
 - `--scenethreshold`:
   Number of seconds between lines to consider it a new scene.
@@ -341,9 +405,6 @@ Some additional arguments are available for specific providers.
 
 - `-m`, `--model`:
   Specify the [AI model](https://platform.openai.com/docs/models) to use for translation
-
-- `--proxy`:
-  SOCKS proxy URL
 
 #### Gemini
 - `-k`, `--apikey`:
@@ -425,18 +486,35 @@ Some additional arguments are available for specific providers.
   If using a conversation endpoint, translation instructions will be sent as the "system" user if this flag is specified.
 
 
-### Proxy
+## Proxy Support
 
-If you need to use proxy in your location, you can use socks proxy by using command line
+LLM-Subtrans has support for proxies across most providers.
+
+### Configuration
+
+You can configure a proxy using the following arguments:
+
+- `--proxy <URL>`:
+  Specify the proxy URL. Supports both HTTP and SOCKS proxies.
+  *Example*: `--proxy http://127.0.0.1:8888` or `--proxy socks5://127.0.0.1:1080`
+
+- `--proxycert <PATH>`:
+  Path to a custom CA certificate bundle (PEM format). This is required when using an intercepting proxy (like `mitmproxy` or `Fiddler`) that uses a self-signed certificate.
+  *Example*: `--proxycert C:\Users\name\.mitmproxy\mitmproxy-ca-cert.pem`
+
+### Example Usage
 
 ```sh
-python3 gpt-subtrans.py <path_to_subtitle_file> --target_language <target_language> --proxy socks://127.0.0.1:1089
+# Use a SOCKS proxy for OpenRouter
+llm-subtrans --auto -l Spanish input.srt --proxy socks5://127.0.0.1:1080
+
+# Use mitmdump with a custom certificate
+llm-subtrans --auto -l French input.srt --proxy http://127.0.0.1:8080 --proxycert ./mitmproxy-ca-cert.pem
 ```
-Remember to change the local port to yours and turn on your proxy tools such as v2ray, naiveproxy and clash.
 
 ### batch process
 
-you can process files with the following struct：
+You can process files with the following directory structure：
 
       #   -SRT
       #   --fold1
@@ -448,10 +526,23 @@ you can process files with the following struct：
       #   ---2.srt
       #   ...
 
+Use the `batch_translate.py` script to process multiple subtitle files:
+
+You can modify the `DEFAULT_OPTIONS` values directly in the script file, or use a combination of script defaults and command line overrides.
+
 ```sh
-python3 batch_process.py  # process files in different folders
+# Preview mode to test settings without making API calls
+python scripts/batch_translate.py --preview
+
+# Basic usage with command line arguments
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --apikey sk-... --language Spanish
+
+# Override output format
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --output-format srt
+
+# Use additional options
+python scripts/batch_translate.py ./subtitles ./translated --provider openai --option max_batch_size=150 --option postprocess_subtitles=true
 ```
-You need to modify the command line in batch_process.py accordingly.
 
 ### Developers
 It is recommended to use an IDE such as Visual Studio Code to run the program when installed from source, and set up a launch.json file to specify the arguments.
@@ -473,6 +564,20 @@ Create a new branch for your changes using the following command:
 
 ```sh
 git checkout -b feature/your-new-feature
+```
+
+Install pyright as a pre-commit hook (optional but encouraged):
+
+```sh
+# Install pyright for type checking
+pip install pyright
+
+# Install git hooks (runs type checking before commits)
+# Windows:
+hooks\install.bat
+
+# Linux/Mac:
+./hooks/install.sh
 ```
 
 Make your changes to the code and commit them with a descriptive commit message.
@@ -514,7 +619,7 @@ Translation providers:
 
 For the GUI:
 - pyside6 (https://wiki.qt.io/Qt_for_Python)
-- events (https://pypi.org/project/Events/)
+- blinker (https://pythonhosted.org/blinker/)
 - darkdetect (https://github.com/albertosottile/darkdetect)
 - appdirs (https://github.com/ActiveState/appdirs)
 
@@ -548,4 +653,4 @@ Version 0.2 employs a new prompting approach that greatly reduces desyncs caused
 The instructions have also been made more detailed, with multiple examples of correct output for GPT to reference, and the generation of summaries has been improved so that GPT is better able to understand the context of the batch it is translating. Additionally, double-clicking a scene or batch now allows the summary to be edited by hand, which can greatly improve the results of a retranslation and of subsequent batches or scenes. Individually lines can also be edited by double-clicking them.
 
 ## License
-LLM-Subtrans is licensed under the MIT License. See LICENSE for the 3rd party library licenses.
+LLM-Subtrans is licensed under the MIT License. The packaged GUI-Subtrans build includes THIRD-PARTY-NOTICES.txt with the licenses of the third-party libraries it bundles.

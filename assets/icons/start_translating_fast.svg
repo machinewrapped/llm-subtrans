@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-    <!-- fast-forward: two larger play triangles -->
-    <polygon points="5 4 14 12 5 20" fill="white" stroke="black"/>
-    <polygon points="12 4 21 12 12 20" fill="white" stroke="black"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+     fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="m3 5 8 7-8 7V5Zm10 0 8 7-8 7V5Z" fill="white"/>
 </svg>

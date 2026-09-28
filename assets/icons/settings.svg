@@ -1,16 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" xmlns="http://www.w3.org/2000/svg">
-    <!-- Main gear body -->
-    <circle cx="12" cy="12" r="7" fill="white" stroke="black"/>
-    <!-- Gear teeth extending outward -->
-    <rect x="11" y="2" width="2" height="3" fill="white" stroke="black"/>
-    <rect x="11" y="19" width="2" height="3" fill="white" stroke="black"/>
-    <rect x="2" y="11" width="3" height="2" fill="white" stroke="black"/>
-    <rect x="19" y="11" width="3" height="2" fill="white" stroke="black"/>
-    <rect x="17.5" y="4.5" width="2" height="2" fill="white" stroke="black" transform="rotate(45 18.5 5.5)"/>
-    <rect x="17.5" y="17.5" width="2" height="2" fill="white" stroke="black" transform="rotate(45 18.5 18.5)"/>
-    <rect x="4.5" y="17.5" width="2" height="2" fill="white" stroke="black" transform="rotate(45 5.5 18.5)"/>
-    <rect x="4.5" y="4.5" width="2" height="2" fill="white" stroke="black" transform="rotate(45 5.5 5.5)"/>
-    <!-- Center hole -->
-    <circle cx="12" cy="12" r="2.5" fill="white" stroke="black"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+     fill="none" stroke="black" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="m10 3-.5 2.5-2 .9L5 5.5 2.5 9l2 1.6v2.8l-2 1.6L5 18.5l2.5-.9 2 .9L10 21h4l.5-2.5 2-.9 2.5.9 2.5-3.5-2-1.6v-2.8l2-1.6L19 5.5l-2.5.9-2-.9L14 3h-4Z" fill="white"/><circle cx="12" cy="12" r="3"/>
 </svg>

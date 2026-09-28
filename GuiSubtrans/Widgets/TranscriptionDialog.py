@@ -616,6 +616,7 @@ class TranscriptionDialog(QDialog):
             'min_split_chars': self.global_options.get_int('min_split_chars'),
             'max_newlines': self.global_options.get_int('max_newlines'),
             'min_gap': self.global_options.get_float('min_gap'),
+            'abbreviations': self.global_options.get_list('abbreviations'),
         })
 
         output_format = str(self.fields['output_format'].GetValue() or '.srt').lstrip('.')

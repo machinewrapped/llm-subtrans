@@ -472,6 +472,24 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             dialog.deleteLater()
             self.application.processEvents()
 
+    def test_build_command_passes_global_abbreviations(self) -> None:
+        """Transcription runs receive the configured abbreviations, not the defaults."""
+        options = Options({'abbreviations': 'Sig,Sra'})
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(options)
+        try:
+            dialog.provider = FakeTranscriptionProvider()
+            dialog.media_path = __file__
+            command = dialog._build_command()
+
+            self.assertLoggedIsNotNone('command created', command)
+            if command is not None:
+                self.assertLoggedEqual('configured abbreviations', ['Sig', 'Sra'],
+                                       command.settings.get_list('abbreviations'))
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
     def test_option_widgets_have_valid_size_hints(self) -> None:
         """Option widgets report valid size hints and non-zero layouts."""
         int_w = IntegerOptionWidget('int_key', 10)

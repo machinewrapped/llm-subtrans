@@ -11,6 +11,7 @@ import transcribe  # type: ignore[import-not-found] - scripts dir added to sys.p
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
+from PySubtrans.Options import Options
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionOutcome, TranscriptionStatus
 
@@ -141,6 +142,24 @@ class TestTranscribeCliExecution(LoggedTestCase):
         self.assertLoggedEqual("exit status", 0, result)
         settings = coordinator_factory.call_args.args[1]
         self.assertLoggedEqual("coordinator language", "cmn-Hans-CN", settings.get_str('language'))
+
+    def test_abbreviations_pass_to_coordinator(self):
+        """The coordinator receives the configured abbreviations, not the defaults."""
+        coordinator = Mock()
+        coordinator.CreateTranscription.return_value = TranscriptionOutcome(
+            TranscriptionStatus.COMPLETED, Mock(linecount=1))
+
+        with patch.object(transcribe, 'InitLogger'), \
+                patch.object(transcribe, 'Options', return_value=Options({'abbreviations': 'Sig,Sra'})), \
+                patch.object(transcribe.TranscriptionProvider, 'create_provider', return_value=Mock()), \
+                patch.object(transcribe, 'TranscriptionCoordinator', return_value=coordinator) as coordinator_factory, \
+                patch.object(transcribe, 'GetOutputPath', return_value='out.vtt'), \
+                patch.object(sys, 'argv', ['transcribe.py', 'input.wav']):
+            result = transcribe.main()
+
+        self.assertLoggedEqual("exit status", 0, result)
+        settings = coordinator_factory.call_args.args[1]
+        self.assertLoggedEqual("coordinator abbreviations", ['Sig', 'Sra'], settings.get_list('abbreviations'))
 
     def test_plain_output_passes_postprocess_options(self):
         """Postprocessing applies even when no project file is requested."""

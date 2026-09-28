@@ -106,6 +106,7 @@ def main() -> int:
         'min_split_chars': options.get_int('min_split_chars'),
         'max_newlines': options.get_int('max_newlines'),
         'min_gap': options.get_float('min_gap'),
+        'abbreviations': options.get_list('abbreviations'),
     })
     # Drop unset values so provider defaults apply
     if args.rate_limit is not None:

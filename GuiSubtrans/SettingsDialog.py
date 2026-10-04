@@ -12,6 +12,7 @@ from PySubtrans.Options import ConfigActionOption, INFO_OPTION, Options
 from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
+from PySubtrans.Subtitles import OriginalTextPlacement
 from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
 from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
@@ -102,6 +103,7 @@ class SettingsDialog(QDialog):
             'max_retries': (int, _("Number of times to retry a failed translation before giving up")),
             'backoff_time': (float, _("Seconds to wait before retrying a failed translation")),
             'prewarm_providers': (bool, _("Load previously used translation providers after startup to make switching providers faster")),
+            'original_text_placement': (OriginalTextPlacement, _("Whether the original text goes above or below the translation when the original text is included")),
         }
     }
 

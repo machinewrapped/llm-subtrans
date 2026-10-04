@@ -9,7 +9,7 @@ from dataclasses import dataclass, field
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames, TryParseNonNegative
-from PySubtrans import SaveSettings, batch_subtitles, init_options, init_translator, preprocess_subtitles
+from PySubtrans import OriginalTextPlacement, SaveSettings, batch_subtitles, init_options, init_translator, preprocess_subtitles
 from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
@@ -220,6 +220,9 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--description', type=str, default=None, help="A brief description of the film to give context")
     parser.add_argument('--addrtlmarkers', action='store_true', help="Add RTL markers to translated lines if they contains primarily right-to-left script")
     parser.add_argument('--includeoriginal', action='store_true', help="Include the original text in the translated subtitles")
+    placement_group = parser.add_mutually_exclusive_group()
+    placement_group.add_argument('--originalabove', action='store_true', help="Include the original text above the translation (implies --includeoriginal)")
+    placement_group.add_argument('--originalbelow', action='store_true', help="Include the original text below the translation (implies --includeoriginal)")
     parser.add_argument('--instruction', action='append', type=str, default=None, help="An instruction for the AI translator")
     parser.add_argument('--instructionfile', type=str, default=None, help="Name/path of a file to load instructions from")
     parser.add_argument('--matchpartialwords', action='store_true', help="Allow substitutions that do not match not on word boundaries")
@@ -262,6 +265,16 @@ def HandleFormatListing(args: Namespace) -> None:
             print("No subtitle formats available.")
         raise SystemExit(0)
 
+def GetOriginalTextPlacement(args : Namespace) -> OriginalTextPlacement|None:
+    """Return the placement requested by --originalabove or --originalbelow, if either was given."""
+    if args.originalabove:
+        return OriginalTextPlacement.OriginalAboveTranslation
+
+    if args.originalbelow:
+        return OriginalTextPlacement.TranslationAboveOriginal
+
+    return None
+
 def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
     """ Create options with additional arguments """
     if getattr(args, 'proxycert', None):
@@ -271,7 +284,8 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
     settings = {
         'api_key': args.apikey,
         'description': args.description,
-        'include_original': args.includeoriginal,
+        'include_original': args.includeoriginal or args.originalabove or args.originalbelow,
+        'original_text_placement': GetOriginalTextPlacement(args),
         'add_right_to_left_markers': args.addrtlmarkers,
         'instruction_args': args.instruction,
         'instruction_file': args.instructionfile or "instructions.txt",

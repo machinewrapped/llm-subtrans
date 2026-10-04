@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from GuiSubtrans.Command import Command
 from GuiSubtrans.CommandQueue import CommandQueue
 from GuiSubtrans.Commands.StartTranslationCommand import StartTranslationCommand
@@ -56,3 +58,36 @@ class TranslateSelectionTests(GuiSubtitleTestCase):
 
         self.assertLoggedSequenceEqual("scenes to translate", [1], sorted(scenes.keys()))
         self.assertLoggedEqual("only the selected lines", { 'batches' : [2], 'lines' : [3, 4] }, scenes.get(1))
+
+
+class SaveProjectTests(GuiSubtitleTestCase):
+    """Test that Shift+Save writes the project even when nothing has changed."""
+
+    def _shift_save(self, chosen_path : str) -> tuple[bool, list[str]]:
+        datamodel, _subtitles = self.create_datamodel_from_line_counts([[2]])
+        project = datamodel.project
+        if project is None:
+            self.fail("No project")
+
+        project.needs_writing = False
+        actions = ProjectActions(CapturingCommandQueue(), datamodel)
+        emitted : list[str] = []
+        actions.saveProject.connect(emitted.append)
+
+        with patch.object(ProjectActions, '_is_shift_pressed', return_value=True), \
+                patch('GuiSubtrans.ProjectActions.QFileDialog.getSaveFileName', return_value=(chosen_path, "")):
+            actions.SaveProject()
+
+        return project.needs_writing, emitted
+
+    def test_shift_save_marks_project_for_writing(self) -> None:
+        needs_writing, emitted = self._shift_save("chosen.subtrans")
+
+        self.assertLoggedEqual("save requested", ["chosen.subtrans"], emitted)
+        self.assertLoggedTrue("project marked for writing", needs_writing)
+
+    def test_cancelled_shift_save_leaves_project_unchanged(self) -> None:
+        needs_writing, emitted = self._shift_save("")
+
+        self.assertLoggedEqual("no save requested", [], emitted)
+        self.assertLoggedFalse("project not marked for writing", needs_writing)

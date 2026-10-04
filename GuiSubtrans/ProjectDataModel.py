@@ -192,4 +192,11 @@ class ProjectDataModel:
     def _update_save_settings(self) -> None:
         """Update settings applied only while writing translated subtitles."""
         if self.project:
-            self.project.save_settings = SaveSettings(self.project_options)
+            save_settings = SaveSettings(self.project_options)
+            previous = self.project.save_settings
+
+            # The saved translation no longer reflects the settings it would be written with
+            if previous is not None and save_settings != previous and self.project.any_translated:
+                self.project.needs_writing = True
+
+            self.project.save_settings = save_settings

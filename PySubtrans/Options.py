@@ -60,6 +60,7 @@ default_settings = {
     'instruction_file': env_str('INSTRUCTION_FILE', None),
     'target_language': env_str('TARGET_LANGUAGE', 'English'),
     'include_original': env_bool('INCLUDE_ORIGINAL', False),
+    'original_text_placement': env_str('ORIGINAL_TEXT_PLACEMENT', 'OriginalAboveTranslation'),
     'add_right_to_left_markers': env_bool('add_right_to_left_markers', False),
     'scene_threshold': env_float('SCENE_THRESHOLD', 60.0),
     'min_batch_size': env_int('MIN_BATCH_SIZE', 10),

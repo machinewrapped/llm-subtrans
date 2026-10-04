@@ -1,7 +1,11 @@
+from datetime import timedelta
+
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from .DataModelHelpers import CreateTestDataModel
 from PySubtrans.Helpers.TestCases import SubtitleTestCase
 from PySubtrans.Options import Options, SettingsType
+from PySubtrans.SubtitleBuilder import SubtitleBuilder
+from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.SubtitleProject import SubtitleProject
@@ -262,3 +266,21 @@ class DataModelTests(SubtitleTestCase):
         self.assertLoggedEqual("Max threads with no project", 6, max_threads_no_project)
         self.assertIsNotNone(max_threads_no_project)
 
+    def test_SaveSettingsChangeMarksTranslationForWriting(self):
+        """Changing a save-time setting marks a translated project for writing, so it can be saved again"""
+        project = SubtitleProject()
+        project.subtitles = (SubtitleBuilder(max_batch_size=1)
+            .AddLines([(timedelta(seconds=1), timedelta(seconds=2), "Original")])
+            .Build())
+
+        with SubtitleEditor(project.subtitles) as editor:
+            editor.DuplicateOriginalsAsTranslations()
+
+        datamodel = ProjectDataModel(project, Options({'provider': 'Dummy GPT'}))
+        project.needs_writing = False
+
+        datamodel.UpdateSettings(SettingsType({'max_threads': 6}))
+        self.assertLoggedFalse("Needs writing after unrelated change", project.needs_writing)
+
+        datamodel.UpdateSettings(SettingsType({'original_text_placement': 'TranslationAboveOriginal'}))
+        self.assertLoggedTrue("Needs writing after placement change", project.needs_writing)

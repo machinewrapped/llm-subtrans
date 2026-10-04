@@ -319,6 +319,12 @@ Default values for many settings can be set in the .env file, using a NAME_IN_CA
 - `-o`, `--output`:
   Specify a filename for the translated subtitles.
 
+- `--includeoriginal`:
+  Include the original text in the translated subtitles, above the translation unless set otherwise.
+
+- `--originalabove`, `--originalbelow`:
+  Include the original text above or below the translation (either implies `--includeoriginal`).
+
 - `--project`:
   Read or Write a project file for the subtitles being translated (see above for details)
 

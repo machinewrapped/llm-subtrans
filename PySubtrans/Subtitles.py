@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import timedelta
+from enum import Enum
 import os
 import logging
 import threading
@@ -34,11 +35,20 @@ def HasDuplicateLineNumbers(lines : list[SubtitleLine]) -> bool:
     line_numbers = [line.number for line in lines]
     return len(set(line_numbers)) != len(line_numbers)
 
+class OriginalTextPlacement(str, Enum):
+    """
+    Where the original text goes relative to the translation when include_original is set.
+    Values are the member names, so a setting saved as a string compares equal to its member.
+    """
+    OriginalAboveTranslation = "OriginalAboveTranslation"
+    TranslationAboveOriginal = "TranslationAboveOriginal"
+
 class SaveSettings:
     """Settings applied only while writing translated subtitles."""
 
     def __init__(self, settings : SettingsType|Options|None = None) -> None:
         settings = settings or SettingsType()
+        self.original_text_placement : OriginalTextPlacement = self._get_original_text_placement(settings)
         self.extend_short_subtitles : bool = settings.get_bool('extend_short_subtitles', False)
         self.min_line_duration : timedelta = max(
             settings.get_timedelta('min_line_duration', timedelta(seconds=0.8)),
@@ -52,6 +62,22 @@ class SaveSettings:
             settings.get_timedelta('min_gap', timedelta(seconds=0.05)),
             timedelta(),
         )
+
+    def __eq__(self, other : object) -> bool:
+        return isinstance(other, SaveSettings) and vars(self) == vars(other)
+
+    @staticmethod
+    def _get_original_text_placement(settings : SettingsType|Options) -> OriginalTextPlacement:
+        """Read original_text_placement, falling back to the original above the translation."""
+        placement = settings.get_str('original_text_placement')
+        if placement is None:
+            return OriginalTextPlacement.OriginalAboveTranslation
+
+        if placement not in OriginalTextPlacement.__members__:
+            logging.warning(_("Unknown original text placement '{}', placing the original above the translation").format(placement))
+            return OriginalTextPlacement.OriginalAboveTranslation
+
+        return OriginalTextPlacement(placement)
 
 class Subtitles:
     """
@@ -325,7 +351,8 @@ class Subtitles:
                 return
 
             if self.settings.get('include_original'):
-                translated = self._merge_original_and_translated(originals, translated)
+                placement = save_settings.original_text_placement if save_settings else OriginalTextPlacement.OriginalAboveTranslation
+                translated = self._merge_original_and_translated(originals, translated, placement)
 
             output_lines = translated
             if save_settings and save_settings.extend_short_subtitles:
@@ -409,12 +436,16 @@ class Subtitles:
         return adjusted
 
 
-    def _merge_original_and_translated(self, originals: list[SubtitleLine], translated: list[SubtitleLine]) -> list[SubtitleLine]:
+    def _merge_original_and_translated(self, originals: list[SubtitleLine], translated: list[SubtitleLine], placement : OriginalTextPlacement) -> list[SubtitleLine]:
+        """Combine each original line with its translation, in the order given by placement."""
         lines = {item.key: SubtitleLine(item) for item in originals if item.key}
 
         for item in translated:
             if item.key in lines:
                 line = lines[item.key]
-                line.text = f"{line.text}\n{item.text}"
+                if placement == OriginalTextPlacement.TranslationAboveOriginal:
+                    line.text = f"{item.text}\n{line.text}"
+                else:
+                    line.text = f"{line.text}\n{item.text}"
 
         return sorted(lines.values(), key=lambda item: item.key)

@@ -719,13 +719,13 @@ class TranscriptionDialog(QDialog):
     def _on_status(self, text : str) -> None:
         self.status_label.setText(text)
 
-    @Slot(int, int, str)
-    def _on_progress(self, done : int, total : int, span : str) -> None:
-        self.run_progress.OnProgress(done, total, span)
+    @Slot(int, str)
+    def _on_progress(self, done : int, span : str) -> None:
+        self.run_progress.OnProgress(done, span)
 
         if self.run_progress.audio_total <= 0.0:
-            # The streamed chunk plan has no stable total. Stay indeterminate
-            # only until the media duration arrives through audio progress.
+            # The number of chunks is not known in advance.
+            # Stay indeterminate until the media duration arrives through audio progress.
             self.progress_bar.setRange(0, 0)
 
         self._update_run_status()

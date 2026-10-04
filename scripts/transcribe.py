@@ -95,9 +95,8 @@ def main() -> int:
         logging.error(f"Unable to initialise transcription: {e}")
         return 1
 
-    def progress(sender, done : int, total : int, span : str) -> None:
-        # Total is unknown while the chunk plan streams in (0 signals that)
-        label = f"Transcribing chunk {done + 1}/{total}" if total > 0 else f"Transcribing chunk {done + 1}"
+    def progress(sender, done : int, span : str) -> None:
+        label = f"Transcribing chunk {done + 1}"
         logging.info(f"{label} [{span}]")
         if args.verbose:
             print(f"{label} [{span}]", flush=True)

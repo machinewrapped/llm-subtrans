@@ -214,7 +214,7 @@ class TranscriptionCoordinator:
         """
         def report_progress(done : int, chunk : AudioChunk) -> None:
             # Total is unknown while the plan streams in (0 signals that)
-            self.events.progress.send(self, done=done, total=0, span=SpanLabel(chunk.start, chunk.end))
+            self.events.progress.send(self, done=done, span=SpanLabel(chunk.start, chunk.end))
 
         def report_audio(chunk : AudioChunk) -> None:
             if run.audio_total_seconds > 0.0:

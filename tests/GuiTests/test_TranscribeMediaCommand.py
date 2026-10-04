@@ -46,7 +46,7 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         segment = TranscriptionSegment(timedelta(), timedelta(seconds=1), 'Recovered text')
 
         def create_transcription(media, options, **kwargs):
-            coordinator.events.progress.send(coordinator, done=1, total=2, span='0:00-0:10')
+            coordinator.events.progress.send(coordinator, done=1, span='0:00-0:10')
             coordinator.events.audio_progress.send(coordinator, processed=10.0, total=20.0)
             coordinator.events.segment.send(coordinator, segment=segment)
             return TranscriptionOutcome(TranscriptionStatus.COMPLETED, subtitles, transcribed_lines=1)
@@ -55,7 +55,7 @@ class TestTranscribeMediaCommand(LoggedTestCase):
         provider = Mock(settings=SettingsType())
         command = TranscribeMediaCommand(provider, 'media.wav', SettingsType(), Options())
         progress = []
-        command.progressed.connect(lambda done, total, span: progress.append((done, total, span)))
+        command.progressed.connect(lambda done, span: progress.append((done, span)))
         audio_progress = []
         command.audioProgressed.connect(lambda processed, total: audio_progress.append((processed, total)))
         command.segmented.connect(segment_events.append)
@@ -64,7 +64,7 @@ class TestTranscribeMediaCommand(LoggedTestCase):
 
         self.assertLoggedTrue('completed command succeeds', result)
         self.assertLoggedEqual('subtitles retained', subtitles, command.subtitles)
-        self.assertLoggedEqual('progress forwarded', [(1, 2, '0:00-0:10')], progress)
+        self.assertLoggedEqual('progress forwarded', [(1, '0:00-0:10')], progress)
         self.assertLoggedEqual('audio progress forwarded', [(10.0, 20.0)], audio_progress)
         self.assertLoggedEqual('segment forwarded', [segment], segment_events)
 

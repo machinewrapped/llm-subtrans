@@ -301,7 +301,7 @@ Save the transcription as VTT or ASS rather than SRT. SRT has no way to store sp
 Subscribe to `transcriber.events` for progress updates:
 
 - `audio_progress(sender, processed, total)`: seconds of audio transcribed so far, out of the total length.
-- `progress(sender, done, total, span)`: sent before each chunk of audio is transcribed. `total` is 0, because the number of chunks is not known in advance.
+- `progress(sender, done, span)`: sent before each chunk of audio is transcribed. The number of chunks is not known in advance, so use `audio_progress` for overall progress.
 - `status(sender, text)`: sent when transcription enters a new phase.
 
 ```python

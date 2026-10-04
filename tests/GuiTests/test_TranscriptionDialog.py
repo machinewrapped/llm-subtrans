@@ -195,7 +195,7 @@ class TestTranscriptionRunEvidence(LoggedTestCase):
             dialog = TranscriptionDialog(options)
         try:
             dialog.run_progress.started = 100.0
-            dialog.run_progress.OnProgress(1, 0, '0.0s-10.0s')
+            dialog.run_progress.OnProgress(1, '0.0s-10.0s')
             with patch('GuiSubtrans.Widgets.TranscriptionRunProgress.time.monotonic', return_value=160.0):
                 dialog._on_audio_progress(10.0, 100.0)
 
@@ -204,7 +204,7 @@ class TestTranscriptionRunEvidence(LoggedTestCase):
 
             # Chunk callbacks continue to report the current span, but must
             # not replace the time-based progress with a busy indicator.
-            dialog._on_progress(2, 0, '10.0s-20.0s')
+            dialog._on_progress(2, '10.0s-20.0s')
             self.assertLoggedEqual('chunk progress keeps determinate bar', 10, dialog.progress_bar.value())
         finally:
             dialog.deleteLater()

@@ -14,10 +14,13 @@ from PySubtrans.Transcription.WordAlignment import (AlignedWord, AlignWords, Ass
                                                     SplitAtSpeakerChanges, TimedSentenceRanges, WordCoverage)
 from PySubtrans.Transcription.WordTiming import WordTiming
 
-# A spoken word lasting under this fraction of its estimate has been squeezed by the aligner, and is not used for timing
+# A spoken word lasting less than this fraction of its estimated speaking time is treated as squeezed, and not used for timing
 SQUEEZED_WORD_FRACTION = 0.1
 
-# A part whose matched words spell at least this share of its text is timed by them alone
+# With partial word coverage, the word timings may leave out stretches of the transcript.
+# A part spanning only its timed words would then be too short to say all of its text, so it is extended.
+# If the words match at least this share of the part's spoken characters, the rest is put down to the words and transcript
+# writing the same speech differently (e.g. "3" and "three"), not to missing speech, and the part keeps the span of its words.
 WELL_COVERED_FRACTION = 0.8
 
 
@@ -29,16 +32,25 @@ class PartCoverage(NamedTuple):
 
 
 def IsSqueezed(word : WordTiming) -> bool:
-    """Whether a spoken word is far too brief for its text, as when an aligner crams a run of words together."""
+    """
+    Whether a spoken word lasts far less time than its text takes to say.
+    An aligner that loses its place can stack the following words into a few milliseconds, so their times are not reliable.
+    """
     if word.is_punctuation:
         return False
 
     return (word.end - word.start).total_seconds() < SQUEEZED_WORD_FRACTION * EstimateSpeechSeconds(word.text)
 
 
+def IsInstant(word : WordTiming) -> bool:
+    """Whether a spoken word was stamped with a start time but no duration."""
+    return not word.is_punctuation and word.start == word.end
+
+
 def ExtendToPunctuation(words : list[WordTiming]) -> list[WordTiming]:
     """Extend each word to the end of any punctuation-only words after it."""
-    # Engines that time punctuation place it where the utterance ends, so a part closed by it ends there too
+    # Some engines return punctuation as separate words, timed to end where the utterance ends.
+    # Extending the word before it lets a part closed by the punctuation end there too.
     extended : list[WordTiming] = []
     spoken : int|None = None
 
@@ -79,33 +91,35 @@ class TranscriptCutter:
         self.splitter : UtteranceSplitter = splitter
 
     def Cut(self, segment : TranscriptionSegment, words : list[WordTiming]) -> tuple[list[TranscriptionSegment], list[list[WordTiming]]]:
-        """Cut the transcript into timed parts, each with the words that spell it."""
-        # The transcript is the text; words drop characters and punctuation, so they only give the timing
+        """
+        Cut the transcript into timed parts, each with the words that spell it.
+        A part's text is always a slice of the transcript, never rebuilt from the words.
+        The words may leave out punctuation, and with partial coverage whole stretches of speech, which the transcript keeps.
+        The words decide where the transcript is cut and when each part starts and ends.
+        """
         text = segment.text.strip()
         duration = segment.end - segment.start
 
         aligned = AlignWords(text, ExtendToPunctuation(words))
         ranges = self._ranges(text, aligned)
         assigned = AssignToRanges(text, ranges, aligned)
-        speakers = [MajoritySpeaker(part_words) for part_words in assigned]
-        anchors : list[timedelta|None] = [None] * len(assigned)
+        parts = [TranscriptionSegment(text=text[start:end].strip(), speaker=MajoritySpeaker(part_words))
+                 for (start, end), part_words in zip(ranges, assigned)]
 
+        anchors : list[timedelta|None] = [None] * len(parts)
         if self.settings.word_coverage == WordCoverage.PARTIAL:
-            # An aligner that drops text also crams runs of words into a moment.
-            # Those words still mark speaker changes and sentence ends, so they are only left out of the timing.
-            # Assigned words are respelled with their slice of the transcript, so squeezing is judged on the aligned words
-            squeezed = {(word.word.start, word.word.end) for word in aligned if IsSqueezed(word.word)}
-            # A word stamped with no duration is a point in time, unlike a run crammed into a moment by an aligner, so it still places its part
-            anchors = [min((word.start for word in part_words if word.start == word.end and (word.start, word.end) in squeezed), default=None)
-                       for part_words in assigned]
-            assigned = [[word for word in part_words if (word.start, word.end) not in squeezed] for part_words in assigned]
+            # Squeezed words still carry speaker tags, and their starts are used to find sentence ends and speaker changes.
+            # So they are kept for cutting and speaker labels above, and left out only of the words that time each part.
+            timed = [word for word in aligned if not IsSqueezed(word.word)]
+            assigned = AssignToRanges(text, ranges, timed)
 
-        parts = [TranscriptionSegment(text=text[start:end].strip(), speaker=speaker)
-                 for (start, end), speaker in zip(ranges, speakers)]
+            # A zero-duration word is squeezed, but still has a usable start time.
+            # It places its part if the part has no other timed words.
+            instants = AssignToRanges(text, ranges, [word for word in aligned if IsInstant(word.word)])
+            anchors = [part_words[0].start if part_words else None for part_words in instants]
 
         self._time_parts(parts, assigned, anchors, duration)
         if self.settings.word_coverage == WordCoverage.PARTIAL:
-            timed = [word for word in aligned if not IsSqueezed(word.word)]
             self._fill_sparse_parts(parts, CharacterCounts(text, ranges, timed), duration)
 
         kept = [index for index, part in enumerate(parts) if part.text]
@@ -141,9 +155,10 @@ class TranscriptCutter:
                     anchors : list[timedelta|None], duration : timedelta) -> None:
         """
         Set each part's chunk-relative span from its words, placing parts without words between their neighbours.
-        A part with only squeezed words starts at the first of its zero-duration words, if that falls between its neighbours.
+        A part with no timed words starts at its anchor instead, if it is the only part between its neighbours and the anchor falls between them.
         """
-        if not any(assigned):
+        # A chunk with no timed words is spread by characters, unless it is a single part that its anchor can place
+        if not any(assigned) and not (len(parts) == 1 and anchors[0] is not None):
             self._spread_untimed(parts, duration)
             return
 
@@ -156,7 +171,8 @@ class TranscriptCutter:
 
     def _spread_untimed(self, parts : list[TranscriptionSegment], duration : timedelta) -> None:
         """Give each part its share of the chunk by characters, up to a line's length or the time its text takes to say."""
-        # Text that takes longer to say than a line may last is left long, so that subtitle post-processing splits it by duration
+        # A part can last longer than max_line_seconds if its text takes that long to say.
+        # Subtitle post-processing splits long lines by duration.
         total = sum(len(CompactText(part.text)) for part in parts) or 1
         longest = timedelta(seconds=self.settings.max_line_seconds)
         position = 0
@@ -185,7 +201,7 @@ class TranscriptCutter:
             gap = max(timedelta(0), before - after)
             run = parts[index:run_end]
 
-            # A lone part keeps the place of its squeezed words when they fall within the gap
+            # A lone untimed part with an anchor starts there, instead of at the start of the gap
             anchor = anchors[index]
             if len(run) == 1 and anchor is not None and after <= anchor <= before:
                 run[0].start = anchor
@@ -203,7 +219,7 @@ class TranscriptCutter:
                 position += len(CompactText(part.text))
                 room = after + gap * (position / total) - part.start if offset + 1 < len(run) else before - part.start
 
-                # A part lasts only as long as its text takes to say, so it does not stretch over silence
+                # Cap the part at its estimated speaking time, so it does not cover silence in the rest of the gap
                 speech = timedelta(seconds=EstimateSpeechSeconds(part.text))
                 part.end = part.start + (min(speech, room) if room > timedelta(0) else speech)
 
@@ -217,12 +233,12 @@ class TranscriptCutter:
             if not coverage.matched or coverage.matched >= WELL_COVERED_FRACTION * coverage.spoken:
                 continue
 
-            # Never slower than a normal speaking rate, so a pause inside the words does not stretch the part
+            # Cap the pace at a normal speaking rate, so a pause between the matched words does not over-extend the part
             nominal = NominalSecondsPerChar(part.text)
             span = (part.end - part.start).total_seconds()
             pace = min(span / coverage.matched, nominal) if span > 0.0 else nominal
 
-            # Unmatched text before the first matched word starts the part earlier, never overlapping its neighbours
+            # Unmatched text before the first matched word moves the start earlier, but not into the previous part
             earliest = parts[index - 1].end + min_gap if index > 0 else timedelta(0)
             start = max(part.start - timedelta(seconds=coverage.leading * pace), earliest)
             if start < part.start:

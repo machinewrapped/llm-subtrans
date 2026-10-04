@@ -1404,6 +1404,19 @@ class TestDerivedParts(LoggedTestCase):
 
         self.assertLoggedEqual("placed at its word", timedelta(seconds=110), lines[0].start)
 
+    def test_zero_length_word_places_a_chunk_with_no_other_timing(self):
+        """With partial word coverage, a lone part's zero-duration word places it even when the chunk has no other timed words."""
+        lines = self._lines("你好。", [_word("你好", 10.0, 10.0)], self._partial())
+
+        self.assertLoggedEqual("placed at its word", timedelta(seconds=110), lines[0].start)
+
+    def test_squeezed_word_does_not_remove_a_word_with_the_same_timing(self):
+        """With partial word coverage, a word sharing its timing with a squeezed word still times its part."""
+        words = [_word("好", 10.0, 10.05), _word("朋友我们走吧", 10.0, 10.05)]
+        lines = self._lines("好朋友我们走吧。", words, self._partial())
+
+        self.assertLoggedEqual("timed by the unsqueezed word", timedelta(seconds=110), lines[0].start)
+
     def test_squeezed_words_still_mark_speaker_changes(self):
         """With partial word coverage, a squeezed word is left out of the timing but still tells speakers apart."""
         words = [_word("你好", 10.0, 10.5, speaker="A"), _word("朋友我们走吧", 11.0, 11.01, speaker="B")]

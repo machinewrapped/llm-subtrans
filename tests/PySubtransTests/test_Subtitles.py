@@ -13,7 +13,7 @@ from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.Formats.SrtFileHandler import SrtFileHandler
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.Subtitles import SaveSettings, Subtitles
+from PySubtrans.Subtitles import OriginalTextPlacement, SaveSettings, Subtitles
 
 
 class TestSubtitles(LoggedTestCase):
@@ -370,6 +370,42 @@ class SubtitleTimingTests(LoggedTestCase):
         self.assertLoggedEqual("previous end trimmed", timedelta(seconds=2.45), source[0].end)
         self.assertLoggedEqual("next start unchanged", timedelta(seconds=2.5), source[1].start)
         self.assertLoggedEqual("non-overlapping end unchanged", timedelta(seconds=2.8), source[1].end)
+
+class OriginalTextPlacementTests(LoggedTestCase):
+
+    def test_MergeOriginalAndTranslated(self):
+        originals = [SubtitleLine("1\n00:00:01,000 --> 00:00:02,000\nOriginal")]
+        translated = [SubtitleLine("1\n00:00:01,000 --> 00:00:02,000\nTranslation")]
+        subtitles = Subtitles()
+
+        cases = [
+            (OriginalTextPlacement.OriginalAboveTranslation, "Original\nTranslation"),
+            (OriginalTextPlacement.TranslationAboveOriginal, "Translation\nOriginal"),
+        ]
+        for placement, expected in cases:
+            with self.subTest(placement=placement):
+                result = subtitles._merge_original_and_translated(originals, translated, placement)
+                self.assertLoggedEqual("merged text", expected, result[0].text, input_value=placement)
+
+        self.assertLoggedEqual("original line unchanged", "Original", originals[0].text)
+
+    def test_SaveSettingsReadsPlacement(self):
+        cases = [
+            (None, OriginalTextPlacement.OriginalAboveTranslation),
+            (OriginalTextPlacement.TranslationAboveOriginal, OriginalTextPlacement.TranslationAboveOriginal),
+            ("TranslationAboveOriginal", OriginalTextPlacement.TranslationAboveOriginal),
+        ]
+        for value, expected in cases:
+            with self.subTest(value=value):
+                save_settings = SaveSettings(SettingsType({ 'original_text_placement': value }))
+                self.assertLoggedEqual("placement", expected, save_settings.original_text_placement, input_value=value)
+
+    def test_SaveSettingsUnknownPlacement(self):
+        with self.assertLogs(level=logging.WARNING):
+            save_settings = SaveSettings(SettingsType({ 'original_text_placement': "Sideways" }))
+
+        self.assertLoggedEqual("fallback placement", OriginalTextPlacement.OriginalAboveTranslation, save_settings.original_text_placement)
+
 
 class SubtitleLoadTests(LoggedTestCase):
 

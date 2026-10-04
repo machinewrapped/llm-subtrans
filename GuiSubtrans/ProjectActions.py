@@ -175,6 +175,10 @@ class ProjectActions(QObject):
             filepath, dummy = QFileDialog.getSaveFileName(self._mainwindow, title, filepath, filters)  # type: ignore[unused-ignore]
 
         if filepath:
+            if show_dialog:
+                # Shift+Save writes the project and translation even if nothing has changed
+                project.needs_writing = True
+
             self.saveProject.emit(filepath)
 
     def CheckProviderSettings(self, options : Options|None = None):

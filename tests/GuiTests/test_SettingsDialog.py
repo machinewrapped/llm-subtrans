@@ -11,6 +11,7 @@ from PySide6.QtWidgets import QApplication
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Options import Options
+from PySubtrans.Subtitles import OriginalTextPlacement
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 
@@ -63,6 +64,36 @@ class TestTranscriptionProviderSettingBinding(LoggedTestCase):
             for name, namespace in namespaces.items():
                 if isinstance(namespace, dict):
                     self.assertLoggedNotIn('stale write ignored', 'leaked-key', list(namespace.values()), input_value=name)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+
+class TestEnumSettingSelection(LoggedTestCase):
+    """An enum setting loaded from the settings file selects its member in the dropdown."""
+
+    application : QApplication
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        super().setUpClass()
+        existing = QApplication.instance()
+        cls.application = existing if isinstance(existing, QApplication) else QApplication([])
+
+    def test_saved_member_name_selects_member(self) -> None:
+        """A placement saved by member name is selected rather than the first option."""
+        options = Options({'provider': 'OpenRouter', 'original_text_placement': 'TranslationAboveOriginal'})
+
+        with patch.object(SettingsDialog, '_refresh_transcription_providers'), \
+                patch.object(SettingsDialog, '_initialise_translation_provider'):
+            with self.assertLogs(level=logging.WARNING):
+                dialog = SettingsDialog(options)
+
+        try:
+            field = dialog.widgets.get('original_text_placement')
+            self.assertLoggedIsNotNone('placement field', field)
+            if field is not None:
+                self.assertLoggedEqual('selected placement', OriginalTextPlacement.TranslationAboveOriginal, field.GetValue())
         finally:
             dialog.deleteLater()
             self.application.processEvents()

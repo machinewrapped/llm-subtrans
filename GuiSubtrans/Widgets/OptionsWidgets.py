@@ -293,6 +293,9 @@ class DropdownOptionWidget(OptionWidget):
                 self.combo_box.addItem(value_name)
                 if selected_value and value_name == selected_value_name:
                     self.combo_box.setCurrentIndex(self.combo_box.count() - 1)
+                elif isinstance(value, Enum) and selected_value == value.name:
+                    # Enum settings loaded from file are stored by member name
+                    self.combo_box.setCurrentIndex(self.combo_box.count() - 1)
                 elif isinstance(value, LocaleDisplayItem) and selected_value == value.code:
                     self.combo_box.setCurrentIndex(self.combo_box.count() - 1)
 

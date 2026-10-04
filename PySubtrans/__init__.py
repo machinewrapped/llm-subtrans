@@ -53,7 +53,7 @@ from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleLine import SubtitleLine
-from PySubtrans.Subtitles import SaveSettings, Subtitles
+from PySubtrans.Subtitles import OriginalTextPlacement, SaveSettings, Subtitles
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleScene import SubtitleScene
@@ -699,6 +699,7 @@ def _validate_transcription_provider(provider : TranscriptionProvider) -> None:
 __all__ = [
     '__version__',
     'Options',
+    'OriginalTextPlacement',
     'SaveSettings',
     'SettingsPrecedence',
     'SettingsType',

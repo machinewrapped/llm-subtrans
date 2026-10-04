@@ -10,7 +10,7 @@ from PySubtrans.Helpers.Text import CompactText
 from PySubtrans.Transcription.LineSettings import LineSettings
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 from PySubtrans.Transcription.UtteranceSplitter import UtteranceSplitter
-from PySubtrans.Transcription.WordAlignment import (AlignedWord, AlignWords, AssignToRanges, CutPoints,
+from PySubtrans.Transcription.WordAlignment import (OPENING_CHAR, AlignedWord, AlignWords, AssignToRanges, CutPoints,
                                                     SplitAtSpeakerChanges, TimedSentenceRanges, WordCoverage)
 from PySubtrans.Transcription.WordTiming import WordTiming
 
@@ -48,16 +48,18 @@ def IsInstant(word : WordTiming) -> bool:
 
 
 def ExtendToPunctuation(words : list[WordTiming]) -> list[WordTiming]:
-    """Extend each word to the end of any punctuation-only words after it."""
+    """Extend each word to the end of any punctuation-only words after it, unless they open the next utterance."""
     # Some engines return punctuation as separate words, timed to end where the utterance ends.
     # Extending the word before it lets a part closed by the punctuation end there too.
+    # An opening mark such as "¿" or "“" belongs to the next utterance, and may be timed at its start.
+    # Extending the word before it would stretch that word over the pause between the two.
     extended : list[WordTiming] = []
     spoken : int|None = None
 
     for word in words:
         if not word.is_punctuation:
             spoken = len(extended)
-        elif spoken is not None and word.end > extended[spoken].end:
+        elif spoken is not None and word.end > extended[spoken].end and not OPENING_CHAR.match(word.text.lstrip()):
             previous = extended[spoken]
             extended[spoken] = WordTiming(text=previous.text, start=previous.start, end=word.end, speaker=previous.speaker)
         extended.append(word)

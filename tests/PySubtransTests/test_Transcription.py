@@ -1259,6 +1259,14 @@ class TestDerivedParts(LoggedTestCase):
 
         self.assertLoggedEqual("first end", timedelta(seconds=101.3), lines[0].end)
 
+    def test_opening_punctuation_does_not_extend_the_word_before(self):
+        """A punctuation word that opens the next utterance does not stretch the previous word over the pause."""
+        words = [_word("Tenemos", 0.0, 0.3), _word("que", 0.3, 0.5), _word("hablar", 0.5, 1.0),
+                 _word("¿", 3.0, 3.1), _word("Hablar", 3.1, 3.5), _word("?", 3.5, 3.6)]
+        lines = self._lines("Tenemos que hablar. ¿Hablar?", words)
+
+        self.assertLoggedEqual("first end", timedelta(seconds=101), lines[0].end)
+
     def test_punctuated_sentence_is_cut_where_the_speaker_changes(self):
         """A sentence voiced by two speakers becomes a part for each."""
         words = ([_word(char, 0.3 * index, 0.3 * (index + 1), "A") for index, char in enumerate("你好朋友")]

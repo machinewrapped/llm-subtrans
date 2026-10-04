@@ -68,7 +68,7 @@ A safety filter was suggested as a cause, but the raw responses showed no safety
 
 **Languages.** 30 supported languages. A hint for an unsupported language logs a warning and falls back to auto-detection. The model does not translate. In `qwen-asr` 0.0.6, the aligner does not reject unsupported languages.
 
-**Korean.** Korean alignment needs `soynlp`, which the packaged app leaves out because it is GPL-licensed. Without it, Korean is split on spaces instead of into morphemes, so the timings are coarser.
+**Korean.** Korean alignment needs `soynlp`, which the local transcription setup installs with `qwen-asr`. In an environment prepared by hand without it, Korean is split on spaces instead of into morphemes, so the timings are coarser.
 
 **Speed.** About 18 s per 30-second chunk with the 1.7B model and aligner on one CUDA machine, at about 33% GPU utilisation. That is roughly ten times slower than MAI.
 

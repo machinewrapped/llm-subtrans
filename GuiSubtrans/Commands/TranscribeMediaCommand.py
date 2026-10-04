@@ -21,7 +21,7 @@ class TranscribeMediaCommand(Command):
     """Run a media transcription as a project-opening command."""
 
     statusChanged = Signal(str)
-    progressed = Signal(int, int, str)
+    progressed = Signal(int, str)
     audioProgressed = Signal(float, float)
     segmented = Signal(object)
 
@@ -131,8 +131,8 @@ class TranscribeMediaCommand(Command):
     def _on_status(self, sender, text : str) -> None:
         self.statusChanged.emit(text)
 
-    def _on_progress(self, sender, done : int, total : int, span : str) -> None:
-        self.progressed.emit(done, total, span)
+    def _on_progress(self, sender, done : int, span : str) -> None:
+        self.progressed.emit(done, span)
 
     def _on_audio_progress(self, sender, processed : float, total : float) -> None:
         self.audioProgressed.emit(processed, total)

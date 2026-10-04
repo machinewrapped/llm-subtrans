@@ -1950,7 +1950,7 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
         seen : list = []
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            coordinator.events.progress.connect(lambda sender, done, total, span: seen.append(span), weak=False)
+            coordinator.events.progress.connect(lambda sender, done, span: seen.append(span), weak=False)
             coordinator.TranscribeMedia(media.name)
 
         self.assertLoggedEqual("chunk spans", ["0.0s-4.0s", "6.0s-10.0s"], seen)
@@ -1981,7 +1981,7 @@ class TestTranscriptionCoordinator(LoggedTestCase):
             AudioChunk(start=timedelta(seconds=6), end=timedelta(seconds=10)),
         ])
 
-        def abort_after_first(sender, done : int, total : int, span : str) -> None:
+        def abort_after_first(sender, done : int, span : str) -> None:
             if done >= 1:
                 coordinator.Abort()
 

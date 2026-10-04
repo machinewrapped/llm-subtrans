@@ -48,7 +48,6 @@ class TranscriptionRunProgress:
     def __init__(self):
         self.started : float = 0.0
         self.chunks_done : int = 0
-        self.chunks_total : int = 0
         self.audio_done : float = 0.0
         self.audio_total : float = 0.0
         self.last_span : str = ""
@@ -60,7 +59,6 @@ class TranscriptionRunProgress:
     def Reset(self) -> None:
         """Start timing a fresh run from the beginning."""
         self.chunks_done = 0
-        self.chunks_total = 0
         self.audio_done = 0.0
         self.audio_total = 0.0
         self.last_span = ""
@@ -70,9 +68,8 @@ class TranscriptionRunProgress:
         """Restart timing for a resumed run, keeping the positions reached."""
         self.started = time.monotonic()
 
-    def OnProgress(self, done : int, total : int, span : str) -> None:
+    def OnProgress(self, done : int, span : str) -> None:
         self.chunks_done = done
-        self.chunks_total = total
         self.last_span = span
 
     def OnAudioProgress(self, processed : float, total : float) -> None:
@@ -81,11 +78,7 @@ class TranscriptionRunProgress:
 
     def StatusText(self) -> str:
         """Meaningful run status: position, current span, elapsed time and ETA."""
-        if self.chunks_total > 0:
-            status = _("Transcribing chunk {current}/{total}").format(
-                current=min(self.chunks_done + 1, self.chunks_total), total=self.chunks_total)
-        else:
-            status = _("Transcribing chunk {current}").format(current=self.chunks_done + 1)
+        status = _("Transcribing chunk {current}").format(current=self.chunks_done + 1)
 
         if self.last_span:
             status += f" [{_format_span(self.last_span)}"

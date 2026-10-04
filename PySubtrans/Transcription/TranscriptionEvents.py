@@ -13,9 +13,9 @@ class TranscriptionEvents:
             Emitted when the coordinator enters a new phase (preparing
             the runtime, scanning audio, etc.).
 
-        progress(sender, done : int, total : int, span : str):
-            Emitted before each chunk is transcribed. Total is 0 while the
-            chunk plan is still streaming in.
+        progress(sender, done : int, span : str):
+            Emitted before each chunk is transcribed.
+            The chunk plan streams in during transcription, so the number of chunks is not known in advance.
 
         audio_progress(sender, processed : float, total : float):
             Emitted as audio seconds are processed, once the media duration

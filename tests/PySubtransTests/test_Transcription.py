@@ -1425,6 +1425,13 @@ class TestDerivedParts(LoggedTestCase):
 
         self.assertLoggedEqual("timed by the unsqueezed word", timedelta(seconds=110), lines[0].start)
 
+    def test_zero_length_word_starts_a_part_with_other_timed_words(self):
+        """With partial word coverage, a zero-duration word still times its part alongside the part's other words."""
+        words = [_word("好", 10.0, 10.0)] + _uniform_words(["我", "们", "走", "吧"], 0.2, start=10.5)
+        lines = self._lines("好我们走吧。", words, self._partial())
+
+        self.assertLoggedEqual("starts at the zero-duration word", timedelta(seconds=110), lines[0].start)
+
     def test_squeezed_words_still_mark_speaker_changes(self):
         """With partial word coverage, a squeezed word is left out of the timing but still tells speakers apart."""
         words = [_word("你好", 10.0, 10.5, speaker="A"), _word("朋友我们走吧", 11.0, 11.01, speaker="B")]

@@ -320,7 +320,7 @@ transcriber.events.audio_progress.connect(on_audio_progress)
 | `OpenRouter` | `microsoft/mai-transcribe-2` (default) | Yes | Yes |
 | `OpenRouter` | `deepgram/nova-3`, `x-ai/grok-stt-1.0` | Yes | Not verified |
 | `OpenRouter` | `openai/whisper-large-v3-turbo` | No | Not verified |
-| `Gemini` | `gemini-3.5-transcribe` (default) | Yes, on by default | Partial |
+| `Gemini` | `gemini-3.5-transcribe` (default) | Yes, on by default | Yes |
 | `OpenAI` | `whisper-1` (default) | No | Yes |
 | `OpenAI` | `gpt-4o-transcribe-diarize` | Yes | No, segment timings only |
 | `Muse` | `muse-voice-transcribe-1.0` (default) | Yes | No, turn timings only |

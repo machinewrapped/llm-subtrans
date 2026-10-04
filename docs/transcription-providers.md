@@ -9,7 +9,7 @@ How the project uses each provider (requests, parsing, retries) is documented in
 | Provider | Text | Punctuation | Word timings | Speakers |
 |---|---|---|---|---|
 | OpenRouter, MAI Transcribe 2 | Segments plus words | Yes, also as separate timed tokens | Yes, accurate | Yes, with diarization |
-| Gemini 3.5 Transcribe | Transcript plus words | Varies, absent in some captures | Partial | Yes, with diarization, verbatim mode only |
+| Gemini 3.5 Transcribe | Transcript plus words | Varies, absent in some captures | Yes | Yes, with diarization, verbatim mode only |
 | Qwen Local | Transcript plus aligned words | In the transcript only | Partial, from a forced aligner | No |
 | OpenAI `whisper-1` | Segments plus words | Not checked | Yes | No |
 | OpenAI `gpt-4o-transcribe-diarize` | Segments | Not checked | No, segment timings only | Yes |
@@ -39,11 +39,15 @@ MAI Transcribe 2 has given the best results in this project's testing, and is th
 
 **What it returns.** A transcript, and word annotations with offsets and speaker labels. There is no detected-language field. The word annotations can leave out characters that are in the transcript, so the transcript is used for text and the words only for timing. Using the transcript recovered about 250 characters in one comparison, including negations.
 
-**Word timings are partial.** They can miss stretches of the transcript. About 6% of the words in one film capture had zero duration. These still have a usable start time.
+**Word timings cover the transcript.** In the October 2026 captures of Fist of Fury and La Madre Muerta, and the September capture of Natural City, the words match the transcript almost entirely (median similarity 1.00). Many words have zero duration: 9% in the Fist of Fury capture and 5% in La Madre Muerta. These still have a usable start time.
+
+Until 24 September 2026 the client dropped zero-duration words, so captures made before then have none. Their word timings look partial (similarity 0.92–0.99), and replays of them do not reflect current output. This applies to `fist_of_fury_gemini.json` and `la_madre_muerta_gemini.json`; the `_oct` captures replace them.
 
 **Punctuation varies.** Spanish captures have full stops. Some Cantonese captures have no punctuation at all. In the Fist of Fury capture, the scene at 4:15–4:55 is one unpunctuated run, `…不是嘛朱姐啊朱姐朱姐你有我死了朱姐啊朱姐开门先啦…`, where MAI has `唔係嘛？姑姐啊！姑姐！`. Gemini also misheard `姑姐` ("Auntie") as `朱姐` throughout. Words are sometimes glued together with no space, often at a speaker change, as in `Ánimo.Nadie`.
 
 **Silent omissions.** Gemini can leave out whole stretches of audio without any error or warning. Some 10–20 minute spans were 43–79% complete. The recommended maximum chunk length was cut from 20 to 15 minutes because of this, but a later test showed that chunk length only changes which stretches go missing. On one 20-minute passage, short chunks returned 760 characters and a long chunk 1,388, where MAI returned 4,262.
+
+The same film transcribed again in October 2026 (`fist_of_fury_gemini_oct.json`) returned 7,727 spoken characters, where MAI returned 13,014. The first 10 minutes, most of 25–35 minutes and nearly all of 80–95 minutes are missing. The September capture of the same film was missing different stretches.
 
 **Degenerate output.** Seen in real captures:
 - A chunk of about 7 minutes returned no text or words, and reported success.

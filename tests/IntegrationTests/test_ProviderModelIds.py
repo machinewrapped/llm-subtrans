@@ -7,10 +7,11 @@ from unittest.mock import patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Providers.Provider_OpenRouter import OpenRouterProvider
+from PySubtrans.Providers.Provider_Opper import OpperProvider
 from PySubtrans.Providers.Provider_Requesty import RequestyProvider
 from PySubtrans.SettingsType import SettingsType
 
-MODEL_ID_PROVIDERS = (OpenRouterProvider, RequestyProvider)
+MODEL_ID_PROVIDERS = (OpenRouterProvider, RequestyProvider, OpperProvider)
 
 
 class TestProviderModelIds(LoggedTestCase):

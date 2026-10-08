@@ -143,7 +143,9 @@ def _parse_verbose_payload(payload : dict) -> tuple[str, str|None, list[WordTimi
         word_text = str(entry.get('word') or entry.get('text') or '').strip()
         start = TryParseNonNegative(entry.get('start'))
         end = TryParseNonNegative(entry.get('end'))
-        if not word_text or start is None or end is None or end <= start:
+
+        # Zero-length words still have a usable start.
+        if not word_text or start is None or end is None or end < start:
             continue
         words.append(WordTiming(text=word_text,
                                 start=timedelta(seconds=start),

@@ -9,6 +9,7 @@ How the project uses each provider (requests, parsing, retries) is documented in
 | Provider | Text | Punctuation | Word timings | Speakers |
 |---|---|---|---|---|
 | OpenRouter, MAI Transcribe 2 | Segments plus words | Yes, also as separate timed tokens | Yes, accurate | Yes, with diarization |
+| OpenRouter, ElevenLabs Scribe v2 | Transcript plus words | Yes, attached to words | Yes, short words clipped | Yes, with diarization |
 | Gemini 3.5 Transcribe | Transcript plus words | Varies, absent in some captures | Yes | Yes, with diarization, verbatim mode only |
 | Qwen Local | Transcript plus aligned words | In the transcript only | Partial, from a forced aligner | No |
 | OpenAI `whisper-1` | Segments plus words | Not checked | Yes | No |
@@ -30,6 +31,16 @@ MAI Transcribe 2 has given the best results in this project's testing, and is th
 **Language hints.** A wrong hint degrades the output. On a 64-minute Korean episode, a `Chinese` hint put Chinese characters into 56 of 848 lines, and the correct `Korean` hint avoided it. Omit the hint when unsure.
 
 **Duplicated output.** Rarely, MAI returns the same utterance twice at the same times, once in Traditional Cantonese and once in Simplified Mandarin. The cause is not known. Whether a `yue` or `zh-HK` hint prevents it has not been tested.
+
+**ElevenLabs Scribe v2.** `elevenlabs/scribe-v2` was added to OpenRouter in October 2026. It was compared with MAI on Damo s01e06 (Korean, 62 minutes, with Jeolla dialect), in `test_transcriptions/damo/`.
+- *Output.* One segment spanning the whole chunk, including silence, and a list of timed words with punctuation attached. Language is an ISO 639-3 code (`kor`).
+- *Diarization.* Requested with `{'elevenlabs': {'diarize': True}}` under `provider.options`. Words carry numeric speaker IDs. It split lines at speaker changes that MAI merged, e.g. `아니라.` / `나가 간다고…` at 53:18.
+- *Audio events.* Tagged inline by default, e.g. `[웃음]` and `[배경 음악]`. The client sends `tag_audio_events: false` unless the `audio_events` option is on, and OpenRouter passes it through. With tags on, each event is a single timed word, and 47 lines contained one, mostly at the start or end of a line of dialogue, in closed-caption style. Six lines were tags alone, capped at the 4 s line limit. Event timings span the sound, from 0.02 s up to 89 s for music under dialogue.
+- *Zero-length words.* Some words have the same start and end. The client dropped them until October 2026. In the Damo capture, two chunks' words then covered 97% and 81% of their transcript.
+- *Accuracy.* Spoken characters per 5-minute window match MAI within a few percent, with nothing missing. Each model has errors the other avoids. Scribe handled the dialect better (`성님`, `당겨불랑게`, `강녕하셨습니까`); MAI got some phrases Scribe misheard (`나서는` as `따서는`).
+- *Timing.* Starts agree with MAI to about 0.1 s. Short words are clipped: 315 of 2,808 words last 60 ms or less, against 31 for MAI, e.g. `예.` in 20 ms. Lines are shorter for their text, with a median of 0.76 of the speech estimate against 0.84, and 28 lines below 0.5 against 2. The OpenRouter defaults are tuned for MAI, so no timing correction is applied.
+- *Language hint.* The captures above used a `Korean` hint. A full transcription and translation of the same episode in the GUI, with no hint, looked excellent when watched.
+- *Cost.* $0.11 for the episode at a 50% launch discount, against $0.10 for MAI. The list price is $0.22 per hour.
 
 **Account restrictions.** Requests can fail with a 404 citing zero available endpoints when the account or workspace has zero-data-retention guardrails that exclude the model's providers.
 
@@ -100,4 +111,5 @@ No OpenAI transcription has been assessed on real media yet.
 
 - **Punctuation tokens.** Of the providers with captures, only MAI returns punctuation as separate timed words. Gemini and Qwen return none.
 - **Empty audio.** Music or noise returns a successful empty result from all the API providers.
+- **Zero-length words.** Gemini and ElevenLabs Scribe return words whose start and end are the same. Every client keeps them, since the start is still usable, and drops only words that end before they start.
 - **Chunk lengths are project choices.** The defaults (Qwen Local 30–60 s, OpenAI and Muse 8–60 s, OpenRouter 30–120 s, Gemini 10–15 minutes) were chosen by the project. No provider-published limits are recorded.

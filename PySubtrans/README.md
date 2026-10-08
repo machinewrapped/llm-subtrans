@@ -318,6 +318,7 @@ transcriber.events.audio_progress.connect(on_audio_progress)
 | Provider | Model | Speaker identification | Word timings |
 |----------|-------|------------------------|--------------|
 | `OpenRouter` | `microsoft/mai-transcribe-2` (default) | Yes | Yes |
+| `OpenRouter` | `elevenlabs/scribe-v2` | Yes | Yes |
 | `OpenRouter` | `deepgram/nova-3`, `x-ai/grok-stt-1.0` | Yes | Not verified |
 | `OpenRouter` | `openai/whisper-large-v3-turbo` | No | Not verified |
 | `Gemini` | `gemini-3.5-transcribe` (default) | Yes, on by default | Yes |

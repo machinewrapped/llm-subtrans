@@ -31,6 +31,7 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('--language', type=str, default=None, help="Spoken language hint (e.g. Chinese, English)")
     parser.add_argument('--diarize', dest='diarize', action='store_true', default=None, help="Identify speakers (default on; model-dependent)")
     parser.add_argument('--no-diarize', dest='diarize', action='store_false', help="Turn off speaker identification")
+    parser.add_argument('--audio-events', action='store_true', default=None, help="Tag sound effects and music, e.g. [laughter], for closed captions (model-dependent)")
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
     parser.add_argument('--ffmpeg-path', type=str, default=None,
                         help="Path to the ffmpeg executable (default: use ffmpeg and ffprobe from PATH)")
@@ -82,6 +83,7 @@ def main() -> int:
             language=args.language,
             server_address=args.server,
             diarize=args.diarize,
+            audio_events=args.audio_events,
             audio_track=args.track,
             ffmpeg_path=args.ffmpeg_path,
             min_chunk_seconds=args.min_chunk,

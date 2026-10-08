@@ -308,12 +308,12 @@ class GuiInterface(QObject):
         except Exception as e:
             logging.error(f"Error initialising project settings: {str(e)}")
 
-    def ShowTranscriptionDialog(self) -> None:
+    def ShowTranscriptionDialog(self, media_path : str|None = None) -> None:
         """
-        Open the app-modal transcription dialog. On accept, load the
-        transcribed project exactly like a freshly loaded subtitle file.
+        Open the app-modal transcription dialog, optionally with a media file selected.
+        On accept, load the transcribed project exactly like a freshly loaded subtitle file.
         """
-        dialog = TranscriptionDialog(self.global_options, parent=self.GetMainWindow())
+        dialog = TranscriptionDialog(self.global_options, parent=self.GetMainWindow(), media_path=media_path)
         dialog.commandRequested.connect(self.QueueCommand)
         try:
             if dialog.exec() != QDialog.DialogCode.Accepted:

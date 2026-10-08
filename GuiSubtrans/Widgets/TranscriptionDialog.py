@@ -80,7 +80,7 @@ class TranscriptionDialog(QDialog):
 
     commandRequested = Signal(object)
 
-    def __init__(self, options : Options, parent=None):
+    def __init__(self, options : Options, parent=None, media_path : str|None = None):
         super().__init__(parent)
         self.setWindowTitle(_("Transcribe Media"))
         self.setModal(True)
@@ -108,6 +108,10 @@ class TranscriptionDialog(QDialog):
 
         self._build_form()
         self.setAcceptDrops(True)
+
+        if media_path:
+            self.file_edit.setText(media_path)
+
         self.status_label.setText(_("Loading transcription providers..."))
         self._refresh_providers()
         self._show_setup()

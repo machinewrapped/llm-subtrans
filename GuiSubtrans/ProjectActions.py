@@ -22,12 +22,12 @@ from GuiSubtrans.Commands.SplitBatchCommand import SplitBatchCommand
 from GuiSubtrans.Commands.SplitSceneCommand import SplitSceneCommand
 from GuiSubtrans.Commands.SwapTextAndTranslations import SwapTextAndTranslations
 from GuiSubtrans.GUICommands import CheckProviderSettings
+from GuiSubtrans.GuiHelpers import GetSubtitleExtensions
 
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.ProjectSelection import ProjectSelection
 
 from PySubtrans.Options import Options
-from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Helpers.Localization import _
 
@@ -130,8 +130,7 @@ class ProjectActions(QObject):
         initial_path = self.last_used_path or os.getcwd()
         shift_pressed = self._is_shift_pressed()
 
-        extensions = sorted(set(SubtitleFormatRegistry.enumerate_formats()).union(['.subtrans']))
-        extension_wildcards = ' '.join(f'*{ext}' for ext in extensions)
+        extension_wildcards = ' '.join(f'*{ext}' for ext in GetSubtitleExtensions())
         filters = f"{_('Subtitle files')} ({extension_wildcards});;{_('All Files')} (*)"
         filepath, dummy = QFileDialog.getOpenFileName(parent=self._mainwindow, caption=_("Open File"), dir=initial_path, filter=filters) # type: ignore[unused-ignore]
 

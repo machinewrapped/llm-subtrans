@@ -123,8 +123,8 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
         return self._ParseJsonResponse(url, response)
 
     def _provider_options(self) -> dict:
-        """The vendor options for the model, with diarization if it is on and the model can be diarized."""
-        return ProviderOptions(self.model, self.diarize)
+        """The vendor options for the model, following the diarize and audio_events settings."""
+        return ProviderOptions(self.model, self.settings)
 
     def _looks_like_unsupported(self, text : str) -> bool:
         lowered = text.casefold()

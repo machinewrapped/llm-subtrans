@@ -248,10 +248,10 @@ class TestOpenRouterCatalog(LoggedTestCase):
         self.assertLoggedIn("fallback model", OpenRouterTranscriptionProvider.default_transcription_model, models)
 
 class TestOpenRouterClient(LoggedTestCase):
-    def _client(self, model : str = OpenRouterTranscriptionProvider.default_transcription_model, diarize : bool = False):
+    def _client(self, model : str = OpenRouterTranscriptionProvider.default_transcription_model, diarize : bool = False, audio_events : bool = False):
         return OpenRouterTranscriptionClient(SettingsType({
             'server_address': 'http://127.0.0.1:9/v1', 'api_key': 'test-key',
-            'model': model, 'diarize': diarize,
+            'model': model, 'diarize': diarize, 'audio_events': audio_events,
         }))
 
     def test_usage_cost_and_duration_parsed(self):
@@ -370,8 +370,8 @@ class TestOpenRouterClient(LoggedTestCase):
 
         self.assertLoggedIn("deepgram options", "deepgram", options)
 
-    def test_diarize_merges_request_options(self):
-        """Diarization merges with the options sent on every ElevenLabs request."""
+    def test_diarize_merges_audio_event_option(self):
+        """Diarization merges with the audio event option under the ElevenLabs slug."""
         client = self._client(model="elevenlabs/scribe-v2", diarize=True)
 
         options = client._provider_options().get('elevenlabs', {})
@@ -379,14 +379,24 @@ class TestOpenRouterClient(LoggedTestCase):
         self.assertLoggedEqual("diarize requested", True, options.get('diarize'))
         self.assertLoggedEqual("audio events off", False, options.get('tag_audio_events'))
 
-    def test_request_options_without_diarize(self):
-        """Request options are sent when diarization is off."""
-        client = self._client(model="elevenlabs/scribe-v2", diarize=False)
+    def test_audio_events_sent_without_diarize(self):
+        """The audio event option is sent when diarization is off, and follows the setting."""
+        client = self._client(model="elevenlabs/scribe-v2", diarize=False, audio_events=True)
 
         options = client._provider_options().get('elevenlabs', {})
 
         self.assertLoggedNotIn("no diarize option", 'diarize', options)
-        self.assertLoggedEqual("audio events off", False, options.get('tag_audio_events'))
+        self.assertLoggedEqual("audio events on", True, options.get('tag_audio_events'))
+
+    def test_audio_events_follow_model_support(self):
+        """Only models that can tag audio events offer the option or send it."""
+        provider = OpenRouterTranscriptionProvider(SettingsType({'api_key': 'k', 'model': 'elevenlabs/scribe-v2'}))
+        other = OpenRouterTranscriptionProvider(SettingsType({'api_key': 'k', 'model': 'deepgram/nova-3'}))
+        client = self._client(model="deepgram/nova-3", audio_events=True)
+
+        self.assertLoggedIn("supported model offers audio events", 'audio_events', provider.GetOptions(provider.settings, OptionsScope.PER_RUN))
+        self.assertLoggedNotIn("other model hides audio events", 'audio_events', other.GetOptions(other.settings, OptionsScope.PER_RUN))
+        self.assertLoggedNotIn("other model sends no event option", 'tag_audio_events', client._provider_options().get('deepgram', {}))
 
     def test_diarize_unmapped_model(self):
         """Unmapped models request without diarization options."""

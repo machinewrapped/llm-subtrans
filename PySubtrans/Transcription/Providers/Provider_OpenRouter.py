@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from typing import TypeVar
 
 import httpx
 
@@ -10,6 +11,8 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
 
+_Entry = TypeVar('_Entry')
+
 # Vendor options are not top-level OpenRouter fields; each vendor takes its own under its provider slug
 _DIARIZATION_OPTIONS : dict[str, dict] = {
     'microsoft/': {'azure': {'diarization': {'enabled': True}}},
@@ -18,20 +21,30 @@ _DIARIZATION_OPTIONS : dict[str, dict] = {
     'x-ai/': {'xai': {'diarize': True}},
 }
 
-# Options sent with every request to the vendor.
-# ElevenLabs tags audio events such as [laughter] inline by default, which puts them into subtitle lines.
-_REQUEST_OPTIONS : dict[str, dict] = {
-    'elevenlabs/': {'elevenlabs': {'tag_audio_events': False}},
+# The vendor option that tags audio events such as [laughter], as (provider slug, option name).
+# It is always sent, because ElevenLabs tags events unless told not to.
+_AUDIO_EVENT_OPTIONS : dict[str, tuple[str, str]] = {
+    'elevenlabs/': ('elevenlabs', 'tag_audio_events'),
 }
 
 def DiarizationOptions(model : str) -> dict|None:
     """The provider options that request diarization for *model*, or None if it cannot be diarized."""
     return _MatchModel(_DIARIZATION_OPTIONS, model)
 
-def ProviderOptions(model : str, diarize : bool) -> dict:
-    """The provider options to send for *model*, with diarization when requested and supported."""
-    sources = [_MatchModel(_REQUEST_OPTIONS, model)]
-    if diarize:
+def CanTagAudioEvents(model : str) -> bool:
+    """Whether *model* can tag audio events in the transcript."""
+    return _MatchModel(_AUDIO_EVENT_OPTIONS, model) is not None
+
+def ProviderOptions(model : str, settings : SettingsType) -> dict:
+    """The provider options to send for *model*, following the diarize and audio_events settings."""
+    sources : list[dict|None] = []
+
+    audio_event_option = _MatchModel(_AUDIO_EVENT_OPTIONS, model)
+    if audio_event_option is not None:
+        slug, name = audio_event_option
+        sources.append({slug: {name: settings.get_bool('audio_events', False)}})
+
+    if settings.get_bool('diarize', True):
         sources.append(DiarizationOptions(model))
 
     options : dict[str, dict] = {}
@@ -41,12 +54,12 @@ def ProviderOptions(model : str, diarize : bool) -> dict:
 
     return options
 
-def _MatchModel(table : dict[str, dict], model : str) -> dict|None:
+def _MatchModel(table : dict[str, _Entry], model : str) -> _Entry|None:
     """The entry in *table* whose prefix matches *model*, if any."""
     model_cf = model.casefold()
-    for prefix, options in table.items():
+    for prefix, entry in table.items():
         if model_cf.startswith(prefix):
-            return options
+            return entry
     return None
 
 class OpenRouterTranscriptionProvider(TranscriptionProvider):
@@ -83,6 +96,7 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
             'server_address': settings.get_str('server_address', os.getenv('OPENROUTER_SERVER_ADDRESS', 'https://openrouter.ai/api/v1')),
             'model': settings.get_str('model', os.getenv('OPENROUTER_STT_MODEL', 'microsoft/mai-transcribe-2')),
             'diarize': settings.get_bool('diarize', True),
+            'audio_events': settings.get_bool('audio_events', False),
             'request_timeout': settings.get_float('request_timeout', env_float('TRANSCRIPTION_TIMEOUT', 300.0)),
             'rate_limit': settings.get_float('rate_limit', env_float('OPENROUTER_TRANSCRIPTION_RATE_LIMIT')),
             # Short chunks bound base64 request bodies and the blast radius of retries.
@@ -91,7 +105,7 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
             'proxy': settings.get_str('proxy') or os.getenv('OPENROUTER_PROXY'),
         })
 
-        self.refresh_when_changed = ['api_key', 'model', 'language', 'diarize']
+        self.refresh_when_changed = ['api_key', 'model', 'language', 'diarize', 'audio_events']
 
     def GetAvailableModels(self) -> list[str]:
         """
@@ -138,6 +152,9 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
 
         if self._model_can_diarize:
             options['diarize'] = (bool, _("Identify speakers"))
+
+        if CanTagAudioEvents(self.selected_model or self.default_transcription_model):
+            options['audio_events'] = (bool, _("Tag sound effects and music, e.g. [laughter], for closed captions"))
 
         options.update(self._chunk_options())
 

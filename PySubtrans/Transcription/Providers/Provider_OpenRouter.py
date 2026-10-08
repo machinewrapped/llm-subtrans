@@ -123,7 +123,7 @@ class OpenRouterTranscriptionProvider(TranscriptionProvider):
         if models:
             return models
 
-        return ["microsoft/mai-transcribe-2", "deepgram/nova-3", "openai/whisper-large-v3-turbo", "x-ai/grok-stt-1.0"]
+        return ["microsoft/mai-transcribe-2", "deepgram/nova-3", "elevenlabs/scribe-v2", "openai/whisper-large-v3-turbo", "x-ai/grok-stt-1.0"]
 
     def GetTranscriptionClient(self, settings : SettingsType) -> TranscriptionClient:
         """Returns a new client merging provider defaults with call settings."""

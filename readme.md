@@ -37,6 +37,13 @@ https://www.requesty.ai/privacy
 
 Models are named provider/model, e.g. `openai/gpt-4o-mini` or `anthropic/claude-sonnet-4-5`.
 
+### Opper
+https://opper.ai/privacy
+
+[Opper](https://opper.ai) is an EU-hosted AI gateway with an OpenAI-compatible API, which provides access to models from many different providers. You will need an [Opper API key](https://platform.opper.ai) to use the service (the app will look for OPPER_API_KEY in the environment if this is not provided).
+
+Models use pool names without a vendor prefix, e.g. `gemini-3.8-flash` or `claude-sonnet-4-6`, and are grouped by model maker.
+
 ### Google Gemini
 https://ai.google.dev/terms
 

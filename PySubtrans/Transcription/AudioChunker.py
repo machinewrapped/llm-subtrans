@@ -38,7 +38,10 @@ class AudioChunker:
     """
     def __init__(self, settings : SettingsType|None = None):
         self.settings : SettingsType = settings or SettingsType()
-        self.ValidateChunkBounds(self.min_chunk_seconds, self.max_chunk_seconds)
+
+        # Chunk limits are unused when the whole clip is one chunk
+        if not self.whole_clip:
+            self.ValidateChunkBounds(self.min_chunk_seconds, self.max_chunk_seconds)
 
         self.extractor : AudioExtractor = AudioExtractor(self.settings)
 
@@ -49,6 +52,11 @@ class AudioChunker:
             raise SubtitleError(_(
                 "Minimum chunk length cannot exceed maximum chunk length"
             ))
+
+    @property
+    def whole_clip(self) -> bool:
+        """Plan the whole media as a single chunk, for providers that take it in one request."""
+        return self.settings.get_bool('transcribe_whole_clip', False)
 
     @property
     def min_chunk_seconds(self) -> float:
@@ -119,8 +127,8 @@ class AudioChunker:
         if duration_cb:
             duration_cb(duration)
 
-        # Media shorter than the minimum chunk is transcribed whole
-        if total < self.min_chunk_seconds:
+        # Media shorter than the minimum chunk is transcribed whole, with no silence scan
+        if self.whole_clip or total < self.min_chunk_seconds:
             yield AudioChunk(start=timedelta(seconds=0), end=duration)
             return
 

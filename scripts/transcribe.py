@@ -36,7 +36,7 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('--ffmpeg-path', type=str, default=None,
                         help="Path to the ffmpeg executable (default: use ffmpeg and ffprobe from PATH)")
     parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
-    parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
+    parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation). 0 sends the whole clip in one request, for providers that support it (ElevenLabs)")
     parser.add_argument('--format', choices=('srt', 'ass', 'vtt'), default='vtt', help="Subtitle format for the transcribed output (default vtt; ass and vtt preserve speaker labels)")
     parser.add_argument('--rate-limit', type=float, default=None, help="Maximum backend requests per minute (0 for unlimited)")
     parser.add_argument('--align', action='store_true', default=True, help="Request word timestamps for timed lines (default on)")

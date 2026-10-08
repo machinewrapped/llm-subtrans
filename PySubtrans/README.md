@@ -288,7 +288,7 @@ subtitles.SaveTranslation("movie.en.srt", save_settings=SaveSettings(options))
 
 Transcription requires [ffmpeg](https://ffmpeg.org/) on the PATH, or pass `ffmpeg_path` to `init_transcription`.
 
-Diarization identifies who is speaking, which helps prevent lines spoken by different people from being merged into one subtitle. It is on by default for providers that support it; pass `diarize=False` to turn it off.
+Diarization identifies who is speaking. It helps prevent lines spoken by different people from being merged into one subtitle, and the speaker labels are passed to the translator, which may help it interpret a line or a scene. Labels restart with each chunk of audio, so the same label can refer to different people in different chunks, unless the provider transcribes the whole clip in one request. Diarization is on by default for providers that support it; pass `diarize=False` to turn it off.
 
 Save the transcription as VTT or ASS rather than SRT. SRT has no way to store speaker labels, so they would be lost if you reload the file later, e.g. to resume or retranslate it.
 
@@ -321,13 +321,16 @@ transcriber.events.audio_progress.connect(on_audio_progress)
 | `OpenRouter` | `elevenlabs/scribe-v2` | Yes | Yes |
 | `OpenRouter` | `deepgram/nova-3`, `x-ai/grok-stt-1.0` | Yes | Not verified |
 | `OpenRouter` | `openai/whisper-large-v3-turbo` | No | Not verified |
+| `ElevenLabs` | `scribe_v2` (default) | Yes | Yes |
 | `Gemini` | `gemini-3.5-transcribe` (default) | Yes, on by default | Yes |
 | `OpenAI` | `whisper-1` (default) | No | Yes |
 | `OpenAI` | `gpt-4o-transcribe-diarize` | Yes | No, segment timings only |
 | `Muse` | `muse-voice-transcribe-1.0` (default) | Yes | No, turn timings only |
 | `Qwen Local` | `Qwen/Qwen3-ASR-1.7B` (default), `Qwen/Qwen3-ASR-0.6B` | No | Partial, for languages the aligner supports |
 
-`OpenRouter`, `OpenAI` and `Muse` work with the basic installation and an API key. `Gemini` requires `pip install pysubtrans[gemini]`.
+`OpenRouter`, `ElevenLabs`, `OpenAI` and `Muse` work with the basic installation and an API key. `Gemini` requires `pip install pysubtrans[gemini]`.
+
+`ElevenLabs` can send the whole clip in one request. Pass `transcribe_whole_clip=True`, or `max_chunk_seconds=0`, to do so.
 
 `Qwen Local` runs Qwen3-ASR on your own hardware. Install a PyTorch build for your hardware from [pytorch.org](https://pytorch.org/get-started/locally/) first, then `pip install pysubtrans[qwen-asr]`. The first run downloads the model weights (about 6 GB). Pass `allow_cpu_fallback=True` to run without a GPU, though this is much slower.
 
@@ -508,6 +511,8 @@ continuing to evolve is the key to survival.
 ```
 
 Adapting the examples to your use case can greatly improve the model's performance by teaching it what good looks like.
+
+Lines with a speaker label, e.g. from a transcription with diarization, are sent with a `Speaker>` field. When a batch contains any, `speaker_instructions` is added to the instructions to explain the field. The default tells the model to treat labels as a weak hint, since they can restart between sections. Override it with a `### speaker_instructions` section in an instruction file, or on the Speakers tab of the GUI's instructions editor.
   
 See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
 

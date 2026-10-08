@@ -113,6 +113,11 @@ class TranscriptionProvider:
         """Whether the provider will label speakers, as currently configured."""
         return False
 
+    @property
+    def transcribe_whole_clip(self) -> bool:
+        """Whether the media is sent in one request rather than in chunks."""
+        return False
+
     def GetAvailableModels(self) -> list[str]:
         """
         Returns a list of possible models for the provider

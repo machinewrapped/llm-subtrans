@@ -10,6 +10,7 @@ How the project uses each provider (requests, parsing, retries) is documented in
 |---|---|---|---|---|
 | OpenRouter, MAI Transcribe 2 | Segments plus words | Yes, also as separate timed tokens | Yes, accurate | Yes, with diarization |
 | OpenRouter, ElevenLabs Scribe v2 | Transcript plus words | Yes, attached to words | Yes, short words clipped | Yes, with diarization |
+| ElevenLabs Scribe v2 (direct) | Transcript plus words | Yes, attached to words | Yes, short words clipped | Yes, with diarization |
 | Gemini 3.5 Transcribe | Transcript plus words | Varies, absent in some captures | Yes | Yes, with diarization, verbatim mode only |
 | Qwen Local | Transcript plus aligned words | In the transcript only | Partial, from a forced aligner | No |
 | OpenAI `whisper-1` | Segments plus words | Not checked | Yes | No |
@@ -43,6 +44,20 @@ MAI Transcribe 2 has given the best results in this project's testing, and is th
 - *Cost.* $0.11 for the episode at a 50% launch discount, against $0.10 for MAI. The list price is $0.22 per hour.
 
 **Account restrictions.** Requests can fail with a 404 citing zero available endpoints when the account or workspace has zero-data-retention guardrails that exclude the model's providers.
+
+## ElevenLabs
+
+**Interface.** `POST /v1/speech-to-text` with a multipart upload and an `xi-api-key` header. The official SDK was not used: it installs about 31 MB, of which speech-to-text is under 1%, and the request is a single multipart POST.
+
+**What it returns.** A transcript, an ISO 639-3 language code, the audio duration, a `transcription_id`, and typed words: `word`, `spacing`, and `audio_event` when events are tagged. Words carry speaker IDs such as `speaker_0`. There are no segments. Some words have zero length.
+
+**Whole clips.** Damo s01e06 (62 minutes) was sent as one 127 MB FLAC upload in October 2026, and came back in 52 seconds. The 20 speaker IDs were consistent across the episode: the bandit who says `성님` is `speaker_11` at 19 and 51–53 minutes. Dialogue matched the chunked OpenRouter run almost exactly. An insert song at 58:40–60:15 was not transcribed, where MAI transcribed the lyrics.
+
+**No early return without a webhook.** `webhook=true` returns at once and delivers the result later, but only to a webhook configured on the account. Without one the request is refused. A transcript can be fetched by `transcription_id`, but that ID only arrives with the result.
+
+**Credits.** On a credit plan, transcription used about 67 credits per minute of audio: 4,194 for the 62-minute episode.
+
+The model's accuracy and timing are described under OpenRouter, ElevenLabs Scribe v2.
 
 ## Gemini
 
@@ -112,4 +127,4 @@ No OpenAI transcription has been assessed on real media yet.
 - **Punctuation tokens.** Of the providers with captures, only MAI returns punctuation as separate timed words. Gemini and Qwen return none.
 - **Empty audio.** Music or noise returns a successful empty result from all the API providers.
 - **Zero-length words.** Gemini and ElevenLabs Scribe return words whose start and end are the same. Every client keeps them, since the start is still usable, and drops only words that end before they start.
-- **Chunk lengths are project choices.** The defaults (Qwen Local 30–60 s, OpenAI and Muse 8–60 s, OpenRouter 30–120 s, Gemini 10–15 minutes) were chosen by the project. No provider-published limits are recorded.
+- **Chunk lengths are project choices.** The defaults (Qwen Local 30–60 s, OpenAI and Muse 8–60 s, OpenRouter 30–120 s, chunked ElevenLabs 10–15 minutes, Gemini 10–15 minutes) were chosen by the project. ElevenLabs accepts files of up to 5 GB, and can send the whole clip in one request.

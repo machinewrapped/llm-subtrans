@@ -180,6 +180,9 @@ class MainWindow(QMainWindow):
         return self.toolbar.GetAction(action_name).isEnabled()
 
     def _open_dropped_file(self, filepath : str, kind : FileKind, reload_subtitles : bool) -> None:
+        """
+        Load a dropped subtitle file as a project, or open the transcription dialog for a media file.
+        """
         if kind == FileKind.Subtitles:
             self.gui_interface.LoadProject(filepath, reload_subtitles=reload_subtitles)
         else:

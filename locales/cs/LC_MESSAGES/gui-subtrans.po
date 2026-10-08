@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-10-04 20:21+0000\n"
+"POT-Creation-Date: 2026-10-06 17:08+0000\n"
 "PO-Revision-Date: 2025-08-09 21:00+0000\n"
 "Last-Translator: AI Assistant\n"
 "Language-Team: Czech\n"
@@ -80,19 +80,19 @@ msgstr ""
 "    <p>Časová razítka slov a diarizace závisí na vybraném modelu.</p>\n"
 "    "
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:102
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:95
 msgid " (about {} left)"
 msgstr " (zbývá asi {})"
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:99
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:92
 msgid " (elapsed {})"
 msgstr " (uplynulo {})"
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:96
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:89
 msgid " (source length {})"
 msgstr " (délka zdroje {})"
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:93
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:86
 msgid " of {}"
 msgstr " z {}"
 
@@ -115,11 +115,11 @@ msgstr "1 řádek"
 
 #: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:150
 msgid "<p><b>Qwen runtime required:</b> The Torch environment does not include the Qwen speech recognition packages. Earlier versions bundled them with the application.</p>"
-msgstr ""
+msgstr "<p><b>Qwen runtime vyžadován:</b> Prostředí Torch neobsahuje balíčky pro rozpoznávání řeči Qwen. Starší verze je měly zabudované v aplikaci.</p>"
 
 #: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:145
 msgid "<p><b>Setup required:</b> Qwen3-ASR runs on PyTorch and the Qwen speech recognition packages, which are installed separately from the application. The correct Torch build depends on your operating system and hardware.</p>"
-msgstr ""
+msgstr "<p><b>Nastavení vyžadováno:</b> Qwen3-ASR běží na PyTorchu a balíčcích pro rozpoznávání řeči Qwen, které jsou instalovány odděleně od aplikace. Správná sestavení Torchu závisí na vašem operačním systému a hardwaru.</p>"
 
 #: PySubtrans/Transcription/TranscriptionProvider.py:140
 msgid "<p>Audio extraction needs <a href=\"https://ffmpeg.org/download.html\">ffmpeg</a> installed."
@@ -131,11 +131,11 @@ msgstr "<p>Inference na CPU je zakázána. Povolte ji, pokud přijímáte dopady
 
 #: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:151
 msgid "<p>Click <b>{button}</b> and select the same environment to install them into it.</p>"
-msgstr ""
+msgstr "<p>Klikněte na <b>{button}</b> a vyberte stejné prostředí pro jejich instalaci do něj.</p>"
 
 #: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:146
 msgid "<p>Click <b>{button}</b> to detect available hardware and install them.</p>"
-msgstr ""
+msgstr "<p>Klikněte na <b>{button}</b> pro detekci dostupného hardwaru a jejich instalaci.</p>"
 
 #: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:158
 msgid "<p>Running on CPU: transcription will work but likely much slower than on a GPU.</p>"
@@ -3008,11 +3008,23 @@ msgstr "Knihovna OpenAI je zastaralá a musí být aktualizována"
 
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:507
 msgid "The Torch environment at:\n{path}\n\ndoes not include the Qwen runtime that local transcription needs.\n\nInstall it into this environment now? It needs about {size} of disk space."
-msgstr "Torch prostředí na:\n{path}\n\nneobsahuje runtime Qwen, který místní transkrice potřebuje.\n\nNainstalujte ho do tohoto prostředí nyní? Potřebuje asi {size} místa na disku."
+msgstr ""
+"Torch prostředí na:\n"
+"{path}\n"
+"\n"
+"neobsahuje runtime Qwen, který místní transkrice potřebuje.\n"
+"\n"
+"Nainstalujte ho do tohoto prostředí nyní? Potřebuje asi {size} místa na disku."
 
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:498
 msgid "The Torch environment at:\n{path}\n\ndoes not include the Qwen runtime, and has no Python interpreter to install it with.\n\nSelect a virtual environment, or use the automatic install."
-msgstr "Torch prostředí na:\n{path}\n\nneobsahuje runtime Qwen, a nemá Python interpreter pro jeho instalaci.\n\nVyberte virtuální prostředí, nebo použijte automatickou instalaci."
+msgstr ""
+"Torch prostředí na:\n"
+"{path}\n"
+"\n"
+"neobsahuje runtime Qwen, a nemá Python interpreter pro jeho instalaci.\n"
+"\n"
+"Vyberte virtuální prostředí, nebo použijte automatickou instalaci."
 
 #: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:48
 msgid "The Torch environment does not include the Qwen runtime. Use {button} and select the same environment to install it."
@@ -3237,13 +3249,9 @@ msgstr "Přepsáno {} řádků z {} bloků"
 msgid "Transcribed {} lines."
 msgstr "Přepsáno {} řádků."
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:88
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:81
 msgid "Transcribing chunk {current}"
 msgstr "Přepisuji blok {current}"
-
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:85
-msgid "Transcribing chunk {current}/{total}"
-msgstr "Přepisuji blok {current}/{total}"
 
 #: PySubtrans/Transcription/TranscriptionCoordinator.py:144
 msgid "Transcribing {} with {}"
@@ -4520,6 +4528,9 @@ msgstr "~5,5 GB"
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:72
 msgid "~600 MB"
 msgstr "~600 MB"
+
+#~ msgid "Transcribing chunk {current}/{total}"
+#~ msgstr "Přepisuji blok {current}/{total}"
 
 #~ msgid "Diarization is not mapped for model '{}', requesting without it"
 #~ msgstr "Diarizace není pro model '{}' namapována, požaduje se bez ní"

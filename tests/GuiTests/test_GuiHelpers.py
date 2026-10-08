@@ -1,4 +1,8 @@
-from GuiSubtrans.GuiHelpers import GetDisplayLength, GetWrapKey, WrapKeyDominates
+import os
+
+from PySide6.QtCore import QMimeData, QUrl
+
+from GuiSubtrans.GuiHelpers import FileKind, GetDisplayLength, GetDroppedFile, GetFileKind, GetWrapKey, WrapKeyDominates
 from GuiSubtrans.ViewModel.LineItem import LineItem
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 
@@ -84,3 +88,54 @@ class LineItemSizeKeyTests(LoggedTestCase):
     def test_wide_original_dominates_longer_latin_translation(self) -> None:
         line = self._create_line("唔方得到報唔方得到報唔方得到報", "x" * 20)
         self.assertLoggedEqual("key is the wider original", (GetWrapKey(line.line_text),), line.size_key)
+
+
+class GetFileKindTests(LoggedTestCase):
+    """Tests for choosing whether a file is opened for translation or transcription."""
+
+    def test_subtitle_files_are_translated(self) -> None:
+        for filepath in ("movie.srt", "movie.ass", "movie.subtrans", "MOVIE.SRT"):
+            self.assertLoggedEqual("subtitle file kind", FileKind.Subtitles, GetFileKind(filepath), input_value=filepath)
+
+    def test_media_files_are_transcribed(self) -> None:
+        for filepath in ("movie.mkv", "movie.mp4", "audio.mp3", "MOVIE.MKV"):
+            self.assertLoggedEqual("media file kind", FileKind.Media, GetFileKind(filepath), input_value=filepath)
+
+    def test_unsupported_files_are_ignored(self) -> None:
+        for filepath in ("notes.txt", "archive.zip", "noextension"):
+            self.assertLoggedIsNone("unsupported file kind", GetFileKind(filepath), input_value=filepath)
+
+
+class GetDroppedFileTests(LoggedTestCase):
+    """Tests for reading a dropped file from drag and drop data."""
+
+    def _mime(self, urls : list[QUrl]) -> QMimeData:
+        mime = QMimeData()
+        mime.setUrls(urls)
+        return mime
+
+    def test_single_local_file_is_returned_with_its_kind(self) -> None:
+        filepath = os.path.abspath("movie.mkv")
+        dropped = GetDroppedFile(self._mime([QUrl.fromLocalFile(filepath)]))
+        self.assertLoggedIsNotNone("dropped file", dropped, input_value=filepath)
+        if dropped:
+            self.assertLoggedEqual("dropped path", os.path.normcase(filepath), os.path.normcase(os.path.normpath(dropped[0])))
+            self.assertLoggedEqual("dropped kind", FileKind.Media, dropped[1])
+
+    def test_multiple_files_are_rejected(self) -> None:
+        urls = [QUrl.fromLocalFile(os.path.abspath("one.srt")), QUrl.fromLocalFile(os.path.abspath("two.srt"))]
+        self.assertLoggedIsNone("multiple files", GetDroppedFile(self._mime(urls)))
+
+    def test_remote_url_is_rejected(self) -> None:
+        url = QUrl("https://example.com/movie.srt")
+        self.assertLoggedIsNone("remote url", GetDroppedFile(self._mime([url])), input_value=url.toString())
+
+    def test_unsupported_file_is_rejected(self) -> None:
+        url = QUrl.fromLocalFile(os.path.abspath("notes.txt"))
+        self.assertLoggedIsNone("unsupported file", GetDroppedFile(self._mime([url])))
+
+    def test_missing_or_non_url_data_is_rejected(self) -> None:
+        text_only = QMimeData()
+        text_only.setText("movie.srt")
+        self.assertLoggedIsNone("text without urls", GetDroppedFile(text_only))
+        self.assertLoggedIsNone("no mime data", GetDroppedFile(None))

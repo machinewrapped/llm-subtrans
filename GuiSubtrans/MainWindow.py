@@ -1,8 +1,8 @@
 import logging
 import dotenv
 
-from PySide6.QtCore import Qt
-from PySide6.QtGui import QIcon
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QDragEnterEvent, QDropEvent, QIcon
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     QSplitter,
 )
 from GuiSubtrans.Command import Command
+from GuiSubtrans.GuiHelpers import FileKind, GetDroppedFile
 from GuiSubtrans.GuiInterface import GuiInterface
 from GuiSubtrans.MainToolbar import MainToolbar
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
@@ -33,6 +34,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(_("GUI-Subtrans"))
         self.setGeometry(100, 100, 1600, 900)
         self._load_icon("gui-subtrans")
+        self.setAcceptDrops(True)
 
         self._create_gui_interface(options)
 
@@ -97,6 +99,37 @@ class MainWindow(QMainWindow):
 
         super().closeEvent(e)
 
+    def dragEnterEvent(self, event : QDragEnterEvent) -> None:
+        """
+        Accept drags that carry a single subtitle or media file, if it can be opened now.
+        """
+        dropped = GetDroppedFile(event.mimeData())
+        if dropped and self._can_open(dropped[1]):
+            # Always copy, so the drag source never treats the drop as a move and deletes the file
+            event.setDropAction(Qt.DropAction.CopyAction)
+            event.accept()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event : QDropEvent) -> None:
+        """
+        Open a dropped subtitle file for translation, or a media file for transcription.
+        Hold shift to reload the subtitles of an existing project, as with the Load button.
+        """
+        dropped = GetDroppedFile(event.mimeData())
+        if not dropped or not self._can_open(dropped[1]):
+            event.ignore()
+            return
+
+        event.setDropAction(Qt.DropAction.CopyAction)
+        event.accept()
+
+        filepath, kind = dropped
+        reload_subtitles = bool(event.modifiers() & Qt.KeyboardModifier.ShiftModifier)
+
+        # Open once the drop has returned, so a modal dialog does not hold the drag source
+        QTimer.singleShot(0, lambda: self._open_dropped_file(filepath, kind, reload_subtitles))
+
     def _create_gui_interface(self, options):
         """
         Create the interface for communicating with the GUI
@@ -138,6 +171,22 @@ class MainWindow(QMainWindow):
             self.model_viewer.hide()
             self.project_settings.hide()
             self.project_toolbar.hide()
+
+    def _can_open(self, kind : FileKind) -> bool:
+        """
+        Only open a dropped file when the matching toolbar action is available.
+        """
+        action_name = 'Load Subtitles' if kind == FileKind.Subtitles else 'Transcribe Audio'
+        return self.toolbar.GetAction(action_name).isEnabled()
+
+    def _open_dropped_file(self, filepath : str, kind : FileKind, reload_subtitles : bool) -> None:
+        """
+        Load a dropped subtitle file as a project, or open the transcription dialog for a media file.
+        """
+        if kind == FileKind.Subtitles:
+            self.gui_interface.LoadProject(filepath, reload_subtitles=reload_subtitles)
+        else:
+            self.gui_interface.ShowTranscriptionDialog(filepath)
 
     def _load_icon(self, name):
         if not name or name == "default":

@@ -1,13 +1,24 @@
 import logging
 import os
 import unicodedata
+from enum import Enum, auto
+
 import darkdetect # type: ignore
 
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QMimeData
 from PySide6.QtWidgets import (QApplication, QFormLayout)
 
 from PySubtrans.Helpers.Resources import GetResourcePath
 from PySubtrans.Helpers.Localization import _
+from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
+from PySubtrans.Transcription.AudioExtractor import SUPPORTED_MEDIA_EXTENSIONS
+
+class FileKind(Enum):
+    """
+    How the GUI opens a file: subtitles are loaded for translation, media is transcribed.
+    """
+    Subtitles = auto()
+    Media = auto()
 
 def GetThemeNames():
     themes = []
@@ -93,3 +104,37 @@ def ClearForm(layout : QFormLayout):
                 widget.hide()
                 widget.setParent(None)
                 widget.deleteLater()
+
+def GetSubtitleExtensions() -> list[str]:
+    """
+    File extensions the GUI can open as a subtitle project, including project files.
+    """
+    return sorted(set(SubtitleFormatRegistry.enumerate_formats()).union(['.subtrans']))
+
+def GetFileKind(filepath : str) -> FileKind|None:
+    """
+    Identify whether a file should be opened for translation or transcription, from its extension.
+    """
+    extension = os.path.splitext(filepath)[1].casefold()
+    if extension in GetSubtitleExtensions():
+        return FileKind.Subtitles
+
+    if extension in SUPPORTED_MEDIA_EXTENSIONS:
+        return FileKind.Media
+
+    return None
+
+def GetDroppedFile(mime : QMimeData|None) -> tuple[str, FileKind]|None:
+    """
+    Return the path and kind of a single dropped local file that the GUI can open.
+    """
+    if not mime or not mime.hasUrls():
+        return None
+
+    urls = mime.urls()
+    if len(urls) != 1 or not urls[0].isLocalFile():
+        return None
+
+    filepath = urls[0].toLocalFile()
+    kind = GetFileKind(filepath)
+    return (filepath, kind) if kind else None

@@ -285,6 +285,17 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             dialog.deleteLater()
             self.application.processEvents()
 
+    def test_initial_media_path_is_selected(self) -> None:
+        """A media file passed to the dialog is selected as if the user had chosen it."""
+        media_path = 'dropped.mkv'
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(Options(), media_path=media_path)
+        try:
+            self.assertLoggedEqual('media path selected', media_path, dialog.media_path)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
     def test_language_follows_audio_track_until_user_edits_it(self) -> None:
         """An empty language hint follows track metadata until overridden."""
         options = Options()

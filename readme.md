@@ -100,7 +100,7 @@ LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...), whi
 
 **Note**: Transcription requires `ffmpeg`/`ffprobe` to be installed and accessible.
 
-From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separate dialog for transcription. A successful result will be opened as a translation project upon completion.
+From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separate dialog for transcription, or drag a media file onto the main window. A successful result will be opened as a translation project upon completion.
 
 ### Cloud transcription services
 * **OpenRouter**: Provides several speech-to-text models, e.g. the excellent MAI Transcribe 2, DeepGram and Grok.

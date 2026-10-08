@@ -1,11 +1,14 @@
 """Exercise synchronous transcription settings and result handling."""
 import logging
+import os
 from unittest.mock import patch
 
 from tests.GuiTestSupport import ConfigureOffscreenPlatform
 
 ConfigureOffscreenPlatform()
 
+from PySide6.QtCore import QMimeData, QPoint, QPointF, Qt, QUrl
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
 from PySide6.QtWidgets import QApplication, QDialog, QDialogButtonBox
 
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
@@ -292,6 +295,31 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             dialog = TranscriptionDialog(Options(), media_path=media_path)
         try:
             self.assertLoggedEqual('media path selected', media_path, dialog.media_path)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
+
+    def test_shift_dropped_media_is_copied_and_selected(self) -> None:
+        """A shift-drag proposes a move, but the drop is reported as a copy so the source keeps the file."""
+        media_path = os.path.abspath('dropped.mkv')
+        mime = QMimeData()
+        mime.setUrls([QUrl.fromLocalFile(media_path)])
+        actions = Qt.DropAction.CopyAction | Qt.DropAction.MoveAction
+        shift = Qt.KeyboardModifier.ShiftModifier
+
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(Options())
+        try:
+            enter = QDragEnterEvent(QPoint(10, 10), actions, mime, Qt.MouseButton.LeftButton, shift)
+            QApplication.sendEvent(dialog, enter)
+            self.assertLoggedTrue('drag accepted', enter.isAccepted())
+            self.assertLoggedEqual('drag reported as copy', Qt.DropAction.CopyAction, enter.dropAction())
+
+            drop = QDropEvent(QPointF(10, 10), actions, mime, Qt.MouseButton.LeftButton, shift)
+            QApplication.sendEvent(dialog, drop)
+            self.assertLoggedTrue('drop accepted', drop.isAccepted())
+            self.assertLoggedEqual('drop reported as copy', Qt.DropAction.CopyAction, drop.dropAction())
+            self.assertLoggedEqual('dropped media selected', os.path.normcase(media_path), os.path.normcase(os.path.normpath(dialog.media_path or '')))
         finally:
             dialog.deleteLater()
             self.application.processEvents()

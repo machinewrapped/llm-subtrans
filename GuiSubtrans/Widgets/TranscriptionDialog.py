@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 )
 
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
+from GuiSubtrans.GuiHelpers import FileKind, GetDroppedFile
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from GuiSubtrans.Widgets.OptionsWidgets import (
     CreateOptionWidget,
@@ -917,28 +918,24 @@ class TranscriptionDialog(QDialog):
 
     def dragEnterEvent(self, event : QDragEnterEvent) -> None:
         """Accept drags that carry a single supported media file."""
-        mime = event.mimeData()
-        if mime and mime.hasUrls():
-            urls = mime.urls()
-            if len(urls) == 1 and urls[0].isLocalFile():
-                path = urls[0].toLocalFile()
-                if os.path.splitext(path)[1].casefold() in SUPPORTED_MEDIA_EXTENSIONS:
-                    event.acceptProposedAction()
-                    return
-
-        event.ignore()
+        dropped = GetDroppedFile(event.mimeData())
+        if dropped and dropped[1] == FileKind.Media:
+            # Always copy, so the drag source never treats the drop as a move and deletes the file
+            event.setDropAction(Qt.DropAction.CopyAction)
+            event.accept()
+        else:
+            event.ignore()
 
     def dropEvent(self, event : QDropEvent) -> None:
         """Set the media file from a dropped file."""
-        mime = event.mimeData()
-        if mime and mime.hasUrls():
-            urls = mime.urls()
-            if len(urls) == 1 and urls[0].isLocalFile():
-                self.file_edit.setText(urls[0].toLocalFile())
-                event.acceptProposedAction()
-                return
+        dropped = GetDroppedFile(event.mimeData())
+        if not dropped or dropped[1] != FileKind.Media:
+            event.ignore()
+            return
 
-        event.ignore()
+        event.setDropAction(Qt.DropAction.CopyAction)
+        event.accept()
+        self.file_edit.setText(dropped[0])
 
     def done(self, result : int) -> None:
         """Discard a provider load still in flight, so it cannot populate a closed dialog."""

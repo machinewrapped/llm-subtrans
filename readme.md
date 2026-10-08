@@ -98,12 +98,15 @@ To use Bedrock, you must:
 ## Transcription
 LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...), which can then be translated with the normal workflow. This can produce better results than a text-only translation flow, with more accurate timings and speaker identification (depending on the provider).
 
+Speaker labels are passed to the translator with each line, which may help it interpret a line or a scene. They restart with each chunk of audio, so the same label can refer to different people in different chunks, unless the provider transcribes the whole clip in one request. Save transcriptions as VTT or ASS to keep the labels.
+
 **Note**: Transcription requires `ffmpeg`/`ffprobe` to be installed and accessible.
 
 From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separate dialog for transcription, or drag a media file onto the main window. A successful result will be opened as a translation project upon completion.
 
 ### Cloud transcription services
 * **OpenRouter**: Provides several speech-to-text models, e.g. the excellent MAI Transcribe 2, ElevenLabs Scribe v2, DeepGram and Grok.
+* **ElevenLabs**: Scribe v2 with word timestamps and speaker diarization.
 * **Gemini**: `gemini-3.5-transcribe` with word timestamps and speaker diarization. Very good, but brutal rate limits.
 * **Muse**: Meta `muse-voice-transcribe-1. Slow, and only provides approximate timings.
 * **OpenAI**: `whisper-1` (word timestamps) and `gpt-4o-transcribe-diarize`. Experimental support.

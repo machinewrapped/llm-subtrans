@@ -601,7 +601,7 @@ class TranscriptionDialog(QDialog):
         max_chunk_seconds = provider.settings.get_float('max_chunk_seconds')
 
         try:
-            if min_chunk_seconds is not None and max_chunk_seconds is not None:
+            if not provider.transcribe_whole_clip and min_chunk_seconds is not None and max_chunk_seconds is not None:
                 AudioChunker.ValidateChunkBounds(min_chunk_seconds, max_chunk_seconds)
 
             language = provider.ResolveLanguageCode(provider.settings.get_str('language'), self.global_options.ui_language)

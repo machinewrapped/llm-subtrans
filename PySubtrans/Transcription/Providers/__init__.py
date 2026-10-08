@@ -12,3 +12,4 @@ from . import Provider_OpenRouter
 from . import Provider_OpenAI
 from . import Provider_Gemini
 from . import Provider_Muse
+from . import Provider_ElevenLabs

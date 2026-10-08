@@ -168,6 +168,20 @@ class TestOpenRouterRegistered(LoggedTestCase):
         self.assertLoggedEqual("part count", 0, len(parts))
         self.assertLoggedEqual("word count", 0, len(words))
 
+    def test_zero_length_words_kept(self):
+        """Zero-length words keep their text and start; reversed timings are still dropped."""
+        payload = {
+            'text': 'a b c',
+            'words': [
+                {'word': 'a', 'start': 1.0, 'end': 1.2},
+                {'word': 'b', 'start': 1.3, 'end': 1.3},
+                {'word': 'c', 'start': 2.0, 'end': 1.9},
+            ],
+        }
+        _text, _language, _parts, words = _parse_transcription_payload(payload)
+
+        self.assertLoggedEqual("words kept", ['a', 'b'], [word.text for word in words])
+
     def test_missing_optional_fields_skipped_silently(self):
         """Absent no_speech_prob and timings parse without raising anything."""
         payload = {
@@ -344,7 +358,7 @@ class TestOpenRouterClient(LoggedTestCase):
         """Diarize maps onto Azure options for Microsoft models."""
         client = self._client(model="microsoft/mai-transcribe-2", diarize=True)
 
-        options = client._diarize_options()
+        options = client._provider_options()
 
         self.assertLoggedIn("azure options", "azure", options)
 
@@ -352,15 +366,33 @@ class TestOpenRouterClient(LoggedTestCase):
         """Diarize maps onto Deepgram options."""
         client = self._client(model="deepgram/nova-3", diarize=True)
 
-        options = client._diarize_options()
+        options = client._provider_options()
 
         self.assertLoggedIn("deepgram options", "deepgram", options)
+
+    def test_diarize_merges_request_options(self):
+        """Diarization merges with the options sent on every ElevenLabs request."""
+        client = self._client(model="elevenlabs/scribe-v2", diarize=True)
+
+        options = client._provider_options().get('elevenlabs', {})
+
+        self.assertLoggedEqual("diarize requested", True, options.get('diarize'))
+        self.assertLoggedEqual("audio events off", False, options.get('tag_audio_events'))
+
+    def test_request_options_without_diarize(self):
+        """Request options are sent when diarization is off."""
+        client = self._client(model="elevenlabs/scribe-v2", diarize=False)
+
+        options = client._provider_options().get('elevenlabs', {})
+
+        self.assertLoggedNotIn("no diarize option", 'diarize', options)
+        self.assertLoggedEqual("audio events off", False, options.get('tag_audio_events'))
 
     def test_diarize_unmapped_model(self):
         """Unmapped models request without diarization options."""
         client = self._client(model="openai/whisper-large-v3", diarize=True)
 
-        options = client._diarize_options()
+        options = client._provider_options()
 
         self.assertLoggedEqual("empty options", {}, options)
 

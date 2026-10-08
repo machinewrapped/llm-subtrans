@@ -307,6 +307,15 @@ class TestQwenResultParsing(LoggedTestCase):
         self.assertLoggedEqual("word count", 1, len(words))
         self.assertLoggedEqual("word start", timedelta(seconds=0.5), words[0].start)
 
+    def test_zero_length_words_kept(self):
+        """Zero-length words keep their text and start; reversed timings are still dropped."""
+        units = [type("Unit", (), {'text': text, 'start_time': start, 'end_time': end})()
+                 for text, start, end in [('a', 1.0, 1.2), ('b', 1.3, 1.3), ('c', 2.0, 1.9)]]
+        result = type("Result", (), {'text': 'a b c', 'language': None, 'time_stamps': units})()
+        _text, _language, words = qwen_module.parse_qwen_result(result)
+
+        self.assertLoggedEqual("words kept", ['a', 'b'], [word.text for word in words])
+
     def test_parse_flat_result(self):
         """Results without timestamps parse to text-only."""
         result = type("Result", (), {'text': 'hi', 'language': None, 'time_stamps': None})()

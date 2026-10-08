@@ -10,17 +10,41 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
 
-# Diarization is not a top-level OpenRouter field; each vendor takes its own option under its provider slug
+# Vendor options are not top-level OpenRouter fields; each vendor takes its own under its provider slug
 _DIARIZATION_OPTIONS : dict[str, dict] = {
     'microsoft/': {'azure': {'diarization': {'enabled': True}}},
     'deepgram/': {'deepgram': {'diarize': True}},
+    'elevenlabs/': {'elevenlabs': {'diarize': True}},
     'x-ai/': {'xai': {'diarize': True}},
+}
+
+# Options sent with every request to the vendor.
+# ElevenLabs tags audio events such as [laughter] inline by default, which puts them into subtitle lines.
+_REQUEST_OPTIONS : dict[str, dict] = {
+    'elevenlabs/': {'elevenlabs': {'tag_audio_events': False}},
 }
 
 def DiarizationOptions(model : str) -> dict|None:
     """The provider options that request diarization for *model*, or None if it cannot be diarized."""
+    return _MatchModel(_DIARIZATION_OPTIONS, model)
+
+def ProviderOptions(model : str, diarize : bool) -> dict:
+    """The provider options to send for *model*, with diarization when requested and supported."""
+    sources = [_MatchModel(_REQUEST_OPTIONS, model)]
+    if diarize:
+        sources.append(DiarizationOptions(model))
+
+    options : dict[str, dict] = {}
+    for source in sources:
+        for slug, values in (source or {}).items():
+            options[slug] = options.get(slug, {}) | values
+
+    return options
+
+def _MatchModel(table : dict[str, dict], model : str) -> dict|None:
+    """The entry in *table* whose prefix matches *model*, if any."""
     model_cf = model.casefold()
-    for prefix, options in _DIARIZATION_OPTIONS.items():
+    for prefix, options in table.items():
         if model_cf.startswith(prefix):
             return options
     return None

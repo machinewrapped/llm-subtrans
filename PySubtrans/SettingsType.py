@@ -11,6 +11,9 @@ BasicType: TypeAlias = str | int | float | bool | list[str] | None
 SettingType: TypeAlias = BasicType | dict[str, 'SettingType'] | dict[str, 'SettingsType']
 GuiSettingsType: TypeAlias = dict[str, tuple[type|str|list[str], str]]
 
+# A plain count of seconds, such as "4", "0.05" or "120.5"
+_seconds_pattern = regex.compile(r"^(\d+(\.\d*)?|\.\d+)$")
+
 class SettingsError(Exception):
     """Raised when a setting cannot be coerced to the expected type."""
     pass
@@ -94,13 +97,22 @@ class SettingsType(dict[str, SettingType]):
         return value.strip() or None
 
     def get_timedelta(self, key: str, default: timedelta) -> timedelta:
-        """Get a timedelta setting with type safety"""
+        """
+        Get a timedelta setting with type safety.
+        A number, or a string holding a number, is a count of seconds.
+        Other strings are parsed as timestamps.
+        """
         value = self.get(key, default)
         if value is None:
             return default
         if isinstance(value, timedelta):
             return value
-        elif isinstance(value, (int, float, str)):
+
+        # Timestamp parsing reads a full stop as a delimiter, so "4.0" would be four minutes
+        if isinstance(value, str) and _seconds_pattern.match(value.strip()):
+            return timedelta(seconds=float(value))
+
+        if isinstance(value, (int, float, str)):
             result = GetTimeDelta(value)
             if isinstance(result, timedelta):
                 return result    

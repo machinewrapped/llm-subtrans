@@ -66,11 +66,11 @@ class TranslationClient:
 
     @property
     def max_retries(self) -> int:
-        return self.settings.get_int('max_retries') or 3
+        return self.settings.get_int('max_retries', 3) or 0
 
     @property
     def backoff_time(self) -> float:
-        return self.settings.get_float('backoff_time') or 5.0
+        return self.settings.get_float('backoff_time', 5.0) or 0.0
 
     @property
     def supports_streaming(self) -> bool:

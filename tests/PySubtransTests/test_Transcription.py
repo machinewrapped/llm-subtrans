@@ -21,7 +21,7 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Transcription.AudioChunker import AudioChunk, AudioChunker
+from PySubtrans.Transcription.AudioChunker import DEFAULT_QUIET_SCAN_SECONDS, AudioChunk, AudioChunker
 from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioTrack
 from PySubtrans.Transcription.LineMerger import MIN_TIMING_CORRECTION
 from PySubtrans.Transcription.LineSettings import LineSettings
@@ -659,6 +659,13 @@ class TestOverlongUtteranceSplitting(LoggedTestCase):
         self.assertLoggedEqual("first span", (timedelta(seconds=100), timedelta(seconds=104)), (lines[0].start, lines[0].end))
         self.assertLoggedEqual("second span", (timedelta(seconds=104), timedelta(seconds=108)), (lines[1].start, lines[1].end))
 
+    def test_no_duration_limit_keeps_the_utterance_whole(self):
+        """With no duration limit, an utterance within the character limit is not split."""
+        builder = TranscriptionLineBuilder(LineSettings(max_line_chars=200, max_line_seconds=None))
+        lines = self._lines(builder, _uniform_words(self.WORDS))
+
+        self.assertLoggedEqual("line count", 1, len(lines))
+
     def test_limit_never_strands_a_short_tail(self):
         """A sentence just over the character limit splits in the middle, not before its last word."""
         builder = TranscriptionLineBuilder(LineSettings(max_line_chars=40, max_line_seconds=10.0))
@@ -873,6 +880,17 @@ class TestOverlongSpans(LoggedTestCase):
         self.assertLoggedEqual("duration", timedelta(seconds=EstimateSpeechSeconds(text)), lines[0].end - lines[0].start)
         self.assertLoggedGreater("longer than one line", (lines[0].end - lines[0].start).total_seconds(),
                                  builder.settings.max_line_seconds)
+
+    def test_untimed_chunk_with_no_duration_limit_spans_the_chunk(self):
+        """With no duration limit, a transcript with no timings takes the whole chunk."""
+        builder = TranscriptionLineBuilder(LineSettings(max_line_chars=120, max_line_seconds=None))
+        segment = TranscriptionSegment(start=timedelta(seconds=100), end=timedelta(seconds=160),
+                                       text="monologue", language="Chinese")
+        with self.assertLogs(level=logging.INFO):
+            lines = builder.LinesForSegment(segment)
+
+        self.assertLoggedEqual("line count", 1, len(lines))
+        self.assertLoggedEqual("duration", timedelta(seconds=60), lines[0].end - lines[0].start)
 
     def test_timed_line_no_warning(self):
         """Word-timed lines are already capped, so they never flag."""
@@ -1583,6 +1601,34 @@ class TestLineBuilderWiring(LoggedTestCase):
         self.assertLoggedEqual("min split chars", 6, coordinator.line_builder.settings.min_split_chars)
         self.assertLoggedEqual("min gap", 0.1, coordinator.line_builder.settings.min_gap)
 
+    def test_zero_maximums_mean_no_limit(self):
+        """A maximum line length or duration of zero lifts the limit."""
+        coordinator = TranscriptionCoordinator(FakeTranscriptionProvider(), SettingsType({
+            'max_characters': 0,
+            'max_line_duration': 0.0}))
+
+        self.assertLoggedIsNone("max chars", coordinator.line_builder.settings.max_line_chars)
+        self.assertLoggedIsNone("max seconds", coordinator.line_builder.settings.max_line_seconds)
+
+    def test_zero_values_are_kept(self):
+        """Settings where zero is meaningful are not replaced by their defaults."""
+        provider = FakeTranscriptionProvider(SettingsType({
+            'merge_eligible_gap': 0.0,
+            'same_speaker_merge_eligible_gap': 0.0}))
+        coordinator = TranscriptionCoordinator(provider, SettingsType({
+            'min_split_chars': 0,
+            'min_line_duration': 0.0,
+            'max_newlines': 0,
+            'min_gap': 0.0}))
+
+        settings = coordinator.line_builder.settings
+        self.assertLoggedEqual("min split chars", 0, settings.min_split_chars)
+        self.assertLoggedEqual("min line seconds", 0.0, settings.min_line_seconds)
+        self.assertLoggedEqual("max newlines", 0, settings.max_newlines)
+        self.assertLoggedEqual("min gap", 0.0, settings.min_gap)
+        self.assertLoggedEqual("merge gap", 0.0, settings.merge_eligible_gap)
+        self.assertLoggedEqual("same speaker merge gap", 0.0, settings.same_speaker_merge_eligible_gap)
+
     def test_builder_takes_the_provider_word_coverage(self):
         """A provider whose words can miss stretches of the transcript configures the builder for it."""
         provider = FakeTranscriptionProvider()
@@ -1638,6 +1684,19 @@ class TestChunkSettings(LoggedTestCase):
 
         self.assertLoggedEqual("fallback pause", 0.5, coordinator.chunker.fallback_silence_min_duration)
         self.assertLoggedEqual("quiet scan", 8.0, coordinator.chunker.quiet_scan_seconds)
+
+    def test_unset_cut_fallbacks_use_the_chunker_defaults(self):
+        """Fallback tuning left unset for the run is not passed to the chunker as zero."""
+        coordinator = TranscriptionCoordinator(self._provider())
+
+        self.assertLoggedEqual("quiet scan", DEFAULT_QUIET_SCAN_SECONDS, coordinator.chunker.quiet_scan_seconds)
+
+    def test_zero_lookahead_is_kept(self):
+        """A lookahead of zero cuts at the cap instead of scanning past it."""
+        chunker = AudioChunker(SettingsType({'lookahead_seconds': 0.0, 'quiet_scan_seconds': 0.0}))
+
+        self.assertLoggedEqual("lookahead", 0.0, chunker.lookahead_seconds)
+        self.assertLoggedEqual("quiet scan", 0.0, chunker.quiet_scan_seconds)
 
 
 class TestSettingsNamespaces(LoggedTestCase):

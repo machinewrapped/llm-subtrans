@@ -109,10 +109,10 @@ class LineMerger:
         # Measured rather than predicted: how many turns render as dialogue depends on the order they fold together in
         merged = self._merge_run(chunk)
 
-        if (merged.end - merged.start).total_seconds() > self.settings.max_line_seconds:
+        if not self.settings.FitsDuration((merged.end - merged.start).total_seconds()):
             return False
 
-        if len(merged.text) > self.settings.max_line_chars:
+        if not self.settings.FitsLength(merged.text):
             return False
 
         return merged.text.count('\n') <= self.settings.max_newlines

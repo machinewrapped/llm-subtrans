@@ -20,9 +20,12 @@ DEFAULT_TIMING_CORRECTION_FACTOR = 0.0
 
 @dataclass(frozen=True)
 class LineSettings:
-    """Limits a transcribed subtitle line is held to, and how its neighbours may be merged."""
-    max_line_chars : int
-    max_line_seconds : float
+    """
+    Limits a transcribed subtitle line is held to, and how its neighbours may be merged.
+    A maximum length or duration of None means there is no limit.
+    """
+    max_line_chars : int|None
+    max_line_seconds : float|None
     min_split_chars : int = 3
     min_line_seconds : float = 0.8
     merge_eligible_gap : float = DEFAULT_MERGE_ELIGIBLE_GAP_SECONDS
@@ -33,6 +36,14 @@ class LineSettings:
     word_coverage : WordCoverage = WordCoverage.COMPLETE
     timing_correction_factor : float = DEFAULT_TIMING_CORRECTION_FACTOR
     abbreviations : frozenset[str] = DEFAULT_ABBREVIATIONS
+
+    def FitsLength(self, text : str) -> bool:
+        """Whether text is within the character limit."""
+        return self.max_line_chars is None or len(text) <= self.max_line_chars
+
+    def FitsDuration(self, seconds : float) -> bool:
+        """Whether a span is within the duration limit."""
+        return self.max_line_seconds is None or seconds <= self.max_line_seconds
 
     def EligibleGap(self, first_speaker : str|None, second_speaker : str|None) -> float:
         """The widest gap that still leaves two lines eligible to be one."""

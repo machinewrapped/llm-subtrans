@@ -70,6 +70,22 @@ class TestSubtitleValidator(LoggedTestCase):
         self.assertIn(LineTooLongError, error_types)
         self.assertIn(UntranslatedLinesError, error_types)
 
+    def test_zero_max_characters_means_no_limit(self):
+        options = Options({'max_characters': 0})
+        validator = SubtitleValidator(options)
+
+        line = SubtitleLine({'number': 1, 'start': '00:00:00,000', 'end': '00:00:01,000', 'text': 'x' * 2000})
+        errors = validator.ValidateTranslations([line])
+        self.assertLoggedEqual("error_count", 0, len(errors))
+
+    def test_zero_max_newlines_allows_no_newlines(self):
+        options = Options({'max_newlines': 0})
+        validator = SubtitleValidator(options)
+
+        line = SubtitleLine({'number': 1, 'start': '00:00:00,000', 'end': '00:00:01,000', 'text': 'one\ntwo'})
+        errors = validator.ValidateTranslations([line])
+        self.assertLoggedEqual("error types", {TooManyNewlinesError}, {type(e) for e in errors})
+
 
 class TestValidateOriginals(LoggedTestCase):
     def test_empty_list(self):
@@ -110,6 +126,16 @@ class TestValidateOriginals(LoggedTestCase):
         validator.ValidateBatch(batch)
         error_types = {type(e) for e in batch.errors}
         self.assertLoggedEqual("batch error types", {ExcessiveDurationError}, error_types)
+
+    def test_ValidateBatch_zero_max_duration_means_no_limit(self):
+        validator = SubtitleValidator(Options({'max_line_duration': 0.0}))
+
+        orig = SubtitleLine({'number': 1, 'start': '00:00:00,000', 'end': '00:00:20,000', 'text': 'ok'})
+        batch = SubtitleBatch({'originals': [orig], 'translated': []})
+        batch.validate_originals = True
+
+        validator.ValidateBatch(batch)
+        self.assertLoggedEqual("error_count", 0, len(batch.errors))
 
     def test_ValidateBatch_unflagged_skips_originals(self):
         validator = SubtitleValidator(Options())

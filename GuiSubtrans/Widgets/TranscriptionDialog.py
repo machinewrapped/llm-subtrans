@@ -38,7 +38,7 @@ from PySubtrans.Helpers.Languages import LanguageName, ResolveLanguage
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Time import TimedeltaToText
 from PySubtrans.Options import Options
-from PySubtrans.SettingsType import SettingsType
+from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Subtitles import Subtitles
@@ -610,7 +610,8 @@ class TranscriptionDialog(QDialog):
             self.status_label.setText(str(e))
             return None
 
-        settings = SettingsType({
+        # Unset values are left out so the coordinator applies its own defaults
+        values : dict[str, SettingType] = {
             'audio_track': self.track_combo.currentData() or 0,
             'language': language,
             'transcription_align': True,
@@ -622,7 +623,8 @@ class TranscriptionDialog(QDialog):
             'max_newlines': self.global_options.get_int('max_newlines'),
             'min_gap': self.global_options.get_float('min_gap'),
             'abbreviations': self.global_options.get_list('abbreviations'),
-        })
+        }
+        settings = SettingsType({key: value for key, value in values.items() if value is not None})
 
         output_format = str(self.fields['output_format'].GetValue() or '.srt').lstrip('.')
 

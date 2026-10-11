@@ -5,6 +5,7 @@ import sys
 from argparse import ArgumentParser, Namespace
 from contextlib import contextmanager
 from dataclasses import dataclass, field
+from datetime import timedelta
 
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
@@ -377,7 +378,7 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
             min_batch_size=min_batch_size,
             max_batch_size=max_batch_size,
             prevent_overlap=options.get_bool('prevent_overlapping_times'),
-            min_gap=options.get_float('min_gap', 0.05) or 0.0,
+            min_gap=options.get_timedelta('min_gap', timedelta(seconds=0.05)).total_seconds(),
         )
 
     scene_count = subtitles.scenecount

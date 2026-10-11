@@ -40,6 +40,7 @@ translator.TranslateSubtitles(subs)
 from __future__ import annotations
 
 from collections.abc import Mapping
+from datetime import timedelta
 from enum import Enum
 
 from PySubtrans.Helpers import GetInputPath
@@ -527,8 +528,9 @@ def init_transcription(
 
     coordinator_settings = SettingsType(explicit_settings)
     for key in _TRANSCRIPTION_OPTIONS:
-        if key not in coordinator_settings:
-            coordinator_settings[key] = options.get(key)
+        value = options.get(key)
+        if key not in coordinator_settings and value is not None:
+            coordinator_settings[key] = value
 
     # The provider converts the language hint to the form its engine expects
     language_hint = language or transcription_provider.settings.get_str('language')
@@ -685,7 +687,7 @@ def _batch_with_options(subtitles : Subtitles, options : Options) -> None:
         min_batch_size=options.get_int('min_batch_size') or 1,
         max_batch_size=options.get_int('max_batch_size') or 100,
         prevent_overlap=options.get_bool('prevent_overlapping_times'),
-        min_gap=options.get_float('min_gap', 0.05) or 0.0,
+        min_gap=options.get_timedelta('min_gap', timedelta(seconds=0.05)).total_seconds(),
     )
 
 

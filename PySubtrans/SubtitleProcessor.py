@@ -51,7 +51,7 @@ class SubtitleProcessor:
         self.merge_line_duration : timedelta = settings.get_timedelta('merge_line_duration', timedelta(seconds=0))
         self.max_gap_for_merge : timedelta = settings.get_timedelta('max_gap_for_merge', timedelta(seconds=0.5))
         self.min_gap : timedelta = settings.get_timedelta('min_gap', timedelta(seconds=0.05))
-        self.min_split_chars : int = settings.get_int('min_split_chars') or 4
+        self.min_split_chars : int = settings.get_int('min_split_chars', 4) or 0
 
         self.convert_whitespace_to_linebreak : bool = settings.get_bool('whitespaces_to_newline', False)
         self.break_dialog_on_one_line : bool = settings.get_bool('break_dialog_on_one_line', False)
@@ -62,7 +62,7 @@ class SubtitleProcessor:
 
         self.break_long_lines : bool = settings.get_bool('break_long_lines', False)
         self.max_single_line_length : int = settings.get_int('max_single_line_length') or 40
-        self.min_single_line_length : int = settings.get_int('min_single_line_length') or 4
+        self.min_single_line_length : int = settings.get_int('min_single_line_length', 4) or 0
 
         self.split_dialog_pattern: regex.Pattern[Any]|None = CompileDialogSplitPattern(self.dialog_marker) if self.break_dialog_on_one_line else None
 

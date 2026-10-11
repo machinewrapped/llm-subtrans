@@ -46,8 +46,8 @@ from PySubtrans.Transcription.WordAlignment import WordCoverage
 LIMIT_SETTINGS = ('max_line_chars', 'max_line_seconds')
 
 
-def BuildLines(segments : list[TranscriptionSegment], **overrides) -> list[TranscriptionSegment]:
-    """Run the line builder over captured segments with the given settings."""
+def ReplaySettings(**overrides) -> LineSettings:
+    """Line settings from the current options, with the given overrides."""
     options = Options()
     settings = {
         'max_line_chars': options.get_int('max_characters', 120) or None,
@@ -62,7 +62,12 @@ def BuildLines(segments : list[TranscriptionSegment], **overrides) -> list[Trans
     for key in LIMIT_SETTINGS:
         settings[key] = settings[key] or None
 
-    builder = TranscriptionLineBuilder(LineSettings(**settings))
+    return LineSettings(**settings)
+
+
+def BuildLines(segments : list[TranscriptionSegment], settings : LineSettings) -> list[TranscriptionSegment]:
+    """Run the line builder over captured segments with the given settings."""
+    builder = TranscriptionLineBuilder(settings)
 
     lines : list[TranscriptionSegment] = []
     for segment in segments:
@@ -288,14 +293,15 @@ def main() -> int:
             print(f"\n=== {setting} = {value} ===")
             trial = dict(overrides)
             trial[setting] = float(value) if '.' in value else int(value)
-            lines = BuildLines(segments, **trial)
-            Report(lines, float(trial.get('min_line_seconds') or 0.8), int(trial.get('max_newlines') or 2), args.quiet,
-                   transcript_chars)
+            settings = ReplaySettings(**trial)
+            lines = BuildLines(segments, settings)
+            Report(lines, settings.min_line_seconds, settings.max_newlines, args.quiet, transcript_chars)
         return 0
 
     print()
-    lines = BuildLines(segments, **overrides)
-    Report(lines, overrides['min_line_seconds'] or 0.8, overrides['max_newlines'] or 2, args.quiet, transcript_chars)
+    settings = ReplaySettings(**overrides)
+    lines = BuildLines(segments, settings)
+    Report(lines, settings.min_line_seconds, settings.max_newlines, args.quiet, transcript_chars)
 
     if args.output:
         count = SaveLines(lines, args.output, args.postprocess)

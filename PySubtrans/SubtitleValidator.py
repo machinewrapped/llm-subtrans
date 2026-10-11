@@ -1,3 +1,5 @@
+from datetime import timedelta
+
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import EmptyLinesError, ExcessiveDurationError, LineTooLongError, TooManyNewlinesError, UnmatchedLinesError, UntranslatedLinesError
@@ -22,7 +24,8 @@ class SubtitleValidator:
             self.errors.append(UntranslatedLinesError(f"No translation found for {len(batch.originals) - len(batch.translated)} lines", translation=batch.translation))
 
         if getattr(batch, 'validate_originals', False):
-            max_duration = self.options.get_float('max_line_duration') or 4.0
+            # A maximum duration of zero means no limit
+            max_duration = self.options.get_timedelta('max_line_duration', timedelta(seconds=4.0)).total_seconds() or None
             self.errors.extend(self.ValidateOriginals(batch.originals, max_duration))
 
         batch.errors = self.errors
@@ -34,8 +37,8 @@ class SubtitleValidator:
         if not translated:
             return [ UntranslatedLinesError(f"Failed to extract any translations") ]
 
-        max_characters : int = self.options.get_int('max_characters') or 1000
-        max_newlines : int = self.options.get_int('max_newlines') or 10
+        max_characters : int|None = self.options.get_int('max_characters', 1000) or None
+        max_newlines : int = self.options.get_int('max_newlines', 10) or 0
 
         no_number : list[SubtitleLine] = []
         for line in translated:
@@ -60,7 +63,7 @@ class SubtitleValidator:
 
         return errors
 
-    def ValidateOriginals(self, originals : list[SubtitleLine], max_duration_seconds : float) -> list[Exception]:
+    def ValidateOriginals(self, originals : list[SubtitleLine], max_duration_seconds : float|None) -> list[Exception]:
         """
         Check transcribed source lines for issues worth a human glance.
         Same buckets as translations, plus over-duration spans that no
@@ -69,15 +72,15 @@ class SubtitleValidator:
         if not originals:
             return []
 
-        max_characters : int = self.options.get_int('max_characters') or 1000
-        max_newlines : int = self.options.get_int('max_newlines') or 10
+        max_characters : int|None = self.options.get_int('max_characters', 1000) or None
+        max_newlines : int = self.options.get_int('max_newlines', 10) or 0
 
         no_text, too_long, too_many_newlines = _bucket_text_issues(originals, max_characters, max_newlines)
         overlong : list[SubtitleLine] = []
 
         for line in originals:
             duration = line.duration.total_seconds()
-            if duration > max_duration_seconds:
+            if max_duration_seconds is not None and duration > max_duration_seconds:
                 overlong.append(line)
 
         errors = []
@@ -98,13 +101,14 @@ class SubtitleValidator:
         return errors
 
 
-def _bucket_text_issues(lines : list[SubtitleLine], max_characters : int, max_newlines : int
+def _bucket_text_issues(lines : list[SubtitleLine], max_characters : int|None, max_newlines : int
                         ) -> tuple[list[SubtitleLine], list[SubtitleLine], list[SubtitleLine]]:
     """
     Shared blank / too-long / too-many-newlines buckets for both
     translations and transcribed originals. Number and duration checks
     stay per-side: only parser output can be unnumbered, and only
     source spans can run over-duration.
+    A maximum length of None means there is no limit.
     """
     no_text : list[SubtitleLine] = []
     too_long : list[SubtitleLine] = []
@@ -115,7 +119,7 @@ def _bucket_text_issues(lines : list[SubtitleLine], max_characters : int, max_ne
             no_text.append(line)
             continue
 
-        if len(line.text) > max_characters:
+        if max_characters is not None and len(line.text) > max_characters:
             too_long.append(line)
 
         if line.text.count('\n') > max_newlines:

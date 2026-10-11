@@ -6,7 +6,7 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.Transcription.Providers.Provider_OpenRouter import DiarizationOptions
+from PySubtrans.Transcription.Providers.Provider_OpenRouter import DiarizationOptions, ProviderOptions
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
 from PySubtrans.Transcription.WordTiming import WordTiming
@@ -17,7 +17,7 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
 
     Requests verbose_json with word timestamps. Providers that reject
     structured output fail fast to avoid incurring a charge for untimed text.
-    Diarization is a per-model provider option (see _diarize_options).
+    Diarization and other vendor settings are per-model provider options (see _provider_options).
     """
     def __init__(self, settings : SettingsType):
         super().__init__(settings)
@@ -109,7 +109,7 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
         if self.language:
             body['language'] = self.language
 
-        options = self._diarize_options()
+        options = self._provider_options()
         if options:
             body['provider'] = {'options': options}
 
@@ -122,12 +122,9 @@ class OpenRouterTranscriptionClient(TranscriptionClient):
 
         return self._ParseJsonResponse(url, response)
 
-    def _diarize_options(self) -> dict:
-        """The provider options that request diarization, or none if it is off or the model cannot be diarized."""
-        if not self.diarize:
-            return {}
-
-        return DiarizationOptions(self.model) or {}
+    def _provider_options(self) -> dict:
+        """The vendor options for the model, following the diarize and audio_events settings."""
+        return ProviderOptions(self.model, self.settings)
 
     def _looks_like_unsupported(self, text : str) -> bool:
         lowered = text.casefold()
@@ -172,7 +169,9 @@ def _parse_transcription_payload(payload : dict) -> tuple[str, str|None, list[Tr
         word_text = str(entry.get('word') or entry.get('text') or '').strip()
         start = TryParseNonNegative(entry.get('start'))
         end = TryParseNonNegative(entry.get('end'))
-        if not word_text or start is None or end is None or end <= start:
+
+        # Zero-length words still have a usable start.
+        if not word_text or start is None or end is None or end < start:
             continue
         speaker = entry.get('speaker')
         words.append(WordTiming(text=word_text,

@@ -10,6 +10,7 @@ from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Transcription.Providers.Clients.OpenAITranscriptionClient import (
     _parse_diarized_payload,
+    _parse_verbose_payload,
 )
 from PySubtrans.Transcription.Providers.Provider_OpenAI import (
     OpenAITranscriptionProvider,
@@ -116,6 +117,20 @@ class TestOpenAITranscription(LoggedTestCase):
         self.assertLoggedEqual("part count", 2, len(parts))
         self.assertLoggedEqual("first speaker", "A", parts[0].speaker)
         self.assertLoggedEqual("second start", timedelta(seconds=2.0), parts[1].start)
+
+    def test_zero_length_words_kept(self):
+        """Zero-length words keep their text and start; reversed timings are still dropped."""
+        payload = {
+            'text': 'a b c',
+            'words': [
+                {'word': 'a', 'start': 1.0, 'end': 1.2},
+                {'word': 'b', 'start': 1.3, 'end': 1.3},
+                {'word': 'c', 'start': 2.0, 'end': 1.9},
+            ],
+        }
+        _text, _language, words = _parse_verbose_payload(payload)
+
+        self.assertLoggedEqual("words kept", ['a', 'b'], [word.text for word in words])
 
     def test_empty_success_is_returned_for_both_timed_modes(self):
         """Music and noise are successful empty results in both OpenAI modes."""

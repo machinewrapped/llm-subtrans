@@ -147,6 +147,13 @@ class TestTranscriptionIntegration(LoggedTestCase):
         self.assertLoggedEqual('discard keeps current model', self.old_model, self.gui.datamodel)
         self.assertLoggedEqual('discard does not install model', 0, set_model.call_count)
 
+    def test_media_path_is_passed_to_dialog(self) -> None:
+        """A media file given to the interface, e.g. by drag and drop, is preselected in the dialog."""
+        dialog = _DialogStub(self._subtitles(), QDialog.DialogCode.Rejected)
+        with patch('GuiSubtrans.GuiInterface.TranscriptionDialog', return_value=dialog) as dialog_class:
+            self.gui.ShowTranscriptionDialog('dropped.mkv')
+        self.assertLoggedEqual('dialog opened with media path', 'dropped.mkv', dialog_class.call_args.kwargs.get('media_path'))
+
     def test_transcribe_action_gated_on_blocking_commands_without_project(self) -> None:
         """Only blocking commands disable Transcribe before a project is loaded."""
         toolbar = MainToolbar(self.gui)

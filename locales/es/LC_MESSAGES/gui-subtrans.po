@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-10-04 20:21+0000\n"
+"POT-Creation-Date: 2026-10-06 17:08+0000\n"
 "PO-Revision-Date: 2025-01-01 00:00+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: Spanish <EMAIL@ADDRESS>\n"
@@ -80,19 +80,19 @@ msgstr ""
 "    <p>Las marcas de tiempo por palabra y la diarización dependen del modelo seleccionado.</p>\n"
 "    "
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:102
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:95
 msgid " (about {} left)"
 msgstr " (quedan unos {})"
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:99
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:92
 msgid " (elapsed {})"
 msgstr " (transcurrido {})"
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:96
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:89
 msgid " (source length {})"
 msgstr " (duración de la fuente {})"
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:93
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:86
 msgid " of {}"
 msgstr " de {}"
 
@@ -3234,13 +3234,9 @@ msgstr "Se transcribieron {} líneas de {} fragmentos"
 msgid "Transcribed {} lines."
 msgstr "Se transcribieron {} líneas."
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:88
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:81
 msgid "Transcribing chunk {current}"
 msgstr "Transcribiendo fragmento {current}"
-
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:85
-msgid "Transcribing chunk {current}/{total}"
-msgstr "Transcribiendo fragmento {current}/{total}"
 
 #: PySubtrans/Transcription/TranscriptionCoordinator.py:144
 msgid "Transcribing {} with {}"
@@ -4515,6 +4511,9 @@ msgstr "~5.5 GB"
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:72
 msgid "~600 MB"
 msgstr "~600 MB"
+
+#~ msgid "Transcribing chunk {current}/{total}"
+#~ msgstr "Transcribiendo fragmento {current}/{total}"
 
 #~ msgid "Diarization is not mapped for model '{}', requesting without it"
 #~ msgstr "La diarización no está mapeada para el modelo '{}', solicitando sin ella"

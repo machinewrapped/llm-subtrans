@@ -537,7 +537,7 @@ def init_transcription(
     # Chunk bounds given for this run override the provider's
     min_chunk_seconds = coordinator_settings.get_float('min_chunk_seconds') or transcription_provider.settings.get_float('min_chunk_seconds')
     max_chunk_seconds = coordinator_settings.get_float('max_chunk_seconds') or transcription_provider.settings.get_float('max_chunk_seconds')
-    if min_chunk_seconds is not None and max_chunk_seconds is not None:
+    if not transcription_provider.transcribe_whole_clip and min_chunk_seconds is not None and max_chunk_seconds is not None:
         AudioChunker.ValidateChunkBounds(min_chunk_seconds, max_chunk_seconds)
 
     return TranscriptionCoordinator(transcription_provider, coordinator_settings)

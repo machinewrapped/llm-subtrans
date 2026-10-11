@@ -31,11 +31,12 @@ def CreateTranscribeParser() -> ArgumentParser:
     parser.add_argument('--language', type=str, default=None, help="Spoken language hint (e.g. Chinese, English)")
     parser.add_argument('--diarize', dest='diarize', action='store_true', default=None, help="Identify speakers (default on; model-dependent)")
     parser.add_argument('--no-diarize', dest='diarize', action='store_false', help="Turn off speaker identification")
+    parser.add_argument('--audio-events', action='store_true', default=None, help="Tag sound effects and music, e.g. [laughter], for closed captions (model-dependent)")
     parser.add_argument('--track', type=int, default=0, help="Audio track index to transcribe (default 0)")
     parser.add_argument('--ffmpeg-path', type=str, default=None,
                         help="Path to the ffmpeg executable (default: use ffmpeg and ffprobe from PATH)")
     parser.add_argument('--min-chunk', type=float, default=None, help="Minimum chunk length in seconds (default: provider recommendation)")
-    parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation)")
+    parser.add_argument('--max-chunk', type=float, default=None, help="Maximum chunk length in seconds (default: provider recommendation). 0 sends the whole clip in one request, for providers that support it (ElevenLabs)")
     parser.add_argument('--format', choices=('srt', 'ass', 'vtt'), default='vtt', help="Subtitle format for the transcribed output (default vtt; ass and vtt preserve speaker labels)")
     parser.add_argument('--rate-limit', type=float, default=None, help="Maximum backend requests per minute (0 for unlimited)")
     parser.add_argument('--align', action='store_true', default=True, help="Request word timestamps for timed lines (default on)")
@@ -82,6 +83,7 @@ def main() -> int:
             language=args.language,
             server_address=args.server,
             diarize=args.diarize,
+            audio_events=args.audio_events,
             audio_track=args.track,
             ffmpeg_path=args.ffmpeg_path,
             min_chunk_seconds=args.min_chunk,

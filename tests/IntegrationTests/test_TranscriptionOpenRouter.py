@@ -168,6 +168,20 @@ class TestOpenRouterRegistered(LoggedTestCase):
         self.assertLoggedEqual("part count", 0, len(parts))
         self.assertLoggedEqual("word count", 0, len(words))
 
+    def test_zero_length_words_kept(self):
+        """Zero-length words keep their text and start; reversed timings are still dropped."""
+        payload = {
+            'text': 'a b c',
+            'words': [
+                {'word': 'a', 'start': 1.0, 'end': 1.2},
+                {'word': 'b', 'start': 1.3, 'end': 1.3},
+                {'word': 'c', 'start': 2.0, 'end': 1.9},
+            ],
+        }
+        _text, _language, _parts, words = _parse_transcription_payload(payload)
+
+        self.assertLoggedEqual("words kept", ['a', 'b'], [word.text for word in words])
+
     def test_missing_optional_fields_skipped_silently(self):
         """Absent no_speech_prob and timings parse without raising anything."""
         payload = {
@@ -234,10 +248,10 @@ class TestOpenRouterCatalog(LoggedTestCase):
         self.assertLoggedIn("fallback model", OpenRouterTranscriptionProvider.default_transcription_model, models)
 
 class TestOpenRouterClient(LoggedTestCase):
-    def _client(self, model : str = OpenRouterTranscriptionProvider.default_transcription_model, diarize : bool = False):
+    def _client(self, model : str = OpenRouterTranscriptionProvider.default_transcription_model, diarize : bool = False, audio_events : bool = False):
         return OpenRouterTranscriptionClient(SettingsType({
             'server_address': 'http://127.0.0.1:9/v1', 'api_key': 'test-key',
-            'model': model, 'diarize': diarize,
+            'model': model, 'diarize': diarize, 'audio_events': audio_events,
         }))
 
     def test_usage_cost_and_duration_parsed(self):
@@ -344,7 +358,7 @@ class TestOpenRouterClient(LoggedTestCase):
         """Diarize maps onto Azure options for Microsoft models."""
         client = self._client(model="microsoft/mai-transcribe-2", diarize=True)
 
-        options = client._diarize_options()
+        options = client._provider_options()
 
         self.assertLoggedIn("azure options", "azure", options)
 
@@ -352,15 +366,43 @@ class TestOpenRouterClient(LoggedTestCase):
         """Diarize maps onto Deepgram options."""
         client = self._client(model="deepgram/nova-3", diarize=True)
 
-        options = client._diarize_options()
+        options = client._provider_options()
 
         self.assertLoggedIn("deepgram options", "deepgram", options)
+
+    def test_diarize_merges_audio_event_option(self):
+        """Diarization merges with the audio event option under the ElevenLabs slug."""
+        client = self._client(model="elevenlabs/scribe-v2", diarize=True)
+
+        options = client._provider_options().get('elevenlabs', {})
+
+        self.assertLoggedEqual("diarize requested", True, options.get('diarize'))
+        self.assertLoggedEqual("audio events off", False, options.get('tag_audio_events'))
+
+    def test_audio_events_sent_without_diarize(self):
+        """The audio event option is sent when diarization is off, and follows the setting."""
+        client = self._client(model="elevenlabs/scribe-v2", diarize=False, audio_events=True)
+
+        options = client._provider_options().get('elevenlabs', {})
+
+        self.assertLoggedNotIn("no diarize option", 'diarize', options)
+        self.assertLoggedEqual("audio events on", True, options.get('tag_audio_events'))
+
+    def test_audio_events_follow_model_support(self):
+        """Only models that can tag audio events offer the option or send it."""
+        provider = OpenRouterTranscriptionProvider(SettingsType({'api_key': 'k', 'model': 'elevenlabs/scribe-v2'}))
+        other = OpenRouterTranscriptionProvider(SettingsType({'api_key': 'k', 'model': 'deepgram/nova-3'}))
+        client = self._client(model="deepgram/nova-3", audio_events=True)
+
+        self.assertLoggedIn("supported model offers audio events", 'audio_events', provider.GetOptions(provider.settings, OptionsScope.PER_RUN))
+        self.assertLoggedNotIn("other model hides audio events", 'audio_events', other.GetOptions(other.settings, OptionsScope.PER_RUN))
+        self.assertLoggedNotIn("other model sends no event option", 'tag_audio_events', client._provider_options().get('deepgram', {}))
 
     def test_diarize_unmapped_model(self):
         """Unmapped models request without diarization options."""
         client = self._client(model="openai/whisper-large-v3", diarize=True)
 
-        options = client._diarize_options()
+        options = client._provider_options()
 
         self.assertLoggedEqual("empty options", {}, options)
 

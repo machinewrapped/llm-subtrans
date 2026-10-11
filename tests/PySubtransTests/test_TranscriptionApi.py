@@ -25,6 +25,7 @@ def _mock_provider(valid : bool = True, resolved_language : str|None = None, set
     provider = Mock(spec=TranscriptionProvider)
     provider.name = "Mock Transcription"
     provider.settings = settings or SettingsType()
+    provider.transcribe_whole_clip = False
     provider.validation_message = None if valid else "API key is required"
     provider.ValidateSettings.return_value = valid
     provider.ResolveLanguageCode.return_value = resolved_language

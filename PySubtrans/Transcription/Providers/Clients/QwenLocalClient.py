@@ -367,7 +367,9 @@ def parse_qwen_result(result : object) -> tuple[str, str|None, list[WordTiming]]
             continue
         start = TryParseFloat(getattr(unit, 'start_time', None))
         end = TryParseFloat(getattr(unit, 'end_time', None))
-        if start is None or end is None or end <= start:
+
+        # Zero-length words still have a usable start.
+        if start is None or end is None or end < start:
             continue
         words.append(WordTiming(text=unit_text,
                                 start=timedelta(seconds=max(0.0, start)),

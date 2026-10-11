@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pysubtrans"
-version = "1.6.0"
+version = "1.7.3"
 description = "Core subtitle translation toolkit used by LLM-Subtrans"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -43,6 +43,12 @@ mistral = [
 bedrock = [
     "boto3"
 ]
+litellm = [
+    "litellm>=1.84.0,<1.87.0"
+]
+qwen-asr = [
+    "qwen-asr"
+]
 
 [project.urls]
 Homepage = "https://github.com/machinewrapped/llm-subtrans"
@@ -56,6 +62,10 @@ packages = [
     "PySubtrans.Formats",
     "PySubtrans.Helpers",
     "PySubtrans.Providers",
-    "PySubtrans.Providers.Clients"
+    "PySubtrans.Providers.Clients",
+    "PySubtrans.Transcription",
+    "PySubtrans.Transcription.Providers",
+    "PySubtrans.Transcription.Providers.Clients",
+    "PySubtrans.Transcription.Torch"
 ]
 package-dir = {"PySubtrans" = "."}

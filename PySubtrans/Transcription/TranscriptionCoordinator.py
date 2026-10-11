@@ -50,6 +50,7 @@ class TranscriptionCoordinator:
             'fallback_silence_min_duration': self.settings.get_float('fallback_silence_min_duration'),
             'quiet_scan_seconds': self.settings.get_float('quiet_scan_seconds'),
             'ffmpeg_path': self.settings.get_str('ffmpeg_path'),
+            'transcribe_whole_clip': provider.transcribe_whole_clip,
         })
         self.chunker : AudioChunker = AudioChunker(chunk_settings)
         self.extractor : AudioExtractor = self.chunker.extractor

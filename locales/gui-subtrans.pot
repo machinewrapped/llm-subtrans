@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-10-04 20:21+0000\n"
+"POT-Creation-Date: 2026-10-06 17:09+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "MIME-Version: 1.0\n"
@@ -45,19 +45,19 @@ msgstr ""
 msgid "\n    <p>Transcribe with OpenRouter speech-to-text models.</p>\n    <p>Word timestamps and diarization depend on the selected model.</p>\n    "
 msgstr ""
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:102
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:95
 msgid " (about {} left)"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:99
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:92
 msgid " (elapsed {})"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:96
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:89
 msgid " (source length {})"
 msgstr ""
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:93
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:86
 msgid " of {}"
 msgstr ""
 
@@ -3013,12 +3013,8 @@ msgstr ""
 msgid "Transcribed {} lines."
 msgstr ""
 
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:88
+#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:81
 msgid "Transcribing chunk {current}"
-msgstr ""
-
-#: GuiSubtrans/Widgets/TranscriptionRunProgress.py:85
-msgid "Transcribing chunk {current}/{total}"
 msgstr ""
 
 #: PySubtrans/Transcription/TranscriptionCoordinator.py:144

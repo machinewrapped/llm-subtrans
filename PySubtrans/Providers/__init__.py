@@ -22,3 +22,4 @@ from . import Provider_Requesty
 from . import Provider_Opper
 from . import Provider_LiteLLM
 
+from . import Provider_APIRoute

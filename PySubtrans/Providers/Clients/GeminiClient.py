@@ -17,12 +17,14 @@ from google.genai.types import (
     HttpOptions,
     Part,
     SafetySetting,
-    ThinkingConfig
+    ThinkingConfig,
+    ThinkingLevel
 )
 
 from PySubtrans.Helpers import FormatMessages
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import SettingsType
+from PySubtrans.Providers.Provider_Gemini import DEFAULT_THINKING_LEVEL
 from PySubtrans.SubtitleError import TranslationImpossibleError, TranslationResponseError
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
@@ -53,14 +55,12 @@ class GeminiClient(TranslationClient):
 
         self.automatic_function_calling: AutomaticFunctionCallingConfig = AutomaticFunctionCallingConfig(disable=True, maximum_remote_calls=None)
 
-        # Configure reasoning parameters
-        enable_thinking = settings.get_bool('enable_thinking', False)
-        thinking_budget = settings.get_int('thinking_budget', 100)
-        include_thoughts = False # Gemini appends thoughts to the text if this is true, breaking the parser
-
-        self.thinking_config: ThinkingConfig|None = ThinkingConfig(
-            include_thoughts=include_thoughts, thinking_budget=thinking_budget
-            ) if enable_thinking else None
+        # Configure reasoning parameters, or leave the model to use its default level
+        self.thinking_config: ThinkingConfig|None = None
+        thinking_level = self._get_thinking_level(settings.get_str('thinking_level'))
+        if thinking_level:
+            # Gemini appends thoughts to the text if include_thoughts is true, breaking the parser
+            self.thinking_config = ThinkingConfig(include_thoughts=False, thinking_level=thinking_level)
 
     @property
     def api_key(self) -> str|None:
@@ -85,7 +85,8 @@ class GeminiClient(TranslationClient):
 
     def _request_translation(self, request: TranslationRequest, temperature: float|None = None) -> Translation|None:
         """
-        Request a translation based on the provided prompt
+        Request a translation based on the provided prompt.
+        Temperature is ignored because Gemini rejects custom sampling parameters.
         """
         prompt: TranslationPrompt = request.prompt
         logging.debug(f"Messages:\n{FormatMessages(prompt.messages)}")
@@ -96,16 +97,14 @@ class GeminiClient(TranslationClient):
         if not isinstance(prompt.content, str) or not prompt.content.strip():
             raise TranslationImpossibleError(_("No content provided for translation"))
 
-        temperature = temperature or self.temperature
-
-        response = self._send_messages(request, temperature)
+        response = self._send_messages(request)
 
         return Translation(response) if response else None
 
     def _abort(self) -> None:
         return super()._abort()
 
-    def _send_messages(self, request: TranslationRequest, temperature: float) -> dict[str, Any]|None:
+    def _send_messages(self, request: TranslationRequest) -> dict[str, Any]|None:
         """
         Make a request to the Gemini API to provide a translation
         """
@@ -114,7 +113,7 @@ class GeminiClient(TranslationClient):
 
         for retry in range(1 + self.max_retries):
             try:
-                return self._get_gemini_response(request, temperature)
+                return self._get_gemini_response(request)
 
             except TranslationImpossibleError:
                 raise
@@ -132,7 +131,7 @@ class GeminiClient(TranslationClient):
                     ))
                     time.sleep(sleep_time)
 
-    def _get_gemini_response(self, request: TranslationRequest, temperature: float) -> dict[str, Any]|None:
+    def _get_gemini_response(self, request: TranslationRequest) -> dict[str, Any]|None:
         """
         Handle both streaming and non-streaming Gemini API calls
         """
@@ -161,7 +160,6 @@ class GeminiClient(TranslationClient):
         gemini_client = genai.Client(api_key=self.api_key, http_options=http_options)
         config = GenerateContentConfig(
             candidate_count=1,
-            temperature=temperature,
             system_instruction=prompt.system_prompt,
             safety_settings=self.safety_settings,
             thinking_config=self.thinking_config,
@@ -345,6 +343,20 @@ class GeminiClient(TranslationClient):
             response['reasoning'] = thoughts
 
         return response
+
+    def _get_thinking_level(self, level : str|None) -> ThinkingLevel|None:
+        """
+        Convert a thinking level setting to the SDK value, or None to use the model default
+        """
+        if not level or level == DEFAULT_THINKING_LEVEL:
+            return None
+
+        thinking_level = ThinkingLevel.__members__.get(level.strip().upper())
+        if thinking_level is None or thinking_level == ThinkingLevel.THINKING_LEVEL_UNSPECIFIED:
+            self._emit_warning(_("Unknown Gemini thinking level {level}, using the model default").format(level=level))
+            return None
+
+        return thinking_level
 
     def _extract_block_info(self, gcr: GenerateContentResponse) -> str:
         """

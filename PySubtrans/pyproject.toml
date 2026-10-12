@@ -31,7 +31,7 @@ azure = [
     "openai"
 ]
 gemini = [
-    "google-genai",
+    "google-genai>=1.56.0",
     "google-api-core"
 ]
 claude = [

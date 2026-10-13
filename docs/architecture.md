@@ -69,6 +69,7 @@ Supports translating subtitle files and transcribing subtitles from video/audio.
 - `ResponseText` - xml-like tag extraction from translation responses, and summary cleanup.
 - `Time` - `timedelta` parsing and formatting, including SRT timestamps and time span labels.
 - `Speech` - how long text takes to say, by script, and where its sentences end.
+- `Reading` - how long a subtitle takes to read, from Netflix's reading speed limits and counting rules for each language. See [netflix-timing-guide.md](netflix-timing-guide.md) for the figures and their sources.
 - `Parse` - key/value pairs, name lists, numeric coercion, and retry-delay/error-message extraction from provider responses.
 - `SubtitleHelpers` - operations that need `SubtitleLine`: insert-or-replace by number, merging lines, and merging translations back onto originals.
 - `ContextHelpers` - assembles batch context and history for translation prompts.

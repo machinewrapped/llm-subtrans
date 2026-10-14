@@ -60,6 +60,11 @@ class SubtitleScene:
         return all(batch.all_translated for batch in self.batches)
 
     @property
+    def translation_complete(self) -> bool:
+        """Whether every batch is translated without recorded errors."""
+        return all(batch.translation_complete for batch in self.batches)
+
+    @property
     def any_translated(self) -> bool:
         """ Check if any batch in the scene has translations """
         return any(batch.any_translated for batch in self.batches)

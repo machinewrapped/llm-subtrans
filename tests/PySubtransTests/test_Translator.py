@@ -171,6 +171,7 @@ class ResumeTranslationTests(SubtitleTestCase):
     """Resume must reuse only complete batches without saved errors."""
 
     def setUp(self) -> None:
+        """Prepare valid, invalid, and pending batches for resume tests."""
         super().setUp()
         self.options.add("max_characters", 40)
         self.options.add("autosplit_on_error", False)

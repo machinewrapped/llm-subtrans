@@ -286,13 +286,14 @@ class MainToolbar(QToolBar):
 
     def UpdateTranslateButtons(self):
         """
-        Update translate buttons to disable them when project is fully translated, unless shift is pressed
+        Disable translate buttons when every scene is complete, unless shift is pressed.
         """
         if self._shift_pressed:
             return
 
         datamodel : ProjectDataModel = self.gui.GetDataModel()
-        if datamodel and datamodel.project and datamodel.project.all_translated:
+        subtitles = datamodel.project.subtitles if datamodel and datamodel.project else None
+        if subtitles and subtitles.scenes and all(scene.translation_complete for scene in subtitles.scenes):
             self.SetActionsEnabled(["Start Translating", "Start Translating Fast"], False)
 
     def UpdateTooltips(self):

@@ -28,7 +28,7 @@ class StartTranslationCommand(Command):
         project : SubtitleProject = self.datamodel.project
         subtitles : Subtitles = project.subtitles
 
-        if self.resume and subtitles.scenes and all(scene.all_translated for scene in subtitles.scenes):
+        if self.resume and subtitles.scenes and all(scene.translation_complete for scene in subtitles.scenes):
             logging.info(_("All scenes are fully translated"))
             return True
 
@@ -46,7 +46,7 @@ class StartTranslationCommand(Command):
             previous_command = command
 
         for scene in subtitles.scenes:
-            if self.resume and scene.all_translated:
+            if self.resume and scene.translation_complete:
                 continue
 
             if self.scenes and scene.number not in self.scenes:
@@ -57,7 +57,7 @@ class StartTranslationCommand(Command):
             line_numbers = scene_data.get('lines', None)
 
             if self.resume and scene.any_translated:
-                batches = [ batch for batch in scene.batches if not batch.all_translated ]
+                batches = [ batch for batch in scene.batches if not batch.translation_complete ]
                 batch_numbers = [ batch.number for batch in batches ]
 
             command = TranslateSceneCommand(scene.number, batch_numbers, line_numbers, resume=self.resume, datamodel=self.datamodel)

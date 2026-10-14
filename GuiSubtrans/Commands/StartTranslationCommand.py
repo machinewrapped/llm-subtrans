@@ -28,7 +28,7 @@ class StartTranslationCommand(Command):
         project : SubtitleProject = self.datamodel.project
         subtitles : Subtitles = project.subtitles
 
-        if self.resume and subtitles.scenes and all(scene.translation_complete for scene in subtitles.scenes):
+        if self.resume and subtitles.translation_complete:
             logging.info(_("All scenes are fully translated"))
             return True
 

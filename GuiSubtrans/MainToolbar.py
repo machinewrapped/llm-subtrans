@@ -292,8 +292,7 @@ class MainToolbar(QToolBar):
             return
 
         datamodel : ProjectDataModel = self.gui.GetDataModel()
-        subtitles = datamodel.project.subtitles if datamodel and datamodel.project else None
-        if subtitles and subtitles.scenes and all(scene.translation_complete for scene in subtitles.scenes):
+        if datamodel and datamodel.project and datamodel.project.translation_complete:
             self.SetActionsEnabled(["Start Translating", "Start Translating Fast"], False)
 
     def UpdateTooltips(self):

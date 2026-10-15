@@ -137,12 +137,12 @@ class SubtitleTranslator:
             if self.max_lines and self.lines_processed >= self.max_lines:
                 break
 
-            if self.resume and scene.all_translated:
+            if self.resume and scene.translation_complete:
                 self._emit_info(_("Scene {scene} already translated {linecount} lines...").format(scene=scene.number, linecount=scene.linecount))
                 continue
 
             logging.debug(f"Translating scene {scene.number} of {subtitles.scenecount}")
-            batch_numbers =[ batch.number for batch in scene.batches if not batch.translated ] if self.resume else None
+            batch_numbers = [batch.number for batch in scene.batches if not batch.translation_complete] if self.resume else None
 
             self.TranslateScene(subtitles, scene, batch_numbers=batch_numbers)
 
@@ -242,7 +242,7 @@ class SubtitleTranslator:
             self.ProcessBatchTranslation(batch, batch.translation, line_numbers)
             return
 
-        if self.resume and not self.retranslate and batch.all_translated:
+        if self.resume and not self.retranslate and batch.translation_complete:
             self._emit_info(_("Scene {scene} batch {batch} already translated {lines} lines...").format(scene=batch.scene, batch=batch.number, lines=batch.size))
             return
 

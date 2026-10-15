@@ -54,6 +54,11 @@ class SubtitleBatch:
         return True if (self.translated and (len(self.translated) == len(self.originals))) else False
 
     @property
+    def translation_complete(self) -> bool:
+        """Whether all lines are translated without recorded errors."""
+        return self.all_translated and not self.errors
+
+    @property
     def any_translated(self) -> bool:
         """ Check if any original lines have a translation """
         return len(self.translated or []) > 0

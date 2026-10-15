@@ -421,7 +421,7 @@ def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_
         logging.info("Translation status: preview completed (no translation was requested)")
         return
 
-    if project.all_translated:
+    if project.translation_complete:
         logging.info(f"Translation status: completed ({translated_lines}/{total_lines} lines translated)")
     elif translated_lines > 0:
         logging.warning(f"Translation status: incomplete ({translated_lines}/{total_lines} lines translated)")

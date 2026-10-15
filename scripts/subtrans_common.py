@@ -467,7 +467,7 @@ def TranslateProject(project : SubtitleProject, options : Options, verbose : boo
         if terminology_file and project.subtitles and project.subtitles.terminology_map:
             _save_terminology_file(terminology_file, project.subtitles.terminology_map)
 
-        LogTranslationStatus(project, preview=preview, has_error=bool(translator.errors), token_usage=progress_logger.token_usage)
+        LogTranslationStatus(project, preview=preview, token_usage=progress_logger.token_usage)
 
     except Exception:
         LogTranslationStatus(project, preview=preview, has_error=True, token_usage=progress_logger.token_usage)

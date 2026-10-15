@@ -1,7 +1,6 @@
+import json
 from copy import deepcopy
 from datetime import timedelta
-from pathlib import Path
-from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from PySubtrans.Helpers.ContextHelpers import GetBatchContext
@@ -17,9 +16,9 @@ from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleEditor import SubtitleEditor
 from PySubtrans.SubtitleError import LineTooLongError, SubtitleError
 from PySubtrans.SubtitleLine import SubtitleLine
-from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
+from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationEvents import TranslationEvents
 from PySubtrans.TranslationParser import TranslationParser
@@ -273,14 +272,6 @@ class ResumeTranslationTests(SubtitleTestCase):
             self.pending_batch.translated,
         )
 
-    def CreateTranslator(self) -> SubtitleTranslator:
-        """Use deterministic responses through the existing dummy provider."""
-        return SubtitleTranslator(
-            self.options,
-            DummyProvider({"response_map": self.response_map}),
-            resume=True,
-        )
-
     def test_resume_retries_persisted_invalid_batches(self) -> None:
         """Retry saved validation failures, including otherwise fully translated scenes."""
         for pending_translated in [False, True]:
@@ -294,17 +285,9 @@ class ResumeTranslationTests(SubtitleTestCase):
                         0
                     ].translated = self.pending_batch.translated[0]
 
-                with TemporaryDirectory() as directory:
-                    filepath = str(Path(directory) / "example.subtrans")
-                    project = self.create_subtitle_project(self.subtitles)
-                    project.SaveProjectFile(filepath)
-                    reloaded = SubtitleProject(persistent=True).ReadProjectFile(
-                        filepath
-                    )
-
-                self.assertLoggedIsNotNone("Saved project reloads", reloaded)
-                if reloaded is None:
-                    self.fail("Saved project did not reload")
+                serialized = json.dumps(self.subtitles, cls=SubtitleEncoder)
+                reloaded : Subtitles = json.loads(serialized, cls=SubtitleDecoder)
+                self.assertLoggedIsInstance("Subtitles reload", reloaded, Subtitles)
 
                 invalid_batch = reloaded.scenes[1].batches[1]
                 self.assertLoggedTrue(
@@ -353,6 +336,14 @@ class ResumeTranslationTests(SubtitleTestCase):
                 self.assertLoggedEqual(
                     "All final lines present", 4, len(reloaded.translated or [])
                 )
+
+    def CreateTranslator(self) -> SubtitleTranslator:
+        """Use deterministic responses through the existing dummy provider."""
+        return SubtitleTranslator(
+            self.options,
+            DummyProvider({"response_map": self.response_map}),
+            resume=True,
+        )
 
 
 class TranslationEventsTests(SubtitleTestCase):

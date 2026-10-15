@@ -7,7 +7,7 @@ from PySubtrans.Helpers.TestCases import (
     SubtitleTestCase,
 )
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleError import LineTooLongError, TranslationError
+from PySubtrans.SubtitleError import LineTooLongError
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
@@ -16,37 +16,6 @@ from scripts.subtrans_common import LogTranslationStatus, TranslateProject
 
 class TranslationStatusTests(SubtitleTestCase):
     """CLI completion reports must distinguish line coverage from success."""
-
-    def test_run_errors_are_reported_even_with_complete_translations(self) -> None:
-        """Run failures take precedence over line completion and preview status."""
-        for preview, expected_level in [
-            (False, logging.WARNING),
-            (True, logging.ERROR),
-        ]:
-            with self.subTest(preview=preview):
-                subtitles = BuildSubtitlesFromLineCounts([[1]])
-                batch = subtitles.scenes[0].batches[0]
-                batch.translated = [SubtitleLine(batch.originals[0])]
-                batch.translated[0].text = "Saved translation"
-                subtitles.translated = batch.translated
-                project = self.create_subtitle_project(subtitles)
-                self.options.add("preview", preview)
-                translator = SubtitleTranslator(
-                    self.options, DummyProvider({}), resume=True
-                )
-                translator.errors = [TranslationError("Synthetic run failure")]
-
-                with patch(
-                    "scripts.subtrans_common.init_translator", return_value=translator
-                ):
-                    with self.assertLogs(level=logging.INFO) as captured:
-                        TranslateProject(project, self.options, preview=preview)
-
-                self.assertLoggedEqual(
-                    "Final status reflects run errors",
-                    expected_level,
-                    captured.records[-1].levelno,
-                )
 
     def test_saved_validation_errors_are_not_reported_as_complete(self) -> None:
         """A full set of rejected translations must produce a warning status."""

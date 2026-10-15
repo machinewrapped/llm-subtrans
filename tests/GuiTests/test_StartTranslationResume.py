@@ -1,5 +1,4 @@
-from pathlib import Path
-from tempfile import TemporaryDirectory
+import json
 
 from GuiSubtrans.Commands.StartTranslationCommand import StartTranslationCommand
 from GuiSubtrans.Commands.TranslateSceneCommand import TranslateSceneCommand
@@ -7,7 +6,8 @@ from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, SubtitleTestCase
 from PySubtrans.SubtitleError import LineTooLongError
 from PySubtrans.SubtitleLine import SubtitleLine
-from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Subtitles import Subtitles
+from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
 
 
 class StartTranslationResumeTests(SubtitleTestCase):
@@ -49,15 +49,22 @@ class StartTranslationResumeTests(SubtitleTestCase):
                                     )
                                 ]
 
-                    project = self.create_subtitle_project(subtitles)
-                    with TemporaryDirectory() as directory:
-                        filepath = str(Path(directory) / "example.subtrans")
-                        project.SaveProjectFile(filepath)
-                        reloaded = SubtitleProject(persistent=True)
-                        self.assertLoggedIsNotNone(
-                            "Saved project reloads", reloaded.ReadProjectFile(filepath)
-                        )
+                    serialized = json.dumps(subtitles, cls=SubtitleEncoder)
+                    reloaded_subtitles : Subtitles = json.loads(
+                        serialized, cls=SubtitleDecoder
+                    )
+                    self.assertLoggedIsInstance(
+                        "Subtitles reload", reloaded_subtitles, Subtitles
+                    )
+                    for scene, batch_states in zip(reloaded_subtitles.scenes, states):
+                        for batch, state in zip(scene.batches, batch_states):
+                            self.assertLoggedEqual(
+                                "Saved validation errors survive reload",
+                                1 if state == "invalid" else 0,
+                                len(batch.errors),
+                            )
 
+                    reloaded = self.create_subtitle_project(reloaded_subtitles)
                     reloaded.needs_writing = False
                     datamodel = ProjectDataModel(reloaded, self.options.GetSettings())
                     command = StartTranslationCommand(

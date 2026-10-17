@@ -37,6 +37,16 @@ https://www.requesty.ai/privacy
 
 Models are named provider/model, e.g. `openai/gpt-4o-mini` or `anthropic/claude-sonnet-4-5`.
 
+### API Route
+
+[API Route](https://www.api-route.com) is a paid OpenAI-compatible gateway. Select **API Route** in the translation provider settings and enter a key from the [API keys page](https://www.api-route.com/api-keys). The authenticated catalogue supplies chat model IDs without rewriting them; image and video generation models are excluded.
+
+The default translator is `gpt-6.1-sol`. Select another chat model available to your account if needed. Streaming uses the existing OpenAI-compatible translation client.
+
+Environment configuration: `API_ROUTE_API_KEY`, `API_ROUTE_MODEL`, `API_ROUTE_STREAM_RESPONSES`, and optional `API_ROUTE_SERVER_ADDRESS` (default `https://global.api-route.com/`; use the host root, without `/v1`). GUI/project values take precedence over environment defaults.
+
+See the [quickstart](https://www.api-route.com/docs/quickstart) and [pricing](https://www.api-route.com/pricing).
+
 ### Opper
 https://opper.ai/privacy
 

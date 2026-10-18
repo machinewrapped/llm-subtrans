@@ -2,7 +2,7 @@ from datetime import timedelta
 
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatch import SubtitleBatch
-from PySubtrans.SubtitleError import SubtitleError
+from PySubtrans.SubtitleError import SubtitleError, TranslationError
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.ValidationError import (
     EmptyLinesError,
@@ -10,6 +10,7 @@ from PySubtrans.ValidationError import (
     IsValidationWarning,
     LineTooLongError,
     TooManyNewlinesError,
+    TranslationValidationError,
     UnmatchedLinesError,
     UntranslatedLinesError,
 )
@@ -27,7 +28,7 @@ class SubtitleValidator:
         """
         Check if the batch seems at least plausible, recording errors and warnings on the batch
         """
-        issues : list[str|Exception] = []
+        issues : list[TranslationError] = []
 
         if batch.translated:
             issues.extend(self.ValidateTranslations(batch.translated))
@@ -42,19 +43,15 @@ class SubtitleValidator:
 
         batch.errors, batch.warnings = self.SortIssues(issues)
 
-    def SortIssues(self, issues : list[str|Exception]) -> tuple[list[str|SubtitleError], list[str|SubtitleError]]:
+    def SortIssues(self, issues : list[TranslationError]) -> tuple[list[str|SubtitleError], list[str|SubtitleError]]:
         """
         Split validation issues into errors and warnings by severity.
         Everything is an error when warnings_as_errors is set.
-        Issues that are not subtitle errors or messages are dropped.
         """
         errors : list[str|SubtitleError] = []
         warnings : list[str|SubtitleError] = []
 
         for issue in issues:
-            if not isinstance(issue, (str, SubtitleError)):
-                continue
-
             if IsValidationWarning(issue) and not self.warnings_as_errors:
                 warnings.append(issue)
             else:
@@ -62,7 +59,7 @@ class SubtitleValidator:
 
         return errors, warnings
 
-    def ValidateTranslations(self, translated : list[SubtitleLine]) -> list[Exception]:
+    def ValidateTranslations(self, translated : list[SubtitleLine]) -> list[TranslationValidationError]:
         """
         Check if the translation seems at least plausible
         """
@@ -95,7 +92,7 @@ class SubtitleValidator:
 
         return errors
 
-    def ValidateOriginals(self, originals : list[SubtitleLine], max_duration_seconds : float|None) -> list[Exception]:
+    def ValidateOriginals(self, originals : list[SubtitleLine], max_duration_seconds : float|None) -> list[TranslationValidationError]:
         """
         Check transcribed source lines for issues worth a human glance.
         Same buckets as translations, plus over-duration spans that no

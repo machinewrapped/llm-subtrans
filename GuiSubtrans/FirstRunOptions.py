@@ -7,7 +7,7 @@ from PySide6.QtWidgets import (
     QFrame,
     )
 
-from GuiSubtrans.GuiHelpers import GetThemeNames
+from GuiSubtrans.GuiHelpers import GetProviderDropdownValues, GetThemeNames
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget, ParseOptionDefinition
 from PySubtrans.Options import Options
 from PySubtrans.Helpers.Localization import _, get_locale_display_items
@@ -28,7 +28,8 @@ class FirstRunOptions(QDialog):
         self.options = Options(options)
 
         # Populate provider list
-        self.OPTIONS['provider'] = (options.available_providers, self.OPTIONS['provider'][1])
+        provider_values = GetProviderDropdownValues(options.available_providers)
+        self.OPTIONS['provider'] = (provider_values, self.OPTIONS['provider'][1])
 
         # Populate theme list
         self.OPTIONS['theme'] = (['default'] + GetThemeNames(), self.OPTIONS['theme'][1])

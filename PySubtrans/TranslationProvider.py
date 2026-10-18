@@ -1,13 +1,28 @@
+from enum import Enum
 from typing import cast
 from PySubtrans.ModelList import ModelList
 from PySubtrans.Options import Options, SettingsType
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.TranslationClient import TranslationClient
 
+class ProviderKind(Enum):
+    """
+    The kind of service a provider connects to, used to group providers for selection.
+    """
+    Direct = 'direct'           # A model maker's own API
+    Platform = 'platform'       # A cloud platform hosting models from several makers
+    Gateway = 'gateway'         # A router or aggregator in front of other providers
+    Custom = 'custom'           # A server the user configures themselves
+
 class TranslationProvider:
     """
     Base class for translation service providers.
+
+    Concrete providers define a class-level `name`.
+    Intermediate base classes leave it undefined, so they are not registered as providers.
     """
+    kind : ProviderKind = ProviderKind.Direct
+
     def __init__(self, name : str, settings : SettingsType):
         self.name : str = name
         self.settings : SettingsType = settings
@@ -130,9 +145,35 @@ class TranslationProvider:
             # Import the providers package, which will trigger explicit imports
             from . import Providers  # type: ignore[ignore-unused]
 
-        providers = { cast(TranslationProvider, provider).name : provider for provider in cls.__subclasses__() }
+        providers = { cast(TranslationProvider, provider).name : provider for provider in cls._get_concrete_subclasses() }
 
         return providers
+
+    @classmethod
+    def get_provider_kind(cls, name : str) -> ProviderKind:
+        """
+        Return the kind of a registered provider, without importing any providers
+        """
+        name_cf = name.casefold()
+        for provider in cls._get_concrete_subclasses():
+            if cast(TranslationProvider, provider).name.casefold() == name_cf:
+                return provider.kind
+
+        return ProviderKind.Direct
+
+    @classmethod
+    def _get_concrete_subclasses(cls) -> list[type['TranslationProvider']]:
+        """
+        Return every subclass at any depth that defines its own provider name
+        """
+        concrete : list[type[TranslationProvider]] = []
+        for subclass in cls.__subclasses__():
+            # An inherited name would shadow the provider it came from
+            if isinstance(vars(subclass).get('name'), str):
+                concrete.append(subclass)
+            concrete.extend(subclass._get_concrete_subclasses())
+
+        return concrete
 
     @classmethod
     def get_provider(cls, options : Options):

@@ -17,10 +17,11 @@ else:
 
         from PySubtrans.Providers.Clients.BedrockClient import BedrockClient
         from PySubtrans.TranslationClient import TranslationClient
-        from PySubtrans.TranslationProvider import TranslationProvider
+        from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
         class BedrockProvider(TranslationProvider):
             name = "Bedrock"
+            kind = ProviderKind.Platform
 
             information = """
             <p>Bedrock API provider.</p>

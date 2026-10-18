@@ -12,10 +12,11 @@ else:
     try:
         from PySubtrans.Providers.Clients.LiteLLMClient import LiteLLMClient
         from PySubtrans.TranslationClient import TranslationClient
-        from PySubtrans.TranslationProvider import TranslationProvider
+        from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
         class LiteLLMProvider(TranslationProvider):
             name = "LiteLLM"
+            kind = ProviderKind.Gateway
 
             default_model = "openai/gpt-4o"
 

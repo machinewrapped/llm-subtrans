@@ -8,10 +8,12 @@ import darkdetect # type: ignore
 from PySide6.QtCore import Qt, QMimeData
 from PySide6.QtWidgets import (QApplication, QFormLayout)
 
+from GuiSubtrans.Widgets.OptionsWidgets import DropdownHeader
 from PySubtrans.Helpers.Resources import GetResourcePath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Transcription.AudioExtractor import SUPPORTED_MEDIA_EXTENSIONS
+from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
 class FileKind(Enum):
     """
@@ -19,6 +21,33 @@ class FileKind(Enum):
     """
     Subtitles = auto()
     Media = auto()
+
+def GetProviderDropdownValues(provider_names : list[str]) -> list[str|DropdownHeader]:
+    """
+    Group provider names by kind under headings, for a provider selector.
+    A single group is returned without a heading.
+    """
+    headings = {
+        ProviderKind.Direct: _("Model providers"),
+        ProviderKind.Platform: _("Cloud platforms"),
+        ProviderKind.Gateway: _("Gateways and routers"),
+        ProviderKind.Custom: _("Custom"),
+    }
+
+    groups : dict[ProviderKind, list[str]] = {}
+    for name in provider_names:
+        groups.setdefault(TranslationProvider.get_provider_kind(name), []).append(name)
+
+    if len(groups) < 2:
+        return list(provider_names)
+
+    values : list[str|DropdownHeader] = []
+    for kind, heading in headings.items():
+        if kind in groups:
+            values.append(DropdownHeader(heading))
+            values.extend(groups[kind])
+
+    return values
 
 def GetThemeNames():
     themes = []

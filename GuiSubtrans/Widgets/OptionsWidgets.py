@@ -6,7 +6,7 @@ from typing import Any, cast
 
 from PySide6.QtCore import Qt, Signal, QSignalBlocker
 from PySide6.QtWidgets import (QWidget, QLabel, QLineEdit, QPushButton, QSpinBox, QDoubleSpinBox, QComboBox, QCheckBox, QTextEdit, QSizePolicy, QHBoxLayout, QVBoxLayout)
-from PySide6.QtGui import QTextOption
+from PySide6.QtGui import QBrush, QColor, QPalette, QStandardItemModel, QTextOption
 
 from PySubtrans.Helpers import GetValueFromName, GetValueName
 from PySubtrans.Helpers.Localization import LocaleDisplayItem, _
@@ -259,6 +259,16 @@ class CheckboxOptionWidget(OptionWidget):
     def SetVisible(self, is_visible : bool):
         self.check_box.setVisible(is_visible)
 
+class DropdownHeader:
+    """
+    A non-selectable heading that groups the dropdown values after it.
+    """
+    def __init__(self, label : str):
+        self.label = label
+
+    def __str__(self) -> str:
+        return self.label
+
 class DropdownOptionWidget(OptionWidget):
     def __init__(self, key, values, initial_value, tooltip = None):
         super().__init__(key, initial_value, tooltip=tooltip)
@@ -286,9 +296,13 @@ class DropdownOptionWidget(OptionWidget):
     def SetOptions(self, values, selected_value = None):
         with QSignalBlocker(self.combo_box):
             self.combo_box.clear()
-            self.values = values
+            self.values = [value for value in values if not isinstance(value, DropdownHeader)]
             selected_value_name = GetValueName(selected_value) if selected_value else None
             for value in values:
+                if isinstance(value, DropdownHeader):
+                    self._add_header(value)
+                    continue
+
                 value_name = GetValueName(value)
                 self.combo_box.addItem(value_name)
                 if selected_value and value_name == selected_value_name:
@@ -299,13 +313,44 @@ class DropdownOptionWidget(OptionWidget):
                 elif isinstance(value, LocaleDisplayItem) and selected_value == value.code:
                     self.combo_box.setCurrentIndex(self.combo_box.count() - 1)
 
-            self.combo_box.setEnabled(len(values) > 1)
+            # Qt selects the first row by default, which may be a header
+            if self.values and self.combo_box.currentText() not in [GetValueName(value) for value in self.values]:
+                self.combo_box.setCurrentIndex(self.combo_box.findText(GetValueName(self.values[0])))
+
+            self.combo_box.setEnabled(len(self.values) > 1)
 
     def SetEnabled(self, enabled : bool):
         self.combo_box.setEnabled(enabled)
 
     def SetVisible(self, is_visible : bool):
         self.combo_box.setVisible(is_visible)
+
+    def _add_header(self, header : DropdownHeader) -> None:
+        """
+        Add a heading row that cannot be selected, separated from the group above it.
+        """
+        if self.combo_box.count() > 0:
+            self.combo_box.insertSeparator(self.combo_box.count())
+
+        self.combo_box.addItem(header.label)
+
+        model = self.combo_box.model()
+        if not isinstance(model, QStandardItemModel):
+            return
+
+        item = model.item(self.combo_box.count() - 1)
+        item.setFlags(item.flags() & ~(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled))
+
+        font = item.font()
+        font.setBold(True)
+        item.setFont(font)
+
+        # A disabled row is drawn greyed out, so set the colours explicitly to read as a heading instead
+        palette = self.combo_box.palette()
+        band = QColor(palette.color(QPalette.ColorRole.Highlight))
+        band.setAlpha(48)
+        item.setBackground(QBrush(band))
+        item.setForeground(QBrush(palette.color(QPalette.ColorRole.Text)))
 
 class ButtonOptionWidget(OptionWidget):
     """A single action button. The action callable receives the current value

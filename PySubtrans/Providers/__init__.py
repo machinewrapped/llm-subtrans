@@ -20,5 +20,3 @@ from . import Provider_OpenAI
 from . import Provider_OpenRouter
 from . import Provider_LiteLLM
 from . import Gateways
-
-from . import Provider_APIRoute

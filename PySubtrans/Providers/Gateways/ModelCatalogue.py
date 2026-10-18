@@ -24,7 +24,7 @@ class ModelCatalogue:
     requires_auth : bool = True                     # Send the API key when listing models
     query : Mapping[str, str|int] = field(default_factory=dict)
     required_fields : Mapping[str, Any] = field(default_factory=dict)   # Entries must match all of these values
-    excluded_prefixes : tuple[str, ...] = ()        # Skip models whose name (after any family prefix) starts with one of these
+    excluded_prefixes : tuple[str, ...] = ()        # Skip models whose name (after any vendor prefix) starts with one of these
 
     def Parse(self, data : Any, gateway_name : str) -> tuple[dict[str, dict[str, str]], list[str]]:
         """
@@ -50,10 +50,12 @@ class ModelCatalogue:
             if any(entry.get(key) != value for key, value in self.required_fields.items()):
                 continue
 
-            family, display_name = self._get_family_and_name(entry, model_id, gateway_name)
-
-            if display_name.lower().startswith(self.excluded_prefixes):
+            # Match the model name, so 'vendor/veo-3' is excluded by 'veo' whatever the family source
+            model_name = model_id.rsplit('/', 1)[-1].lower()
+            if model_name.startswith(self.excluded_prefixes):
                 continue
+
+            family, display_name = self._get_family_and_name(entry, model_id, gateway_name)
 
             all_models.add(model_id)
             model_cache.setdefault(family, {})[display_name] = model_id

@@ -93,7 +93,7 @@ Supports translating subtitle files and transcribing subtitles from video/audio.
 
 `SubtitleTranslator` builds context-rich requests for subtitle batches, coordinates provider clients and response parsing, handles retries and post-processing, and emits `TranslationEvents`.
 
-Translation providers live in `PySubtrans/Providers/`; their clients are in `PySubtrans/Providers/Clients/`. `TranslationPrompt` prepares requests, and `TranslationParser` maps responses back to subtitle lines.
+Translation providers live in `PySubtrans/Providers/`; their clients are in `PySubtrans/Providers/Clients/`. Gateways that route to many model makers are data-driven: each gateway in `PySubtrans/Providers/Gateways/` is a definition that the shared `GatewayProvider` implements. Each provider declares a `ProviderKind`, which the GUI uses to group the provider selector. `TranslationPrompt` prepares requests, and `TranslationParser` maps responses back to subtitle lines.
 
 For provider registration, model discovery, streaming, and provider-specific settings, see [translation-provider-integration.md](translation-provider-integration.md).
 

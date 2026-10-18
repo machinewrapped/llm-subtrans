@@ -90,6 +90,27 @@ class TestGatewayCatalogue(LoggedTestCase):
         self.assertLoggedEqual("excluded models removed", ['gpt-6.1-sol'], all_models)
 
 
+class TestGatewayFamilySelector(LoggedTestCase):
+    """The family selector is hidden only when there is nothing else to choose."""
+
+    def test_selector_shown_when_saved_family_is_missing(self) -> None:
+        provider = RequestyProvider(SettingsType({'api_key': 'test-key', 'model_family': 'openai'}))
+        provider._cached_models = {'anthropic': {'claude-sonnet-4-5': 'anthropic/claude-sonnet-4-5'}}
+
+        options = provider.GetOptions(provider.settings)
+
+        self.assertLoggedIn("family selector offered", 'model_family', options)
+
+    def test_selector_hidden_for_single_matching_family(self) -> None:
+        provider = RequestyProvider(SettingsType({'api_key': 'test-key', 'model_family': 'anthropic'}))
+        provider._cached_models = {'anthropic': {'claude-sonnet-4-5': 'anthropic/claude-sonnet-4-5'}}
+
+        options = provider.GetOptions(provider.settings)
+
+        self.assertLoggedNotIn("no family selector", 'model_family', options)
+        self.assertLoggedIn("model selector offered", 'model', options)
+
+
 class TestGatewayClient(LoggedTestCase):
     """The client is configured from the gateway definition."""
 

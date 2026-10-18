@@ -126,9 +126,11 @@ class GatewayProvider(TranslationProvider):
 
         if not settings.get_bool('use_default_model'):
             if self._cached_models:
-                if len(self._cached_models) > 1:
+                # The list includes a saved family the catalogue lacks, so the user can switch away from it
+                model_families = self.available_model_families
+                if len(model_families) > 1:
                     options.update({
-                        'model_family': (self.available_model_families, _( "Model family/provider to choose from")),
+                        'model_family': (model_families, _( "Model family/provider to choose from")),
                     })
 
                 # Add model selector if family is chosen

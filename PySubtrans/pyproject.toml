@@ -63,6 +63,7 @@ packages = [
     "PySubtrans.Helpers",
     "PySubtrans.Providers",
     "PySubtrans.Providers.Clients",
+    "PySubtrans.Providers.Gateways",
     "PySubtrans.Transcription",
     "PySubtrans.Transcription.Providers",
     "PySubtrans.Transcription.Providers.Clients",

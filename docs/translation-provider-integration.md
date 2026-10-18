@@ -61,6 +61,14 @@ The definition's `ModelCatalogue` describes the model list and parses it: its pa
 
 Then add the gateway to `tests/IntegrationTests/test_ProviderModelIds.py` and add a readme section.
 
+A gateway is only merged once it has been tested against the live service. The maintainers usually don't have an account with each gateway, so the contributor tests it and reports in the pull request that:
+
+- the model list loads with an API key, and unsuitable models are filtered out
+- a short subtitle file translates with the default model and one other, with streaming on and off
+- the command line works with the `<ENV_PREFIX>_API_KEY` environment variable
+
+Never post an API key in a pull request or issue.
+
 ## Adding a Provider
 
 1. Add a `TranslationProvider` subclass under `PySubtrans/Providers/` with a `name` and `kind`.

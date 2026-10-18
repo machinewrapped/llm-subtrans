@@ -625,6 +625,16 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         self.assertLoggedEqual("error_count", 0, len(loaded.errors))
         self.assertLoggedTrue("batch is complete", loaded.translation_complete)
 
+    def test_legacy_string_errors_remain_errors(self):
+        """Errors saved as plain messages keep blocking completion, with or without typed errors beside them."""
+        for error_types, expected_warnings in [([], []), (["LineTooLongError"], [LineTooLongError])]:
+            with self.subTest(error_types=error_types):
+                loaded = self._load_with_legacy_errors(error_types, plain_errors=["Saved as a plain message"])
+
+                self.assertLoggedEqual("error types", [str], [type(e) for e in loaded.errors])
+                self.assertLoggedEqual("warning types", expected_warnings, [type(w) for w in loaded.warnings])
+                self.assertLoggedFalse("batch is incomplete", loaded.translation_complete)
+
     def _create_translated_batch(self) -> SubtitleBatch:
         originals = [
             SubtitleLine({'number': 1, 'start': '00:00:00,000', 'end': '00:00:01,000', 'text': 'one'}),
@@ -633,10 +643,10 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         translated = [SubtitleLine({'number': line.number, 'start': line.srt_start, 'end': line.srt_end, 'text': f"{line.text} translated"}) for line in originals]
         return SubtitleBatch({'originals': originals, 'translated': translated})
 
-    def _load_with_legacy_errors(self, error_types : list[str]) -> SubtitleBatch:
+    def _load_with_legacy_errors(self, error_types : list[str], plain_errors : list[str]|None = None) -> SubtitleBatch:
         """Replace a batch's saved errors with the format written by older versions, then load it."""
         saved = json.loads(json.dumps(self._create_translated_batch(), cls=SubtitleEncoder))
-        saved['errors'] = [
+        saved['errors'] = (plain_errors or []) + [
             {"__class": "TranslationError", "type": error_type, "problem": f"{error_type} problem"}
             for error_type in error_types
         ]

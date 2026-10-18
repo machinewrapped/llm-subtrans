@@ -8,5 +8,6 @@ See docs/translation-provider-integration.md before adding one.
 # pyright: reportUnusedImport=false
 
 # Explicitly import each gateway so it is registered
+from . import APIRoute
 from . import Opper
 from . import Requesty

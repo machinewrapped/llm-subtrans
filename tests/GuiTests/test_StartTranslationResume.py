@@ -4,10 +4,10 @@ from GuiSubtrans.Commands.StartTranslationCommand import StartTranslationCommand
 from GuiSubtrans.Commands.TranslateSceneCommand import TranslateSceneCommand
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, SubtitleTestCase
-from PySubtrans.SubtitleError import LineTooLongError
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
+from PySubtrans.ValidationError import LineTooLongError
 
 
 class StartTranslationResumeTests(SubtitleTestCase):

@@ -21,6 +21,7 @@ from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleSerialisation import SubtitleEncoder, SubtitleDecoder
 from PySubtrans.Subtitles import SaveSettings, Subtitles
+from PySubtrans.ValidationError import LineTooLongError, TranslationValidationError, UntranslatedLinesError, ValidationSeverity
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Helpers.Tests import (
     skip_if_debugger_attached,
@@ -586,6 +587,63 @@ Dialogue: 0,0:00:01.00,0:00:02.00,Default,,0,0,0,,Hello ASS!
         loaded = json.loads(data, cls=SubtitleDecoder)
 
         self.assertLoggedEqual("flag defaults false", False, loaded.validate_originals)
+
+    def test_errors_and_warnings_round_trip(self):
+        """Saved validation issues keep their type, severity and line numbers."""
+        batch = self._create_translated_batch()
+        batch.errors = [UntranslatedLinesError("Missing translation", lines=[batch.originals[1]])]
+        batch.warnings = [LineTooLongError("Line too long", lines=[batch.translated[0]])]
+
+        loaded = json.loads(json.dumps(batch, cls=SubtitleEncoder), cls=SubtitleDecoder)
+
+        self.assertLoggedEqual("error types", [UntranslatedLinesError], [type(e) for e in loaded.errors])
+        self.assertLoggedEqual("warning types", [LineTooLongError], [type(w) for w in loaded.warnings])
+        self.assertLoggedEqual("error line numbers", [2], loaded.errors[0].line_numbers)
+        self.assertLoggedEqual("warning line numbers", [1], loaded.warnings[0].line_numbers)
+
+    def test_new_validation_types_are_restored_without_registration(self):
+        """A validation error type defined anywhere is rebuilt by name on load, keeping its severity."""
+        class ExampleStyleWarning(TranslationValidationError):
+            severity = ValidationSeverity.Warning
+
+        loaded = self._load_with_legacy_errors(["ExampleStyleWarning"])
+
+        self.assertLoggedEqual("error_count", 0, len(loaded.errors))
+        self.assertLoggedEqual("warning types", [ExampleStyleWarning], [type(w) for w in loaded.warnings])
+
+    def test_legacy_errors_are_sorted_by_severity(self):
+        """Errors saved by older versions are rebuilt, and minor issues become warnings."""
+        loaded = self._load_with_legacy_errors(["UntranslatedLinesError", "LineTooLongError"])
+
+        self.assertLoggedEqual("error types", [UntranslatedLinesError], [type(e) for e in loaded.errors])
+        self.assertLoggedEqual("warning types", [LineTooLongError], [type(w) for w in loaded.warnings])
+
+    def test_legacy_batch_with_only_minor_issues_is_complete(self):
+        """A batch that only failed on line length no longer blocks completion after upgrading."""
+        loaded = self._load_with_legacy_errors(["LineTooLongError", "TooManyNewlinesError"])
+
+        self.assertLoggedEqual("error_count", 0, len(loaded.errors))
+        self.assertLoggedTrue("batch is complete", loaded.translation_complete)
+
+    def _create_translated_batch(self) -> SubtitleBatch:
+        originals = [
+            SubtitleLine({'number': 1, 'start': '00:00:00,000', 'end': '00:00:01,000', 'text': 'one'}),
+            SubtitleLine({'number': 2, 'start': '00:00:01,000', 'end': '00:00:02,000', 'text': 'two'}),
+        ]
+        translated = [SubtitleLine({'number': line.number, 'start': line.srt_start, 'end': line.srt_end, 'text': f"{line.text} translated"}) for line in originals]
+        return SubtitleBatch({'originals': originals, 'translated': translated})
+
+    def _load_with_legacy_errors(self, error_types : list[str]) -> SubtitleBatch:
+        """Replace a batch's saved errors with the format written by older versions, then load it."""
+        saved = json.loads(json.dumps(self._create_translated_batch(), cls=SubtitleEncoder))
+        saved['errors'] = [
+            {"__class": "TranslationError", "type": error_type, "problem": f"{error_type} problem"}
+            for error_type in error_types
+        ]
+
+        loaded = json.loads(json.dumps(saved), cls=SubtitleDecoder)
+        self.assertLoggedIsInstance("batch loaded", loaded, SubtitleBatch)
+        return loaded
 
 
 if __name__ == "__main__":

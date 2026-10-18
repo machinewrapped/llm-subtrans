@@ -57,7 +57,10 @@ class AutoSplitBatchCommand(Command):
         for batch_number in range(self.batch_number + 1, len(scene.batches)):
              model_update.batches.update((self.scene_number, batch_number), { 'number' : batch_number + 1})
 
-        model_update.batches.update((self.scene_number, self.batch_number), { 'errors' : split_batch.error_messages })
+        model_update.batches.update((self.scene_number, self.batch_number), {
+            'errors' : split_batch.error_messages,
+            'warnings' : split_batch.warning_messages
+        })
         new_batch = scene.GetBatch(new_batch_number)
         if new_batch:
             model_update.batches.add((self.scene_number, new_batch_number), new_batch)
@@ -85,7 +88,10 @@ class AutoSplitBatchCommand(Command):
 
         model_update : ModelUpdate =  self.AddModelUpdate()
         model_update.batches.remove((self.scene_number, self.batch_number + 1))
-        model_update.batches.update((self.scene_number, self.batch_number), { 'errors' : merged_batch.error_messages })
+        model_update.batches.update((self.scene_number, self.batch_number), {
+            'errors' : merged_batch.error_messages,
+            'warnings' : merged_batch.warning_messages
+        })
 
         if not self.split_line or not merged_batch.first_line_number or not merged_batch.last_line_number:
             logging.warning(f"Split line number {self.split_line} or merged batch line numbers ({merged_batch.first_line_number}, {merged_batch.last_line_number}) is not set")

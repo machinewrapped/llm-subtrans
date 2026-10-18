@@ -4,8 +4,8 @@ from GuiSubtrans.GuiInterface import GuiInterface
 from GuiSubtrans.GuiSubtitleTestCase import GuiSubtitleTestCase
 from GuiSubtrans.MainToolbar import MainToolbar
 from GuiSubtrans.ProjectActions import ProjectActions
-from PySubtrans.SubtitleError import LineTooLongError
 from PySubtrans.SubtitleLine import SubtitleLine
+from PySubtrans.ValidationError import LineTooLongError
 
 
 class MainToolbarResumeTests(GuiSubtitleTestCase):

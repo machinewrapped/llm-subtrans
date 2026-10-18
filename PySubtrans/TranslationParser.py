@@ -9,7 +9,8 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtrans.Helpers.Text import IsTextContentEqual
 from PySubtrans.SubtitleLine import SubtitleLine
-from PySubtrans.SubtitleError import NoTranslationError, TranslationError, UntranslatedLinesError
+from PySubtrans.SubtitleError import NoTranslationError, TranslationError
+from PySubtrans.ValidationError import UntranslatedLinesError
 from PySubtrans.SubtitleValidator import SubtitleValidator
 from PySubtrans.Translation import Translation
 

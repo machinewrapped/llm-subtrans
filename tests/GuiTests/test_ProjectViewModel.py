@@ -5,6 +5,7 @@ from GuiSubtrans.ViewModel.TestableViewModel import TestableViewModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, CreateDummyBatch, CreateDummyScene
 from PySubtrans.SubtitleLine import SubtitleLine
+from PySubtrans.ValidationError import LineTooLongError
 
 class ProjectViewModelTests(GuiSubtitleTestCase):
     """
@@ -50,6 +51,28 @@ class ProjectViewModelTests(GuiSubtitleTestCase):
         # Verify dataChanged was emitted (batch setData + scene.emitDataChanged + batch.emitDataChanged = 3)
         # TODO: this count seems high, invesigate whether the explicit calls are needed
         viewmodel.assert_signal_emitted('dataChanged', expected_count=3)
+
+    def test_batch_warnings_are_flagged_separately_from_errors(self):
+        subtitles = BuildSubtitlesFromLineCounts([[2, 2]])
+        batch = subtitles.scenes[0].batches[0]
+        batch.warnings = [LineTooLongError("Line too long", lines=batch.originals[:1])]
+
+        viewmodel : TestableViewModel = self.create_testable_viewmodel(subtitles)
+        batch_item = viewmodel.test_get_batch_item(1, 1)
+        scene_item = viewmodel.test_get_scene_item(1)
+
+        self.assertLoggedTrue("batch has warnings", batch_item.has_warnings)
+        self.assertLoggedFalse("batch has no errors", batch_item.has_errors)
+        self.assertLoggedEqual("batch warning flags", {'all_translated': False, 'errors': False, 'warnings': True, 'shows_warnings': True}, batch_item.GetContent()['properties'])
+        self.assertLoggedTrue("scene has warnings", scene_item.has_warnings)
+        self.assertLoggedFalse("scene summary is not styled as a warning", scene_item.GetContent()['properties'].get('shows_warnings', False))
+
+        update = ModelUpdate()
+        update.batches.update((1, 1), {'warnings': []})
+        update.ApplyToViewModel(viewmodel)
+
+        self.assertLoggedFalse("warnings cleared by update", viewmodel.test_get_batch_item(1, 1).has_warnings)
+        self.assertLoggedFalse("scene warnings cleared", viewmodel.test_get_scene_item(1).has_warnings)
 
     def test_update_line_text(self):
         viewmodel : TestableViewModel = self.create_testable_viewmodel_from_line_counts([[2, 2], [1, 1]])

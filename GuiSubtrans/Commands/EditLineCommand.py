@@ -107,6 +107,9 @@ class EditLineCommand(Command):
 
         if self.datamodel:
             validator = SubtitleValidator(self.datamodel.project_options)
-            self.errors = validator.ValidateBatch(batch)
-            viewmodel_update.batches.update((batch.scene,batch.number), { 'errors': self.errors })
+            validator.ValidateBatch(batch)
+            viewmodel_update.batches.update((batch.scene,batch.number), {
+                'errors' : batch.error_messages,
+                'warnings' : batch.warning_messages
+            })
 

@@ -33,7 +33,7 @@ from PySubtrans.Options import Options
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.Subtitles import Subtitles
-from PySubtrans.Transcription.LineSettings import DEFAULT_TIMING_CORRECTION_FACTOR, LineSettings
+from PySubtrans.Transcription.LineSettings import DEFAULT_MIN_GAP_SECONDS, DEFAULT_TIMING_CORRECTION_FACTOR, LineSettings
 from PySubtrans.Transcription.TranscriptionCapture import LoadCapture, LoadCaptureLineSettings, LoadCaptureProvider
 from PySubtrans.Transcription.TranscriptionLines import TranscriptionLineBuilder
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
@@ -42,21 +42,32 @@ from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 from PySubtrans.Transcription.WordAlignment import WordCoverage
 
 
-def BuildLines(segments : list[TranscriptionSegment], **overrides) -> list[TranscriptionSegment]:
-    """Run the line builder over captured segments with the given settings."""
+# Here None means a setting was not given, so a limit of zero means no limit until the line settings are built
+LIMIT_SETTINGS = ('max_line_chars', 'max_line_seconds')
+
+
+def ReplaySettings(**overrides) -> LineSettings:
+    """Line settings from the current options, with the given overrides."""
     options = Options()
     settings = {
-        'max_line_chars': options.get_int('max_characters') or 120,
-        'max_line_seconds': options.get_float('max_line_duration') or 4.0,
-        'min_split_chars': options.get_int('min_split_chars') or 3,
-        'min_line_seconds': options.get_float('min_line_duration') or 0.8,
-        'max_newlines': options.get_int('max_newlines') or 2,
-        'min_gap': options.get_float('min_gap') or 0.05,
+        'max_line_chars': options.get_int('max_characters', 120) or None,
+        'max_line_seconds': options.get_timedelta('max_line_duration', timedelta(seconds=4.0)).total_seconds() or None,
+        'min_split_chars': options.get_int('min_split_chars', 3) or 0,
+        'min_line_seconds': options.get_timedelta('min_line_duration', timedelta(seconds=0.8)).total_seconds(),
+        'max_newlines': options.get_int('max_newlines', 2) or 0,
+        'min_gap': options.get_timedelta('min_gap', timedelta(seconds=DEFAULT_MIN_GAP_SECONDS)).total_seconds(),
         'abbreviations': ParseAbbreviations(options.get_list('abbreviations', sorted(DEFAULT_ABBREVIATIONS))),
     }
     settings.update({key: value for key, value in overrides.items() if value is not None})
+    for key in LIMIT_SETTINGS:
+        settings[key] = settings[key] or None
 
-    builder = TranscriptionLineBuilder(LineSettings(**settings))
+    return LineSettings(**settings)
+
+
+def BuildLines(segments : list[TranscriptionSegment], settings : LineSettings) -> list[TranscriptionSegment]:
+    """Run the line builder over captured segments with the given settings."""
+    builder = TranscriptionLineBuilder(settings)
 
     lines : list[TranscriptionSegment] = []
     for segment in segments:
@@ -84,7 +95,7 @@ def ProviderTimingCorrection(capture : str) -> float:
     except ValueError:
         return DEFAULT_TIMING_CORRECTION_FACTOR
 
-    return provider.settings.get_float('timing_correction_factor') or DEFAULT_TIMING_CORRECTION_FACTOR
+    return provider.settings.get_float('timing_correction_factor', DEFAULT_TIMING_CORRECTION_FACTOR) or 0.0
 
 
 def SaveLines(lines : list[TranscriptionSegment], path : str, postprocess : bool) -> int:
@@ -221,8 +232,8 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Replay a captured transcription through the line builder")
     parser.add_argument('capture', help="Capture file written by TranscriptionCapture")
     parser.add_argument('--min-line-duration', type=float, help="Below this a line is a fragment to be merged")
-    parser.add_argument('--max-line-duration', type=float, help="Longest a merged line may be")
-    parser.add_argument('--max-characters', type=int, help="Longest a merged line may be, in characters")
+    parser.add_argument('--max-line-duration', type=float, help="Longest a merged line may be, in seconds (0 for no limit)")
+    parser.add_argument('--max-characters', type=int, help="Longest a merged line may be, in characters (0 for no limit)")
     parser.add_argument('--max-newlines', type=int, help="Most rows a merged line may have, less one")
     parser.add_argument('--merge-eligible-gap', type=float, help="Widest gap that can be merged across")
     parser.add_argument('--same-speaker-gap', type=float, help="As above, for one speaker continuing")
@@ -251,6 +262,8 @@ def main() -> int:
     recorded = LoadCaptureLineSettings(args.capture)
     if recorded is not None:
         defaults : dict[str, Any] = asdict(recorded)
+        for key in LIMIT_SETTINGS:
+            defaults[key] = defaults[key] or 0
     else:
         print("Line settings were not recorded in this capture, so the current options and provider defaults are used")
         defaults = {
@@ -280,14 +293,15 @@ def main() -> int:
             print(f"\n=== {setting} = {value} ===")
             trial = dict(overrides)
             trial[setting] = float(value) if '.' in value else int(value)
-            lines = BuildLines(segments, **trial)
-            Report(lines, float(trial.get('min_line_seconds') or 0.8), int(trial.get('max_newlines') or 2), args.quiet,
-                   transcript_chars)
+            settings = ReplaySettings(**trial)
+            lines = BuildLines(segments, settings)
+            Report(lines, settings.min_line_seconds, settings.max_newlines, args.quiet, transcript_chars)
         return 0
 
     print()
-    lines = BuildLines(segments, **overrides)
-    Report(lines, overrides['min_line_seconds'] or 0.8, overrides['max_newlines'] or 2, args.quiet, transcript_chars)
+    settings = ReplaySettings(**overrides)
+    lines = BuildLines(segments, settings)
+    Report(lines, settings.min_line_seconds, settings.max_newlines, args.quiet, transcript_chars)
 
     if args.output:
         count = SaveLines(lines, args.output, args.postprocess)

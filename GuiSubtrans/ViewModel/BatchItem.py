@@ -27,6 +27,7 @@ class BatchItem(ViewModelItem):
             'end': batch.txt_end,
             'summary': batch.summary,
             'errors': self._get_errors(batch.errors),
+            'warnings': self._get_errors(batch.warnings),
             'translated': batch.translation is not None
         }
 
@@ -113,6 +114,10 @@ class BatchItem(ViewModelItem):
     def has_errors(self) -> bool:
         return True if self.batch_model.get('errors') else False
 
+    @property
+    def has_warnings(self) -> bool:
+        return True if self.batch_model.get('warnings') else False
+
     def Update(self, update : dict):
         """
         Update the batch model properties
@@ -124,6 +129,9 @@ class BatchItem(ViewModelItem):
 
         if 'errors' in update.keys():
             self.batch_model['errors'] = self._get_errors(update['errors'])
+
+        if 'warnings' in update.keys():
+            self.batch_model['warnings'] = self._get_errors(update['warnings'])
 
         if 'translation' in update.keys():
             translation = update['translation']
@@ -215,8 +223,9 @@ class BatchItem(ViewModelItem):
         """
         Return a dictionary of interesting batch data for UI display
         """
-        errors = self.batch_model.get('errors', [])
-        body = "\n".join(e for e in errors) if self.has_errors and errors \
+        # Errors are listed before warnings
+        issues = (self.batch_model.get('errors') or []) + (self.batch_model.get('warnings') or [])
+        body = "\n".join(issues) if issues \
             else self.summary if self.summary \
             else "\n".join([
                 _("1 line") if self.line_count == 1 else _("{count} lines").format(count=self.line_count),
@@ -230,7 +239,10 @@ class BatchItem(ViewModelItem):
             'footer': DescribeLineCount(self.line_count, self.translated_count),
             'properties': {
                 'all_translated' : self.all_translated,
-                'errors' : self.has_errors
+                'errors' : self.has_errors,
+                'warnings' : self.has_warnings,
+                # The body lists the warnings, so it is styled too (scene bodies show a summary instead)
+                'shows_warnings' : self.has_warnings
             }
         }
 

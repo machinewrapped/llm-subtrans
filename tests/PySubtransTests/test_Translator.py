@@ -1,3 +1,4 @@
+import json
 from copy import deepcopy
 from datetime import timedelta
 from unittest.mock import patch
@@ -7,7 +8,7 @@ from PySubtrans.Helpers.Parse import ParseNames
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Translation import Translation
 from PySubtrans.Helpers.SubtitleHelpers import FindBestSplitIndex
-from PySubtrans.Helpers.TestCases import DummyProvider, PrepareSubtitles, SubtitleTestCase
+from PySubtrans.Helpers.TestCases import BuildSubtitlesFromLineCounts, DummyProvider, PrepareSubtitles, SubtitleTestCase
 from PySubtrans.Helpers.Tests import log_info, log_test_name
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatch import SubtitleBatch
@@ -17,9 +18,11 @@ from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
+from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationEvents import TranslationEvents
 from PySubtrans.TranslationParser import TranslationParser
+from PySubtrans.ValidationError import LineTooLongError
 
 from ..TestData.chinese_dinner import chinese_dinner_data
 
@@ -162,6 +165,241 @@ class SubtitleTranslatorTests(SubtitleTestCase):
         self.assertIsNotNone(parser.translated)
         self.assertEqual(parser.translated[-1].text, "bar")
         self.assertEqual(parser.errors, [])
+
+
+class ResumeTranslationTests(SubtitleTestCase):
+    """Resume must reuse only complete batches without saved errors."""
+
+    def setUp(self) -> None:
+        """Prepare valid, invalid, and pending batches for resume tests."""
+        super().setUp()
+        self.options.add("max_characters", 40)
+        self.options.add("autosplit_on_error", False)
+        self.subtitles = BuildSubtitlesFromLineCounts([[1], [1, 1, 1]])
+        self.subtitles.UpdateSettings(
+            SettingsType(
+                {
+                    "movie_name": "Example story",
+                    "description": "A synthetic translation test.",
+                    "names": ["Example character"],
+                }
+            )
+        )
+        self.valid_batch = self.subtitles.scenes[1].batches[0]
+        self.invalid_batch = self.subtitles.scenes[1].batches[1]
+        self.pending_batch = self.subtitles.scenes[1].batches[2]
+
+        for batch in [
+            self.subtitles.scenes[0].batches[0],
+            self.valid_batch,
+            self.invalid_batch,
+        ]:
+            batch.translated = [SubtitleLine(line) for line in batch.originals]
+            batch.translated[0].text = "Saved translation"
+            batch.originals[0].translated = batch.translated[0]
+
+        self.invalid_batch.translated[0].text = "x" * 80
+        self.invalid_batch.errors = [
+            LineTooLongError(
+                "Synthetic validation error", lines=self.invalid_batch.translated
+            )
+        ]
+        self.response_map = {
+            f"Translate scene {batch.scene} batch {batch.number}": f"#{batch.originals[0].number}\nOriginal>\n{batch.originals[0].text}\nTranslation>\nCorrected translation"
+            for batch in [self.invalid_batch, self.pending_batch]
+        }
+
+    def test_resume_batch_retries_errors_and_skips_valid_translation(self) -> None:
+        """Direct batch resume uses the same validation-aware skip condition."""
+        translator = self.CreateTranslator()
+        context = GetBatchContext(self.subtitles, 2, 2)
+        with patch.object(
+            translator.client,
+            "RequestTranslation",
+            wraps=translator.client.RequestTranslation,
+        ) as requests:
+            translator.TranslateBatch(self.invalid_batch, None, context)
+            translator.TranslateBatch(self.valid_batch, None, context)
+
+        self.assertLoggedEqual(
+            "Only the invalid batch is requested", 1, requests.call_count
+        )
+        self.assertLoggedEqual(
+            "Invalid translation is corrected",
+            "Corrected translation",
+            self.invalid_batch.translated[0].text,
+        )
+        self.assertLoggedEqual(
+            "Corrected batch has no errors", [], self.invalid_batch.errors
+        )
+        self.assertLoggedEqual(
+            "Valid translation is reused",
+            "Saved translation",
+            self.valid_batch.translated[0].text,
+        )
+
+    def test_resume_reports_errors_when_retranslation_still_fails_validation(
+        self,
+    ) -> None:
+        """A failed replacement must surface errors on the resumed translator."""
+        key = "Translate scene 2 batch 2"
+        self.response_map[key] = self.response_map[key].replace(
+            "Corrected translation", "y" * 80
+        )
+        self.options.add("warnings_as_errors", True)
+        translator = self.CreateTranslator()
+        translator.TranslateSubtitles(self.subtitles)
+
+        self.assertLoggedEqual(
+            "Replacement was attempted", "y" * 80, self.invalid_batch.translated[0].text
+        )
+        self.assertLoggedEqual(
+            "Replacement validation failure is retained",
+            1,
+            len(self.invalid_batch.errors),
+        )
+        self.assertLoggedIsInstance(
+            "Replacement fails length validation",
+            self.invalid_batch.errors[0],
+            LineTooLongError,
+        )
+        self.assertLoggedEqual(
+            "Failure propagates to resumed translator",
+            self.invalid_batch.errors,
+            translator.errors,
+        )
+        self.assertLoggedEqual(
+            "Stop-on-error leaves later batch pending",
+            [],
+            self.pending_batch.translated,
+        )
+
+    def test_resume_accepts_replacement_with_only_warnings(self) -> None:
+        """A long replacement line is a warning, so the batch completes without a retry and the run continues."""
+        key = "Translate scene 2 batch 2"
+        self.response_map[key] = self.response_map[key].replace(
+            "Corrected translation", "y" * 80
+        )
+        translator = self.CreateTranslator()
+        with patch.object(
+            translator.client,
+            "RequestTranslation",
+            wraps=translator.client.RequestTranslation,
+        ) as requests:
+            translator.TranslateSubtitles(self.subtitles)
+
+        self.assertLoggedEqual(
+            "Invalid and pending batches requested once each", 2, requests.call_count
+        )
+        self.assertLoggedEqual("Replacement has no errors", [], self.invalid_batch.errors)
+        self.assertLoggedEqual(
+            "Replacement warning types",
+            {LineTooLongError},
+            {type(warning) for warning in self.invalid_batch.warnings},
+        )
+        self.assertLoggedTrue(
+            "Batch with only warnings is complete", self.invalid_batch.translation_complete
+        )
+        self.assertLoggedEqual("No translator errors", [], translator.errors)
+        self.assertLoggedEqual(
+            "Warnings propagate to the translator", self.invalid_batch.warnings, translator.warnings
+        )
+        self.assertLoggedEqual(
+            "Later batch is still translated",
+            "Corrected translation",
+            self.pending_batch.translated[0].text,
+        )
+
+    def test_resume_skips_batches_with_only_warnings(self) -> None:
+        """A saved batch whose only issues are warnings is reused on resume."""
+        self.invalid_batch.warnings = self.invalid_batch.errors
+        self.invalid_batch.errors = []
+
+        translator = self.CreateTranslator()
+        with patch.object(
+            translator.client,
+            "RequestTranslation",
+            wraps=translator.client.RequestTranslation,
+        ) as requests:
+            translator.TranslateSubtitles(self.subtitles)
+
+        self.assertLoggedEqual("Only the pending batch is requested", 1, requests.call_count)
+        self.assertLoggedEqual(
+            "Accepted translation is kept", "x" * 80, self.invalid_batch.translated[0].text
+        )
+
+    def test_resume_retries_persisted_invalid_batches(self) -> None:
+        """Retry saved validation failures, including otherwise fully translated scenes."""
+        for pending_translated in [False, True]:
+            with self.subTest(pending_translated=pending_translated):
+                if pending_translated:
+                    self.pending_batch.translated = [
+                        SubtitleLine(line) for line in self.pending_batch.originals
+                    ]
+                    self.pending_batch.translated[0].text = "Saved pending translation"
+                    self.pending_batch.originals[
+                        0
+                    ].translated = self.pending_batch.translated[0]
+
+                serialized = json.dumps(self.subtitles, cls=SubtitleEncoder)
+                reloaded : Subtitles = json.loads(serialized, cls=SubtitleDecoder)
+                self.assertLoggedIsInstance("Subtitles reload", reloaded, Subtitles)
+
+                invalid_batch = reloaded.scenes[1].batches[1]
+                self.assertLoggedTrue(
+                    "Invalid batch has full line coverage", invalid_batch.all_translated
+                )
+                self.assertLoggedGreater(
+                    "Validation error survives reload", len(invalid_batch.errors), 0
+                )
+
+                translator = self.CreateTranslator()
+                with patch.object(
+                    translator.client,
+                    "RequestTranslation",
+                    wraps=translator.client.RequestTranslation,
+                ) as requests:
+                    translator.TranslateSubtitles(reloaded)
+
+                self.assertLoggedEqual(
+                    "Only invalid and unfinished batches requested",
+                    1 if pending_translated else 2,
+                    requests.call_count,
+                )
+                self.assertLoggedEqual(
+                    "Invalid text is replaced",
+                    "Corrected translation",
+                    invalid_batch.translated[0].text,
+                )
+                self.assertLoggedEqual(
+                    "Saved batch errors cleared after successful translation",
+                    [],
+                    invalid_batch.errors,
+                )
+                self.assertLoggedEqual(
+                    "Successful resume has no translator errors", [], translator.errors
+                )
+                self.assertLoggedEqual(
+                    "Valid batch in mixed scene is reused",
+                    "Saved translation",
+                    reloaded.scenes[1].batches[0].translated[0].text,
+                )
+                self.assertLoggedEqual(
+                    "Valid completed scene is reused",
+                    "Saved translation",
+                    reloaded.scenes[0].batches[0].translated[0].text,
+                )
+                self.assertLoggedEqual(
+                    "All final lines present", 4, len(reloaded.translated or [])
+                )
+
+    def CreateTranslator(self) -> SubtitleTranslator:
+        """Use deterministic responses through the existing dummy provider."""
+        return SubtitleTranslator(
+            self.options,
+            DummyProvider({"response_map": self.response_map}),
+            resume=True,
+        )
 
 
 class TranslationEventsTests(SubtitleTestCase):

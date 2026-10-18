@@ -10,10 +10,11 @@ if not importlib.util.find_spec("openai"):
 else:
     try:
         from PySubtrans.TranslationClient import TranslationClient
-        from PySubtrans.TranslationProvider import TranslationProvider
+        from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
         class AzureOpenAiProvider(TranslationProvider):
             name = "Azure"
+            kind = ProviderKind.Platform
 
             information = """
             <p>Azure API-provider.</p>

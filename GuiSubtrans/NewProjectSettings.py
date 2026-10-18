@@ -6,6 +6,7 @@ from typing import cast
 from PySide6.QtCore import Qt, QThread, Signal, Slot, QRecursiveMutex, QMutexLocker
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QDialogButtonBox, QFormLayout, QFrame, QLabel)
 
+from GuiSubtrans.GuiHelpers import GetProviderDropdownValues
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, DropdownOptionWidget, OptionWidget, ParseOptionDefinition
 
@@ -55,7 +56,8 @@ class NewProjectSettings(QDialog):
         self.settings = datamodel.project_options.GetSettings()
 
         self.providers = datamodel.available_providers
-        self.OPTIONS['provider'] = (self.providers, self.OPTIONS['provider'][1])
+        provider_values = GetProviderDropdownValues(self.providers)
+        self.OPTIONS['provider'] = (provider_values, self.OPTIONS['provider'][1])
         self.settings['provider'] = datamodel.provider
 
         available_models = datamodel.available_models

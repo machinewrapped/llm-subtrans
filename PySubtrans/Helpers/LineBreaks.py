@@ -72,6 +72,10 @@ def FindBreakPoint(text : str, break_sequences: list[regex.Pattern], max_line_le
         if split_index < start_index or split_index > end_index:
             continue
 
+        # With no minimum line length a match can fall in trailing whitespace, which would leave an empty line
+        if not text[:split_index].strip() or not text[split_index:].strip():
+            continue
+
         # Don't break if it would result in a line longer than the maximum or shorter than the minimum, if avoidable.
         # Track the candidate as a fallback rather than discarding it - a break point that is merely unbalanced
         # is still far better than no break point at all.

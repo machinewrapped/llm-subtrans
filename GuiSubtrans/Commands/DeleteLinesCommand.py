@@ -46,10 +46,13 @@ class DeleteLinesCommand(Command):
                 model_update.lines.remove((scene_number, batch_number, line.number))
 
             batch = project.subtitles.GetBatch(scene_number, batch_number)
-            if batch.errors:
+            if batch.errors or batch.warnings:
                 validator = SubtitleValidator(self.datamodel.project_options)
                 validator.ValidateBatch(batch)
-                model_update.batches.update((scene_number, batch_number), {'errors': batch.error_messages})
+                model_update.batches.update((scene_number, batch_number), {
+                    'errors' : batch.error_messages,
+                    'warnings' : batch.warning_messages
+                })
 
         return True
 

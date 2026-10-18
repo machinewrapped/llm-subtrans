@@ -10,7 +10,7 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Speech import DEFAULT_ABBREVIATIONS, ParseAbbreviations
 from PySubtrans.Helpers.Time import SpanLabel
 from PySubtrans.Options import Options
-from PySubtrans.SettingsType import SettingsType
+from PySubtrans.SettingsType import SettingType, SettingsType
 from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleProcessor import SubtitleProcessor
 from PySubtrans.Subtitles import Subtitles
@@ -40,8 +40,9 @@ class TranscriptionCoordinator:
         self.settings : SettingsType = SettingsType(settings or {})
         self.aborted : bool = False
 
-        # Chunk bounds are provider settings; an explicit value for this run wins
-        chunk_settings = SettingsType({
+        # Chunk bounds are provider settings; an explicit value for this run wins.
+        # Unset values are left out so the chunker applies its own defaults.
+        chunk_values : dict[str, SettingType] = {
             'min_chunk_seconds': self.settings.get_float('min_chunk_seconds')
                 or provider.settings.get_float('min_chunk_seconds'),
             'max_chunk_seconds': self.settings.get_float('max_chunk_seconds')
@@ -51,7 +52,8 @@ class TranscriptionCoordinator:
             'quiet_scan_seconds': self.settings.get_float('quiet_scan_seconds'),
             'ffmpeg_path': self.settings.get_str('ffmpeg_path'),
             'transcribe_whole_clip': provider.transcribe_whole_clip,
-        })
+        }
+        chunk_settings = SettingsType({key: value for key, value in chunk_values.items() if value is not None})
         self.chunker : AudioChunker = AudioChunker(chunk_settings)
         self.extractor : AudioExtractor = self.chunker.extractor
 
@@ -59,22 +61,21 @@ class TranscriptionCoordinator:
         # finished line is held to are not
         line_settings = provider.settings
 
-        # Transcribed lines obey the same limits as loaded and translated subtitles
-        min_gap = self.settings.get_float('min_gap')
+        # Transcribed lines obey the same limits as loaded and translated subtitles.
+        # A maximum length or duration of zero means no limit.
         self.line_builder : TranscriptionLineBuilder = TranscriptionLineBuilder(LineSettings(
-            max_line_chars=self.settings.get_int('max_characters') or 120,
-            max_line_seconds=self.settings.get_float('max_line_duration') or 4.0,
-            min_split_chars=self.settings.get_int('min_split_chars') or 3,
-            min_line_seconds=self.settings.get_float('min_line_duration') or 0.8,
-            merge_eligible_gap=line_settings.get_float('merge_eligible_gap') or DEFAULT_MERGE_ELIGIBLE_GAP_SECONDS,
-            same_speaker_merge_eligible_gap=line_settings.get_float('same_speaker_merge_eligible_gap')
-                or DEFAULT_SAME_SPEAKER_MERGE_ELIGIBLE_GAP_SECONDS,
-            max_newlines=self.settings.get_int('max_newlines') or 2,
+            max_line_chars=self.settings.get_int('max_characters', 120) or None,
+            max_line_seconds=self.settings.get_timedelta('max_line_duration', timedelta(seconds=4.0)).total_seconds() or None,
+            min_split_chars=self.settings.get_int('min_split_chars', 3) or 0,
+            min_line_seconds=self.settings.get_timedelta('min_line_duration', timedelta(seconds=0.8)).total_seconds(),
+            merge_eligible_gap=line_settings.get_float('merge_eligible_gap', DEFAULT_MERGE_ELIGIBLE_GAP_SECONDS) or 0.0,
+            same_speaker_merge_eligible_gap=line_settings.get_float(
+                'same_speaker_merge_eligible_gap', DEFAULT_SAME_SPEAKER_MERGE_ELIGIBLE_GAP_SECONDS) or 0.0,
+            max_newlines=self.settings.get_int('max_newlines', 2) or 0,
             can_merge_different_speakers=line_settings.get_bool('can_merge_different_speakers', True),
-            min_gap=min_gap if min_gap is not None else DEFAULT_MIN_GAP_SECONDS,
+            min_gap=self.settings.get_timedelta('min_gap', timedelta(seconds=DEFAULT_MIN_GAP_SECONDS)).total_seconds(),
             word_coverage=provider.word_coverage,
-            timing_correction_factor=line_settings.get_float('timing_correction_factor')
-                or DEFAULT_TIMING_CORRECTION_FACTOR,
+            timing_correction_factor=line_settings.get_float('timing_correction_factor', DEFAULT_TIMING_CORRECTION_FACTOR) or 0.0,
             abbreviations=ParseAbbreviations(self.settings.get_list('abbreviations', sorted(DEFAULT_ABBREVIATIONS)))))
 
         self.events : TranscriptionEvents = TranscriptionEvents()

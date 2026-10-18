@@ -2,8 +2,11 @@ import importlib.util
 import logging
 import os
 
-from PySubtrans.Options import SettingsType, env_float, env_int
+from PySubtrans.Options import env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
+
+# Thinking level that sends no thinking config, so the model uses its own default
+DEFAULT_THINKING_LEVEL = "default"
 
 if not importlib.util.find_spec("google"):
     from PySubtrans.Helpers.Localization import _
@@ -20,6 +23,10 @@ else:
             name = "Gemini"
 
             default_model = "gemini-3-flash-preview"
+
+            # Supported levels vary by model and the API does not report them.
+            # These are the levels most models accept, plus the model's own default.
+            thinking_levels = [DEFAULT_THINKING_LEVEL, "low", "medium", "high"]
 
             information = """
             <p>Select the <a href="https://ai.google.dev/models/gemini">AI model</a> to use as a translator.</p>
@@ -38,15 +45,13 @@ else:
                     "api_key": settings.get_str('api_key') or os.getenv('GEMINI_API_KEY'),
                     "model": settings.get_str('model') or os.getenv('GEMINI_MODEL', self.default_model),
                     'stream_responses': settings.get_bool('stream_responses', os.getenv('GEMINI_STREAM_RESPONSES', "True") == "True"),
-                    'enable_thinking': settings.get_bool('enable_thinking', os.getenv('GEMINI_ENABLE_THINKING', "False") == "True"),
-                    'thinking_budget': settings.get_int('thinking_budget', env_int('GEMINI_THINKING_BUDGET', 100)) or 100,
-                    'temperature': settings.get_float('temperature', env_float('GEMINI_TEMPERATURE', 0.0)),
+                    'thinking_level': settings.get_str('thinking_level') or os.getenv('GEMINI_THINKING_LEVEL', DEFAULT_THINKING_LEVEL),
                     'rate_limit': settings.get_float('rate_limit', env_float('GEMINI_RATE_LIMIT', 60.0)),
                     'proxy': settings.get_str('proxy') or os.getenv('GEMINI_PROXY'),
                     'timeout': settings.get_int('timeout', env_int('GEMINI_TIMEOUT', 120)),
                 }))
 
-                self.refresh_when_changed = ['api_key', 'model', 'enable_thinking']
+                self.refresh_when_changed = ['api_key', 'model']
                 self.gemini_models = []
                 self.excluded_models = ["vision", "tts", "banana", "antigravity", "transcribe", "lyria", "research", "robotics"]
 
@@ -82,14 +87,10 @@ else:
                     options.update({
                         'model': (models, "AI model to use as the translator" if models else "Unable to retrieve models"),
                         'stream_responses': (bool, _("Stream translations in realtime as they are generated")),
-                        'enable_thinking': (bool, _("Enable reasoning capabilities for more complex translations (increases cost)")),
-                        'temperature': (float, _("Amount of random variance to add to translations. Generally speaking, none is best")),
+                        'thinking_level': (self.thinking_levels, _("How much reasoning the model does. Higher levels increase cost")),
                         'rate_limit': (float, _("Maximum API requests per minute.")),
                         'timeout': (int, _("Seconds to wait for a batch translation before stopping (0 for no limit)"))
                     })
-
-                    if self.settings.get_bool('enable_thinking', False):
-                        options['thinking_budget'] = (int, _("Token budget for reasoning. Higher values increase cost"))
 
                 else:
                     options['model'] = (["Unable to retrieve models"], _("Check API key is authorized and try again"))

@@ -30,7 +30,7 @@ gui = [
 ]
 openai = ["openai"]
 azure = ["openai"]
-gemini = ["google-genai", "google-api-core"]
+gemini = ["google-genai>=1.56.0", "google-api-core"]
 claude = ["anthropic>=0.105.0"]
 mistral = ["mistralai"]
 bedrock = ["boto3"]

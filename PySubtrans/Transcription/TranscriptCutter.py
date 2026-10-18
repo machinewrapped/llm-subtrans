@@ -161,7 +161,9 @@ class TranscriptCutter:
         # A part can last longer than max_line_seconds if its text takes that long to say.
         # Subtitle post-processing splits long lines by duration.
         total = sum(len(CompactText(part.text)) for part in parts) or 1
-        longest = timedelta(seconds=self.settings.max_line_seconds)
+        # With no duration limit a part can take its whole share
+        max_line_seconds = self.settings.max_line_seconds
+        longest = timedelta(seconds=max_line_seconds) if max_line_seconds is not None else duration
         position = 0
 
         for part in parts:

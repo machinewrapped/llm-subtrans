@@ -8,10 +8,11 @@ from PySubtrans.Providers.Clients.CustomClient import CustomClient
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationPrompt import default_prompt_template
-from PySubtrans.TranslationProvider import TranslationProvider
+from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
 class CustomServerProvider(TranslationProvider):
     name = "Custom Server"
+    kind = ProviderKind.Custom
 
     information = """
     <p>This provider allows you to connect to a server running locally (or otherwise accessible) with an OpenAI compatible API,

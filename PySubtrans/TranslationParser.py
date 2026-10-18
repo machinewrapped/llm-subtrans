@@ -9,7 +9,8 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtrans.Helpers.Text import IsTextContentEqual
 from PySubtrans.SubtitleLine import SubtitleLine
-from PySubtrans.SubtitleError import NoTranslationError, TranslationError, UntranslatedLinesError
+from PySubtrans.SubtitleError import NoTranslationError, TranslationError
+from PySubtrans.ValidationError import UntranslatedLinesError
 from PySubtrans.SubtitleValidator import SubtitleValidator
 from PySubtrans.Translation import Translation
 
@@ -58,7 +59,7 @@ class TranslationParser:
         self.text : str|None = None
         self.translations : dict[int|str, SubtitleLine] = {}
         self.translated : list[SubtitleLine] = []
-        self.errors : list[Exception] = []
+        self.errors : list[TranslationError] = []
         self.warnings : list[str] = []
         self.metatags : list[str] = ["summary", "scene", "terminology"]
         self.task_type : str = task_type
@@ -198,7 +199,7 @@ class TranslationParser:
                 item.translation = f"#Fuzzy: {translation.text}"
                 #unmatched.remove(item)
 
-    def ValidateTranslations(self) -> list[Exception]:
+    def ValidateTranslations(self) -> list[TranslationError]:
         """
         Check if the translation seems at least plausible
         """
@@ -206,7 +207,7 @@ class TranslationParser:
             return [ NoTranslationError("Failed to extract translations from response", translation=self.text) ]
 
         validator = SubtitleValidator(self.options)
-        return validator.ValidateTranslations(self.translated)
+        return list(validator.ValidateTranslations(self.translated))
 
     def _fix_unclosed_tags(self):
         """

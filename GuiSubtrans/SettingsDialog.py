@@ -50,7 +50,8 @@ class SettingsDialog(QDialog):
             'autosave': (bool, _("Automatically save the project/translation after each scene is translated")),
             'autosplit_on_error': (bool, _("If a batch fails validation, split it in half and retry each half separately")),
             'retry_on_error': (bool, _("If true, translations that fail validation will be retried with a note about the error")),
-            'stop_on_error': (bool, _("Stop translating if an error is encountered"))
+            'stop_on_error': (bool, _("Stop translating if an error is encountered")),
+            'warnings_as_errors': (bool, _("Treat validation warnings such as long lines as errors"))
         },
         PROVIDER_SECTION: {
             'provider': ([], _("The AI translation service to use")),

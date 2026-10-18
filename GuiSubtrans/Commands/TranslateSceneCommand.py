@@ -134,6 +134,7 @@ class TranslateSceneCommand(Command):
                 'summary' : batch.summary,
                 'context' : batch.context,
                 'errors' : batch.error_messages,
+                'warnings' : batch.warning_messages,
                 'translation': batch.translation,
                 'prompt': batch.prompt,
                 'lines' : { line.number : { 'translation' : line.text } for line in batch.translated if line.number }

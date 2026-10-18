@@ -123,6 +123,8 @@ class EditBatchDialog(EditDialog):
             self.AddMultilineEdit(response_layout, 'response', read_only=True)
             if self.item.has_errors:
                 self.AddMultilineEdit(response_layout, 'errors', read_only=True)
+            if self.item.has_warnings:
+                self.AddMultilineEdit(response_layout, 'warnings', read_only=True)
 
             self.SetTabLayout(tab_widget, response_layout, _("Response"))
 

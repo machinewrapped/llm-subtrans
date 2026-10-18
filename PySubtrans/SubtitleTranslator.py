@@ -50,6 +50,7 @@ class SubtitleTranslator:
         self.lock = threading.Lock()
         self.aborted : bool = False
         self.errors : list[str|SubtitleError] = []
+        self.warnings : list[str|SubtitleError] = []
         self.lines_processed : int = 0
 
         self.max_lines = settings.get_int('max_lines')
@@ -214,6 +215,10 @@ class SubtitleTranslator:
                     scene.errors.extend(batch.errors)
                     self.errors.extend(batch.errors)
 
+                if batch.warnings:
+                    self._emit_warning(_("Scene {scene} batch {batch} has validation warnings: {warnings}").format(scene=batch.scene, batch=batch.number, warnings=FormatErrorMessages(batch.warnings)))
+                    self.warnings.extend(batch.warnings)
+
                 if batch.errors and self.stop_on_error:
                     return
 
@@ -362,7 +367,7 @@ class SubtitleTranslator:
         batch._translated = MergeTranslations(batch.translated or [], translated)
 
         batch.translation = translation
-        batch.errors = [err for err in parser.errors if isinstance(err, str) or isinstance(err, SubtitleError)]
+        batch.errors, batch.warnings = self.validator.SortIssues(list(parser.errors))
 
         # Emit any warnings from the parser
         for warning in parser.warnings:
@@ -418,7 +423,8 @@ class SubtitleTranslator:
         if retry_instructions is None:
             return
 
-        prompt.GenerateRetryPrompt(translation.text, retry_instructions, batch.errors)
+        # Ask for warnings to be fixed too, since the batch is being retranslated anyway
+        prompt.GenerateRetryPrompt(translation.text, retry_instructions, batch.errors + batch.warnings)
 
         # Let's raise the temperature a little bit
         temperature = self.client.temperature or 0.0

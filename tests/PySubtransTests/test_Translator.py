@@ -14,7 +14,7 @@ from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleBatcher import SubtitleBatcher
 from PySubtrans.SubtitleEditor import SubtitleEditor
-from PySubtrans.SubtitleError import LineTooLongError, SubtitleError
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
@@ -22,6 +22,7 @@ from PySubtrans.SubtitleSerialisation import SubtitleDecoder, SubtitleEncoder
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.TranslationEvents import TranslationEvents
 from PySubtrans.TranslationParser import TranslationParser
+from PySubtrans.ValidationError import LineTooLongError
 
 from ..TestData.chinese_dinner import chinese_dinner_data
 
@@ -245,6 +246,7 @@ class ResumeTranslationTests(SubtitleTestCase):
         self.response_map[key] = self.response_map[key].replace(
             "Corrected translation", "y" * 80
         )
+        self.options.add("warnings_as_errors", True)
         translator = self.CreateTranslator()
         translator.TranslateSubtitles(self.subtitles)
 
@@ -270,6 +272,60 @@ class ResumeTranslationTests(SubtitleTestCase):
             "Stop-on-error leaves later batch pending",
             [],
             self.pending_batch.translated,
+        )
+
+    def test_resume_accepts_replacement_with_only_warnings(self) -> None:
+        """A long replacement line is a warning, so the batch completes without a retry and the run continues."""
+        key = "Translate scene 2 batch 2"
+        self.response_map[key] = self.response_map[key].replace(
+            "Corrected translation", "y" * 80
+        )
+        translator = self.CreateTranslator()
+        with patch.object(
+            translator.client,
+            "RequestTranslation",
+            wraps=translator.client.RequestTranslation,
+        ) as requests:
+            translator.TranslateSubtitles(self.subtitles)
+
+        self.assertLoggedEqual(
+            "Invalid and pending batches requested once each", 2, requests.call_count
+        )
+        self.assertLoggedEqual("Replacement has no errors", [], self.invalid_batch.errors)
+        self.assertLoggedEqual(
+            "Replacement warning types",
+            {LineTooLongError},
+            {type(warning) for warning in self.invalid_batch.warnings},
+        )
+        self.assertLoggedTrue(
+            "Batch with only warnings is complete", self.invalid_batch.translation_complete
+        )
+        self.assertLoggedEqual("No translator errors", [], translator.errors)
+        self.assertLoggedEqual(
+            "Warnings propagate to the translator", self.invalid_batch.warnings, translator.warnings
+        )
+        self.assertLoggedEqual(
+            "Later batch is still translated",
+            "Corrected translation",
+            self.pending_batch.translated[0].text,
+        )
+
+    def test_resume_skips_batches_with_only_warnings(self) -> None:
+        """A saved batch whose only issues are warnings is reused on resume."""
+        self.invalid_batch.warnings = self.invalid_batch.errors
+        self.invalid_batch.errors = []
+
+        translator = self.CreateTranslator()
+        with patch.object(
+            translator.client,
+            "RequestTranslation",
+            wraps=translator.client.RequestTranslation,
+        ) as requests:
+            translator.TranslateSubtitles(self.subtitles)
+
+        self.assertLoggedEqual("Only the pending batch is requested", 1, requests.call_count)
+        self.assertLoggedEqual(
+            "Accepted translation is kept", "x" * 80, self.invalid_batch.translated[0].text
         )
 
     def test_resume_retries_persisted_invalid_batches(self) -> None:

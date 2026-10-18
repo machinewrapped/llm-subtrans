@@ -76,6 +76,10 @@ class SceneItem(ViewModelItem):
         return bool(self.batches and any(b.has_errors for b in self.batches.values()))
 
     @property
+    def has_warnings(self) -> bool:
+        return bool(self.batches and any(b.has_warnings for b in self.batches.values()))
+
+    @property
     def start(self) -> str:
         return self.scene_model['start']
 
@@ -152,7 +156,8 @@ class SceneItem(ViewModelItem):
             'footer': DescribeLineCount(self.line_count, self.translated_count),
             'properties': {
                 'all_translated' : self.all_translated,
-                'errors' : self.has_errors
+                'errors' : self.has_errors,
+                'warnings' : self.has_warnings
             }
         }
 

@@ -200,6 +200,8 @@ The Options class provides a wide range of options to configure the translation 
 
 `autosplit_on_error`: When a batch fails validation, split it at the largest time-gap nearest the midpoint and retry each half independently. More effective than a straight retry for small local models that struggle with long contexts. Takes priority over `retry_on_error` when both are set.
 
+`warnings_as_errors`: Validation sorts problems into errors and warnings. Errors, such as untranslated or blank lines, mark a batch as failed: it is retried or split, stops the run when `stop_on_error` is set, and is translated again on resume. Warnings, such as lines over `max_characters` or `max_newlines`, are reported but do not block completion. Set this to treat warnings as errors too.
+
 `postprocess_translation`: Runs a pass on the translated subtitles to try to resolve some common problems introduced by translation, e.g. breaking long lines with newlines. The post-processor can perform a range of operations, each of which is enabled by another setting, e.g. `break_dialog_on_one_line`, `normalise_dialog_tags`, `whitespaces_to_newline`, `remove_filler_words`.
 
 `extend_short_subtitles`: Extends short subtitles when the translated file is saved, without changing the timestamps stored in the project. The target display time is the greater of `min_line_duration` and the visible character count multiplied by `seconds_per_character`. Extensions are capped at the next subtitle's start time minus `min_gap`. Pass `SaveSettings(options)` when saving translations directly with a `Subtitles` instance.

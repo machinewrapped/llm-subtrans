@@ -16,6 +16,7 @@ class SubtitleBatch:
         self.summary : str|None = dct.get('summary')
         self.context : dict[str,str|list|dict] = dct.get('context', {})
         self.errors : list[str|SubtitleError] = dct.get('errors', [])
+        self.warnings : list[str|SubtitleError] = dct.get('warnings', [])
         self.validate_originals : bool = dct.get('validate_originals', False)
         self._originals : list[SubtitleLine] = dct.get('originals', []) or dct.get('subtitles', [])
         self._translated : list[SubtitleLine] = dct.get('translated', [])
@@ -55,7 +56,10 @@ class SubtitleBatch:
 
     @property
     def translation_complete(self) -> bool:
-        """Whether all lines are translated without recorded errors."""
+        """
+        Whether all lines are translated without recorded errors.
+        Validation warnings do not block completion.
+        """
         return self.all_translated and not self.errors
 
     @property
@@ -112,6 +116,11 @@ class SubtitleBatch:
     def error_messages(self) -> list[str]:
         """ Get the list of error messages associated with the batch """
         return [str(error) for error in self.errors if isinstance(error, (str, Exception))]
+
+    @property
+    def warning_messages(self) -> list[str]:
+        """ Get the list of validation warning messages associated with the batch """
+        return [str(warning) for warning in self.warnings if isinstance(warning, (str, Exception))]
 
     @originals.setter
     def originals(self, value : list[SubtitleLine]|list[str]):

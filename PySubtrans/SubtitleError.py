@@ -83,35 +83,6 @@ class NoTranslationError(TranslationError):
     def __init__(self, message : str, translation : str|None = None):
         super().__init__(message=message, translation=translation)
 
-class TranslationValidationError(TranslationError):
-    def __init__(self, message : str, lines : list[Any]|None = None, translation : Any|None = None):
-        super().__init__(message, translation)
-        self.lines = lines or []
-
-class UntranslatedLinesError(TranslationValidationError):
-    def __init__(self, message : str, lines : list[Any]|None = None, translation : Any|None = None):
-        super().__init__(message, lines=lines, translation=translation)
-
-class UnmatchedLinesError(TranslationValidationError):
-    def __init__(self, message : str, lines : list[Any]|None = None, translation : Any|None = None):
-        super().__init__(message, lines=lines, translation=translation)
-
-class EmptyLinesError(TranslationValidationError):
-    def __init__(self, message : str, lines : list[Any]|None = None, translation : Any|None = None):
-        super().__init__(message, lines=lines, translation=translation)
-
-class TooManyNewlinesError(TranslationValidationError):
-    def __init__(self, message : str, lines : list[Any]|None = None, translation : Any|None = None):
-        super().__init__(message, lines=lines, translation=translation)
-
-class LineTooLongError(TranslationValidationError):
-    def __init__(self, message : str, lines : list[Any]|None = None, translation : Any|None = None):
-        super().__init__(message, lines=lines, translation=translation)
-
-class ExcessiveDurationError(TranslationValidationError):
-    def __init__(self, message : str, lines : list[Any]|None = None, translation : Any|None = None):
-        super().__init__(message, lines=lines, translation=translation)
-
 class SubtitleParseError(SubtitleError):
     """Error raised when subtitle file cannot be parsed."""
     def __init__(self, message : str, error : Exception|None = None):

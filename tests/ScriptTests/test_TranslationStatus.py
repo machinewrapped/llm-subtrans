@@ -7,11 +7,11 @@ from PySubtrans.Helpers.TestCases import (
     SubtitleTestCase,
 )
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleError import LineTooLongError
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
-from scripts.subtrans_common import LogTranslationStatus, TranslateProject
+from PySubtrans.ValidationError import LineTooLongError
+from scripts.subtrans_common import LogTranslationStatus, TokenUsage, TranslateProject
 
 
 class TranslationStatusTests(SubtitleTestCase):
@@ -34,6 +34,36 @@ class TranslationStatusTests(SubtitleTestCase):
             captured.records[0].levelno,
         )
 
+    def test_validation_warnings_do_not_block_completion(self) -> None:
+        """A run whose only issues are warnings completes, with a separate warning summary."""
+        project = self.CreateRejectedProject()
+        batch = project.subtitles.scenes[0].batches[0]
+        batch.warnings = batch.errors
+        batch.errors = []
+
+        with self.assertLogs(level=logging.INFO) as captured:
+            LogTranslationStatus(project)
+
+        self.assertLoggedEqual(
+            "Status and warning summary levels",
+            [logging.INFO, logging.WARNING],
+            [record.levelno for record in captured.records],
+        )
+
+    def test_token_usage_is_logged_for_every_outcome(self) -> None:
+        """Usage and cost are reported after failures and previews as well as successes."""
+        for preview, has_error in [(False, False), (False, True), (True, False), (True, True)]:
+            with self.subTest(preview=preview, has_error=has_error):
+                project = self.CreateRejectedProject()
+                token_usage = TokenUsage(prompt_tokens=100, output_tokens=50, cost=0.25)
+
+                with self.assertLogs(level=logging.INFO) as captured:
+                    LogTranslationStatus(project, preview=preview, has_error=has_error, token_usage=token_usage)
+
+                self.assertLoggedEqual(
+                    "Status followed by usage and cost", 3, len(captured.records)
+                )
+
     def test_resume_and_preview_report_the_final_outcome(self) -> None:
         """Real validation failure, successful correction, and preview retain distinct outcomes."""
         for preview, response, expected_level in [
@@ -53,6 +83,8 @@ class TranslationStatusTests(SubtitleTestCase):
                 self.options.add("preview", preview)
                 self.options.add("max_characters", 40)
                 self.options.add("autosplit_on_error", False)
+                # Long lines must fail validation for the rejected case
+                self.options.add("warnings_as_errors", True)
                 provider = DummyProvider(
                     {
                         "response_map": {

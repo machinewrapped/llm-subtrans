@@ -17,6 +17,7 @@ from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
+from PySubtrans.Subtitles import Subtitles
 
 @dataclass
 class LoggerOptions():
@@ -248,6 +249,7 @@ def CreateArgParser(description : str) -> ArgumentParser:
     parser.add_argument('--substitution', action='append', type=str, default=None, help="A pair of strings separated by ::, to subsitute in source or translation")
     parser.add_argument('--temperature', type=float, default=0.0, help="A higher temperature increases the random variance of translations.")
     parser.add_argument('--autosplit', action='store_true', default=None, help="Split batches that fail validation in half and retry each half separately")
+    parser.add_argument('--warnings-as-errors', dest='warnings_as_errors', action='store_true', default=None, help="Treat validation warnings such as long lines as errors")
     parser.add_argument('--build-terminology-map', action='store_true', default=None, help="Build and use a terminology map during translation")
     parser.add_argument('--terminology', action='append', type=str, default=None, help="Seed entry for the terminology map as SOURCE::TRANSLATION, or a path to a file of such pairs.")
     parser.add_argument('--terminology-file', dest='terminology_file', type=str, default=None, help="Path to a key::value file to seed from and save the terminology map to after translation")
@@ -311,6 +313,7 @@ def CreateOptions(args: Namespace, provider: str, **kwargs) -> Options:
         'target_language': args.target_language,
         'temperature': args.temperature,
         'autosplit_on_error': args.autosplit,
+        'warnings_as_errors': args.warnings_as_errors,
         'build_terminology_map': args.build_terminology_map or bool(getattr(args, 'terminology_file', None)),
         'terminology_file': getattr(args, 'terminology_file', None),
         'write_backup': args.writebackup,
@@ -399,12 +402,24 @@ def CreateProject(options : Options, args: Namespace) -> SubtitleProject:
     return project
 
 def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_error : bool = False, token_usage : TokenUsage|None = None) -> None:
-    """Log a clear completion summary for the translation run."""
+    """
+    Log a clear completion summary for the translation run.
+    Token usage and cost are logged whatever the outcome, since a failed run may still have been billed.
+    """
     subtitles = project.subtitles
     if not subtitles:
         logging.error("Translation status: no subtitles loaded")
-        return
+    else:
+        _log_completion_status(project, subtitles, preview, has_error)
 
+    if token_usage and token_usage.has_data:
+        logging.info(f"Token usage: {token_usage.prompt_tokens} in / {token_usage.output_tokens} out ({token_usage.total_tokens} total)")
+
+    if token_usage and token_usage.cost is not None:
+        logging.info(f"Translation cost: ${token_usage.cost:.4f}")
+
+def _log_completion_status(project : SubtitleProject, subtitles : Subtitles, preview : bool, has_error : bool) -> None:
+    """Log whether the run completed, followed by a count of batches with validation warnings."""
     total_lines : int = subtitles.linecount
     translated_lines : int = len(subtitles.translated) if subtitles.translated else 0
 
@@ -415,24 +430,21 @@ def LogTranslationStatus(project : SubtitleProject, preview : bool = False, has_
             logging.warning(f"Translation status: failed after partial progress ({translated_lines}/{total_lines} lines translated)")
         else:
             logging.error(f"Translation status: failed (0/{total_lines} lines translated)")
-        return
 
-    if preview:
+    elif preview:
         logging.info("Translation status: preview completed (no translation was requested)")
-        return
 
-    if project.translation_complete:
+    elif project.translation_complete:
         logging.info(f"Translation status: completed ({translated_lines}/{total_lines} lines translated)")
     elif translated_lines > 0:
         logging.warning(f"Translation status: incomplete ({translated_lines}/{total_lines} lines translated)")
     else:
         logging.error(f"Translation status: failed (0/{total_lines} lines translated)")
 
-    if token_usage and token_usage.has_data:
-        logging.info(f"Token usage: {token_usage.prompt_tokens} in / {token_usage.output_tokens} out ({token_usage.total_tokens} total)")
-
-    if token_usage and token_usage.cost is not None:
-        logging.info(f"Translation cost: ${token_usage.cost:.4f}")
+    if not preview:
+        batches_with_warnings : int = sum(1 for scene in subtitles.scenes for batch in scene.batches if batch.warnings)
+        if batches_with_warnings:
+            logging.warning(f"Translation warnings: {batches_with_warnings} batches have validation warnings")
 
 def _save_terminology_file(path : str, terminology_map : dict[str, str]) -> None:
     """Write terminology map to a key::value text file."""

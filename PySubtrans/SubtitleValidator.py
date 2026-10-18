@@ -2,33 +2,65 @@ from datetime import timedelta
 
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatch import SubtitleBatch
-from PySubtrans.SubtitleError import EmptyLinesError, ExcessiveDurationError, LineTooLongError, TooManyNewlinesError, UnmatchedLinesError, UntranslatedLinesError
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.SubtitleLine import SubtitleLine
+from PySubtrans.ValidationError import (
+    EmptyLinesError,
+    ExcessiveDurationError,
+    IsValidationWarning,
+    LineTooLongError,
+    TooManyNewlinesError,
+    UnmatchedLinesError,
+    UntranslatedLinesError,
+)
 
 class SubtitleValidator:
+    """
+    Checks translated (and optionally transcribed) lines for problems.
+    Minor issues are recorded as warnings unless warnings_as_errors is set.
+    """
     def __init__(self, options : Options) -> None:
         self.options : Options = options
+        self.warnings_as_errors : bool = options.get_bool('warnings_as_errors', False)
 
-    def ValidateBatch(self, batch : SubtitleBatch):
+    def ValidateBatch(self, batch : SubtitleBatch) -> None:
         """
-        Check if the batch seems at least plausible
+        Check if the batch seems at least plausible, recording errors and warnings on the batch
         """
-        self.errors = []
+        issues : list[str|Exception] = []
 
         if batch.translated:
-            errors = self.ValidateTranslations(batch.translated)
-            if errors:
-                self.errors.extend(errors)
+            issues.extend(self.ValidateTranslations(batch.translated))
 
         if batch.any_translated and not batch.all_translated and not self.options.get_int('max_lines'):
-            self.errors.append(UntranslatedLinesError(f"No translation found for {len(batch.originals) - len(batch.translated)} lines", translation=batch.translation))
+            issues.append(UntranslatedLinesError(f"No translation found for {len(batch.originals) - len(batch.translated)} lines", translation=batch.translation))
 
         if getattr(batch, 'validate_originals', False):
             # A maximum duration of zero means no limit
             max_duration = self.options.get_timedelta('max_line_duration', timedelta(seconds=4.0)).total_seconds() or None
-            self.errors.extend(self.ValidateOriginals(batch.originals, max_duration))
+            issues.extend(self.ValidateOriginals(batch.originals, max_duration))
 
-        batch.errors = self.errors
+        batch.errors, batch.warnings = self.SortIssues(issues)
+
+    def SortIssues(self, issues : list[str|Exception]) -> tuple[list[str|SubtitleError], list[str|SubtitleError]]:
+        """
+        Split validation issues into errors and warnings by severity.
+        Everything is an error when warnings_as_errors is set.
+        Issues that are not subtitle errors or messages are dropped.
+        """
+        errors : list[str|SubtitleError] = []
+        warnings : list[str|SubtitleError] = []
+
+        for issue in issues:
+            if not isinstance(issue, (str, SubtitleError)):
+                continue
+
+            if IsValidationWarning(issue) and not self.warnings_as_errors:
+                warnings.append(issue)
+            else:
+                errors.append(issue)
+
+        return errors, warnings
 
     def ValidateTranslations(self, translated : list[SubtitleLine]) -> list[Exception]:
         """

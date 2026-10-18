@@ -229,7 +229,7 @@ flowchart TD
     B -->|batch_translated| C
 
     C --> D[ModelUpdate.batches.update]
-    D --> E[Set batch properties:<br/>- summary<br/>- context<br/>- errors<br/>- lines]
+    D --> E[Set batch properties:<br/>- summary<br/>- context<br/>- errors<br/>- warnings<br/>- lines]
 
     E --> F[ProjectDataModel.UpdateViewModel]
     F --> G{Has viewmodel?}

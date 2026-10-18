@@ -68,6 +68,7 @@ class ReparseTranslationsCommand(Command):
                 model_update.batches.update((scene_number, batch_number), {
                     'summary' : str(batch.summary) if batch.summary else None,
                     'errors' : batch.error_messages,
+                    'warnings' : batch.warning_messages,
                     'lines' : { 
                         line.number : { 'translation' : str(line.text) if line.text else None 
                              }
@@ -130,7 +131,8 @@ class ReparseTranslationsCommand(Command):
             model_update : ModelUpdate =  self.AddModelUpdate()
             model_update.batches.update((scene_number, batch_number), {
                 'summary' : batch.summary,
-                'errors' : batch.error_messages
+                'errors' : batch.error_messages,
+                'warnings' : batch.warning_messages
             })
 
         return True

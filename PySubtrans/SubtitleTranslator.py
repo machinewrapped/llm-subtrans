@@ -367,7 +367,7 @@ class SubtitleTranslator:
         batch._translated = MergeTranslations(batch.translated or [], translated)
 
         batch.translation = translation
-        batch.errors, batch.warnings = self.validator.SortIssues(list(parser.errors))
+        batch.errors, batch.warnings = self.validator.SortIssues(parser.errors)
 
         # Emit any warnings from the parser
         for warning in parser.warnings:

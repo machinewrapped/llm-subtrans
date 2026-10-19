@@ -109,6 +109,13 @@ https://demonroute.com/privacy
 
 Models are named family/model and grouped by family, e.g. `openai/gpt-oss-120b`, which is selected by default.
 
+#### Atlas Cloud
+https://www.atlascloud.ai/privacy
+
+[Atlas Cloud](https://www.atlascloud.ai/) provides an OpenAI-compatible API for models from multiple providers. You will need an [Atlas Cloud API key](https://www.atlascloud.ai/console/api-keys) and sufficient account credit to use the service (the app will look for ATLASCLOUD_API_KEY in the environment if this is not provided).
+
+Models are named provider/model and grouped by provider, e.g. `openai/gpt-4.1-mini`, which is selected by default.
+
 ### Cloud platforms
 
 #### Amazon Bedrock

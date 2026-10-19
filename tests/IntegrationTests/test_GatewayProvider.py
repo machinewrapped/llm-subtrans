@@ -127,6 +127,19 @@ class TestGatewayClient(LoggedTestCase):
         self.assertLoggedEqual("attribution header", APP_ATTRIBUTION_HEADERS['X-Title'], client.headers.get('X-Title'))
         self.assertLoggedTrue("streaming supported", client.supports_streaming)
 
+    def test_client_creation_survives_a_failed_model_lookup(self) -> None:
+        """A lookup failure leaves a saved model ID usable instead of aborting translation."""
+        gateways = [provider for provider in TranslationProvider.get_providers().values() if issubclass(provider, GatewayProvider)]
+        self.assertLoggedGreater("registered gateways", len(gateways), 0)
+
+        for provider_class in gateways:
+            provider = provider_class(SettingsType({'api_key': 'test-key', 'model': 'test-model-id'}))
+
+            with patch.object(provider_class, '_populate_model_cache', side_effect=RuntimeError("offline")):
+                client = provider.GetTranslationClient(SettingsType({'instructions': 'Translate the subtitles.'}))
+
+            self.assertLoggedEqual(f"{provider_class.name} saved model passed through", 'test-model-id', client.settings.get_str('model'))
+
     def test_environment_prefix_supplies_defaults(self) -> None:
         with patch.dict('os.environ', {'OPPER_API_KEY': 'environment-key', 'OPPER_MODEL': 'environment-model'}):
             provider = OpperProvider(SettingsType())

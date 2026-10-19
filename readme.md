@@ -23,21 +23,76 @@ Prebuilt Linux packages are not provided so you will need to [install from sourc
 
 ## Translation Providers
 
-### OpenRouter
+### Model providers
+
+#### Google Gemini
+https://ai.google.dev/terms
+
+Gemini Flash is probably the leading model for translation speed and fluency, despite some censorship.
+
+You will need a Google Gemini API key from https://ai.google.dev/ or from a project created on https://console.cloud.google.com/. You must ensure that Generative AI is enabled for the api key and project.
+
+Unfortunately Gemini will refuse to translate content that contains certain words or phrases, even with minimal safety settings. If you hit this you will need to use another provider for the batch.
+
+#### OpenAI
+https://openai.com/policies/privacy-policy
+
+You will need an OpenAI API key from https://platform.openai.com/account/api-keys to use OpenAI's GPT models.
+
+You can use the custom api_base parameter to access a custom OpenAI instance (or any other OpenAI-compatible endpoint, though the Custom Server option gives you more control).
+
+You can use an **OpenAI Azure** installation as a translation provider, but this is only advisable if you know what you're doing - in which case hopefully it will be clear how to configure the Azure provider settings.
+
+#### DeepSeek
+https://platform.deepseek.com/downloads/DeepSeek%20Open%20Platform%20Terms%20of%20Service.html
+
+You will need a DeepSeek API key from https://platform.deepseek.com/api_keys to use this provider.
+
+- **API Base**: You can optionally specify a custom URL, e.g. if you are hosting your own DeepSeek instance.
+
+DeepSeek is quite simple to set up and offers reasonable performance at a very low price, though translation does not seem to be its strongest point.
+
+#### Anthropic
+https://support.anthropic.com/en/collections/4078534-privacy-legal
+
+You will need an Anthropic API key from https://console.anthropic.com/settings/keys to use Claude as a provider. Translation is not Claude's strongest suit, and the API is expensive compared to others.
+
+The API has strict [rate limits](https://docs.anthropic.com/claude/reference/rate-limits) based on your credit tier, both on requests per minutes and tokens per day.
+
+#### Mistral
+https://mistral.ai/terms/
+
+You will need a Mistral API key from https://console.mistral.ai/api-keys/ to use this provider.
+
+- **Server URL**: If you are using a custom deployment of the Mistral API, you can specify the server URL using the `--server_url` argument.
+- **Model**: `mistral-large-latest` is recommended for translation. Smaller models tend to perform poorly and may not follow the system instructions well.
+
+### Gateways and routers
+
+Gateways route requests to models from many different makers, so one API key gives access to all of them.
+
+#### OpenRouter
 https://openrouter.ai/privacy
 
 [OpenRouter](https://openrouter.ai/) is a service which aggregates [models](https://openrouter.ai/models) from a wide range of providers. You will need an [OpenRouter API Key](https://openrouter.ai/settings/keys) to use the service, and a credit balance (though some quite capable models are provided free of charge).
 
 You can choose to let OpenRouter select the model automatically (the "Use Default Model" setting in the GUI or `--auto` on the command line) or you can specify a specific model.
 
-### Requesty
+#### Requesty
 https://www.requesty.ai/privacy
 
 [Requesty](https://www.requesty.ai) is an OpenAI-compatible gateway which provides access to models from many different providers. You will need a Requesty API key to use the service (the app will look for REQUESTY_API_KEY in the environment if this is not provided).
 
 Models are named provider/model, e.g. `openai/gpt-4o-mini` or `anthropic/claude-sonnet-4-5`.
 
-### API Route
+#### Opper
+https://opper.ai/privacy
+
+[Opper](https://opper.ai) is an EU-hosted AI gateway with an OpenAI-compatible API, which provides access to models from many different providers. You will need an [Opper API key](https://platform.opper.ai) to use the service (the app will look for OPPER_API_KEY in the environment if this is not provided).
+
+Models use pool names without a vendor prefix, e.g. `gemini-3.8-flash` or `claude-sonnet-4-6`, and are grouped by model maker.
+
+#### API Route
 
 [API Route](https://www.api-route.com) is a paid OpenAI-compatible gateway. Select **API Route** in the translation provider settings and enter a key from the [API keys page](https://www.api-route.com/api-keys). The authenticated catalogue supplies chat model IDs without rewriting them; image and video generation models are excluded.
 
@@ -47,63 +102,9 @@ Environment configuration: `API_ROUTE_API_KEY`, `API_ROUTE_MODEL`, `API_ROUTE_ST
 
 See the [quickstart](https://www.api-route.com/docs/quickstart) and [pricing](https://www.api-route.com/pricing).
 
-### Opper
-https://opper.ai/privacy
+### Cloud platforms
 
-[Opper](https://opper.ai) is an EU-hosted AI gateway with an OpenAI-compatible API, which provides access to models from many different providers. You will need an [Opper API key](https://platform.opper.ai) to use the service (the app will look for OPPER_API_KEY in the environment if this is not provided).
-
-Models use pool names without a vendor prefix, e.g. `gemini-3.8-flash` or `claude-sonnet-4-6`, and are grouped by model maker.
-
-### Google Gemini
-https://ai.google.dev/terms
-
-Gemini Flash is probably the leading model for translation speed and fluency, despite some censorship.
-
-You will need a Google Gemini API key from https://ai.google.dev/ or from a project created on https://console.cloud.google.com/. You must ensure that Generative AI is enabled for the api key and project.
-
-Unfortunately Gemini will refuse to translate content that contains certain words or phrases, even with minimal safety settings. If you hit this you will need to use another provider for the batch.
-
-### OpenAI
-https://openai.com/policies/privacy-policy
-
-You will need an OpenAI API key from https://platform.openai.com/account/api-keys to use OpenAI's GPT models.
-
-You can use the custom api_base parameter to access a custom OpenAI instance (or any other OpenAI-compatible endpoint, though the Custom Server option gives you more control).
-
-You can use an **OpenAI Azure** installation as a translation provider, but this is only advisable if you know what you're doing - in which case hopefully it will be clear how to configure the Azure provider settings.
-
-### DeepSeek
-https://platform.deepseek.com/downloads/DeepSeek%20Open%20Platform%20Terms%20of%20Service.html
-
-You will need a DeepSeek API key from https://platform.deepseek.com/api_keys to use this provider.
-
-- **API Base**: You can optionally specify a custom URL, e.g. if you are hosting your own DeepSeek instance.
-
-DeepSeek is quite simple to set up and offers reasonable performance at a very low price, though translation does not seem to be its strongest point.
-
-### Anthropic
-https://support.anthropic.com/en/collections/4078534-privacy-legal
-
-You will need an Anthropic API key from https://console.anthropic.com/settings/keys to use Claude as a provider. Translation is not Claude's strongest suit, and the API is expensive compared to others.
-
-The API has strict [rate limits](https://docs.anthropic.com/claude/reference/rate-limits) based on your credit tier, both on requests per minutes and tokens per day.
-
-### Mistral
-https://mistral.ai/terms/
-
-You will need a Mistral API key from https://console.mistral.ai/api-keys/ to use this provider.
-
-- **Server URL**: If you are using a custom deployment of the Mistral API, you can specify the server URL using the `--server_url` argument.
-- **Model**: `mistral-large-latest` is recommended for translation. Smaller models tend to perform poorly and may not follow the system instructions well.
-
-### Custom Server
-LLM-Subtrans can interface directly with any server that supports an OpenAI compatible API, including locally hosted models e.g. [LM Studio](https://lmstudio.ai/).
-
-You should not expect particularly good results from local models. LLMs derive much of their power from their size, so the small, quantized models you can run on a consumer GPU are likely to produce weak translations, or fail to generate valid responses.
-
-Chat and completion endpoints are supported - configure the settings and endpoint based on the model the server is running. The prompt template can be edited if you are using a model that requires a particular format - make sure to include at least the {prompt} tag in the template, as this is where the subtitles that need translating in each batch will be inserted.
-
-### Amazon Bedrock
+#### Amazon Bedrock
 https://aws.amazon.com/service-terms/
 
 **Bedrock is not recommended for most users**: The setup process is complex, requiring AWS credentials, proper IAM permissions, and region configuration. Additionally, not all models on Bedrock support translation tasks or offer reliable results. Bedrock support will not be included in packaged releases - if you can handle setting up AWS, you can handle installing llm-subtrans [from source](#installing-from-source).
@@ -111,6 +112,15 @@ https://aws.amazon.com/service-terms/
 To use Bedrock, you must:
   1. Create an **IAM user** or **role** with appropriate permissions (e.g., `bedrock:InvokeModel`, `bedrock:ListFoundationModels`).
   2. Ensure the model you wish to use is accessible in your selected AWS region and [enabled for the IAM user](https://docs.aws.amazon.com/bedrock/latest/userguide/model-access-modify.html).
+
+### Custom
+
+#### Custom Server
+LLM-Subtrans can interface directly with any server that supports an OpenAI compatible API, including locally hosted models e.g. [LM Studio](https://lmstudio.ai/).
+
+You should not expect particularly good results from local models. LLMs derive much of their power from their size, so the small, quantized models you can run on a consumer GPU are likely to produce weak translations, or fail to generate valid responses.
+
+Chat and completion endpoints are supported - configure the settings and endpoint based on the model the server is running. The prompt template can be edited if you are using a model that requires a particular format - make sure to include at least the {prompt} tag in the template, as this is where the subtitles that need translating in each batch will be inserted.
 
 ## Transcription
 LLM-Subtrans can transcribe audio and video files (mp4, mkv, mp3, wav, ...), which can then be translated with the normal workflow. This can produce better results than a text-only translation flow, with more accurate timings and speaker identification (depending on the provider).

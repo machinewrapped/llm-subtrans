@@ -93,6 +93,12 @@ class SubtitleProject:
         with self.lock:
             return bool(self.subtitles and self.subtitles.all_translated)
 
+    @property
+    def translation_complete(self) -> bool:
+        """Whether the project's translations are complete without recorded errors."""
+        with self.lock:
+            return bool(self.subtitles and self.subtitles.translation_complete)
+
     @target_language.setter
     def target_language(self, value : str|None) -> None:
         self._set_project_setting('target_language', value)

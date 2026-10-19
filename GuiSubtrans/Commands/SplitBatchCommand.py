@@ -58,7 +58,10 @@ class SplitBatchCommand(Command):
             for batch_number in range(self.batch_number + 1, len(scene.batches)):
                 model_update.batches.update((self.scene_number, batch_number), { 'number' : batch_number + 1})
 
-            model_update.batches.update((self.scene_number, self.batch_number), { 'errors' : split_batch.errors })
+            model_update.batches.update((self.scene_number, self.batch_number), {
+                'errors' : split_batch.errors,
+                'warnings' : split_batch.warnings
+            })
             new_batch = scene.GetBatch(new_batch_number)
             if new_batch is not None:
                 model_update.batches.add((self.scene_number, new_batch_number), new_batch)

@@ -61,7 +61,7 @@ class TranscriptionLineBuilder:
         """Log a warning for a line over the duration limit, returning whether one was logged."""
         # Only untimed engine spans can get here too long, and their boundaries deserve a human glance
         duration = (line.end - line.start).total_seconds()
-        if duration > self.settings.max_line_seconds:
+        if not self.settings.FitsDuration(duration):
             logging.warning(_("Long transcription line ({:.1f}s, no word timings to split it): '{}'").format(
                 duration, line.text[:120]))
             return True
@@ -115,7 +115,7 @@ class TranscriptionLineBuilder:
         line = self._rebase_part(part, segment)
         sentences = self.splitter.SplitSentences(AttachPunctuation(words))
         duration = (line.end - line.start).total_seconds()
-        fits = duration <= self.settings.max_line_seconds and len(line.text) <= self.settings.max_line_chars
+        fits = self.settings.FitsDuration(duration) and self.settings.FitsLength(line.text)
         if not words or (fits and len(sentences) < 2):
             return [line]
 
@@ -153,7 +153,10 @@ class TranscriptionLineBuilder:
     def _capped_word(self, word : WordTiming) -> WordTiming:
         """Limit a word to a generous multiple of its speaking time, and never beyond a whole line."""
         # Engines occasionally stamp a word across most of a chunk
-        cap = min(self.settings.max_line_seconds, max(MIN_WORD_CAP_SECONDS, WORD_CAP_MULTIPLE * EstimateSpeechSeconds(word.text)))
+        cap = max(MIN_WORD_CAP_SECONDS, WORD_CAP_MULTIPLE * EstimateSpeechSeconds(word.text))
+        if self.settings.max_line_seconds is not None:
+            cap = min(cap, self.settings.max_line_seconds)
+
         if (word.end - word.start).total_seconds() <= cap:
             return word
 

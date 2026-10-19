@@ -80,7 +80,7 @@ class AudioChunker:
         Hard cuts can land mid-sentence or mid-word, so an over-long
         stretch extends to the next natural pause when one is nearby.
         """
-        return self.settings.get_float('lookahead_seconds') or 30.0
+        return self.settings.get_float('lookahead_seconds', 30.0) or 0.0
 
     @property
     def silence_min_duration(self) -> float:
@@ -100,7 +100,7 @@ class AudioChunker:
         """
         How far back from the cap to look for the quietest stretch when there is no pause.
         """
-        return self.settings.get_float('quiet_scan_seconds') or DEFAULT_QUIET_SCAN_SECONDS
+        return self.settings.get_float('quiet_scan_seconds', DEFAULT_QUIET_SCAN_SECONDS) or 0.0
 
     def PlanChunks(self, media_path : str, track_index : int = 0,
                    duration_cb : Callable[[timedelta], None]|None = None) -> list[AudioChunk]:

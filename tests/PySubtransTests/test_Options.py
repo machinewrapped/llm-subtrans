@@ -702,6 +702,24 @@ class TestSettingsType(LoggedTestCase):
         result = self.test_settings.get_timedelta('missing_key', default_td)
         self.assertLoggedEqual("get_timedelta with missing key", default_td, result)
 
+    def test_get_timedelta_strings(self):
+        """A string holding a number is seconds, and other strings are timestamps."""
+        default_td = timedelta(minutes=5)
+        cases = [
+            ('4.0', timedelta(seconds=4)),
+            ('0.05', timedelta(seconds=0.05)),
+            ('120', timedelta(seconds=120)),
+            (' 1.5 ', timedelta(seconds=1.5)),
+            ('00:00:04,000', timedelta(seconds=4)),
+            ('01:30', timedelta(minutes=1, seconds=30)),
+        ]
+
+        for text, expected in cases:
+            with self.subTest(text=text):
+                settings = SettingsType({'duration': text})
+                result = settings.get_timedelta('duration', default_td)
+                self.assertLoggedEqual("get_timedelta from a string", expected, result, input_value=text)
+
     def test_get_str_list(self):
         """Test SettingsType.get_str_list method"""
         

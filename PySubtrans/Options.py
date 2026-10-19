@@ -113,6 +113,7 @@ default_settings = {
     'transcription_ffmpeg_available': None,
     'transcription_torch_device': "Unknown",
     'stop_on_error' : env_bool('STOP_ON_ERROR'),
+    'warnings_as_errors' : env_bool('WARNINGS_AS_ERRORS', False),
     'write_backup' : env_bool('WRITE_BACKUP_FILE', True),
     'theme' : env_str('THEME', 'default'),
     'ui_language': env_str('UI_LANGUAGE', 'en'),

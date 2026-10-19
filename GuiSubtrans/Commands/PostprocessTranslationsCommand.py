@@ -130,10 +130,13 @@ class PostprocessTranslationsCommand(Command):
         model_update.lines.update((batch.scene, batch.number, line_number), {'translation': text})
 
     def _revalidate_batch(self, model_update : ModelUpdate, batch : SubtitleBatch) -> None:
-        """Recompute the batch's validation errors after its translations changed."""
+        """Recompute the batch's validation errors and warnings after its translations changed."""
         if not self.datamodel:
             return
 
         validator = SubtitleValidator(self.datamodel.project_options)
         validator.ValidateBatch(batch)
-        model_update.batches.update((batch.scene, batch.number), {'errors': batch.errors})
+        model_update.batches.update((batch.scene, batch.number), {
+            'errors' : batch.errors,
+            'warnings' : batch.warnings
+        })

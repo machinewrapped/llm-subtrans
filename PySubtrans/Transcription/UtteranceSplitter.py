@@ -103,7 +103,7 @@ class UtteranceSplitter:
         """Whether a run of words is within the duration and character limits."""
         start, end = WordSpan(words)
         seconds = (end - start).total_seconds()
-        return seconds <= self.settings.max_line_seconds and len(JoinWords([w.text for w in words])) <= self.settings.max_line_chars
+        return self.settings.FitsDuration(seconds) and self.settings.FitsLength(JoinWords([w.text for w in words]))
 
     def _best_split_index(self, words : list[WordTiming]) -> int|None:
         """The highest-scoring boundary that leaves both halves long enough, if any."""

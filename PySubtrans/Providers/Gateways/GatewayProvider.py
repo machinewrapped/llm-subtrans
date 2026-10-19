@@ -1,47 +1,55 @@
 import json
 import logging
 import os
+from typing import Any, ClassVar
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import env_float, env_int
-from PySubtrans.Providers.Clients.RequestyClient import RequestyClient
+from PySubtrans.Providers.Clients.CustomClient import CustomClient
+from PySubtrans.Providers.Gateways.GatewayDefinition import GatewayDefinition, GatewayProtocol
+from PySubtrans.Providers.Gateways.ModelCatalogue import FamilySource
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.TranslationClient import TranslationClient
-from PySubtrans.TranslationProvider import TranslationProvider
+from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
-class RequestyProvider(TranslationProvider):
-    name = "Requesty"
-
-    default_model = "openai/gpt-4o-mini"
-
-    information = """
-    <p>Select the <a href="https://app.requesty.ai/models">model</a> to use as a translator.</p>
-    <p>Requesty is an OpenAI-compatible LLM gateway that provides access to many different AI models from various providers.</p>
-    <p>Models are named provider/model (e.g. openai/gpt-4o-mini, anthropic/claude-sonnet-4-5).</p>
-    <p>Models are grouped by provider family to make selection easier.</p>
+class GatewayProvider(TranslationProvider):
     """
+    Base class for gateways that route requests to models from many makers.
 
-    information_noapikey = """
-    <p>To use this provider you need <a href="https://app.requesty.ai/api-keys">a Requesty API key</a>.</p>
+    Each gateway is a subclass that sets `definition`.
+    The provider name, default model and settings namespace all come from the definition.
     """
+    kind = ProviderKind.Gateway
+
+    definition : ClassVar[GatewayDefinition]
+    default_model : ClassVar[str]
+
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        if 'definition' in vars(cls):
+            cls.name = cls.definition.name
+            cls.default_model = cls.definition.default_model
 
     def __init__(self, settings : SettingsType):
-        super().__init__(self.name, SettingsType({
-            'api_key': settings.get_str('api_key', os.getenv('REQUESTY_API_KEY')),
+        definition = self.definition
+        prefix = definition.env_prefix
+
+        super().__init__(definition.name, SettingsType({
+            'api_key': settings.get_str('api_key', os.getenv(f'{prefix}_API_KEY')),
             'use_default_model': settings.get_bool('use_default_model', False),
-            "server_address": settings.get_str('server_address', os.getenv('REQUESTY_SERVER_ADDRESS', "https://router.requesty.ai/")),
-            'stream_responses': settings.get_bool('stream_responses', os.getenv('REQUESTY_STREAM_RESPONSES', "True") == "True"),
-            'model_family': settings.get_str('model_family', os.getenv('REQUESTY_MODEL_FAMILY', "openai")),
-            "model": settings.get_str('model', os.getenv('REQUESTY_MODEL', self.default_model)),
-            'max_tokens': settings.get_int('max_tokens', env_int('REQUESTY_MAX_TOKENS', 0)),
-            'temperature': settings.get_float('temperature', env_float('REQUESTY_TEMPERATURE', 0.0)),
-            'rate_limit': settings.get_float('rate_limit', env_float('REQUESTY_RATE_LIMIT')),
-            'proxy': settings.get_str('proxy') or os.getenv('REQUESTY_PROXY'),
+            'server_address': settings.get_str('server_address', os.getenv(f'{prefix}_SERVER_ADDRESS', definition.server_address)),
+            'stream_responses': settings.get_bool('stream_responses', os.getenv(f'{prefix}_STREAM_RESPONSES', "True") == "True"),
+            'model_family': settings.get_str('model_family', os.getenv(f'{prefix}_MODEL_FAMILY', self._default_family)),
+            'model': settings.get_str('model', os.getenv(f'{prefix}_MODEL', definition.default_model)),
+            'max_tokens': settings.get_int('max_tokens', env_int(f'{prefix}_MAX_TOKENS', 0)),
+            'temperature': settings.get_float('temperature', env_float(f'{prefix}_TEMPERATURE', 0.0)),
+            'rate_limit': settings.get_float('rate_limit', env_float(f'{prefix}_RATE_LIMIT')),
+            'proxy': settings.get_str('proxy') or os.getenv(f'{prefix}_PROXY'),
             'reuse_client': settings.get_bool('reuse_client', True),
         }))
 
         self.refresh_when_changed = ['api_key', 'model', 'model_family', 'use_default_model']
-        self._all_model_list = []
+        self._all_model_list : list[str] = []
         self._cached_models : dict[str, dict[str,str]] = {}
 
     @property
@@ -59,7 +67,7 @@ class RequestyProvider(TranslationProvider):
     @property
     def available_model_families(self) -> list[str]:
         """
-        Returns a list of available provider families for the Requesty API
+        Returns a list of available model families for the gateway
         """
         available_families = sorted(self._cached_models.keys()) if self._cached_models else []
         valid_families : list[str] = [family for family in available_families if isinstance(family, str)]
@@ -69,7 +77,7 @@ class RequestyProvider(TranslationProvider):
 
     @property
     def model_family(self) -> str|None:
-        return self.settings.get_str( 'model_family', "openai")
+        return self.settings.get_str( 'model_family', self._default_family)
 
     @property
     def all_available_models(self) -> list[str]:
@@ -83,7 +91,7 @@ class RequestyProvider(TranslationProvider):
 
     def GetTranslationClient(self, settings : SettingsType) -> TranslationClient:
         """
-        Returns a new instance of the Requesty client
+        Returns a new client for the gateway's protocol
         """
         client_settings = SettingsType(self.settings.copy())
         client_settings.update(settings)
@@ -99,16 +107,17 @@ class RequestyProvider(TranslationProvider):
             else:
                 client_settings['model'] = self._get_model_id(selected_model)
 
-            logging.debug(f"Requesty using model ID: {client_settings.get('model')}")
+            logging.debug(f"{self.name} using model ID: {client_settings.get('model')}")
 
-        return RequestyClient(client_settings)
+        return self._create_client(client_settings)
 
     def GetOptions(self, settings : SettingsType) -> GuiSettingsType:
         """
-        Returns a dictionary of options for the Requesty provider
+        Returns a dictionary of options for the gateway
         """
         options = {
-            'api_key': (str, _( "A Requesty API key is required to use this provider (https://app.requesty.ai/api-keys)")),
+            'api_key': (str, _("An API key from {provider} is required to use this provider ({url})").format(
+                provider=self.name, url=self.definition.api_key_url)),
             'use_default_model': (bool, _( "Use the default model and hide advanced model options")),
         }
 
@@ -117,9 +126,12 @@ class RequestyProvider(TranslationProvider):
 
         if not settings.get_bool('use_default_model'):
             if self._cached_models:
-                options.update({
-                    'model_family': (self.available_model_families, _( "Model family/provider to choose from")),
-                })
+                # The list includes a saved family the catalogue lacks, so the user can switch away from it
+                model_families = self.available_model_families
+                if len(model_families) > 1:
+                    options.update({
+                        'model_family': (model_families, _( "Model family/provider to choose from")),
+                    })
 
                 # Add model selector if family is chosen
                 model_family : str|None = settings.get_str('model_family') or self.model_family
@@ -151,7 +163,7 @@ class RequestyProvider(TranslationProvider):
         Return models for the selected family from cached data
         """
         if not self.api_key:
-            logging.debug("No Requesty API key provided")
+            logging.debug(f"No {self.name} API key provided")
             return []
 
         if self.use_default_model:
@@ -175,9 +187,15 @@ class RequestyProvider(TranslationProvider):
         return sorted(family_models.keys())
 
     def GetInformation(self) -> str:
+        definition = self.definition
         if not self.api_key:
-            return self.information_noapikey
-        return self.information
+            return f'<p>To use this provider you need <a href="{definition.api_key_url}">an API key from {self.name}</a>.</p>'
+
+        information = f'<p>Select the <a href="{definition.models_url}">model</a> to use as a translator.</p>\n{definition.description}'
+        if definition.catalogue.family_source != FamilySource.Single:
+            information += '\n<p>Models are grouped by model maker to make selection easier.</p>'
+
+        return information
 
     def ValidateSettings(self) -> bool:
         """
@@ -188,6 +206,31 @@ class RequestyProvider(TranslationProvider):
             return False
 
         return True
+
+    @property
+    def _default_family(self) -> str:
+        """
+        Single-family gateways name their only family after themselves
+        """
+        if self.definition.catalogue.family_source == FamilySource.Single:
+            return self.definition.name
+        return self.definition.default_family
+
+    def _create_client(self, settings : SettingsType) -> TranslationClient:
+        """
+        Create a client that speaks the gateway's protocol
+        """
+        definition = self.definition
+        settings['endpoint'] = definition.endpoint
+
+        match definition.protocol:
+            case GatewayProtocol.ChatCompletions:
+                settings.setdefault('supports_system_messages', True)
+                settings.setdefault('supports_conversation', True)
+                settings.setdefault('supports_streaming', True)
+                if definition.additional_headers:
+                    settings.setdefault('additional_headers', dict(definition.additional_headers))
+                return CustomClient(settings)
 
     def _allow_multithreaded_translation(self) -> bool:
         """
@@ -200,12 +243,7 @@ class RequestyProvider(TranslationProvider):
 
     def _populate_model_cache(self):
         """
-        Fetch and cache models grouped by provider family from the Requesty API.
-
-        Requesty returns OpenAI-shaped model objects with an 'id' field of the
-        form 'provider/model' and OpenAI-style capability fields such as
-        'context_window' and boolean 'supports_*' flags (which differ from
-        OpenRouter's 'context_length' and 'supported_parameters' array).
+        Fetch the gateway's model catalogue and cache the models grouped by family.
         """
         if not self.api_key:
             return
@@ -218,64 +256,38 @@ class RequestyProvider(TranslationProvider):
             import httpx
 
             if not self.server_address:
-                logging.debug("No Requesty server address provided")
+                logging.debug(f"No {self.name} server address provided")
                 return
 
-            url = self.server_address.rstrip('/') + '/v1/models'
-
-            headers = {'Authorization': f"Bearer {self.api_key}"} if self.api_key else {}
+            catalogue = self.definition.catalogue
+            url = self.server_address.rstrip('/') + '/' + catalogue.path.lstrip('/')
+            headers = {'Authorization': f"Bearer {self.api_key}"} if catalogue.requires_auth else {}
 
             proxy_url = self.settings.get_str('proxy') or None
             with httpx.Client(timeout=20, proxy=proxy_url) as client:
-                result = client.get(url, headers=headers)
+                result = client.get(url, headers=headers, params=dict(catalogue.query))
                 if result.is_error:
                     raise ValueError(_("Error fetching models: {status} {text}").format(
                         status=result.status_code, text=result.text))
 
                 try:
                     data = result.json()
-                    # Requesty returns models under 'data' (OpenAI-compatible)
-                    models_data = data if isinstance(data, list) else data.get('data', [])
-                    model_cache : dict[str, dict[str, str]] = {}
-                    all_models : list[str] = []
-
-                    for model in models_data:
-                        model_id = model.get('id', '')
-                        if not model_id:
-                            continue
-
-                        all_models.append(model_id)
-
-                        # Family is the provider prefix in the 'provider/model' id
-                        model_series, model_name = self._get_model_name(model)
-
-                        if model_series not in model_cache:
-                            model_cache[model_series] = {}
-
-                        # Store display name -> model_id mapping
-                        display_name = model_name if model_name else model_id
-                        model_cache[model_series][display_name] = model_id
-
-                    self._all_model_list = sorted(all_models)
-                    self._cached_models = model_cache
-
                 except json.JSONDecodeError:
                     raise ValueError(_("Unable to parse server response as JSON: {response_text}").format(response_text=result.text))
+
+                self._cached_models, self._all_model_list = self._parse_catalogue(data)
 
         except Exception as e:
             logging.error(_("Unable to retrieve available models: {error}").format(error=str(e)))
             raise
 
-    def _get_model_name(self, model : dict) -> tuple[str, str]:
+    def _parse_catalogue(self, data : Any) -> tuple[dict[str, dict[str, str]], list[str]]:
         """
-        Split a Requesty model id ('provider/model') into family and model name.
+        Group catalogue entries by family as display name -> model ID, and list every model ID.
+
+        Override this for a catalogue the definition cannot describe.
         """
-        model_id = model.get('id', '')
-        if '/' in model_id:
-            model_series, model_name = model_id.split('/', 1)
-        else:
-            model_series, model_name = ("Generic", model_id)
-        return model_series, model_name
+        return self.definition.catalogue.Parse(data, self.name)
 
     def _get_model_id(self, display_name: str) -> str:
         """

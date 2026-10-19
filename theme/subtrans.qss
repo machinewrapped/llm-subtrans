@@ -83,6 +83,15 @@ QListView:item {
     background-color: burlywood;
 }
 
+.WidgetHeader[warnings=true] {
+    color: #e8590c;
+}
+
+.WidgetBody[shows_warnings=true] {
+    color: #e8590c;
+}
+
+/* Errors take precedence over warnings */
 .WidgetHeader[errors=true], .WidgetBody[errors=true] {
     color: red;
 }
@@ -112,6 +121,10 @@ QListView:item {
 
 .WidgetFooter[all_translated=false] QLabel {
     color: saddlebrown;
+}
+
+.WidgetFooter[warnings=true] QLabel {
+    color: #e8590c;
 }
 
 .WidgetBody {

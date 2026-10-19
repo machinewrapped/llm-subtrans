@@ -1,15 +1,17 @@
 import json
+from typing import Any
 
 from PySubtrans.Helpers.Color import Color
 from PySubtrans.Helpers.Parse import TryParseNonNegative
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleBatch import SubtitleBatch
-from PySubtrans.SubtitleError import TranslationError
+from PySubtrans.SubtitleError import SubtitleError, TranslationError
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.SubtitleScene import SubtitleScene
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationPrompt import TranslationPrompt
+from PySubtrans.ValidationError import IsValidationWarning, TranslationValidationError
 
 # Serialisation helpers
 def classname(obj):
@@ -20,13 +22,16 @@ def classname(obj):
 # Convert our custom types to JSON
 class SubtitleEncoder(json.JSONEncoder):
     def default(self, o):
-        if isinstance(o, TranslationError):
-            # Don't bother trying to serialise all the error types (why not?)
-            return {
-                "__class": classname(TranslationError),
+        if isinstance(o, SubtitleError):
+            # Saved under the TranslationError class so that older versions can still load the message
+            error : dict[str, Any] = {
+                "_class": classname(TranslationError),
                 "type": classname(o),
-                "problem": str(o)
+                "message": str(o),
             }
+            if isinstance(o, TranslationValidationError) and o.line_numbers:
+                error["lines"] = o.line_numbers
+            return error
 
         _class = classname(o)
         properties = self.serialize_object(o)
@@ -71,6 +76,7 @@ class SubtitleEncoder(json.JSONEncoder):
                 "size": obj.size,
                 "all_translated": obj.all_translated,
                 "errors": obj.errors if obj.errors else None,
+                "warnings": obj.warnings if obj.warnings else None,
                 "validate_originals": getattr(obj, 'validate_originals', False) or None,
                 "summary": getattr(obj, 'summary'),
                 "originals": obj._originals,
@@ -136,6 +142,7 @@ def _object_hook(dct):
             obj = SubtitleScene(dct)
             return obj
         elif class_name == classname(SubtitleBatch):
+            _upgrade_legacy_errors(dct)
             obj = SubtitleBatch(dct)
             return obj
         elif class_name == classname(SubtitleLine) or class_name == "Subtitle": # TEMP backward compatibility
@@ -176,6 +183,39 @@ def _object_hook(dct):
         elif class_name == classname(Color):
             return Color.from_hex(dct.get('hex', '#00000000'))
         elif class_name == classname(TranslationError):
-            return TranslationError(dct.get('message'))
+            return _decode_error(dct.get('type'), dct.get('message') or '', dct.get('lines'))
 
     return dct
+
+def _decode_error(error_type : str|None, message : str, line_numbers : list[int]|None = None) -> TranslationError:
+    """
+    Rebuild a saved error, restoring its validation type and line numbers when known
+    """
+    validation_type = TranslationValidationError.GetTypeByName(error_type or "")
+    if validation_type:
+        return validation_type(message, line_numbers=line_numbers)
+
+    return TranslationError(message)
+
+def _upgrade_legacy_errors(dct : dict) -> None:
+    """
+    Convert batch errors saved by older versions, which only recorded the type and message.
+    Issues that are now warnings move to the batch warnings, so they no longer block completion.
+    """
+    saved_errors = dct.get('errors')
+    if not saved_errors or not any(isinstance(error, dict) for error in saved_errors):
+        return
+
+    errors = []
+    warnings = list(dct.get('warnings') or [])
+    for error in saved_errors:
+        if isinstance(error, dict):
+            error = _decode_error(error.get('type'), error.get('problem') or error.get('message') or '')
+
+        if IsValidationWarning(error):
+            warnings.append(error)
+        else:
+            errors.append(error)
+
+    dct['errors'] = errors
+    dct['warnings'] = warnings

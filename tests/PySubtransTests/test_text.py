@@ -149,6 +149,8 @@ class TestTextHelpers(LoggedTestCase):
         ("A letter was addressed to J. Smith, who never read it.", 40, 4, "A letter was addressed to J. Smith,\nwho never read it."),
         ("They all moved back to the U.S.A. when the war ended.", 40, 4, "They all moved back to the\nU.S.A. when the war ended."),
         ("Dr. Smith arrived. He sat down in the chair by the window.", 40, 4, "Dr. Smith arrived.\nHe sat down in the chair by the window."),
+        # With no minimum length, a break in trailing whitespace is passed over rather than leaving an empty line
+        ("Short words here and then a long tail. ", 20, 0, "Short words here\nand then a long tail."),
     ]
 
     def test_BreakLongLines(self):

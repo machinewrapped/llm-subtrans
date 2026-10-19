@@ -7,10 +7,11 @@ from PySubtrans.Options import SettingsType, env_float, env_int
 from PySubtrans.Providers.Clients.OpenRouterClient import OpenRouterClient
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.TranslationClient import TranslationClient
-from PySubtrans.TranslationProvider import TranslationProvider
+from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
 class OpenRouterProvider(TranslationProvider):
     name = "OpenRouter"
+    kind = ProviderKind.Gateway
 
     default_model = "google/gemini-3-flash-preview"
     

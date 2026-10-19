@@ -116,6 +116,12 @@ class Subtitles:
             return all(scene.all_translated for scene in self.scenes) if self.scenes else False
 
     @property
+    def translation_complete(self) -> bool:
+        """Whether every scene is translated without recorded errors."""
+        with self.lock:
+            return bool(self.scenes) and all(scene.translation_complete for scene in self.scenes)
+
+    @property
     def linecount(self) -> int:
         with self.lock:
             return len(self.originals) if self.originals else 0

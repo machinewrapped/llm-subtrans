@@ -2,7 +2,7 @@ import logging
 from collections.abc import Callable
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBox, QWidget, QFormLayout, QFrame)
-from GuiSubtrans.GuiHelpers import ClearForm, GetThemeNames
+from GuiSubtrans.GuiHelpers import ClearForm, GetProviderDropdownValues, GetThemeNames
 
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget, ParseOptionDefinition
 from GuiSubtrans.Widgets.ProviderSettingsForm import ProviderSettingsForm
@@ -50,7 +50,8 @@ class SettingsDialog(QDialog):
             'autosave': (bool, _("Automatically save the project/translation after each scene is translated")),
             'autosplit_on_error': (bool, _("If a batch fails validation, split it in half and retry each half separately")),
             'retry_on_error': (bool, _("If true, translations that fail validation will be retried with a note about the error")),
-            'stop_on_error': (bool, _("Stop translating if an error is encountered"))
+            'stop_on_error': (bool, _("Stop translating if an error is encountered")),
+            'warnings_as_errors': (bool, _("Treat validation warnings such as long lines as errors"))
         },
         PROVIDER_SECTION: {
             'provider': ([], _("The AI translation service to use")),
@@ -179,7 +180,8 @@ class SettingsDialog(QDialog):
             self.SECTIONS['General']['instruction_file'] = instruction_files
 
         # Populate available providers
-        self.SECTIONS[self.PROVIDER_SECTION]['provider'] = (options.available_providers, self.SECTIONS[self.PROVIDER_SECTION]['provider'][1])
+        provider_values = GetProviderDropdownValues(options.available_providers)
+        self.SECTIONS[self.PROVIDER_SECTION]['provider'] = (provider_values, self.SECTIONS[self.PROVIDER_SECTION]['provider'][1])
 
         try:
             # Initialise the current translation provider

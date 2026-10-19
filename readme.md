@@ -105,9 +105,9 @@ See the [quickstart](https://www.api-route.com/docs/quickstart) and [pricing](ht
 #### Atlas Cloud
 https://www.atlascloud.ai/privacy
 
-[Atlas Cloud](https://www.atlascloud.ai/) provides an OpenAI-compatible API for models from multiple providers. You will need an [Atlas Cloud API key](https://www.atlascloud.ai/console/api-keys) and sufficient account credit to use the service.
+[Atlas Cloud](https://www.atlascloud.ai/) provides an OpenAI-compatible API for models from multiple providers. You will need an [Atlas Cloud API key](https://www.atlascloud.ai/console/api-keys) and sufficient account credit to use the service (the app will look for ATLASCLOUD_API_KEY in the environment if this is not provided).
 
-The model list is loaded from the Atlas Cloud API. Models use `provider/model` identifiers, and `openai/gpt-4.1-mini` is selected by default.
+Models are named provider/model and grouped by provider, e.g. `openai/gpt-4.1-mini`, which is selected by default.
 
 ### Cloud platforms
 
@@ -435,13 +435,6 @@ Default values for many settings can be set in the .env file, using a NAME_IN_CA
 
 ### Provider-specific arguments
 Some additional arguments are available for specific providers.
-
-#### Atlas Cloud
-- `-k`, `--apikey`:
-  Your [Atlas Cloud API key](https://www.atlascloud.ai/console/api-keys) (the app will look for `ATLASCLOUD_API_KEY` in the environment if this is not provided)
-
-- `-m`, `--model`:
-  Specify the Atlas Cloud model ID to use for translation, for example `openai/gpt-4.1-mini`.
 
 #### OpenRouter
 - `-k`, `--apikey`:

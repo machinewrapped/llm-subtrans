@@ -9,5 +9,6 @@ See docs/translation-provider-integration.md before adding one.
 
 # Explicitly import each gateway so it is registered
 from . import APIRoute
+from . import AtlasCloud
 from . import Opper
 from . import Requesty

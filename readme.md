@@ -102,6 +102,13 @@ Environment configuration: `API_ROUTE_API_KEY`, `API_ROUTE_MODEL`, `API_ROUTE_ST
 
 See the [quickstart](https://www.api-route.com/docs/quickstart) and [pricing](https://www.api-route.com/pricing).
 
+#### DemonRoute
+https://demonroute.com/privacy
+
+[DemonRoute](https://demonroute.com) is a prepaid OpenAI-compatible gateway for open-weight models, including community fine-tunes. You will need a [DemonRoute API key](https://demonroute.com/login) and a credit balance to use the service (the app will look for DEMONROUTE_API_KEY in the environment if this is not provided).
+
+Models are named family/model and grouped by family, e.g. `openai/gpt-oss-120b`, which is selected by default.
+
 ### Cloud platforms
 
 #### Amazon Bedrock

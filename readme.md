@@ -23,41 +23,6 @@ Prebuilt Linux packages are not provided so you will need to [install from sourc
 
 ## Translation Providers
 
-### Gateways and routers
-
-Gateways route requests to models from many different makers, so one API key gives access to all of them.
-
-#### OpenRouter
-https://openrouter.ai/privacy
-
-[OpenRouter](https://openrouter.ai/) is a service which aggregates [models](https://openrouter.ai/models) from a wide range of providers. You will need an [OpenRouter API Key](https://openrouter.ai/settings/keys) to use the service, and a credit balance (though some quite capable models are provided free of charge).
-
-You can choose to let OpenRouter select the model automatically (the "Use Default Model" setting in the GUI or `--auto` on the command line) or you can specify a specific model.
-
-#### Requesty
-https://www.requesty.ai/privacy
-
-[Requesty](https://www.requesty.ai) is an OpenAI-compatible gateway which provides access to models from many different providers. You will need a Requesty API key to use the service (the app will look for REQUESTY_API_KEY in the environment if this is not provided).
-
-Models are named provider/model, e.g. `openai/gpt-4o-mini` or `anthropic/claude-sonnet-4-5`.
-
-#### Opper
-https://opper.ai/privacy
-
-[Opper](https://opper.ai) is an EU-hosted AI gateway with an OpenAI-compatible API, which provides access to models from many different providers. You will need an [Opper API key](https://platform.opper.ai) to use the service (the app will look for OPPER_API_KEY in the environment if this is not provided).
-
-Models use pool names without a vendor prefix, e.g. `gemini-3.8-flash` or `claude-sonnet-4-6`, and are grouped by model maker.
-
-#### API Route
-
-[API Route](https://www.api-route.com) is a paid OpenAI-compatible gateway. Select **API Route** in the translation provider settings and enter a key from the [API keys page](https://www.api-route.com/api-keys). The authenticated catalogue supplies chat model IDs without rewriting them; image and video generation models are excluded.
-
-The default translator is `gpt-6.1-sol`. Select another chat model available to your account if needed. Streaming uses the existing OpenAI-compatible translation client.
-
-Environment configuration: `API_ROUTE_API_KEY`, `API_ROUTE_MODEL`, `API_ROUTE_STREAM_RESPONSES`, and optional `API_ROUTE_SERVER_ADDRESS` (default `https://global.api-route.com/`; use the host root, without `/v1`). GUI/project values take precedence over environment defaults.
-
-See the [quickstart](https://www.api-route.com/docs/quickstart) and [pricing](https://www.api-route.com/pricing).
-
 ### Model providers
 
 #### Google Gemini
@@ -101,6 +66,41 @@ You will need a Mistral API key from https://console.mistral.ai/api-keys/ to use
 
 - **Server URL**: If you are using a custom deployment of the Mistral API, you can specify the server URL using the `--server_url` argument.
 - **Model**: `mistral-large-latest` is recommended for translation. Smaller models tend to perform poorly and may not follow the system instructions well.
+
+### Gateways and routers
+
+Gateways route requests to models from many different makers, so one API key gives access to all of them.
+
+#### OpenRouter
+https://openrouter.ai/privacy
+
+[OpenRouter](https://openrouter.ai/) is a service which aggregates [models](https://openrouter.ai/models) from a wide range of providers. You will need an [OpenRouter API Key](https://openrouter.ai/settings/keys) to use the service, and a credit balance (though some quite capable models are provided free of charge).
+
+You can choose to let OpenRouter select the model automatically (the "Use Default Model" setting in the GUI or `--auto` on the command line) or you can specify a specific model.
+
+#### Requesty
+https://www.requesty.ai/privacy
+
+[Requesty](https://www.requesty.ai) is an OpenAI-compatible gateway which provides access to models from many different providers. You will need a Requesty API key to use the service (the app will look for REQUESTY_API_KEY in the environment if this is not provided).
+
+Models are named provider/model, e.g. `openai/gpt-4o-mini` or `anthropic/claude-sonnet-4-5`.
+
+#### Opper
+https://opper.ai/privacy
+
+[Opper](https://opper.ai) is an EU-hosted AI gateway with an OpenAI-compatible API, which provides access to models from many different providers. You will need an [Opper API key](https://platform.opper.ai) to use the service (the app will look for OPPER_API_KEY in the environment if this is not provided).
+
+Models use pool names without a vendor prefix, e.g. `gemini-3.8-flash` or `claude-sonnet-4-6`, and are grouped by model maker.
+
+#### API Route
+
+[API Route](https://www.api-route.com) is a paid OpenAI-compatible gateway. Select **API Route** in the translation provider settings and enter a key from the [API keys page](https://www.api-route.com/api-keys). The authenticated catalogue supplies chat model IDs without rewriting them; image and video generation models are excluded.
+
+The default translator is `gpt-6.1-sol`. Select another chat model available to your account if needed. Streaming uses the existing OpenAI-compatible translation client.
+
+Environment configuration: `API_ROUTE_API_KEY`, `API_ROUTE_MODEL`, `API_ROUTE_STREAM_RESPONSES`, and optional `API_ROUTE_SERVER_ADDRESS` (default `https://global.api-route.com/`; use the host root, without `/v1`). GUI/project values take precedence over environment defaults.
+
+See the [quickstart](https://www.api-route.com/docs/quickstart) and [pricing](https://www.api-route.com/pricing).
 
 ### Cloud platforms
 

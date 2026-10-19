@@ -59,7 +59,7 @@ The definition's `ModelCatalogue` describes the model list and parses it: its pa
 
 `protocol` selects the request protocol. `GatewayProtocol.ChatCompletions` is the only one so far. A gateway that needs another protocol adds a `GatewayProtocol` member and a matching case in `GatewayProvider._create_client`, rather than a new provider class.
 
-Then add the gateway to `tests/IntegrationTests/test_ProviderModelIds.py` and add a readme section.
+Then add a readme section. The shared gateway tests in `tests/IntegrationTests/test_GatewayProvider.py` cover every registered gateway; add a test there only for catalogue parsing the definition cannot describe.
 
 A gateway is only merged once it has been tested against the live service. The maintainers usually don't have an account with each gateway, so the contributor tests it and reports in the pull request that:
 

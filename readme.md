@@ -109,6 +109,12 @@ https://demonroute.com/privacy
 
 Models are named family/model and grouped by family, e.g. `openai/gpt-oss-120b`, which is selected by default.
 
+#### Cheaper Inference
+
+[Cheaper Inference](https://cheaperinference.com) is an OpenAI-compatible gateway which provides access to models from many different makers. You will need a [Cheaper Inference API key](https://cheaperinference.com/signup) to use the service (the app will look for CHEAPER_INFERENCE_API_KEY in the environment if this is not provided).
+
+Models use bare IDs and are grouped by maker, e.g. `gpt-5.4-mini`, which is selected by default. The catalogue is filtered to text chat models.
+
 ### Cloud platforms
 
 #### Amazon Bedrock

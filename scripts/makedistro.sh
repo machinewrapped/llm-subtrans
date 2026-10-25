@@ -2,8 +2,13 @@
 
 source envsubtrans/bin/activate
 python scripts/sync_version.py
+
+# Skip releases less than 7 days old, so a malicious release is likely to be pulled before it is bundled.
+# Needs a recent pip, so upgrade pip first.
+upload_cooldown="--uploaded-prior-to=P7D"
+pip install --upgrade pip
 # Torch and the Qwen runtime are installed into an external environment by the application, not bundled
-pip install --upgrade -e ".[gui,openai,gemini,claude,mistral,bedrock]"
+pip install --upgrade "$upload_cooldown" -e ".[gui,openai,gemini,claude,mistral,bedrock]"
 
 python scripts/update_translations.py
 
@@ -30,7 +35,7 @@ pyinstaller --noconfirm --additional-hooks-dir="hooks" \
 
 ./envsubtrans/bin/python scripts/collect_third_party_notices.py --dist-dir "dist/gui-subtrans" || exit 1
 
-pip install pip-audit
+pip install "$upload_cooldown" pip-audit
 python -m pip_audit --cache-dir build/pip-audit-cache
 if [ $? -ne 0 ]; then
     echo "WARNING: Vulnerability scan detected known vulnerabilities. DO NOT publish or run this build!"

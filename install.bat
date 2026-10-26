@@ -205,8 +205,18 @@ if not "!EXTRAS!"=="" (
     echo Installing dependencies...
 )
 
+REM Skip releases less than 7 days old, so a malicious release is likely to be pulled before it is installed.
+REM Needs a recent pip, so upgrade pip first.
+set "UPLOAD_COOLDOWN=--uploaded-prior-to=P7D"
+.\envsubtrans\Scripts\python.exe -m pip install --upgrade pip
+if errorlevel 1 (
+    echo Failed to upgrade pip.
+    pause
+    exit /b 1
+)
+
 REM Install dependencies
-.\envsubtrans\Scripts\python.exe -m pip install --upgrade -e "!INSTALL_TARGET!"
+.\envsubtrans\Scripts\python.exe -m pip install --upgrade !UPLOAD_COOLDOWN! -e "!INSTALL_TARGET!"
 if errorlevel 1 (
     echo Failed to install required modules.
     pause

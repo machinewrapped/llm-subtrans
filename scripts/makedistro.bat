@@ -1,10 +1,13 @@
 call envsubtrans/scripts/activate
 .\envsubtrans\Scripts\python.exe scripts/sync_version.py
 .\envsubtrans\Scripts\python.exe -m pip install --upgrade pip
-.\envsubtrans\Scripts\python.exe -m pip install pywin32-ctypes
-.\envsubtrans\Scripts\python.exe -m pip install --upgrade pyinstaller
+
+rem Skip releases less than 7 days old, so a malicious release is likely to be pulled before it is bundled.
+set "UPLOAD_COOLDOWN=--uploaded-prior-to=P7D"
+.\envsubtrans\Scripts\python.exe -m pip install %UPLOAD_COOLDOWN% pywin32-ctypes
+.\envsubtrans\Scripts\python.exe -m pip install --upgrade %UPLOAD_COOLDOWN% pyinstaller
 rem Torch and the Qwen runtime are installed into an external environment by the application, not bundled
-.\envsubtrans\Scripts\python.exe -m pip install --upgrade -e ".[gui,openai,gemini,claude,mistral]"
+.\envsubtrans\Scripts\python.exe -m pip install --upgrade %UPLOAD_COOLDOWN% -e ".[gui,openai,gemini,claude,mistral]"
 rem pip install --upgrade "boto3"  REM Bedrock dependencies excluded
 
 rem Update and compile localization files before tests/build
@@ -61,7 +64,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-.\envsubtrans\Scripts\python.exe -m pip install pip-audit
+.\envsubtrans\Scripts\python.exe -m pip install %UPLOAD_COOLDOWN% pip-audit
 .\envsubtrans\Scripts\python.exe -m pip_audit --cache-dir build\pip-audit-cache
 if %errorlevel% neq 0 (
     echo WARNING: Vulnerability scan detected known vulnerabilities. DO NOT publish or run this build!

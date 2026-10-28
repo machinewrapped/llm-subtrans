@@ -5,6 +5,7 @@ import httpx
 from PySubtrans.Helpers.Attribution import APP_ATTRIBUTION_HEADERS
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Providers.Clients.CustomClient import CustomClient
+from PySubtrans.Providers.Gateways.CheaperInference import CHEAPER_INFERENCE
 from PySubtrans.Providers.Gateways.GatewayProvider import GatewayProvider
 from PySubtrans.Providers.Gateways.ModelCatalogue import FamilySource, ModelCatalogue
 from PySubtrans.Providers.Gateways.Opper import OPPER, OpperProvider
@@ -88,6 +89,26 @@ class TestGatewayCatalogue(LoggedTestCase):
 
         self.assertLoggedEqual("one family named after the gateway", ["Example Gateway"], list(models_by_family.keys()))
         self.assertLoggedEqual("excluded models removed", ['gpt-6.1-sol'], all_models)
+
+    def test_cheaper_inference_keeps_only_chat_models(self) -> None:
+        """Keep models that support chat even when another endpoint is preferred."""
+        models_by_family, all_models = CHEAPER_INFERENCE.catalogue.Parse({'data': [
+            {'id': 'gpt-5.4-mini', 'type': 'text', 'owned_by': 'OpenAI',
+             'supported_endpoints': ['/v1/chat/completions', '/v1/responses']},
+            {'id': 'claude-sonnet-5', 'type': 'text', 'owned_by': 'Anthropic',
+             'endpoint': '/v1/messages', 'supported_endpoints': ['/v1/messages', '/v1/chat/completions']},
+            {'id': 'o3-pro', 'type': 'text', 'owned_by': 'OpenAI',
+             'supported_endpoints': ['/v1/responses']},
+            {'id': 'legacy-text', 'type': 'text', 'owned_by': 'OpenAI'},
+            {'id': 'invalid-endpoints', 'type': 'text', 'owned_by': 'OpenAI',
+             'supported_endpoints': '/v1/chat/completions'},
+            {'id': 'image-model', 'type': 'image', 'owned_by': 'OpenAI',
+             'supported_endpoints': ['/v1/chat/completions']},
+        ]}, CHEAPER_INFERENCE.name)
+
+        self.assertLoggedEqual("chat-capable model IDs", ['claude-sonnet-5', 'gpt-5.4-mini'], all_models)
+        self.assertLoggedEqual("OpenAI chat models", {'gpt-5.4-mini': 'gpt-5.4-mini'}, models_by_family.get('OpenAI'))
+        self.assertLoggedEqual("Anthropic chat models", {'claude-sonnet-5': 'claude-sonnet-5'}, models_by_family.get('Anthropic'))
 
 
 class TestGatewayFamilySelector(LoggedTestCase):

@@ -15,12 +15,13 @@ CHEAPER_INFERENCE = GatewayDefinition(
     <p>Cheaper Inference is an OpenAI-compatible LLM gateway that provides access to models from many different makers.</p>
     <p>Models use bare IDs without a vendor prefix (e.g. gpt-5.4-mini, claude-sonnet-5), and the maker is read from the catalogue.</p>
     """,
-    # The catalogue also lists embedding and media models, so keep only the text chat models
+    # The catalogue also lists media models and text models without chat completions
     catalogue=ModelCatalogue(
         path='v1/models',
         family_source=FamilySource.Field,
         family_field='owned_by',
         required_fields={'type': 'text'},
+        required_list_members={'supported_endpoints': '/v1/chat/completions'},
     ),
 )
 

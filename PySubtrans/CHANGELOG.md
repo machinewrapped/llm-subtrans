@@ -5,6 +5,30 @@ All notable changes to PySubtrans will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.4]
+Added translation with a ChatGPT plan through the OpenAI provider (`use_chatgpt_plan`). Applications must identify themselves with `ConfigureChatGPTApp` before signing in, and each application keeps its own sign-in.
+
+Gateway providers are now data-driven, with new API Route, DemonRoute, Atlas Cloud and Opper gateways.
+
+Added ElevenLabs as a transcription provider, and ElevenLabs Scribe v2 through OpenRouter.
+
+Added a `warnings_as_errors` option. Minor validation issues are now recorded as warnings.
+
+Changed: the default config directory is now a `PySubtrans` folder. Settings and sign-ins saved by earlier versions are not carried over. Call `ConfigureConfigDir` to give your application a folder of its own.
+
+Changed: the Gemini provider uses `thinking_level` instead of a thinking budget, and no longer sends a temperature.
+
+Changed: configured zero values are kept instead of being replaced by defaults.
+
+Fixed: translation completion checks take errors into account.
+
+## [1.7.3]
+Added the `original_text_placement` option and `OriginalTextPlacement`, to place the translation above or below the original text.
+
+Changed: the transcription `progress` event no longer has a `total` argument, since the number of chunks is not known in advance.
+
+Improved transcription word timings, sentence breaks and multi-line VTT voice tags. OpenRouter diarization is only offered for models that support it.
+
 ## [1.7.2]
 Added `init_transcription` and `transcribe_media` helper functions, to transcribe audio/video into subtitles that are ready for translation.
 

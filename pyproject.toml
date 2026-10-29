@@ -19,6 +19,7 @@ dependencies = [
     "blinker",
     "requests",
     "setuptools",
+    "certifi>=2026.10.19",
     "httpx",
     "httpx[socks]"
 ]

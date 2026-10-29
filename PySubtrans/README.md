@@ -266,9 +266,13 @@ Note: `build_terminology_map` controls whether the model is asked to report new 
 
 ### Where PySubtrans stores data
 
-Some features keep files in a config directory: saved settings, custom instruction files, the last update check and ChatGPT sign-in tokens. By default this is a `PySubtrans` folder in the user's config location, e.g. `%APPDATA%\MachineWrapped\PySubtrans` on Windows, `~/Library/Application Support/PySubtrans` on macOS or `~/.config/PySubtrans` on Linux. It is separate from the LLM-Subtrans folder, so your application does not share the settings or sign-ins of an LLM-Subtrans installation.
+Some features keep files in a config directory: saved settings, custom instruction files, the last update check and ChatGPT sign-in tokens.
 
-To use a different folder, call `ConfigureConfigDir` once at startup, before anything reads or writes data:
+By default this is a `PySubtrans` folder in the user's config location, e.g. `%APPDATA%\MachineWrapped\PySubtrans` on Windows, `~/Library/Application Support/PySubtrans` on macOS or `~/.config/PySubtrans` on Linux.
+
+> **Changed in 1.7.4:** PySubtrans now has a config directory of its own. Earlier versions shared one with every other application using the package.
+
+For the best isolation, give your application a folder of its own by calling `ConfigureConfigDir` once at startup, before anything reads or writes data. Your settings, instructions and sign-ins then stay separate from every other application built on PySubtrans, and a user can find, back up or reset them alongside the rest of your application's data.
 
 ```python
 from PySubtrans.Helpers.Resources import ConfigureConfigDir

@@ -18,7 +18,7 @@ if not hasattr(sys, "_MEIPASS"):
     check_required_imports(['PySubtrans', 'GuiSubtrans', 'PySide6', 'scripts'], 'gui')
 
 from PySubtrans.Helpers.ImportGuard import CaptureOriginalImport
-from scripts.subtrans_common import LLM_SUBTRANS_CONFIG_DIR, InitLogger
+from scripts.subtrans_common import LLM_SUBTRANS_CONFIG_DIR, ConfigureChatGPTSignIn, InitLogger
 
 # Must happen before PySide6 is imported; see PySubtrans.Helpers.ImportGuard.
 CaptureOriginalImport()
@@ -42,6 +42,7 @@ def parse_arguments():
     # Parse command line arguments
     ConfigureDefaultConfigDir(LLM_SUBTRANS_CONFIG_DIR)
     ConfigureConfigDirFromArguments()
+    ConfigureChatGPTSignIn()
     parser = argparse.ArgumentParser(description='Translates subtitles using an AI service')
     parser.add_argument('filepath', nargs='?', help="Optional file to load on startup")
     parser.add_argument('-l', '--target-language', type=str, default=None, help="The target language for the translation")

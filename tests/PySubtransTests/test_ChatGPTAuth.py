@@ -3,15 +3,18 @@ from __future__ import annotations
 import base64
 import copy
 import json
+import os
 import threading
 import time
 from typing import Any
 import unittest
+from unittest.mock import patch
 from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import urlopen
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
+import PySubtrans.Auth.ChatGPTAuth as chatgpt_auth_module
 from PySubtrans.Auth.ChatGPTAuth import (
     DYNAMIC_CLIENT_ID,
     PLAN_USAGE_SCOPE,
@@ -20,12 +23,14 @@ from PySubtrans.Auth.ChatGPTAuth import (
     ChatGPTAuth,
     ChatGPTAuthError,
     ChatGPTCredentialStore,
+    ConfigureChatGPTApp,
     CreateCodeChallenge,
     ParseModelList,
 )
 
 ISSUED_CLIENT_ID = 'oaiapp_test'
 REDIRECT_URI = 'http://127.0.0.1:1455/auth/callback'
+TEST_APP_NAME = 'Test App'
 
 
 class MemoryCredentialStore(ChatGPTCredentialStore):
@@ -43,8 +48,8 @@ class MemoryCredentialStore(ChatGPTCredentialStore):
 
 class FakeChatGPTAuth(ChatGPTAuth):
     """Records requests and returns queued responses instead of calling OpenAI."""
-    def __init__(self, store : MemoryCredentialStore, responses : list[dict[str, Any]|Exception]|None = None):
-        super().__init__(store=store)
+    def __init__(self, store : MemoryCredentialStore, responses : list[dict[str, Any]|Exception]|None = None, app_name : str = TEST_APP_NAME):
+        super().__init__(app_name=app_name, store=store)
         self.responses : list[dict[str, Any]|Exception] = list(responses or [])
         self.requests : list[tuple[str, dict[str, str]]] = []
 
@@ -108,7 +113,7 @@ class ChatGPTSignInTests(LoggedTestCase):
         params = { key: values[0] for key, values in parse_qs(urlparse(pending.url).query).items() }
 
         self.assertLoggedEqual('client id', DYNAMIC_CLIENT_ID, params.get('client_id'))
-        self.assertLoggedIn('agent name hint', 'agent_name_hint', params)
+        self.assertLoggedEqual('agent name hint', TEST_APP_NAME, params.get('agent_name_hint'))
         self.assertLoggedEqual('code challenge', CreateCodeChallenge(pending.code_verifier), params.get('code_challenge'))
         self.assertLoggedEqual('code challenge method', 'S256', params.get('code_challenge_method'))
         self.assertLoggedEqual('host id', store.data.get('host_id'), params.get('ext_agent_host_id'))
@@ -224,6 +229,54 @@ class ChatGPTSignInTests(LoggedTestCase):
         with self.assertRaises(ChatGPTAuthError) as context:
             auth.SignIn(cancel_event=cancel_event, open_browser=lambda url: True)
         log_input_expected_error('cancelled', ChatGPTAuthError, context.exception)
+
+
+class ChatGPTAppIdentityTests(LoggedTestCase):
+    """Tests that each application signs in under its own name and keeps its own tokens."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        patcher = patch.object(chatgpt_auth_module, '_app_name', None)
+        patcher.start()
+        self.addCleanup(patcher.stop)
+
+    @skip_if_debugger_attached
+    def test_unidentified_app_cannot_sign_in(self) -> None:
+        """Without an application name there is no default identity or credential file to fall back on."""
+        with self.assertRaises(ChatGPTAuthError) as context:
+            ChatGPTAuth(store=MemoryCredentialStore())
+        log_input_expected_error('no application name', ChatGPTAuthError, context.exception)
+
+    def test_configured_app_signs_in_under_its_name(self) -> None:
+        ConfigureChatGPTApp('Configured App')
+        auth = ChatGPTAuth(store=MemoryCredentialStore())
+
+        pending = auth.BeginSignIn(REDIRECT_URI)
+        params = parse_qs(urlparse(pending.url).query)
+
+        self.assertLoggedEqual('agent name hint', 'Configured App', params['agent_name_hint'][0])
+
+    def test_apps_keep_separate_credentials(self) -> None:
+        """Each application has its own credential file by default, even when the names differ only in punctuation."""
+        for first_name, second_name in [('App One', 'App Two'), ('My App', 'My-App')]:
+            first = ChatGPTAuth(app_name=first_name).store.path
+            second = ChatGPTAuth(app_name=second_name).store.path
+
+            self.assertLoggedFalse('separate credential files', first == second, input_value=(first_name, second_name))
+
+    def test_configured_credential_filename_is_used(self) -> None:
+        """An application can keep an existing credential file, so its sign-ins carry on."""
+        ConfigureChatGPTApp('Configured App', credential_filename='existing-auth.json')
+
+        path = ChatGPTAuth().store.path
+
+        self.assertLoggedEqual('credential file', 'existing-auth.json', os.path.basename(path))
+
+    @skip_if_debugger_attached
+    def test_name_without_usable_characters_is_rejected(self) -> None:
+        with self.assertRaises(ChatGPTAuthError) as context:
+            ChatGPTAuth(app_name='!!!')
+        log_input_expected_error('!!!', ChatGPTAuthError, context.exception)
 
 
 class ChatGPTSessionTests(LoggedTestCase):

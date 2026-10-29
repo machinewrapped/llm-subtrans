@@ -1,11 +1,14 @@
 """
 Sign in with ChatGPT, so OpenAI requests can use the user's ChatGPT plan instead of an API key.
 See https://developers.openai.com/siwc/token-sharing-open-source for the protocol.
+
+Each application signs in under its own name, set with ConfigureChatGPTApp, and keeps its own tokens.
 """
 import base64
 from collections.abc import Callable
 from dataclasses import dataclass
 import hashlib
+import html
 from http.server import BaseHTTPRequestHandler, HTTPServer
 import json
 import logging
@@ -19,6 +22,8 @@ from urllib.parse import parse_qs, urlencode, urlparse
 from urllib.request import OpenerDirector, ProxyHandler, Request, build_opener
 import uuid
 import webbrowser
+
+import regex
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Resources import GetConfigDir
@@ -37,14 +42,44 @@ CALLBACK_PATH = "/auth/callback"
 PLAN_USAGE_SCOPE = "chatgpt.tokens.use.direct"
 SCOPES = f"openid profile email offline_access resource.invoke {PLAN_USAGE_SCOPE}"
 
-APP_NAME = "LLM-Subtrans"
-AUTH_FILENAME = "chatgpt-auth.json"
-
 # By default, refresh this many seconds before the access token expires
 REFRESH_MARGIN = 120.0
 
 # Refresh tokens rotate, so refreshes and sign-out are serialised to avoid racing a replaced or revoked token
 _refresh_lock = threading.Lock()
+
+# The application signing in and its credential file, set once at startup
+_app_name : str|None = None
+_credential_filename : str|None = None
+
+
+def ConfigureChatGPTApp(app_name : str, credential_filename : str|None = None) -> None:
+    """
+    Set the name the application signs in with ChatGPT under.
+    It is shown to the user when they sign in.
+    The sign-in data is kept in credential_filename in the config directory, or a file named after the application.
+    """
+    global _app_name, _credential_filename
+    _app_name = app_name.strip() or None
+    _credential_filename = credential_filename
+
+
+def GetChatGPTAppName() -> str|None:
+    """The name configured with ConfigureChatGPTApp, or None if the application has not identified itself."""
+    return _app_name
+
+
+def GetCredentialFilename(app_name : str) -> str:
+    """
+    The default name of the file the application's sign-in data is stored in.
+    A digest of the exact name keeps names with the same readable slug, such as "My App" and "My-App", apart.
+    """
+    slug = regex.sub(r'[^\w]+', '-', app_name.casefold()).strip('-')
+    if not slug:
+        raise ChatGPTAuthError(_("'{app}' cannot be used as an application name for Sign in with ChatGPT").format(app=app_name))
+
+    digest = hashlib.sha256(app_name.encode('utf-8')).hexdigest()[:8]
+    return f"chatgpt-auth-{slug}-{digest}.json"
 
 
 class ChatGPTAuthError(SubtitleError):
@@ -112,8 +147,8 @@ class ChatGPTCredentialStore:
     Persists the host id, issued client id and tokens in the config directory.
     Tokens are kept out of settings.json so they never end up in project or settings files.
     """
-    def __init__(self, path : str|None = None):
-        self.path = path or os.path.join(GetConfigDir(), AUTH_FILENAME)
+    def __init__(self, path : str):
+        self.path = path
 
     def Load(self) -> dict[str, Any]:
         """Read the stored data, or an empty dict if there is none."""
@@ -142,9 +177,22 @@ class ChatGPTAuth:
     """
     Signs in with ChatGPT and supplies a valid access token for Responses API requests.
     Only one ChatGPT account is supported per host.
+    The application must identify itself, with app_name or ConfigureChatGPTApp.
+    By default its tokens are kept in a file of its own in the config directory.
     """
-    def __init__(self, store : ChatGPTCredentialStore|None = None, proxy : str|None = None):
-        self.store = store or ChatGPTCredentialStore()
+    def __init__(self, app_name : str|None = None, store : ChatGPTCredentialStore|None = None, proxy : str|None = None):
+        name = (app_name or '').strip()
+        if name:
+            filename = GetCredentialFilename(name)
+        else:
+            # Fall back to the application configured at startup, with its chosen credential file
+            name = GetChatGPTAppName()
+            if not name:
+                raise ChatGPTAuthError(_("The application must identify itself with ConfigureChatGPTApp before signing in with ChatGPT"))
+            filename = _credential_filename or GetCredentialFilename(name)
+
+        self.app_name : str = name
+        self.store = store or ChatGPTCredentialStore(os.path.join(GetConfigDir(), filename))
         self.proxy = proxy
 
     @property
@@ -183,6 +231,7 @@ class ChatGPTAuth:
         server = _CallbackServer(('127.0.0.1', 0), _CallbackHandler)
         try:
             server.timeout = 0.5
+            server.app_name = self.app_name
             redirect_uri = f"http://127.0.0.1:{server.server_port}{CALLBACK_PATH}"
 
             pending = self.BeginSignIn(redirect_uri)
@@ -238,7 +287,7 @@ class ChatGPTAuth:
             if credentials and credentials.id_token:
                 params['id_token_hint'] = credentials.id_token
         else:
-            params['agent_name_hint'] = APP_NAME
+            params['agent_name_hint'] = self.app_name
 
         url = f"{AUTHORIZE_URL}?{urlencode(params)}"
         return PendingSignIn(url=url, redirect_uri=redirect_uri, state=state, nonce=nonce, code_verifier=code_verifier, client_id=client_id)
@@ -518,6 +567,7 @@ def _parse_error_body(body : bytes) -> tuple[str|None, str|None]:
 class _CallbackServer(HTTPServer):
     """Loopback listener that captures the authorization redirect."""
     callback_params : dict[str, str]|None = None
+    app_name : str = ''
 
 
 class _CallbackHandler(BaseHTTPRequestHandler):
@@ -531,7 +581,7 @@ class _CallbackHandler(BaseHTTPRequestHandler):
         server = cast(_CallbackServer, self.server)
         server.callback_params = { key: values[0] for key, values in parse_qs(parsed.query).items() if values }
 
-        message = _("Sign-in complete. You can close this window and return to LLM-Subtrans.")
+        message = _("Sign-in complete. You can close this window and return to {app}.").format(app=html.escape(server.app_name))
         content = f"<html><body><p>{message}</p></body></html>".encode('utf-8')
 
         self.send_response(200)

@@ -9,6 +9,7 @@ from datetime import timedelta
 
 import appdirs # type: ignore
 
+from PySubtrans.Auth.ChatGPTAuth import ConfigureChatGPTApp
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames, TryParseNonNegative
@@ -23,6 +24,11 @@ from PySubtrans.Subtitles import Subtitles
 
 # The GUI and CLIs keep their settings, instructions and sign-ins in the LLM-Subtrans config directory
 LLM_SUBTRANS_CONFIG_DIR : str = appdirs.user_config_dir("LLMSubtrans", "MachineWrapped", roaming=True)
+
+# The name LLM-Subtrans signs in with ChatGPT under.
+# It keeps the credential file it used before applications were named, so existing sign-ins carry on.
+CHATGPT_APP_NAME = "LLM-Subtrans"
+CHATGPT_CREDENTIAL_FILENAME = "chatgpt-auth.json"
 
 @dataclass
 class LoggerOptions():
@@ -203,12 +209,17 @@ def _warn_renamed_args() -> None:
             print(f"Warning: {name} is deprecated, use {new_name}", file=sys.stderr)
             sys.argv[i] = arg.replace(name, new_name, 1)
 
+def ConfigureChatGPTSignIn() -> None:
+    """Identify LLM-Subtrans for Sign in with ChatGPT."""
+    ConfigureChatGPTApp(CHATGPT_APP_NAME, credential_filename=CHATGPT_CREDENTIAL_FILENAME)
+
 def CreateArgParser(description : str) -> ArgumentParser:
     """
     Create new arg parser and parse shared command line arguments between models
     """
     ConfigureDefaultConfigDir(LLM_SUBTRANS_CONFIG_DIR)
     ConfigureConfigDirFromArguments()
+    ConfigureChatGPTSignIn()
     _warn_renamed_args()
     pre_parser = ArgumentParser(add_help=False)
     pre_parser.add_argument('--list-formats', action='store_true')

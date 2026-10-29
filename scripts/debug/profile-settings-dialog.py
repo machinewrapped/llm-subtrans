@@ -25,7 +25,7 @@ if not hasattr(sys, "_MEIPASS"):
     check_required_imports(['PySubtrans', 'GuiSubtrans', 'PySide6', 'scripts'], 'gui')
 
 from PySubtrans.Helpers.ImportGuard import CaptureOriginalImport
-from scripts.subtrans_common import LLM_SUBTRANS_CONFIG_DIR, InitLogger
+from scripts.subtrans_common import LLM_SUBTRANS_CONFIG_DIR, ConfigureChatGPTSignIn, InitLogger
 
 # Must happen before PySide6 is imported; see PySubtrans.Helpers.ImportGuard.
 CaptureOriginalImport()
@@ -123,6 +123,7 @@ if __name__ == "__main__":
 
     ConfigureDefaultConfigDir(LLM_SUBTRANS_CONFIG_DIR)
     ConfigureConfigDirFromArguments()
+    ConfigureChatGPTSignIn()
     logger_options = InitLogger("profile-settings", True)
     logging.info(f"Profiling log: {logger_options.log_path}")
 

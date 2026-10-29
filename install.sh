@@ -259,7 +259,11 @@ else
     echo "Installing dependencies..."
 fi
 
-pip install --upgrade -e "$install_target"
+# Skip releases less than 7 days old, so a malicious release is likely to be pulled before it is installed.
+# Needs a recent pip, so upgrade pip first.
+upload_cooldown="--uploaded-prior-to=P7D"
+pip install --upgrade pip
+pip install --upgrade "$upload_cooldown" -e "$install_target"
 
 # Qt no longer ships bundled fonts; create the expected directory so Qt's font
 # discovery does not emit a warning when running headless (offscreen) tests.

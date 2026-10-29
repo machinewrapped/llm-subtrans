@@ -66,7 +66,7 @@ DEFAULT_OPTIONS = SettingsType({
     'output_format': None,                          # Optional format override, e.g. "srt". If not specified, inferred from source file.
     'provider': "OpenRouter",                       # Translation provider to use, e.g. "Gemini"
     'api_key': None,                                # Your API key for the selected provider
-    'model': "qwen/qwen3-235b-a22b:free",           # Your preferred model name
+    'model': "openrouter/free",                     # Your preferred model name (OpenRouter picks an available free model)
     'prompt': 'Translate these subtitles into [target_language]',       # High level prompt template
     'instruction_file': 'instructions.txt',         # Optional file containing detailed instructions for the translator
     'scene_threshold': 60.0,                        # Scene detection threshold in seconds

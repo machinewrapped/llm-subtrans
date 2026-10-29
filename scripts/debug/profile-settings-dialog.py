@@ -25,7 +25,7 @@ if not hasattr(sys, "_MEIPASS"):
     check_required_imports(['PySubtrans', 'GuiSubtrans', 'PySide6', 'scripts'], 'gui')
 
 from PySubtrans.Helpers.ImportGuard import CaptureOriginalImport
-from scripts.subtrans_common import InitLogger
+from scripts.subtrans_common import ConfigureChatGPTSignIn, InitLogger
 
 # Must happen before PySide6 is imported; see PySubtrans.Helpers.ImportGuard.
 CaptureOriginalImport()
@@ -33,7 +33,6 @@ CaptureOriginalImport()
 from PySide6.QtCore import QEvent, QObject, QTimer, Qt
 from PySide6.QtWidgets import QApplication, QWidget
 
-from PySubtrans.Auth.ChatGPTAuth import LLM_SUBTRANS_APP_NAME, ConfigureChatGPTApp
 from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir
 from PySubtrans.Helpers.Localization import initialize_localization
 from PySubtrans.Options import Options
@@ -123,7 +122,7 @@ if __name__ == "__main__":
     app.styleHints().setColorScheme(Qt.ColorScheme.Light)
 
     ConfigureConfigDirFromArguments()
-    ConfigureChatGPTApp(LLM_SUBTRANS_APP_NAME)
+    ConfigureChatGPTSignIn()
     logger_options = InitLogger("profile-settings", True)
     logging.info(f"Profiling log: {logger_options.log_path}")
 

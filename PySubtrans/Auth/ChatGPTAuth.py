@@ -42,27 +42,26 @@ CALLBACK_PATH = "/auth/callback"
 PLAN_USAGE_SCOPE = "chatgpt.tokens.use.direct"
 SCOPES = f"openid profile email offline_access resource.invoke {PLAN_USAGE_SCOPE}"
 
-# LLM-Subtrans keeps the credential file it used before applications were named
-LLM_SUBTRANS_APP_NAME = "LLM-Subtrans"
-LLM_SUBTRANS_AUTH_FILENAME = "chatgpt-auth.json"
-
 # By default, refresh this many seconds before the access token expires
 REFRESH_MARGIN = 120.0
 
 # Refresh tokens rotate, so refreshes and sign-out are serialised to avoid racing a replaced or revoked token
 _refresh_lock = threading.Lock()
 
-# The application signing in, set once at startup
+# The application signing in and its credential file, set once at startup
 _app_name : str|None = None
+_credential_filename : str|None = None
 
 
-def ConfigureChatGPTApp(app_name : str) -> None:
+def ConfigureChatGPTApp(app_name : str, credential_filename : str|None = None) -> None:
     """
     Set the name the application signs in with ChatGPT under.
-    It is shown to the user when they sign in, and selects the application's own credential file.
+    It is shown to the user when they sign in.
+    The sign-in data is kept in credential_filename in the config directory, or a file named after the application.
     """
-    global _app_name
+    global _app_name, _credential_filename
     _app_name = app_name.strip() or None
+    _credential_filename = credential_filename
 
 
 def GetChatGPTAppName() -> str|None:
@@ -71,10 +70,7 @@ def GetChatGPTAppName() -> str|None:
 
 
 def GetCredentialFilename(app_name : str) -> str:
-    """The name of the file the application's sign-in data is stored in."""
-    if app_name == LLM_SUBTRANS_APP_NAME:
-        return LLM_SUBTRANS_AUTH_FILENAME
-
+    """The default name of the file the application's sign-in data is stored in."""
     slug = regex.sub(r'[^\w]+', '-', app_name.casefold()).strip('-')
     if not slug:
         raise ChatGPTAuthError(_("'{app}' cannot be used as an application name for Sign in with ChatGPT").format(app=app_name))
@@ -181,12 +177,18 @@ class ChatGPTAuth:
     By default its tokens are kept in a file of its own in the config directory.
     """
     def __init__(self, app_name : str|None = None, store : ChatGPTCredentialStore|None = None, proxy : str|None = None):
-        name = (app_name or '').strip() or GetChatGPTAppName()
-        if not name:
-            raise ChatGPTAuthError(_("The application must identify itself with ConfigureChatGPTApp before signing in with ChatGPT"))
+        name = (app_name or '').strip()
+        if name:
+            filename = GetCredentialFilename(name)
+        else:
+            # Fall back to the application configured at startup, with its chosen credential file
+            name = GetChatGPTAppName()
+            if not name:
+                raise ChatGPTAuthError(_("The application must identify itself with ConfigureChatGPTApp before signing in with ChatGPT"))
+            filename = _credential_filename or GetCredentialFilename(name)
 
         self.app_name : str = name
-        self.store = store or ChatGPTCredentialStore(os.path.join(GetConfigDir(), GetCredentialFilename(name)))
+        self.store = store or ChatGPTCredentialStore(os.path.join(GetConfigDir(), filename))
         self.proxy = proxy
 
     @property

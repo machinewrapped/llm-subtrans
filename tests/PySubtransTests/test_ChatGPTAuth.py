@@ -17,8 +17,6 @@ from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_
 import PySubtrans.Auth.ChatGPTAuth as chatgpt_auth_module
 from PySubtrans.Auth.ChatGPTAuth import (
     DYNAMIC_CLIENT_ID,
-    LLM_SUBTRANS_APP_NAME,
-    LLM_SUBTRANS_AUTH_FILENAME,
     PLAN_USAGE_SCOPE,
     SCOPES,
     TOKEN_URL,
@@ -259,13 +257,19 @@ class ChatGPTAppIdentityTests(LoggedTestCase):
         self.assertLoggedEqual('agent name hint', 'Configured App', params['agent_name_hint'][0])
 
     def test_apps_keep_separate_credentials(self) -> None:
-        """Each application has its own credential file, and LLM-Subtrans keeps its existing one."""
+        """Each application has its own credential file by default."""
         first = ChatGPTAuth(app_name='App One').store.path
         second = ChatGPTAuth(app_name='App Two').store.path
-        llm_subtrans = ChatGPTAuth(app_name=LLM_SUBTRANS_APP_NAME).store.path
 
         self.assertLoggedFalse('separate credential files', first == second, input_value=(first, second))
-        self.assertLoggedEqual('existing LLM-Subtrans file', LLM_SUBTRANS_AUTH_FILENAME, os.path.basename(llm_subtrans))
+
+    def test_configured_credential_filename_is_used(self) -> None:
+        """An application can keep an existing credential file, so its sign-ins carry on."""
+        ConfigureChatGPTApp('Configured App', credential_filename='existing-auth.json')
+
+        path = ChatGPTAuth().store.path
+
+        self.assertLoggedEqual('credential file', 'existing-auth.json', os.path.basename(path))
 
     @skip_if_debugger_attached
     def test_name_without_usable_characters_is_rejected(self) -> None:

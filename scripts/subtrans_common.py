@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
 
-from PySubtrans.Auth.ChatGPTAuth import LLM_SUBTRANS_APP_NAME, ConfigureChatGPTApp
+from PySubtrans.Auth.ChatGPTAuth import ConfigureChatGPTApp
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames, TryParseNonNegative
@@ -19,6 +19,11 @@ from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Subtitles import Subtitles
+
+# The name LLM-Subtrans signs in with ChatGPT under.
+# It keeps the credential file it used before applications were named, so existing sign-ins carry on.
+CHATGPT_APP_NAME = "LLM-Subtrans"
+CHATGPT_CREDENTIAL_FILENAME = "chatgpt-auth.json"
 
 @dataclass
 class LoggerOptions():
@@ -199,12 +204,16 @@ def _warn_renamed_args() -> None:
             print(f"Warning: {name} is deprecated, use {new_name}", file=sys.stderr)
             sys.argv[i] = arg.replace(name, new_name, 1)
 
+def ConfigureChatGPTSignIn() -> None:
+    """Identify LLM-Subtrans for Sign in with ChatGPT."""
+    ConfigureChatGPTApp(CHATGPT_APP_NAME, credential_filename=CHATGPT_CREDENTIAL_FILENAME)
+
 def CreateArgParser(description : str) -> ArgumentParser:
     """
     Create new arg parser and parse shared command line arguments between models
     """
     ConfigureConfigDirFromArguments()
-    ConfigureChatGPTApp(LLM_SUBTRANS_APP_NAME)
+    ConfigureChatGPTSignIn()
     _warn_renamed_args()
     pre_parser = ArgumentParser(add_help=False)
     pre_parser.add_argument('--list-formats', action='store_true')

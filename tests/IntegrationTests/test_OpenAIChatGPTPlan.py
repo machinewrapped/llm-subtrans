@@ -101,6 +101,7 @@ class OpenAIChatGPTPlanProviderTests(LoggedTestCase):
 
         self.assertLoggedEqual('account option', ChatGPTSignOutOption, options['chatgpt_account'][0])
         self.assertLoggedNotIn('api key option', 'api_key', options)
+        self.assertLoggedNotIn('stream option', 'stream_responses', options)
         self.assertLoggedTrue('settings valid', provider.ValidateSettings())
 
     def test_client_uses_access_token_on_public_api(self) -> None:
@@ -113,6 +114,7 @@ class OpenAIChatGPTPlanProviderTests(LoggedTestCase):
         self.assertLoggedEqual('api key', 'access-1', client.settings.get_str('api_key'))
         self.assertLoggedEqual('api base', API_RESOURCE, client.settings.get_str('api_base'))
         self.assertLoggedTrue('streaming required', client.settings.get_bool('require_streaming'))
+        self.assertLoggedTrue('partial updates enabled', client.enable_streaming)
 
     def test_client_gets_refreshed_token(self) -> None:
         """A token without enough time left is refreshed before the client is created."""

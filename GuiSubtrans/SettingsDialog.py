@@ -700,15 +700,15 @@ class SettingsDialog(QDialog):
         proxy = provider.settings.get_str('proxy') if provider else None
         return ChatGPTAuth(proxy=proxy)
 
-    def _sign_in_with_chatgpt(self, current_account : str) -> str|None:
-        """Sign in with ChatGPT in the browser, returning the account or None if sign-in did not complete."""
+    def _sign_in_with_chatgpt(self, current_value : str) -> str|None:
+        """Sign in with ChatGPT in the browser, returning None if sign-in did not complete."""
         dialog = ChatGPTSignInDialog(self._get_chatgpt_auth(), parent=self)
         if dialog.exec() == QDialog.DialogCode.Accepted:
-            return dialog.account or ''
+            return ''
         return None
 
-    def _sign_out_of_chatgpt(self, current_account : str) -> str|None:
-        """Sign out of ChatGPT after confirmation, returning an empty account or None if cancelled."""
+    def _sign_out_of_chatgpt(self, current_value : str) -> str|None:
+        """Sign out of ChatGPT after confirmation, returning None if cancelled."""
         answer = QMessageBox.question(self, _("Sign out"), _("Sign out of ChatGPT? Translation with OpenAI will need you to sign in again."))
         if answer != QMessageBox.StandardButton.Yes:
             return None

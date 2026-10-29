@@ -4084,7 +4084,7 @@ msgstr "Can Merge Different Speakers"
 
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 msgid "chatgpt_account"
-msgstr "Chatgpt Account"
+msgstr "ChatGPT Account"
 
 #: PySubtrans/Options.py:95
 msgid "convert_wide_dashes"
@@ -4605,7 +4605,7 @@ msgstr ""
 
 #: PySubtrans/Providers/Provider_OpenAI.py:0
 msgid "use_chatgpt_plan"
-msgstr "Use Chatgpt Plan"
+msgstr "Use ChatGPT Plan"
 
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 msgid "use_default_model"

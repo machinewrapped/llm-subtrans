@@ -18,7 +18,7 @@ class _SignInWorker(QObject):
     Runs the blocking browser sign-in on the global thread pool.
     The worker has GUI-thread affinity, so its signals are delivered on the GUI thread.
     """
-    succeeded = Signal(str)
+    succeeded = Signal()
     failed = Signal(str)
     _finished = Signal()
 
@@ -35,8 +35,8 @@ class _SignInWorker(QObject):
 
     def _run(self) -> None:
         try:
-            credentials = self.auth.SignIn(self.cancel_event)
-            self.succeeded.emit(credentials.email or '')
+            self.auth.SignIn(self.cancel_event)
+            self.succeeded.emit()
 
         except (ChatGPTAuthError, OSError) as e:
             self.failed.emit(str(e))
@@ -57,7 +57,6 @@ class ChatGPTSignInDialog(QDialog):
     def __init__(self, auth : ChatGPTAuth, parent : QWidget|None = None):
         super().__init__(parent)
         self.auth = auth
-        self.account : str|None = None
         self._cancelled : bool = False
 
         self.setWindowTitle(_("Sign in with ChatGPT"))
@@ -81,12 +80,11 @@ class ChatGPTSignInDialog(QDialog):
         self._worker.cancel_event.set()
         super().reject()
 
-    @Slot(str)
-    def _on_succeeded(self, account : str) -> None:
+    @Slot()
+    def _on_succeeded(self) -> None:
         if self._cancelled:
             return
 
-        self.account = account
         self._show_welcome()
         self.accept()
 

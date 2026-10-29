@@ -54,7 +54,8 @@ else:
             def __init__(self, settings : SettingsType):
                 super().__init__(self.name, SettingsType({
                     "use_chatgpt_plan": settings.get_bool('use_chatgpt_plan', env_bool('OPENAI_USE_CHATGPT_PLAN')),
-                    "chatgpt_account": settings.get_str('chatgpt_account'),
+                    # Holds no value: the sign-in and sign-out buttons change it so the form is refreshed
+                    "chatgpt_account": '',
                     "api_key": settings.get_str('api_key', os.getenv('OPENAI_API_KEY')),
                     "api_base": settings.get_str('api_base', os.getenv('OPENAI_API_BASE')),
                     "model": settings.get_str('model', os.getenv('OPENAI_MODEL', self.default_model)),
@@ -117,12 +118,14 @@ else:
                     except ChatGPTAuthError as e:
                         raise ProviderError(str(e), provider=self) from e
 
-                    # ChatGPT plan usage requires the public API, with every response streamed and not stored
+                    # ChatGPT plan usage requires the public API, with every response streamed and not stored.
+                    # Responses are streamed anyway, so translations are always shown as they arrive.
                     client_settings.update({
                         'api_key': access_token,
                         'api_base': API_RESOURCE,
                         'use_httpx': False,
                         'require_streaming': True,
+                        'stream_responses': True,
                         'store_responses': False,
                     })
                     return OpenAIReasoningClient(client_settings)
@@ -138,15 +141,6 @@ else:
                     from PySubtrans.Providers.Clients.ChatGPTClient import ChatGPTClient
 
                     return ChatGPTClient(client_settings)
-
-            def GetCombinedSettings(self, overrides : SettingsType) -> SettingsType:
-                """
-                Show the account from the stored ChatGPT sign-in, which may have changed outside the settings
-                """
-                combined_settings = super().GetCombinedSettings(overrides)
-                if self.uses_chatgpt_plan:
-                    combined_settings['chatgpt_account'] = self.chatgpt_auth.account or ''
-                return combined_settings
 
             def GetOptions(self, settings : SettingsType) -> GuiSettingsType:
                 auth_options : GuiSettingsType = {
@@ -195,7 +189,7 @@ else:
                     return { 'chatgpt_account': (ChatGPTSignInOption, _("Sign in with ChatGPT to translate using your ChatGPT plan")) }
 
                 options : GuiSettingsType = {
-                    'chatgpt_account': (ChatGPTSignOutOption, _("The ChatGPT account whose plan is used for translation")),
+                    'chatgpt_account': (ChatGPTSignOutOption, _("Sign out of ChatGPT, so translation no longer uses your ChatGPT plan")),
                 }
 
                 models = self.model_list.known
@@ -205,7 +199,6 @@ else:
 
                 options['model'] = (models, _("AI model to use as the translator"))
                 options['reasoning_effort'] = (["none", "minimal", "low", "medium", "high"], _("The level of reasoning effort to use for the model (valid options are model-dependent)"))
-                options['stream_responses'] = (bool, _("Stream translations in realtime as they are generated"))
                 return options
 
             @classmethod

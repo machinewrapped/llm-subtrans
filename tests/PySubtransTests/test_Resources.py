@@ -6,8 +6,10 @@ from unittest.mock import patch
 from PySubtrans.Helpers.Resources import (
     ConfigureConfigDir,
     ConfigureConfigDirFromArguments,
+    ConfigureDefaultConfigDir,
     GetAppDir,
-    default_config_dir,
+    GetConfigDir,
+    GetDefaultConfigDir,
 )
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 
@@ -17,9 +19,16 @@ class TestResources(LoggedTestCase):
 
     _PORTABLE_APP_DIR : str = os.path.abspath('portable-app')
 
+    def setUp(self) -> None:
+        """Remember the configuration directories so each test can change them."""
+        super().setUp()
+        self._saved_default_dir = GetDefaultConfigDir()
+        self._saved_config_dir = GetConfigDir()
+
     def tearDown(self) -> None:
-        """Restore the normal configuration directory after each test."""
-        ConfigureConfigDir(config_path=default_config_dir)
+        """Restore the configuration directories after each test."""
+        ConfigureDefaultConfigDir(self._saved_default_dir)
+        ConfigureConfigDir(config_path=self._saved_config_dir)
         super().tearDown()
 
     @patch('PySubtrans.Helpers.Resources.os.path.isdir', return_value=False)
@@ -76,6 +85,37 @@ class TestResources(LoggedTestCase):
 
         self.assertLoggedEqual('environment configuration directory', expected_path, result)
         mock_isdir.assert_not_called()
+
+    def test_configured_default_becomes_active_directory(self):
+        """An application's default directory is used straight away."""
+        app_default = os.path.abspath(os.path.join('app', 'default'))
+
+        result = ConfigureDefaultConfigDir(app_default)
+
+        self.assertLoggedEqual('returned configuration directory', app_default, result)
+        self.assertLoggedEqual('active configuration directory', app_default, GetConfigDir())
+
+    @patch.dict('os.environ', {'LLM_SUBTRANS_CONFIG_PATH': ''})
+    @patch('PySubtrans.Helpers.Resources.os.path.isdir', return_value=False)
+    def test_arguments_fall_back_to_configured_default(self, mock_isdir):
+        """Without arguments or portable settings, the application's default directory is used."""
+        app_default = os.path.abspath(os.path.join('app', 'default'))
+        ConfigureDefaultConfigDir(app_default)
+
+        result = ConfigureConfigDirFromArguments([])
+
+        self.assertLoggedEqual('fallback configuration directory', app_default, result)
+        mock_isdir.assert_called()
+
+    def test_configpath_overrides_configured_default(self):
+        """An explicit config path takes precedence over the application's default directory."""
+        ConfigureDefaultConfigDir(os.path.abspath(os.path.join('app', 'default')))
+        config_path = os.path.abspath(os.path.join('custom', 'settings'))
+
+        result = ConfigureConfigDirFromArguments(['--configpath', config_path])
+
+        self.assertLoggedEqual('explicit configuration directory', config_path, result)
+        self.assertLoggedEqual('default configuration directory', os.path.abspath(os.path.join('app', 'default')), GetDefaultConfigDir())
 
 
 class TestGetAppDir(LoggedTestCase):

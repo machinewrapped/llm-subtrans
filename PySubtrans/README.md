@@ -264,6 +264,22 @@ print(translator.terminology_map)
 
 Note: `build_terminology_map` controls whether the model is asked to report new terms after each batch. A seed `terminology_map` passed to `init_translator` is always injected into the prompt context regardless of this setting.
 
+### Where PySubtrans stores data
+
+Some features keep files in a config directory: saved settings, custom instruction files, the last update check and ChatGPT sign-in tokens.
+
+By default this is a `PySubtrans` folder in the user's config location, e.g. `%APPDATA%\MachineWrapped\PySubtrans` on Windows, `~/Library/Application Support/PySubtrans` on macOS or `~/.config/PySubtrans` on Linux.
+
+> **Changed in 1.7.4:** the default config directory moved to the `PySubtrans` folder. Settings and sign-ins saved by earlier versions are not carried over.
+
+The default folder is shared by every application that uses it. For the best isolation, give your application a folder of its own by calling `ConfigureConfigDir` once at startup, before anything reads or writes data. Your settings, instructions and sign-ins then stay separate from other applications built on PySubtrans, and a user can find, back up or reset them alongside the rest of your application's data.
+
+```python
+from PySubtrans.Helpers.Resources import ConfigureConfigDir
+
+ConfigureConfigDir("~/.my-subtitle-app")
+```
+
 ## Transcribing media
 
 PySubtrans can also create subtitles from a video or audio file, ready to be translated. `init_transcription` creates a transcriber with its own provider settings, so the transcription and translation providers can be different. `transcribe_media` transcribes a file and returns `Subtitles` divided into scenes and batches, just like `init_subtitles`.

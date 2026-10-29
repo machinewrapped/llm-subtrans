@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-10-29 20:56+0000\n"
+"POT-Creation-Date: 2026-10-29 21:34+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "MIME-Version: 1.0\n"
@@ -165,7 +165,7 @@ msgstr ""
 msgid "ABI compatibility check passed."
 msgstr ""
 
-#: GuiSubtrans/NewProjectSettings.py:33 GuiSubtrans/Widgets/ProviderSettingsForm.py:63 PySubtrans/Providers/Gateways/GatewayProvider.py:142 PySubtrans/Providers/Provider_DeepSeek.py:68 PySubtrans/Providers/Provider_OpenAI.py:171 PySubtrans/Providers/Provider_OpenAI.py:206 PySubtrans/Providers/Provider_OpenRouter.py:137
+#: GuiSubtrans/NewProjectSettings.py:33 GuiSubtrans/Widgets/ProviderSettingsForm.py:63 PySubtrans/Providers/Gateways/GatewayProvider.py:142 PySubtrans/Providers/Provider_DeepSeek.py:68 PySubtrans/Providers/Provider_OpenAI.py:165 PySubtrans/Providers/Provider_OpenAI.py:200 PySubtrans/Providers/Provider_OpenRouter.py:137
 msgid "AI model to use as the translator"
 msgstr ""
 
@@ -177,7 +177,7 @@ msgstr ""
 msgid "AMD selected"
 msgstr ""
 
-#: PySubtrans/Providers/Gateways/GatewayProvider.py:205 PySubtrans/Providers/Provider_Azure.py:95 PySubtrans/Providers/Provider_DeepSeek.py:127 PySubtrans/Providers/Provider_Gemini.py:128 PySubtrans/Providers/Provider_Mistral.py:142 PySubtrans/Providers/Provider_OpenAI.py:305 PySubtrans/Providers/Provider_OpenRouter.py:194 PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:133 PySubtrans/Transcription/Providers/Provider_Gemini.py:131 PySubtrans/Transcription/Providers/Provider_Muse.py:91 PySubtrans/Transcription/Providers/Provider_OpenAI.py:95 PySubtrans/Transcription/Providers/Provider_OpenRouter.py:176
+#: PySubtrans/Providers/Gateways/GatewayProvider.py:205 PySubtrans/Providers/Provider_Azure.py:95 PySubtrans/Providers/Provider_DeepSeek.py:127 PySubtrans/Providers/Provider_Gemini.py:128 PySubtrans/Providers/Provider_Mistral.py:142 PySubtrans/Providers/Provider_OpenAI.py:298 PySubtrans/Providers/Provider_OpenRouter.py:194 PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:133 PySubtrans/Transcription/Providers/Provider_Gemini.py:131 PySubtrans/Transcription/Providers/Provider_Muse.py:91 PySubtrans/Transcription/Providers/Provider_OpenAI.py:95 PySubtrans/Transcription/Providers/Provider_OpenRouter.py:176
 msgid "API Key is required"
 msgstr ""
 
@@ -329,7 +329,7 @@ msgstr ""
 msgid "Amount of random variance to add to translations"
 msgstr ""
 
-#: PySubtrans/Providers/Gateways/GatewayProvider.py:154 PySubtrans/Providers/Provider_DeepSeek.py:72 PySubtrans/Providers/Provider_Mistral.py:76 PySubtrans/Providers/Provider_OpenAI.py:183 PySubtrans/Providers/Provider_OpenRouter.py:149
+#: PySubtrans/Providers/Gateways/GatewayProvider.py:154 PySubtrans/Providers/Provider_DeepSeek.py:72 PySubtrans/Providers/Provider_Mistral.py:76 PySubtrans/Providers/Provider_OpenAI.py:177 PySubtrans/Providers/Provider_OpenRouter.py:149
 msgid "Amount of random variance to add to translations. Generally speaking, none is best"
 msgstr ""
 
@@ -369,7 +369,7 @@ msgstr ""
 msgid "An OpenAI API key (shared with translation)"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:160
+#: PySubtrans/Providers/Provider_OpenAI.py:154
 msgid "An OpenAI API key is required to use this provider (https://platform.openai.com/account/api-keys)"
 msgstr ""
 
@@ -557,11 +557,11 @@ msgstr ""
 msgid "ChatGPT plan usage was not granted for this account"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:443
+#: PySubtrans/Auth/ChatGPTAuth.py:445
 msgid "ChatGPT request failed ({status}): {error}"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_DeepSeek.py:76 PySubtrans/Providers/Provider_Mistral.py:81 PySubtrans/Providers/Provider_OpenAI.py:186
+#: PySubtrans/Providers/Provider_DeepSeek.py:76 PySubtrans/Providers/Provider_Mistral.py:81 PySubtrans/Providers/Provider_OpenAI.py:180
 msgid "Check API key and base URL and try again"
 msgstr ""
 
@@ -625,7 +625,7 @@ msgstr ""
 msgid "Comma-separated list of titles whose full stop does not end a sentence, such as Mr or Dr (case-sensitive)"
 msgstr ""
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:67
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:66
 msgid "Complete sign-in in your web browser, then return here."
 msgstr ""
 
@@ -1005,7 +1005,7 @@ msgstr ""
 msgid "Failed to import LiteLLM provider components. LiteLLM provider will not be available"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:324
+#: PySubtrans/Providers/Provider_OpenAI.py:317
 msgid "Failed to initialise OpenAI SDK. OpenAI provider will not be available"
 msgstr ""
 
@@ -1209,7 +1209,7 @@ msgstr ""
 msgid "Google SDK (google-genai) is not installed. Gemini transcription will not be available"
 msgstr ""
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:111
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:109
 msgid "Got it"
 msgstr ""
 
@@ -1409,7 +1409,7 @@ msgstr ""
 msgid "Invalid provider settings"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:455
+#: PySubtrans/Auth/ChatGPTAuth.py:457
 msgid "Invalid response from ChatGPT"
 msgstr ""
 
@@ -1593,7 +1593,7 @@ msgstr ""
 msgid "Maximum API requests per minute."
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:172
+#: PySubtrans/Providers/Provider_OpenAI.py:166
 msgid "Maximum OpenAI API requests per minute. Mainly useful if you are on the restricted free plan"
 msgstr ""
 
@@ -1629,7 +1629,7 @@ msgstr ""
 msgid "Maximum requests per minute (0 for unlimited)"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:177
+#: PySubtrans/Providers/Provider_OpenAI.py:171
 msgid "Maximum tokens a completion can contain (only applicable for -instruct models)"
 msgstr ""
 
@@ -1901,7 +1901,7 @@ msgstr ""
 msgid "No retry instructions provided"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:322
+#: PySubtrans/Auth/ChatGPTAuth.py:324
 msgid "No revocation endpoint is published"
 msgstr ""
 
@@ -2013,7 +2013,7 @@ msgstr ""
 msgid "None"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:299 PySubtrans/Auth/ChatGPTAuth.py:347
+#: PySubtrans/Auth/ChatGPTAuth.py:299 PySubtrans/Auth/ChatGPTAuth.py:349
 msgid "Not signed in with ChatGPT"
 msgstr ""
 
@@ -2641,19 +2641,19 @@ msgstr ""
 msgid "Shortest audio chunk to send in one request"
 msgstr ""
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:63 GuiSubtrans/Widgets/ChatGPTSignInDialog.py:99 GuiSubtrans/Widgets/ChatGPTSignInDialog.py:108
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:62 GuiSubtrans/Widgets/ChatGPTSignInDialog.py:97 GuiSubtrans/Widgets/ChatGPTSignInDialog.py:106
 msgid "Sign in with ChatGPT"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:300
+#: PySubtrans/Providers/Provider_OpenAI.py:293
 msgid "Sign in with ChatGPT is required"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:195
+#: PySubtrans/Providers/Provider_OpenAI.py:189
 msgid "Sign in with ChatGPT to translate using your ChatGPT plan"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:153
+#: PySubtrans/Providers/Provider_OpenAI.py:147
 msgid "Sign in with ChatGPT to translate using your ChatGPT plan, instead of an OpenAI API key"
 msgstr ""
 
@@ -2661,23 +2661,27 @@ msgstr ""
 msgid "Sign out"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:203
+#: PySubtrans/Providers/Provider_OpenAI.py:197
 msgid "Sign out and sign in with ChatGPT again"
+msgstr ""
+
+#: PySubtrans/Providers/Provider_OpenAI.py:192
+msgid "Sign out of ChatGPT, so translation no longer uses your ChatGPT plan"
 msgstr ""
 
 #: GuiSubtrans/SettingsDialog.py:712
 msgid "Sign out of ChatGPT? Translation with OpenAI will need you to sign in again."
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:532
+#: PySubtrans/Auth/ChatGPTAuth.py:534
 msgid "Sign-in complete. You can close this window and return to LLM-Subtrans."
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:475 PySubtrans/Auth/ChatGPTAuth.py:481 PySubtrans/Auth/ChatGPTAuth.py:484
+#: PySubtrans/Auth/ChatGPTAuth.py:477 PySubtrans/Auth/ChatGPTAuth.py:483 PySubtrans/Auth/ChatGPTAuth.py:486
 msgid "Sign-in with ChatGPT failed: invalid ID token"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:376
+#: PySubtrans/Auth/ChatGPTAuth.py:378
 msgid "Sign-in with ChatGPT failed: no access token was returned"
 msgstr ""
 
@@ -2689,19 +2693,19 @@ msgstr ""
 msgid "Sign-in with ChatGPT failed: no client id was issued"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:380
+#: PySubtrans/Auth/ChatGPTAuth.py:382
 msgid "Sign-in with ChatGPT failed: no refresh token was returned"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:404
+#: PySubtrans/Auth/ChatGPTAuth.py:406
 msgid "Sign-in with ChatGPT failed: the ID token did not match the request"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:408
+#: PySubtrans/Auth/ChatGPTAuth.py:410
 msgid "Sign-in with ChatGPT failed: the ID token has expired"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:401
+#: PySubtrans/Auth/ChatGPTAuth.py:403
 msgid "Sign-in with ChatGPT failed: the ID token was issued for a different client"
 msgstr ""
 
@@ -2853,7 +2857,7 @@ msgstr ""
 msgid "Stop translation"
 msgstr ""
 
-#: PySubtrans/Providers/Gateways/GatewayProvider.py:152 PySubtrans/Providers/Provider_Claude.py:116 PySubtrans/Providers/Provider_Gemini.py:89 PySubtrans/Providers/Provider_OpenAI.py:181 PySubtrans/Providers/Provider_OpenAI.py:208 PySubtrans/Providers/Provider_OpenRouter.py:147
+#: PySubtrans/Providers/Gateways/GatewayProvider.py:152 PySubtrans/Providers/Provider_Claude.py:116 PySubtrans/Providers/Provider_Gemini.py:89 PySubtrans/Providers/Provider_OpenAI.py:175 PySubtrans/Providers/Provider_OpenRouter.py:147
 msgid "Stream translations in realtime as they are generated"
 msgstr ""
 
@@ -2981,10 +2985,6 @@ msgstr ""
 msgid "The Azure API base URL to use for requests."
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:198
-msgid "The ChatGPT account whose plan is used for translation"
-msgstr ""
-
 #: PySubtrans/Providers/Clients/AzureOpenAIClient.py:22 PySubtrans/Providers/Clients/OpenAIClient.py:26
 msgid "The OpenAI library is out of date and must be updated"
 msgstr ""
@@ -3013,7 +3013,7 @@ msgstr ""
 msgid "The base URL to use for requests (default is https://api.mistral.ai)"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:161
+#: PySubtrans/Providers/Provider_OpenAI.py:155
 msgid "The base URL to use for requests - leave as default unless you know you need something else"
 msgstr ""
 
@@ -3061,7 +3061,7 @@ msgstr ""
 msgid "The language of the application interface"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:180 PySubtrans/Providers/Provider_OpenAI.py:207
+#: PySubtrans/Providers/Provider_OpenAI.py:174 PySubtrans/Providers/Provider_OpenAI.py:201
 msgid "The level of reasoning effort to use for the model (valid options are model-dependent)"
 msgstr ""
 
@@ -3361,7 +3361,7 @@ msgstr ""
 msgid "Translation provider settings are not valid. Please check the settings."
 msgstr ""
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:110
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:108
 msgid "Translation requests with OpenAI will use your ChatGPT plan's usage allowance, not a separately billed API key. You can manage usage in your ChatGPT settings: {url}"
 msgstr ""
 
@@ -3389,7 +3389,7 @@ msgstr ""
 msgid "Unable to acquire subtitle lock"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:331
+#: PySubtrans/Auth/ChatGPTAuth.py:333
 msgid "Unable to confirm ChatGPT sign-out: {error}"
 msgstr ""
 
@@ -3505,7 +3505,7 @@ msgstr ""
 msgid "Unable to probe media duration: {}"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:447
+#: PySubtrans/Auth/ChatGPTAuth.py:449
 msgid "Unable to reach ChatGPT: {error}"
 msgstr ""
 
@@ -3541,7 +3541,7 @@ msgstr ""
 msgid "Unable to retrieve Gemini model list: {error}"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_Bedrock.py:144 PySubtrans/Providers/Provider_Mistral.py:129 PySubtrans/Providers/Provider_OpenAI.py:266 PySubtrans/Providers/Provider_OpenAI.py:282
+#: PySubtrans/Providers/Provider_Bedrock.py:144 PySubtrans/Providers/Provider_Mistral.py:129 PySubtrans/Providers/Provider_OpenAI.py:259 PySubtrans/Providers/Provider_OpenAI.py:275
 msgid "Unable to retrieve available AI models: {error}"
 msgstr ""
 
@@ -3549,7 +3549,7 @@ msgstr ""
 msgid "Unable to retrieve available models: {error}"
 msgstr ""
 
-#: PySubtrans/Providers/Gateways/GatewayProvider.py:148 PySubtrans/Providers/Provider_OpenAI.py:171 PySubtrans/Providers/Provider_OpenAI.py:186 PySubtrans/Providers/Provider_OpenAI.py:203
+#: PySubtrans/Providers/Gateways/GatewayProvider.py:148 PySubtrans/Providers/Provider_OpenAI.py:165 PySubtrans/Providers/Provider_OpenAI.py:180 PySubtrans/Providers/Provider_OpenAI.py:197
 msgid "Unable to retrieve models"
 msgstr ""
 
@@ -3693,7 +3693,7 @@ msgstr ""
 msgid "Use the detected Torch environment"
 msgstr ""
 
-#: PySubtrans/Providers/Provider_OpenAI.py:165
+#: PySubtrans/Providers/Provider_OpenAI.py:159
 msgid "Use the httpx library for requests. May help if you receive a 307 redirect error with a custom api_base"
 msgstr ""
 
@@ -3769,11 +3769,11 @@ msgstr ""
 msgid "You are signed out here, but remote sign-out could not be confirmed. You can disconnect LLM-Subtrans in your ChatGPT settings."
 msgstr ""
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:109
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:107
 msgid "You're using your ChatGPT plan"
 msgstr ""
 
-#: PySubtrans/Auth/ChatGPTAuth.py:360
+#: PySubtrans/Auth/ChatGPTAuth.py:362
 msgid "Your ChatGPT session has expired. Sign in again to continue."
 msgstr ""
 

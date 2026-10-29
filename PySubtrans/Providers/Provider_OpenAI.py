@@ -22,15 +22,11 @@ else:
         class OpenAiProvider(TranslationProvider):
             name = "OpenAI"
 
-            default_model = "gpt-5-mini"
+            default_model = "gpt-6-luna"
 
             information = """
             <p>Select the AI <a href="https://platform.openai.com/docs/models">model</a> to use as a translator.</p>
             <p>Note that different models have different <a href="https://openai.com/pricing">costs</a> and limitations.</p>
-            In particular, the number of tokens supported by each model will affect the batch size that it can handle.
-            This will depend on the contents but as a rule of thumb 16K token models can handle 80-100 lines per batch.</p>
-            <p>GPT4 models are substantially more expensive but are better at following instructions,
-            e.g. using provided names, and may be better for more complex translations and less common languages.</p>
             """
 
             information_instructmodels = "<p>Instruct models require the maximum output tokens to be specified. This should be roughly half the maximum tokens the model supports.</p>"
@@ -39,13 +35,14 @@ else:
             <p>To use this provider you need <a href="https://platform.openai.com/account/api-keys">an OpenAI API key</a>.</p>
             <p>Api Base can usually be left blank unless you are using a custom OpenAI instance, when you will need to provide the base URL.</p>
             <p>Note that if your API Key is attached to a free trial account the <a href="https://platform.openai.com/docs/guides/rate-limits?context=tier-free">rate limit</a> for requests will be <i>severely</i> limited.</p>
+            <p>If you have a ChatGPT plan, you can select Use ChatGPT plan to sign in with ChatGPT instead of using an API key.</p>
             """
 
             information_chatgpt = f"""
             <p>Using ChatGPT plan.</p>
             <p>Translation requests use the usage allowance of your ChatGPT plan instead of an API key, subject to your plan's limits.
             You can <a href="{MANAGE_USAGE_URL}">manage usage</a> in your ChatGPT settings.</p>
-            <p>Select the AI model to use as a translator. The models available depend on your plan.</p>
+            <p>Select the AI <a href="https://platform.openai.com/docs/models">model</a> to use as a translator. The models available depend on your plan.</p>
             <p>Your ChatGPT plan can only be used for translation. Transcription with OpenAI still needs an API key.</p>
             """
 

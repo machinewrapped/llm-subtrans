@@ -280,6 +280,43 @@ class ChatGPTSessionTests(LoggedTestCase):
         self.assertLoggedFalse('signed in', auth.is_signed_in)
         self.assertLoggedEqual('client id kept', ISSUED_CLIENT_ID, store.data.get('client_id'))
 
+    def test_sign_out_waits_for_refresh_in_progress(self) -> None:
+        """A refresh that finishes during sign-out cannot restore the tokens."""
+        class BlockingRefreshAuth(FakeChatGPTAuth):
+            def __init__(self, store : MemoryCredentialStore, responses : list[dict[str, Any]|Exception]):
+                super().__init__(store, responses)
+                self.refresh_started = threading.Event()
+                self.release_refresh = threading.Event()
+
+            def _post_form(self, url : str, form : dict[str, str], expect_json : bool = True) -> dict[str, Any]:
+                if form.get('grant_type') == 'refresh_token':
+                    self.refresh_started.set()
+                    self.release_refresh.wait(timeout=5)
+                return super()._post_form(url, form, expect_json)
+
+        auth = BlockingRefreshAuth(SignedInStore(expires_in=0.0), responses=[
+            {'access_token': 'access-2', 'refresh_token': 'refresh-2', 'expires_in': 3600},
+            {'revocation_endpoint': 'https://auth.example/revoke'},
+            {},
+        ])
+
+        refresh_thread = threading.Thread(target=auth.GetAccessToken)
+        refresh_thread.start()
+        auth.refresh_started.wait(timeout=5)
+
+        sign_out_thread = threading.Thread(target=auth.SignOut)
+        sign_out_thread.start()
+        sign_out_thread.join(timeout=0.2)
+        self.assertLoggedTrue('sign-out waits for refresh', sign_out_thread.is_alive())
+
+        auth.release_refresh.set()
+        refresh_thread.join(timeout=5)
+        sign_out_thread.join(timeout=5)
+
+        _url, form = auth.requests[-1]
+        self.assertLoggedEqual('revoked token', 'refresh-2', form.get('token'))
+        self.assertLoggedFalse('signed in', auth.is_signed_in)
+
     def test_sign_out_clears_tokens_when_revocation_fails(self) -> None:
         auth = FakeChatGPTAuth(SignedInStore(), responses=[ChatGPTAuthError('unreachable')])
 

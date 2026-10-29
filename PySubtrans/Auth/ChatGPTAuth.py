@@ -43,7 +43,7 @@ AUTH_FILENAME = "chatgpt-auth.json"
 # By default, refresh this many seconds before the access token expires
 REFRESH_MARGIN = 120.0
 
-# Refresh tokens rotate, so refreshes are serialised to avoid racing a replaced token
+# Refresh tokens rotate, so refreshes and sign-out are serialised to avoid racing a replaced or revoked token
 _refresh_lock = threading.Lock()
 
 
@@ -309,31 +309,33 @@ class ChatGPTAuth:
         The client registration is kept for the next sign-in.
         Returns False if remote revocation could not be confirmed.
         """
-        data = self.store.Load()
-        credentials = self.credentials
-        client_id = data.get('client_id')
+        # Hold the refresh lock throughout, so a refresh in progress cannot restore the tokens afterwards
+        with _refresh_lock:
+            data = self.store.Load()
+            credentials = self.credentials
+            client_id = data.get('client_id')
 
-        revoked = True
-        if credentials and credentials.refresh_token and client_id:
-            try:
-                configuration = self._get_json(OPENID_CONFIGURATION_URL)
-                revocation_url = str(configuration.get('revocation_endpoint') or '')
-                if not revocation_url:
-                    raise ChatGPTAuthError(_("No revocation endpoint is published"))
+            revoked = True
+            if credentials and credentials.refresh_token and client_id:
+                try:
+                    configuration = self._get_json(OPENID_CONFIGURATION_URL)
+                    revocation_url = str(configuration.get('revocation_endpoint') or '')
+                    if not revocation_url:
+                        raise ChatGPTAuthError(_("No revocation endpoint is published"))
 
-                self._post_form(revocation_url, {
-                    'token': credentials.refresh_token,
-                    'token_type_hint': 'refresh_token',
-                    'client_id': client_id,
-                }, expect_json=False)
+                    self._post_form(revocation_url, {
+                        'token': credentials.refresh_token,
+                        'token_type_hint': 'refresh_token',
+                        'client_id': client_id,
+                    }, expect_json=False)
 
-            except ChatGPTAuthError as e:
-                logging.warning(_("Unable to confirm ChatGPT sign-out: {error}").format(error=str(e)))
-                revoked = False
+                except ChatGPTAuthError as e:
+                    logging.warning(_("Unable to confirm ChatGPT sign-out: {error}").format(error=str(e)))
+                    revoked = False
 
-        data.pop('credentials', None)
-        self.store.Save(data)
-        return revoked
+            data.pop('credentials', None)
+            self.store.Save(data)
+            return revoked
 
     def ListModels(self) -> list[str]:
         """Return the models available to the signed-in account."""

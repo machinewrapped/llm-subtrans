@@ -4,12 +4,31 @@ import os
 import sys
 import appdirs # type: ignore
 
-default_config_dir : str = appdirs.user_config_dir("LLMSubtrans", "MachineWrapped", roaming=True)
+PYSUBTRANS_CONFIG_DIR : str = appdirs.user_config_dir("PySubtrans", "MachineWrapped", roaming=True)
+
+default_config_dir : str = PYSUBTRANS_CONFIG_DIR
 config_dir : str = default_config_dir
 
 
 def GetConfigDir() -> str:
     """Return the active application configuration directory."""
+    return config_dir
+
+
+def GetDefaultConfigDir() -> str:
+    """Return the configuration directory used when no explicit or portable path is configured."""
+    return default_config_dir
+
+
+def ConfigureDefaultConfigDir(default_dir : str) -> str:
+    """
+    Set the application's default configuration directory and make it the active one.
+    Applications call this once at startup, before ConfigureConfigDir or ConfigureConfigDirFromArguments.
+    """
+    global default_config_dir, config_dir
+
+    default_config_dir = os.path.abspath(os.path.expanduser(default_dir))
+    config_dir = default_config_dir
     return config_dir
 
 

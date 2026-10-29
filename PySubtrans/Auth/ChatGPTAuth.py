@@ -70,12 +70,16 @@ def GetChatGPTAppName() -> str|None:
 
 
 def GetCredentialFilename(app_name : str) -> str:
-    """The default name of the file the application's sign-in data is stored in."""
+    """
+    The default name of the file the application's sign-in data is stored in.
+    A digest of the exact name keeps names with the same readable slug, such as "My App" and "My-App", apart.
+    """
     slug = regex.sub(r'[^\w]+', '-', app_name.casefold()).strip('-')
     if not slug:
         raise ChatGPTAuthError(_("'{app}' cannot be used as an application name for Sign in with ChatGPT").format(app=app_name))
 
-    return f"chatgpt-auth-{slug}.json"
+    digest = hashlib.sha256(app_name.encode('utf-8')).hexdigest()[:8]
+    return f"chatgpt-auth-{slug}-{digest}.json"
 
 
 class ChatGPTAuthError(SubtitleError):

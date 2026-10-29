@@ -257,11 +257,12 @@ class ChatGPTAppIdentityTests(LoggedTestCase):
         self.assertLoggedEqual('agent name hint', 'Configured App', params['agent_name_hint'][0])
 
     def test_apps_keep_separate_credentials(self) -> None:
-        """Each application has its own credential file by default."""
-        first = ChatGPTAuth(app_name='App One').store.path
-        second = ChatGPTAuth(app_name='App Two').store.path
+        """Each application has its own credential file by default, even when the names differ only in punctuation."""
+        for first_name, second_name in [('App One', 'App Two'), ('My App', 'My-App')]:
+            first = ChatGPTAuth(app_name=first_name).store.path
+            second = ChatGPTAuth(app_name=second_name).store.path
 
-        self.assertLoggedFalse('separate credential files', first == second, input_value=(first, second))
+            self.assertLoggedFalse('separate credential files', first == second, input_value=(first_name, second_name))
 
     def test_configured_credential_filename_is_used(self) -> None:
         """An application can keep an existing credential file, so its sign-ins carry on."""

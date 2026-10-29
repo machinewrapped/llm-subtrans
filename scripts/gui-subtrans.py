@@ -33,6 +33,7 @@ from PySide6.QtWidgets import QApplication
 if sys.platform == 'win32':
     signal.signal(signal.SIGINT, _prev_sigint)
     del _prev_sigint
+from PySubtrans.Auth.ChatGPTAuth import LLM_SUBTRANS_APP_NAME, ConfigureChatGPTApp
 from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir, GetSettingsPath
 from PySubtrans.Options import Options
 from PySubtrans.Helpers.Localization import initialize_localization, _
@@ -41,6 +42,7 @@ from GuiSubtrans.MainWindow import MainWindow
 def parse_arguments():
     # Parse command line arguments
     ConfigureConfigDirFromArguments()
+    ConfigureChatGPTApp(LLM_SUBTRANS_APP_NAME)
     parser = argparse.ArgumentParser(description='Translates subtitles using an AI service')
     parser.add_argument('filepath', nargs='?', help="Optional file to load on startup")
     parser.add_argument('-l', '--target-language', type=str, default=None, help="The target language for the translation")

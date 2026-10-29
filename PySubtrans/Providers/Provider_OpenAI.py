@@ -13,7 +13,7 @@ if not importlib.util.find_spec("openai"):
     logging.debug(_("OpenAI SDK is not installed. OpenAI provider will not be available"))
 else:
     try:
-        from PySubtrans.Auth.ChatGPTAuth import API_RESOURCE, MANAGE_USAGE_URL, ChatGPTAuth, ChatGPTAuthError, ChatGPTSignInOption, ChatGPTSignOutOption
+        from PySubtrans.Auth.ChatGPTAuth import API_RESOURCE, MANAGE_USAGE_URL, ChatGPTAuth, ChatGPTAuthError, ChatGPTSignInOption, ChatGPTSignOutOption, GetChatGPTAppName
         from PySubtrans.Helpers.Localization import _
         from PySubtrans.SubtitleError import ProviderError
         from PySubtrans.TranslationClient import TranslationClient
@@ -88,8 +88,16 @@ else:
                 return self.settings.get_bool('use_chatgpt_plan')
 
             @property
-            def chatgpt_auth(self) -> ChatGPTAuth:
+            def chatgpt_auth(self) -> ChatGPTAuth|None:
+                """Sign-in for the configured application, or None if the application has not identified itself."""
+                if not GetChatGPTAppName():
+                    return None
                 return ChatGPTAuth(proxy=self.settings.get_str('proxy'))
+
+            @property
+            def chatgpt_signed_in(self) -> bool:
+                auth = self.chatgpt_auth
+                return auth is not None and auth.is_signed_in
 
             @property
             def is_instruct_model(self) -> bool:
@@ -112,9 +120,13 @@ else:
                     # Sanctioned lazy import: defer the measured 2.4-second OpenAI SDK load until reasoning translation is selected.
                     from PySubtrans.Providers.Clients.OpenAIReasoningClient import OpenAIReasoningClient
 
+                    auth = self.chatgpt_auth
+                    if auth is None:
+                        raise ProviderError(_("The application must identify itself with ConfigureChatGPTApp before signing in with ChatGPT"), provider=self)
+
                     # The client keeps this token, so make sure it has a reasonable time left to run
                     try:
-                        access_token = self.chatgpt_auth.GetAccessToken(min_validity=CLIENT_TOKEN_VALIDITY)
+                        access_token = auth.GetAccessToken(min_validity=CLIENT_TOKEN_VALIDITY)
                     except ChatGPTAuthError as e:
                         raise ProviderError(str(e), provider=self) from e
 
@@ -185,7 +197,7 @@ else:
                 """
                 Options for translating with the user's ChatGPT plan
                 """
-                if not self.chatgpt_auth.is_signed_in:
+                if not self.chatgpt_signed_in:
                     return { 'chatgpt_account': (ChatGPTSignInOption, _("Sign in with ChatGPT to translate using your ChatGPT plan")) }
 
                 options : GuiSettingsType = {
@@ -264,7 +276,7 @@ else:
                 Returns the models available with the signed-in ChatGPT plan
                 """
                 auth = self.chatgpt_auth
-                if not auth.is_signed_in:
+                if auth is None or not auth.is_signed_in:
                     logging.debug("Not signed in with ChatGPT")
                     return []
 
@@ -277,7 +289,7 @@ else:
 
             def GetInformation(self) -> str:
                 if self.uses_chatgpt_plan:
-                    return self.information_chatgpt if self.chatgpt_auth.is_signed_in else self.information_chatgpt_signin
+                    return self.information_chatgpt if self.chatgpt_signed_in else self.information_chatgpt_signin
                 if not self.api_key:
                     return self.information_noapikey
                 if self.is_instruct_model:
@@ -289,7 +301,11 @@ else:
                 Validate the settings for the provider
                 """
                 if self.uses_chatgpt_plan:
-                    if not self.chatgpt_auth.is_signed_in:
+                    auth = self.chatgpt_auth
+                    if auth is None:
+                        self.validation_message = _("The application must identify itself with ConfigureChatGPTApp before signing in with ChatGPT")
+                        return False
+                    if not auth.is_signed_in:
                         self.validation_message = _("Sign in with ChatGPT is required")
                         return False
                     return True

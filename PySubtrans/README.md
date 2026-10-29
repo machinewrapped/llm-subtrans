@@ -399,6 +399,28 @@ translator = SubtitleTranslator(settings, openrouter)
 
 A provider can be constructed once and then used to initalise multiple `SubtitleTranslator` instances.
 
+### Translating with a ChatGPT plan
+
+The OpenAI provider can use the user's ChatGPT plan instead of an API key, with `use_chatgpt_plan=True`. This requires `pip install pysubtrans[openai]`.
+
+Your application must first identify itself with `ConfigureChatGPTApp`. The name is shown to the user when they sign in, and your application's tokens are kept in a file of its own in the config directory. Without it, the plan is not available.
+
+```python
+from PySubtrans import init_options, init_translator
+from PySubtrans.Auth.ChatGPTAuth import ChatGPTAuth, ConfigureChatGPTApp
+
+ConfigureChatGPTApp("My Subtitle App")
+
+auth = ChatGPTAuth()
+if not auth.is_signed_in:
+    auth.SignIn()   # Opens the browser and waits for the user to sign in
+
+options = init_options(provider="OpenAI", use_chatgpt_plan=True, model="gpt-6-luna", target_language="French")
+translator = init_translator(options)
+```
+
+`SignIn` waits for the browser to redirect to a listener on `127.0.0.1`, so the browser must run on the same machine. An application that handles the redirect itself can call `BeginSignIn` and `CompleteSignIn` instead. Pass a `ChatGPTCredentialStore` to keep the tokens somewhere else.
+
 ### Preprocessing subtitles with `preprocess_subtitles`
 
 `preprocess_subtitles` can adjust the source subtitles using various heuristics to help produce more translatable subtitles.

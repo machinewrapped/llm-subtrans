@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
 
+from PySubtrans.Auth.ChatGPTAuth import LLM_SUBTRANS_APP_NAME, ConfigureChatGPTApp
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames, TryParseNonNegative
@@ -203,6 +204,7 @@ def CreateArgParser(description : str) -> ArgumentParser:
     Create new arg parser and parse shared command line arguments between models
     """
     ConfigureConfigDirFromArguments()
+    ConfigureChatGPTApp(LLM_SUBTRANS_APP_NAME)
     _warn_renamed_args()
     pre_parser = ArgumentParser(add_help=False)
     pre_parser.add_argument('--list-formats', action='store_true')

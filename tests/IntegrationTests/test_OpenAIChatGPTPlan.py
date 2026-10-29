@@ -8,7 +8,7 @@ from unittest.mock import PropertyMock, patch
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.SubtitleError import TranslationImpossibleError
+from PySubtrans.SubtitleError import ProviderError, TranslationImpossibleError
 from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 
@@ -23,6 +23,7 @@ if _openai_available:
         ResponseOutputMessage,
         ResponseOutputText,
     )
+    import PySubtrans.Auth.ChatGPTAuth as chatgpt_auth_module
     from PySubtrans.Auth.ChatGPTAuth import API_RESOURCE, ChatGPTSignInOption, ChatGPTSignOutOption
     from PySubtrans.Providers.Clients.OpenAIReasoningClient import USAGE_LIMIT_EXCEEDED, OpenAIReasoningClient
     from PySubtrans.Providers.Provider_OpenAI import OpenAiProvider
@@ -124,6 +125,20 @@ class OpenAIChatGPTPlanProviderTests(LoggedTestCase):
         client = provider.GetTranslationClient(SettingsType({'instructions': 'Translate.'}))
 
         self.assertLoggedEqual('api key', 'access-2', client.settings.get_str('api_key'))
+
+    @skip_if_debugger_attached
+    def test_unidentified_app_cannot_use_plan(self) -> None:
+        """Without an application name the plan is not used, rather than falling back to another app's sign-in."""
+        with patch.object(chatgpt_auth_module, '_app_name', None):
+            provider = OpenAiProvider(SettingsType({'use_chatgpt_plan': True, 'model': 'gpt-plan'}))
+
+            options = provider.GetOptions(provider.settings)
+            self.assertLoggedEqual('account option', ChatGPTSignInOption, options['chatgpt_account'][0])
+            self.assertLoggedFalse('settings valid', provider.ValidateSettings())
+
+            with self.assertRaises(ProviderError) as context:
+                provider.GetTranslationClient(SettingsType({'instructions': 'Translate.'}))
+            log_input_expected_error('no application name', ProviderError, context.exception)
 
     def test_api_key_mode_is_unchanged(self) -> None:
         provider = OpenAiProvider(SettingsType({'api_key': 'sk-test', 'use_chatgpt_plan': False}))

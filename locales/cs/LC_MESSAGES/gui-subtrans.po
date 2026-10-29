@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-10-29 20:56+0000\n"
+"POT-Creation-Date: 2026-10-29 21:34+0000\n"
 "PO-Revision-Date: 2025-08-09 21:00+0000\n"
 "Last-Translator: AI Assistant\n"
 "Language-Team: Czech\n"
@@ -55,7 +55,11 @@ msgstr ""
 
 #: PySubtrans/Transcription/Providers/Provider_OpenAI.py:24
 msgid "\n    <p>To use this provider you need <a href=\"https://platform.openai.com/account/api-keys\">an OpenAI API key</a>.</p>\n    <p>Signing in with ChatGPT for translation does not cover transcription, which always needs an API key.</p>\n    "
-msgstr "\n    <p>Pro používání tohoto poskytovatele potřebujete <a href=\\\"https://platform.openai.com/account/api-keys\\\">API klíč OpenAI</a>.</p>\n    <p>Přihlášení přes ChatGPT pro překlad nepokrývá přepis (transkripci), který vždy vyžaduje API klíč.</p>\n    "
+msgstr ""
+"\n"
+"    <p>Pro používání tohoto poskytovatele potřebujete <a href=\\\"https://platform.openai.com/account/api-keys\\\">API klíč OpenAI</a>.</p>\n"
+"    <p>Přihlášení přes ChatGPT pro překlad nepokrývá přepis (transkripci), který vždy vyžaduje API klíč.</p>\n"
+"    "
 
 #: PySubtrans/Transcription/Providers/Provider_Muse.py:24
 msgid "\n    <p>To use this provider you need a Meta <a href=\"https://dev.meta.ai/\">Model API key</a>.</p>\n    "
@@ -205,8 +209,8 @@ msgstr "Kontrola kompatibility ABI proběhla úspěšně."
 #: GuiSubtrans/Widgets/ProviderSettingsForm.py:63
 #: PySubtrans/Providers/Gateways/GatewayProvider.py:142
 #: PySubtrans/Providers/Provider_DeepSeek.py:68
-#: PySubtrans/Providers/Provider_OpenAI.py:171
-#: PySubtrans/Providers/Provider_OpenAI.py:206
+#: PySubtrans/Providers/Provider_OpenAI.py:165
+#: PySubtrans/Providers/Provider_OpenAI.py:200
 #: PySubtrans/Providers/Provider_OpenRouter.py:137
 msgid "AI model to use as the translator"
 msgstr "AI model pro použití jako překladač"
@@ -224,7 +228,7 @@ msgstr "Vybráno AMD"
 #: PySubtrans/Providers/Provider_DeepSeek.py:127
 #: PySubtrans/Providers/Provider_Gemini.py:128
 #: PySubtrans/Providers/Provider_Mistral.py:142
-#: PySubtrans/Providers/Provider_OpenAI.py:305
+#: PySubtrans/Providers/Provider_OpenAI.py:298
 #: PySubtrans/Providers/Provider_OpenRouter.py:194
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:133
 #: PySubtrans/Transcription/Providers/Provider_Gemini.py:131
@@ -393,7 +397,7 @@ msgstr "Míra náhodné odchylky, která má být přidána k překladům"
 #: PySubtrans/Providers/Gateways/GatewayProvider.py:154
 #: PySubtrans/Providers/Provider_DeepSeek.py:72
 #: PySubtrans/Providers/Provider_Mistral.py:76
-#: PySubtrans/Providers/Provider_OpenAI.py:183
+#: PySubtrans/Providers/Provider_OpenAI.py:177
 #: PySubtrans/Providers/Provider_OpenRouter.py:149
 msgid "Amount of random variance to add to translations. Generally speaking, none is best"
 msgstr "Míra náhodné odchylky přidaná do překladů. Obecně platí, že žádná je nejlepší"
@@ -434,7 +438,7 @@ msgstr "Klíč API ElevenLabs"
 msgid "An OpenAI API key (shared with translation)"
 msgstr "API klíč OpenAI (sdílený s překladem)"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:160
+#: PySubtrans/Providers/Provider_OpenAI.py:154
 msgid "An OpenAI API key is required to use this provider (https://platform.openai.com/account/api-keys)"
 msgstr "K použití tohoto poskytovatele je vyžadován API klíč OpenAI (https://platform.openai.com/account/api-keys)"
 
@@ -627,13 +631,13 @@ msgstr "Byl dosažen limit využití plánu ChatGPT. Využití můžete spravova
 msgid "ChatGPT plan usage was not granted for this account"
 msgstr "Využití plánu ChatGPT nebylo pro tento účet povoleno"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:443
+#: PySubtrans/Auth/ChatGPTAuth.py:445
 msgid "ChatGPT request failed ({status}): {error}"
 msgstr "Požadavek na ChatGPT selhal ({status}): {error}"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:76
 #: PySubtrans/Providers/Provider_Mistral.py:81
-#: PySubtrans/Providers/Provider_OpenAI.py:186
+#: PySubtrans/Providers/Provider_OpenAI.py:180
 msgid "Check API key and base URL and try again"
 msgstr "Zkontrolujte API klíč a základní URL a zkuste to znovu"
 
@@ -702,7 +706,7 @@ msgstr "Čárkami oddělený seznam výplňkových slov k odstranění"
 msgid "Comma-separated list of titles whose full stop does not end a sentence, such as Mr or Dr (case-sensitive)"
 msgstr "Seznam oddělený čárkami názvů titulů, jejichž tečka neznamená konec věty, jako jsou Mr nebo Dr (citlivé na velikost písmen)"
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:67
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:66
 msgid "Complete sign-in in your web browser, then return here."
 msgstr "Dokončete přihlášení ve svém webovém prohlížeči a poté se sem vraťte."
 
@@ -1101,7 +1105,7 @@ msgstr "Selhání navázání streamovacího připojení: {error}"
 msgid "Failed to import LiteLLM provider components. LiteLLM provider will not be available"
 msgstr "Nepodařilo se importovat komponenty poskytovatele LiteLLM. Poskytovatel LiteLLM nebude dostupný"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:324
+#: PySubtrans/Providers/Provider_OpenAI.py:317
 msgid "Failed to initialise OpenAI SDK. OpenAI provider will not be available"
 msgstr "Nepodařilo se inicializovat OpenAI SDK. Poskytovatel OpenAI nebude k dispozici"
 
@@ -1312,7 +1316,7 @@ msgstr "Google SDK (google-genai) není nainstalováno. Poskytovatel Gemini nebu
 msgid "Google SDK (google-genai) is not installed. Gemini transcription will not be available"
 msgstr "Sada Google SDK (google-genai) není nainstalována. Přepis pomocí Gemini nebude k dispozici"
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:111
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:109
 msgid "Got it"
 msgstr "Rozumím"
 
@@ -1515,7 +1519,7 @@ msgstr "Neplatná role zprávy: {role}. Musí být jedna z hodnot: 'uživatel', 
 msgid "Invalid provider settings"
 msgstr "Neplatné nastavení poskytovatele"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:455
+#: PySubtrans/Auth/ChatGPTAuth.py:457
 msgid "Invalid response from ChatGPT"
 msgstr "Neplatná odpověď od ChatGPT"
 
@@ -1716,7 +1720,7 @@ msgstr "Maximální počet požadavků na API za minutu (0 = bez omezení)"
 msgid "Maximum API requests per minute."
 msgstr "Maximální počet požadavků API za minutu."
 
-#: PySubtrans/Providers/Provider_OpenAI.py:172
+#: PySubtrans/Providers/Provider_OpenAI.py:166
 msgid "Maximum OpenAI API requests per minute. Mainly useful if you are on the restricted free plan"
 msgstr "Maximální počet požadavků OpenAI API za minutu. Užitečné hlavně pokud máte omezený bezplatný plán"
 
@@ -1754,7 +1758,7 @@ msgstr "Maximální počet souběžných vláken překladu pro rychlý překlad"
 msgid "Maximum requests per minute (0 for unlimited)"
 msgstr "Maximální počet požadavků za minutu (0 = neomezeně)"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:177
+#: PySubtrans/Providers/Provider_OpenAI.py:171
 msgid "Maximum tokens a completion can contain (only applicable for -instruct models)"
 msgstr "Maximální počet tokenů, které může dokončení obsahovat (platí pouze pro modely -instruct)"
 
@@ -2082,7 +2086,7 @@ msgstr "Žádná odpověď od Gemini"
 msgid "No retry instructions provided"
 msgstr "Nebyly poskytnuty žádné pokyny pro opakování"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:322
+#: PySubtrans/Auth/ChatGPTAuth.py:324
 msgid "No revocation endpoint is published"
 msgstr "Není publikován koncový bod pro odvolání (revocation endpoint)"
 
@@ -2205,7 +2209,7 @@ msgstr "V odpovědi nebyli vráceni žádní platní kandidáti"
 msgid "None"
 msgstr "Žádný"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:299 PySubtrans/Auth/ChatGPTAuth.py:347
+#: PySubtrans/Auth/ChatGPTAuth.py:299 PySubtrans/Auth/ChatGPTAuth.py:349
 msgid "Not signed in with ChatGPT"
 msgstr "Nepřihlášeno přes ChatGPT"
 
@@ -2846,21 +2850,21 @@ msgstr "Nastavení"
 msgid "Shortest audio chunk to send in one request"
 msgstr "Nejkratší audio chunk k odeslání v jedné žádosti"
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:63
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:99
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:108
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:62
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:97
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:106
 msgid "Sign in with ChatGPT"
 msgstr "Přihlásit se přes ChatGPT"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:300
+#: PySubtrans/Providers/Provider_OpenAI.py:293
 msgid "Sign in with ChatGPT is required"
 msgstr "Je vyžadováno přihlášení přes ChatGPT"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:195
+#: PySubtrans/Providers/Provider_OpenAI.py:189
 msgid "Sign in with ChatGPT to translate using your ChatGPT plan"
 msgstr "Přihlaste se přes ChatGPT a překládejte v rámci svého plánu ChatGPT"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:153
+#: PySubtrans/Providers/Provider_OpenAI.py:147
 msgid "Sign in with ChatGPT to translate using your ChatGPT plan, instead of an OpenAI API key"
 msgstr "Přihlaste se přes ChatGPT a překládejte v rámci svého plánu ChatGPT místo použití API klíče OpenAI"
 
@@ -2869,24 +2873,28 @@ msgstr "Přihlaste se přes ChatGPT a překládejte v rámci svého plánu ChatG
 msgid "Sign out"
 msgstr "Odhlásit se"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:203
+#: PySubtrans/Providers/Provider_OpenAI.py:197
 msgid "Sign out and sign in with ChatGPT again"
 msgstr "Odhlásit se a znovu se přihlásit přes ChatGPT"
+
+#: PySubtrans/Providers/Provider_OpenAI.py:192
+msgid "Sign out of ChatGPT, so translation no longer uses your ChatGPT plan"
+msgstr ""
 
 #: GuiSubtrans/SettingsDialog.py:712
 msgid "Sign out of ChatGPT? Translation with OpenAI will need you to sign in again."
 msgstr "Odhlásit se z ChatGPT? Pro překlad přes OpenAI se budete muset znovu přihlásit."
 
-#: PySubtrans/Auth/ChatGPTAuth.py:532
+#: PySubtrans/Auth/ChatGPTAuth.py:534
 msgid "Sign-in complete. You can close this window and return to LLM-Subtrans."
 msgstr "Přihlášení dokončeno. Toto okno můžete zavřít a vrátit se do LLM-Subtrans."
 
-#: PySubtrans/Auth/ChatGPTAuth.py:475 PySubtrans/Auth/ChatGPTAuth.py:481
-#: PySubtrans/Auth/ChatGPTAuth.py:484
+#: PySubtrans/Auth/ChatGPTAuth.py:477 PySubtrans/Auth/ChatGPTAuth.py:483
+#: PySubtrans/Auth/ChatGPTAuth.py:486
 msgid "Sign-in with ChatGPT failed: invalid ID token"
 msgstr "Přihlášení přes ChatGPT selhalo: neplatný token ID"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:376
+#: PySubtrans/Auth/ChatGPTAuth.py:378
 msgid "Sign-in with ChatGPT failed: no access token was returned"
 msgstr "Přihlášení přes ChatGPT selhalo: nebyl vrácen přístupový token"
 
@@ -2898,19 +2906,19 @@ msgstr "Přihlášení přes ChatGPT selhalo: nebyl vrácen autorizační kód"
 msgid "Sign-in with ChatGPT failed: no client id was issued"
 msgstr "Přihlášení přes ChatGPT selhalo: nebylo vystaveno ID klienta"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:380
+#: PySubtrans/Auth/ChatGPTAuth.py:382
 msgid "Sign-in with ChatGPT failed: no refresh token was returned"
 msgstr "Přihlášení přes ChatGPT selhalo: nebyl vrácen obnovovací token"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:404
+#: PySubtrans/Auth/ChatGPTAuth.py:406
 msgid "Sign-in with ChatGPT failed: the ID token did not match the request"
 msgstr "Přihlášení přes ChatGPT selhalo: token ID neodpovídá požadavku"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:408
+#: PySubtrans/Auth/ChatGPTAuth.py:410
 msgid "Sign-in with ChatGPT failed: the ID token has expired"
 msgstr "Přihlášení přes ChatGPT selhalo: platnost tokenu ID vypršela"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:401
+#: PySubtrans/Auth/ChatGPTAuth.py:403
 msgid "Sign-in with ChatGPT failed: the ID token was issued for a different client"
 msgstr "Přihlášení přes ChatGPT selhalo: token ID byl vystaven pro jiného klienta"
 
@@ -3069,8 +3077,7 @@ msgstr "Zastavit překlad"
 #: PySubtrans/Providers/Gateways/GatewayProvider.py:152
 #: PySubtrans/Providers/Provider_Claude.py:116
 #: PySubtrans/Providers/Provider_Gemini.py:89
-#: PySubtrans/Providers/Provider_OpenAI.py:181
-#: PySubtrans/Providers/Provider_OpenAI.py:208
+#: PySubtrans/Providers/Provider_OpenAI.py:175
 #: PySubtrans/Providers/Provider_OpenRouter.py:147
 msgid "Stream translations in realtime as they are generated"
 msgstr "Streamovat překlady v reálném čase jak jsou generovány"
@@ -3202,10 +3209,6 @@ msgstr "Musí být zadán region AWS pro požadavky."
 msgid "The Azure API base URL to use for requests."
 msgstr "Základní URL Azure API pro požadavky."
 
-#: PySubtrans/Providers/Provider_OpenAI.py:198
-msgid "The ChatGPT account whose plan is used for translation"
-msgstr "Účet ChatGPT, jehož plán se používá pro překlad"
-
 #: PySubtrans/Providers/Clients/AzureOpenAIClient.py:22
 #: PySubtrans/Providers/Clients/OpenAIClient.py:26
 msgid "The OpenAI library is out of date and must be updated"
@@ -3247,7 +3250,7 @@ msgstr "Základní URL pro požadavky (výchozí je https://api.deepseek.com)"
 msgid "The base URL to use for requests (default is https://api.mistral.ai)"
 msgstr "Základní URL pro požadavky (výchozí je https://api.mistral.ai)"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:161
+#: PySubtrans/Providers/Provider_OpenAI.py:155
 msgid "The base URL to use for requests - leave as default unless you know you need something else"
 msgstr "Základní URL pro požadavky - ponechte výchozí, pokud nevíte, že potřebujete něco jiného"
 
@@ -3295,8 +3298,8 @@ msgstr "Spustitelný soubor ffprobe přidružený k ffmpeg nebyl nalezen: {}"
 msgid "The language of the application interface"
 msgstr "Jazyk uživatelského rozhraní aplikace"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:180
-#: PySubtrans/Providers/Provider_OpenAI.py:207
+#: PySubtrans/Providers/Provider_OpenAI.py:174
+#: PySubtrans/Providers/Provider_OpenAI.py:201
 msgid "The level of reasoning effort to use for the model (valid options are model-dependent)"
 msgstr "Úroveň úsilí při uvažování, které má model použít (platné možnosti závisí na modelu)"
 
@@ -3614,7 +3617,7 @@ msgstr "Nastavení poskytovatele překladu je neplatné"
 msgid "Translation provider settings are not valid. Please check the settings."
 msgstr "Nastavení poskytovatele překladu jsou neplatná. Zkontrolujte prosím nastavení."
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:110
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:108
 msgid "Translation requests with OpenAI will use your ChatGPT plan's usage allowance, not a separately billed API key. You can manage usage in your ChatGPT settings: {url}"
 msgstr "Požadavky na překlad přes OpenAI využijí povolenou kvótu vašeho plánu ChatGPT, nikoli samostatně účtovaný API klíč. Využití můžete spravovat v nastavení ChatGPT: {url}"
 
@@ -3645,7 +3648,7 @@ msgstr "Typ odpovědi očekávaný pro každý řádek (musí odpovídat formát
 msgid "Unable to acquire subtitle lock"
 msgstr "Nelze získat zámek titulků"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:331
+#: PySubtrans/Auth/ChatGPTAuth.py:333
 msgid "Unable to confirm ChatGPT sign-out: {error}"
 msgstr "Nelze potvrdit odhlášení z ChatGPT: {error}"
 
@@ -3767,7 +3770,7 @@ msgstr "Nelze zobrazit náhled dávek: {error}"
 msgid "Unable to probe media duration: {}"
 msgstr "Nepodařilo se zjistit délku média: {}"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:447
+#: PySubtrans/Auth/ChatGPTAuth.py:449
 msgid "Unable to reach ChatGPT: {error}"
 msgstr "ChatGPT je nedostupný: {error}"
 
@@ -3806,8 +3809,8 @@ msgstr "Nepodařilo se načíst seznam modelů Gemini: {error}"
 
 #: PySubtrans/Providers/Provider_Bedrock.py:144
 #: PySubtrans/Providers/Provider_Mistral.py:129
-#: PySubtrans/Providers/Provider_OpenAI.py:266
-#: PySubtrans/Providers/Provider_OpenAI.py:282
+#: PySubtrans/Providers/Provider_OpenAI.py:259
+#: PySubtrans/Providers/Provider_OpenAI.py:275
 msgid "Unable to retrieve available AI models: {error}"
 msgstr "Nepodařilo se načíst dostupné modely AI: {error}"
 
@@ -3818,9 +3821,9 @@ msgid "Unable to retrieve available models: {error}"
 msgstr "Nelze načíst dostupné modely: {error}"
 
 #: PySubtrans/Providers/Gateways/GatewayProvider.py:148
-#: PySubtrans/Providers/Provider_OpenAI.py:171
-#: PySubtrans/Providers/Provider_OpenAI.py:186
-#: PySubtrans/Providers/Provider_OpenAI.py:203
+#: PySubtrans/Providers/Provider_OpenAI.py:165
+#: PySubtrans/Providers/Provider_OpenAI.py:180
+#: PySubtrans/Providers/Provider_OpenAI.py:197
 msgid "Unable to retrieve models"
 msgstr "Nelze načíst modely"
 
@@ -3968,7 +3971,7 @@ msgstr "Použít výchozí model a skrýt pokročilé možnosti modelu"
 msgid "Use the detected Torch environment"
 msgstr "Použít zjištěné prostředí Torch"
 
-#: PySubtrans/Providers/Provider_OpenAI.py:165
+#: PySubtrans/Providers/Provider_OpenAI.py:159
 msgid "Use the httpx library for requests. May help if you receive a 307 redirect error with a custom api_base"
 msgstr "Použít knihovnu httpx pro požadavky. Může pomoci, pokud obdržíte chybu přesměrování 307 s vlastním api_base"
 
@@ -4048,11 +4051,11 @@ msgstr "Zapisování dat projektu do {}"
 msgid "You are signed out here, but remote sign-out could not be confirmed. You can disconnect LLM-Subtrans in your ChatGPT settings."
 msgstr "Zde jste odhlášeni, ale vzdálené odhlášení se nepodařilo potvrdit. LLM-Subtrans můžete odpojit v nastavení svého ChatGPT."
 
-#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:109
+#: GuiSubtrans/Widgets/ChatGPTSignInDialog.py:107
 msgid "You're using your ChatGPT plan"
 msgstr "Používáte svůj plán ChatGPT"
 
-#: PySubtrans/Auth/ChatGPTAuth.py:360
+#: PySubtrans/Auth/ChatGPTAuth.py:362
 msgid "Your ChatGPT session has expired. Sign in again to continue."
 msgstr "Vaše relace ChatGPT vypršela. Pro pokračování se znovu přihlaste."
 
@@ -4782,6 +4785,9 @@ msgstr "~5,5 GB"
 #: GuiSubtrans/Widgets/TorchSetupDialog.py:72
 msgid "~600 MB"
 msgstr "~600 MB"
+
+#~ msgid "The ChatGPT account whose plan is used for translation"
+#~ msgstr "Účet ChatGPT, jehož plán se používá pro překlad"
 
 #~ msgid ""
 #~ "\n"

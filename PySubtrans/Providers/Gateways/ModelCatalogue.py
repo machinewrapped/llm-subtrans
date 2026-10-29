@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
+import regex
+
 class FamilySource(Enum):
     """
     How catalogue entries are grouped into model families.
@@ -25,6 +27,7 @@ class ModelCatalogue:
     query : Mapping[str, str|int] = field(default_factory=dict)
     required_fields : Mapping[str, Any] = field(default_factory=dict)   # Entries must match all of these values
     excluded_prefixes : tuple[str, ...] = ()        # Skip models whose name (after any vendor prefix) starts with one of these
+    excluded_patterns : tuple[str, ...] = ()        # Skip models whose name (after any vendor prefix) matches one of these regular expressions
 
     def Parse(self, data : Any, gateway_name : str) -> tuple[dict[str, dict[str, str]], list[str]]:
         """
@@ -53,6 +56,9 @@ class ModelCatalogue:
             # Match the model name, so 'vendor/veo-3' is excluded by 'veo' whatever the family source
             model_name = model_id.rsplit('/', 1)[-1].lower()
             if model_name.startswith(self.excluded_prefixes):
+                continue
+
+            if any(regex.search(pattern, model_name) for pattern in self.excluded_patterns):
                 continue
 
             family, display_name = self._get_family_and_name(entry, model_id, gateway_name)

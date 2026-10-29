@@ -89,6 +89,18 @@ class TestGatewayCatalogue(LoggedTestCase):
         self.assertLoggedEqual("one family named after the gateway", ["Example Gateway"], list(models_by_family.keys()))
         self.assertLoggedEqual("excluded models removed", ['gpt-6.1-sol'], all_models)
 
+    def test_excluded_patterns_match_anywhere_in_name(self) -> None:
+        catalogue = ModelCatalogue(path='v1/models', family_source=FamilySource.IdPrefix, excluded_patterns=(r'\bimage\b',))
+
+        _models_by_family, all_models = catalogue.Parse({'data': [
+            {'id': 'openai/gpt-6-luna'},
+            {'id': 'openai/gpt-image-2'},
+            {'id': 'google/gemini-3-pro-image'},
+            {'id': 'google/gemini-3.1-flash-lite'},
+        ]}, "Example Gateway")
+
+        self.assertLoggedEqual("image models removed", ['google/gemini-3.1-flash-lite', 'openai/gpt-6-luna'], all_models)
+
 
 class TestGatewayFamilySelector(LoggedTestCase):
     """The family selector is hidden only when there is nothing else to choose."""

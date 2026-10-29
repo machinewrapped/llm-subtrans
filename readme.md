@@ -39,6 +39,8 @@ https://openai.com/policies/privacy-policy
 
 You will need an OpenAI API key from https://platform.openai.com/account/api-keys to use OpenAI's GPT models.
 
+Alternatively, if you have an eligible ChatGPT plan you can tick **Use ChatGPT plan** in the provider settings and sign in with ChatGPT, so translation requests use your plan's usage allowance instead of a separately billed API key. Sign-in opens in your web browser. Usage is subject to your plan's limits, which you can manage in your [ChatGPT settings](https://chatgpt.com/settings/usage). This uses OpenAI's [Sign in with ChatGPT](https://developers.openai.com/siwc/token-sharing-open-source), which is currently in preview. It only covers translation: transcription with OpenAI still needs an API key.
+
 You can use the custom api_base parameter to access a custom OpenAI instance (or any other OpenAI-compatible endpoint, though the Custom Server option gives you more control).
 
 You can use an **OpenAI Azure** installation as a translation provider, but this is only advisable if you know what you're doing - in which case hopefully it will be clear how to configure the Azure provider settings.
@@ -465,6 +467,9 @@ Some additional arguments are available for specific providers.
 
 - `-m`, `--model`:
   Specify the [AI model](https://platform.openai.com/docs/models) to use for translation
+
+- `--chatgpt`:
+  Translate using your ChatGPT plan instead of an API key. If you are not signed in, a browser opens to sign in with ChatGPT. The models available depend on your plan, so you may need to specify one with `--model`.
 
 #### Gemini
 - `-k`, `--apikey`:

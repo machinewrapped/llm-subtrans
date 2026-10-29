@@ -23,6 +23,7 @@ class OpenAITranscriptionProvider(TranscriptionProvider):
 
     information_noapikey = _("""
     <p>To use this provider you need <a href="https://platform.openai.com/account/api-keys">an OpenAI API key</a>.</p>
+    <p>Signing in with ChatGPT for translation does not cover transcription, which always needs an API key.</p>
     """)
 
     @property

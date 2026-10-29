@@ -95,6 +95,8 @@ Supports translating subtitle files and transcribing subtitles from video/audio.
 
 Translation providers live in `PySubtrans/Providers/`; their clients are in `PySubtrans/Providers/Clients/`. Gateways that route to many model makers are data-driven: each gateway in `PySubtrans/Providers/Gateways/` is a definition that the shared `GatewayProvider` implements. Each provider declares a `ProviderKind`, which the GUI uses to group the provider selector. `TranslationPrompt` prepares requests, and `TranslationParser` maps responses back to subtitle lines.
 
+`PySubtrans/Auth/` handles Sign in with ChatGPT: the browser sign-in, token refresh and sign-out. The OpenAI provider uses it when set to use the ChatGPT plan, passing the access token to its client in place of an API key.
+
 For provider registration, model discovery, streaming, and provider-specific settings, see [translation-provider-integration.md](translation-provider-integration.md).
 
 ## Transcription Pipeline

@@ -1,14 +1,16 @@
 import logging
 from collections.abc import Callable
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBox, QWidget, QFormLayout, QFrame)
+from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBox, QWidget, QFormLayout, QFrame, QMessageBox)
 from GuiSubtrans.GuiHelpers import ClearForm, GetProviderDropdownValues, GetThemeNames
 
+from GuiSubtrans.Widgets.ChatGPTSignInDialog import ChatGPTSignInDialog
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget, ParseOptionDefinition
 from GuiSubtrans.Widgets.ProviderSettingsForm import ProviderSettingsForm
 from GuiSubtrans.Widgets.TranscriptionProviderLoader import TranscriptionProviderLoader
 from PySubtrans.Helpers.InstructionsHelpers import GetInstructionsFiles, LoadInstructions
 from PySubtrans.Options import ConfigActionOption, INFO_OPTION, Options
+from PySubtrans.Auth.ChatGPTAuth import ChatGPTAuth, ChatGPTSignInOption, ChatGPTSignOutOption
 from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
@@ -379,7 +381,7 @@ class SettingsDialog(QDialog):
             self.provider_form.settingChanged.disconnect()
             self.provider_form.modelsResolved.disconnect()
 
-        self.provider_form = ProviderSettingsForm(provider, self.provider_settings.get_dict(provider.name), layout)
+        self.provider_form = ProviderSettingsForm(provider, self.provider_settings.get_dict(provider.name), layout, action_handler=self._get_setting_action_handler)
         # Bind the provider name so a superseded form cannot write into another provider's settings
         self.provider_form.settingChanged.connect(lambda key, value, name=provider.name: self._on_provider_setting_changed(name, key, value))
         self.provider_form.modelsResolved.connect(self._on_provider_models_resolved)
@@ -685,7 +687,36 @@ class SettingsDialog(QDialog):
                 return None
             return _torch_handler
 
+        if issubclass(key_type, ChatGPTSignInOption):
+            return self._sign_in_with_chatgpt
+
+        if issubclass(key_type, ChatGPTSignOutOption):
+            return self._sign_out_of_chatgpt
+
         return lambda current_value: None
+
+    def _get_chatgpt_auth(self) -> ChatGPTAuth:
+        provider = self.translation_provider
+        proxy = provider.settings.get_str('proxy') if provider else None
+        return ChatGPTAuth(proxy=proxy)
+
+    def _sign_in_with_chatgpt(self, current_value : str) -> str|None:
+        """Sign in with ChatGPT in the browser, returning None if sign-in did not complete."""
+        dialog = ChatGPTSignInDialog(self._get_chatgpt_auth(), parent=self)
+        if dialog.exec() == QDialog.DialogCode.Accepted:
+            return ''
+        return None
+
+    def _sign_out_of_chatgpt(self, current_value : str) -> str|None:
+        """Sign out of ChatGPT after confirmation, returning None if cancelled."""
+        answer = QMessageBox.question(self, _("Sign out"), _("Sign out of ChatGPT? Translation with OpenAI will need you to sign in again."))
+        if answer != QMessageBox.StandardButton.Yes:
+            return None
+
+        if not self._get_chatgpt_auth().SignOut():
+            QMessageBox.warning(self, _("Sign out"), _("You are signed out here, but remote sign-out could not be confirmed. You can disconnect LLM-Subtrans in your ChatGPT settings."))
+
+        return ''
 
     def _stop_provider_model_load(self) -> None:
         """Prevent late provider results from mutating settings after the dialog closes."""

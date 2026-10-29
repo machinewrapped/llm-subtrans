@@ -270,9 +270,9 @@ Some features keep files in a config directory: saved settings, custom instructi
 
 By default this is a `PySubtrans` folder in the user's config location, e.g. `%APPDATA%\MachineWrapped\PySubtrans` on Windows, `~/Library/Application Support/PySubtrans` on macOS or `~/.config/PySubtrans` on Linux.
 
-> **Changed in 1.7.4:** PySubtrans now has a config directory of its own. Earlier versions shared one with every other application using the package.
+> **Changed in 1.7.4:** the default config directory moved to the `PySubtrans` folder. Settings and sign-ins saved by earlier versions are not carried over.
 
-For the best isolation, give your application a folder of its own by calling `ConfigureConfigDir` once at startup, before anything reads or writes data. Your settings, instructions and sign-ins then stay separate from every other application built on PySubtrans, and a user can find, back up or reset them alongside the rest of your application's data.
+The default folder is shared by every application that uses it. For the best isolation, give your application a folder of its own by calling `ConfigureConfigDir` once at startup, before anything reads or writes data. Your settings, instructions and sign-ins then stay separate from other applications built on PySubtrans, and a user can find, back up or reset them alongside the rest of your application's data.
 
 ```python
 from PySubtrans.Helpers.Resources import ConfigureConfigDir

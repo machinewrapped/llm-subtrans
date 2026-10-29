@@ -7,17 +7,22 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import timedelta
 
+import appdirs # type: ignore
+
 from PySubtrans.Helpers import GetOutputPath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import FormatKeyValuePairs, ParseKeyValuePairsOrFiles, ParseNames, TryParseNonNegative
 from PySubtrans import OriginalTextPlacement, SaveSettings, batch_subtitles, init_options, init_translator, preprocess_subtitles
-from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir
+from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, ConfigureDefaultConfigDir, GetConfigDir
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleTranslator import SubtitleTranslator
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.SubtitleProject import SubtitleProject
 from PySubtrans.Subtitles import Subtitles
+
+# The GUI and CLIs keep their settings, instructions and sign-ins in the LLM-Subtrans config directory
+LLM_SUBTRANS_CONFIG_DIR : str = appdirs.user_config_dir("LLMSubtrans", "MachineWrapped", roaming=True)
 
 @dataclass
 class LoggerOptions():
@@ -202,6 +207,7 @@ def CreateArgParser(description : str) -> ArgumentParser:
     """
     Create new arg parser and parse shared command line arguments between models
     """
+    ConfigureDefaultConfigDir(LLM_SUBTRANS_CONFIG_DIR)
     ConfigureConfigDirFromArguments()
     _warn_renamed_args()
     pre_parser = ArgumentParser(add_help=False)

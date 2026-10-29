@@ -9,7 +9,7 @@ settings save or load.
 import os
 import tempfile
 
-from PySubtrans.Helpers.Resources import ConfigureConfigDir, GetConfigDir, default_config_dir
+from PySubtrans.Helpers.Resources import ConfigureConfigDir, GetConfigDir, GetDefaultConfigDir
 
 
 def _configure_test_settings_sandbox() -> str:
@@ -24,5 +24,5 @@ def _configure_test_settings_sandbox() -> str:
 
 _sandbox_dir = _configure_test_settings_sandbox()
 
-if GetConfigDir() == default_config_dir:
+if GetConfigDir() == GetDefaultConfigDir():
     raise RuntimeError("Test settings sandbox was not applied: tests would use the real settings file")

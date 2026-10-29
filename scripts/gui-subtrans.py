@@ -18,7 +18,7 @@ if not hasattr(sys, "_MEIPASS"):
     check_required_imports(['PySubtrans', 'GuiSubtrans', 'PySide6', 'scripts'], 'gui')
 
 from PySubtrans.Helpers.ImportGuard import CaptureOriginalImport
-from scripts.subtrans_common import InitLogger
+from scripts.subtrans_common import LLM_SUBTRANS_CONFIG_DIR, InitLogger
 
 # Must happen before PySide6 is imported; see PySubtrans.Helpers.ImportGuard.
 CaptureOriginalImport()
@@ -33,13 +33,14 @@ from PySide6.QtWidgets import QApplication
 if sys.platform == 'win32':
     signal.signal(signal.SIGINT, _prev_sigint)
     del _prev_sigint
-from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, GetConfigDir, GetSettingsPath
+from PySubtrans.Helpers.Resources import ConfigureConfigDirFromArguments, ConfigureDefaultConfigDir, GetConfigDir, GetSettingsPath
 from PySubtrans.Options import Options
 from PySubtrans.Helpers.Localization import initialize_localization, _
 from GuiSubtrans.MainWindow import MainWindow
 
 def parse_arguments():
     # Parse command line arguments
+    ConfigureDefaultConfigDir(LLM_SUBTRANS_CONFIG_DIR)
     ConfigureConfigDirFromArguments()
     parser = argparse.ArgumentParser(description='Translates subtitles using an AI service')
     parser.add_argument('filepath', nargs='?', help="Optional file to load on startup")

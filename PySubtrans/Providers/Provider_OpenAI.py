@@ -2,14 +2,18 @@ import importlib.util
 import logging
 import os
 
-from PySubtrans.Options import SettingsType, env_float
+from PySubtrans.Options import SettingsType, env_bool, env_float
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
+
+# Minimum seconds an access token must remain valid when a ChatGPT plan client is created
+CLIENT_TOKEN_VALIDITY = 1800.0
 
 if not importlib.util.find_spec("openai"):
     from PySubtrans.Helpers.Localization import _
     logging.debug(_("OpenAI SDK is not installed. OpenAI provider will not be available"))
 else:
     try:
+        from PySubtrans.Auth.ChatGPTAuth import API_RESOURCE, MANAGE_USAGE_URL, ChatGPTAuth, ChatGPTAuthError, ChatGPTSignInOption, ChatGPTSignOutOption
         from PySubtrans.Helpers.Localization import _
         from PySubtrans.SubtitleError import ProviderError
         from PySubtrans.TranslationClient import TranslationClient
@@ -37,8 +41,23 @@ else:
             <p>Note that if your API Key is attached to a free trial account the <a href="https://platform.openai.com/docs/guides/rate-limits?context=tier-free">rate limit</a> for requests will be <i>severely</i> limited.</p>
             """
 
+            information_chatgpt = f"""
+            <p>Using ChatGPT plan.</p>
+            <p>Translation requests use the usage allowance of your ChatGPT plan instead of an API key, subject to your plan's limits.
+            You can <a href="{MANAGE_USAGE_URL}">manage usage</a> in your ChatGPT settings.</p>
+            <p>Select the AI model to use as a translator. The models available depend on your plan.</p>
+            <p>Your ChatGPT plan can only be used for translation. Transcription with OpenAI still needs an API key.</p>
+            """
+
+            information_chatgpt_signin = """
+            <p>Sign in with ChatGPT to translate using the usage allowance of your ChatGPT plan, instead of a separately billed API key.</p>
+            <p>Sign-in opens in your web browser.</p>
+            """
+
             def __init__(self, settings : SettingsType):
                 super().__init__(self.name, SettingsType({
+                    "use_chatgpt_plan": settings.get_bool('use_chatgpt_plan', env_bool('OPENAI_USE_CHATGPT_PLAN')),
+                    "chatgpt_account": settings.get_str('chatgpt_account'),
                     "api_key": settings.get_str('api_key', os.getenv('OPENAI_API_KEY')),
                     "api_base": settings.get_str('api_base', os.getenv('OPENAI_API_BASE')),
                     "model": settings.get_str('model', os.getenv('OPENAI_MODEL', self.default_model)),
@@ -52,7 +71,7 @@ else:
                     'proxy': settings.get_str('proxy') or os.getenv('OPENAI_PROXY'),
                 }))
 
-                self.refresh_when_changed = ['api_key', 'api_base', 'model']
+                self.refresh_when_changed = ['use_chatgpt_plan', 'chatgpt_account', 'api_key', 'api_base', 'model']
 
                 self.valid_model_types = [ "gpt", "o1", "o3", "o4" ]
                 self.excluded_model_types = [ "vision", "image", "realtime", "audio", "instruct", "search", "transcribe", "tts", "deep-research", "codex" ]
@@ -65,6 +84,14 @@ else:
             @property
             def api_base(self) -> str|None:
                 return self.settings.get_str( 'api_base')
+
+            @property
+            def uses_chatgpt_plan(self) -> bool:
+                return self.settings.get_bool('use_chatgpt_plan')
+
+            @property
+            def chatgpt_auth(self) -> ChatGPTAuth:
+                return ChatGPTAuth(proxy=self.settings.get_str('proxy'))
 
             @property
             def is_instruct_model(self) -> bool:
@@ -83,7 +110,26 @@ else:
             def GetTranslationClient(self, settings : SettingsType) -> TranslationClient:
                 client_settings = SettingsType(self.settings.copy())
                 client_settings.update(settings)
-                if self.is_instruct_model:
+                if self.uses_chatgpt_plan:
+                    # Sanctioned lazy import: defer the measured 2.4-second OpenAI SDK load until reasoning translation is selected.
+                    from PySubtrans.Providers.Clients.OpenAIReasoningClient import OpenAIReasoningClient
+
+                    # The client keeps this token, so make sure it has a reasonable time left to run
+                    try:
+                        access_token = self.chatgpt_auth.GetAccessToken(min_validity=CLIENT_TOKEN_VALIDITY)
+                    except ChatGPTAuthError as e:
+                        raise ProviderError(str(e), provider=self) from e
+
+                    # ChatGPT plan usage requires the public API, with every response streamed and not stored
+                    client_settings.update({
+                        'api_key': access_token,
+                        'api_base': API_RESOURCE,
+                        'use_httpx': False,
+                        'require_streaming': True,
+                        'store_responses': False,
+                    })
+                    return OpenAIReasoningClient(client_settings)
+                elif self.is_instruct_model:
                     raise ProviderError("Instruct models are no longer supported", provider=self)
                 elif self.is_reasoning_model:
                     # Sanctioned lazy import: defer the measured 2.4-second OpenAI SDK load until reasoning translation is selected.
@@ -96,8 +142,24 @@ else:
 
                     return ChatGPTClient(client_settings)
 
+            def GetCombinedSettings(self, overrides : SettingsType) -> SettingsType:
+                """
+                Show the account from the stored ChatGPT sign-in, which may have changed outside the settings
+                """
+                combined_settings = super().GetCombinedSettings(overrides)
+                if self.uses_chatgpt_plan:
+                    combined_settings['chatgpt_account'] = self.chatgpt_auth.account or ''
+                return combined_settings
+
             def GetOptions(self, settings : SettingsType) -> GuiSettingsType:
-                options : GuiSettingsType = {
+                auth_options : GuiSettingsType = {
+                    'use_chatgpt_plan': (bool, _("Sign in with ChatGPT to translate using your ChatGPT plan, instead of an OpenAI API key")),
+                }
+
+                if self.uses_chatgpt_plan:
+                    return auth_options | self._get_chatgpt_options()
+
+                options : GuiSettingsType = auth_options | {
                     'api_key': (str, _("An OpenAI API key is required to use this provider (https://platform.openai.com/account/api-keys)")),
                     'api_base': (str, _("The base URL to use for requests - leave as default unless you know you need something else")),
                 }
@@ -128,6 +190,27 @@ else:
 
                 return options
 
+            def _get_chatgpt_options(self) -> GuiSettingsType:
+                """
+                Options for translating with the user's ChatGPT plan
+                """
+                if not self.chatgpt_auth.is_signed_in:
+                    return { 'chatgpt_account': (ChatGPTSignInOption, _("Sign in with ChatGPT to translate using your ChatGPT plan")) }
+
+                options : GuiSettingsType = {
+                    'chatgpt_account': (ChatGPTSignOutOption, _("The ChatGPT account whose plan is used for translation")),
+                }
+
+                models = self.model_list.known
+                if not models:
+                    options['model'] = ([_("Unable to retrieve models")], _("Sign out and sign in with ChatGPT again"))
+                    return options
+
+                options['model'] = (models, _("AI model to use as the translator"))
+                options['reasoning_effort'] = (["none", "minimal", "low", "medium", "high"], _("The level of reasoning effort to use for the model (valid options are model-dependent)"))
+                options['stream_responses'] = (bool, _("Stream translations in realtime as they are generated"))
+                return options
+
             @classmethod
             def WarmUp(cls) -> None:
                 """Load OpenAI dependencies before the provider is selected in the settings dialog."""
@@ -146,6 +229,9 @@ else:
                 """
                 Returns a list of possible values for the LLM model
                 """
+                if self.uses_chatgpt_plan:
+                    return self._get_chatgpt_models()
+
                 try:
                     if not self.api_key:
                         logging.debug("No OpenAI API key provided")
@@ -183,7 +269,25 @@ else:
                     logging.error(_("Unable to retrieve available AI models: {error}").format(error=str(e)))
                     raise
 
+            def _get_chatgpt_models(self) -> list[str]:
+                """
+                Returns the models available with the signed-in ChatGPT plan
+                """
+                auth = self.chatgpt_auth
+                if not auth.is_signed_in:
+                    logging.debug("Not signed in with ChatGPT")
+                    return []
+
+                try:
+                    return auth.ListModels()
+
+                except ChatGPTAuthError as e:
+                    logging.error(_("Unable to retrieve available AI models: {error}").format(error=str(e)))
+                    raise
+
             def GetInformation(self) -> str:
+                if self.uses_chatgpt_plan:
+                    return self.information_chatgpt if self.chatgpt_auth.is_signed_in else self.information_chatgpt_signin
                 if not self.api_key:
                     return self.information_noapikey
                 if self.is_instruct_model:
@@ -194,6 +298,12 @@ else:
                 """
                 Validate the settings for the provider
                 """
+                if self.uses_chatgpt_plan:
+                    if not self.chatgpt_auth.is_signed_in:
+                        self.validation_message = _("Sign in with ChatGPT is required")
+                        return False
+                    return True
+
                 if not self.api_key:
                     self.validation_message = _("API Key is required")
                     return False

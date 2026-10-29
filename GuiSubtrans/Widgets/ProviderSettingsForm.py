@@ -1,3 +1,4 @@
+from collections.abc import Callable
 import logging
 
 from PySide6.QtCore import QObject, Qt, Signal, Slot
@@ -6,7 +7,7 @@ from PySide6.QtWidgets import QFormLayout
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget, ParseOptionDefinition
 from GuiSubtrans.Widgets.TranslationProviderModelLoader import TranslationProviderModelLoader
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Options import INFO_OPTION
+from PySubtrans.Options import ConfigActionOption, INFO_OPTION
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.TranslationProvider import TranslationProvider
 
@@ -21,9 +22,10 @@ class ProviderSettingsForm(QObject):
     settingChanged = Signal(str, object)
     modelsResolved = Signal()
 
-    def __init__(self, provider : TranslationProvider, settings : SettingsType, layout : QFormLayout):
+    def __init__(self, provider : TranslationProvider, settings : SettingsType, layout : QFormLayout, action_handler : Callable[[type], Callable[[str], str|None]]|None = None):
         super().__init__(layout.parentWidget())
         self.provider = provider
+        self.action_handler = action_handler
         self.settings = settings
         self.layout = layout
         self.widgets : dict[str, OptionWidget] = {}
@@ -75,6 +77,11 @@ class ProviderSettingsForm(QObject):
         if key == 'model' and not self.provider.model_list.resolved:
             initial_value = self.settings.get_str('model') or self.provider.selected_model
             key_type = [initial_value] if initial_value else []
+
+        # Resolve action sentinels to a handler, so the field is created as a button
+        if self.action_handler and isinstance(key_type, type) and issubclass(key_type, ConfigActionOption):
+            placeholder = key_type.label
+            key_type = self.action_handler(key_type)
 
         field = CreateOptionWidget(key, initial_value, key_type, tooltip=tooltip, placeholder=placeholder)
         field.contentChanged.connect(lambda field=field: self.settingChanged.emit(field.key, field.GetValue()))

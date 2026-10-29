@@ -4,17 +4,21 @@ from openai import (
     AuthenticationError,
     BadRequestError,
     NotFoundError,
+    Omit,
     OpenAIError,
     PermissionDeniedError,
     RateLimitError,
-    UnprocessableEntityError
+    UnprocessableEntityError,
+    omit
 )
 from openai.types import responses as responses_types
 from openai.types.responses import (
     EasyInputMessageParam,
     ResponseInputParam,
+    ResponseStreamEvent,
     ResponseTextDeltaEvent,
     ResponseCompletedEvent,
+    ResponseErrorEvent,
     ResponseFailedEvent,
     ResponseIncompleteEvent
 )
@@ -23,6 +27,7 @@ from openai.types.shared_params.reasoning import Reasoning
 from openai.types.shared.reasoning_effort import ReasoningEffort
 
 from typing import Any, Literal, cast
+from PySubtrans.Auth.ChatGPTAuth import MANAGE_USAGE_URL
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Providers.Clients.OpenAIClient import OpenAIClient
 from PySubtrans.SettingsType import SettingsType
@@ -35,6 +40,10 @@ from PySubtrans.TranslationPrompt import TranslationPrompt
 from PySubtrans.TranslationRequest import TranslationRequest
 
 linesep = '\n'
+
+# Stream error codes for requests that use the ChatGPT plan, when the plan cannot be used
+USAGE_LIMIT_EXCEEDED = 'subscription_sharing_usage_limit_exceeded'
+USAGE_UNAVAILABLE = 'subscription_sharing_usage_unavailable'
 
 class OpenAIReasoningClient(OpenAIClient):
     """
@@ -60,6 +69,17 @@ class OpenAIReasoningClient(OpenAIClient):
     @property
     def is_streaming(self) -> bool:
         return self._is_streaming
+
+    @property
+    def require_streaming(self) -> bool:
+        """Whether every request must be streamed, even when partial updates are not shown."""
+        return self.settings.get_bool('require_streaming', False)
+
+    @property
+    def store_responses(self) -> bool|Omit:
+        """Whether OpenAI should store responses, omitted to use the service default unless set."""
+        store = self.settings.get('store_responses')
+        return store if isinstance(store, bool) else omit
 
     def _abort(self) -> None:
         """
@@ -114,7 +134,7 @@ class OpenAIReasoningClient(OpenAIClient):
             raise TranslationImpossibleError(_("No content provided for translation"))
 
         try:
-            if request.is_streaming:
+            if request.is_streaming or self.require_streaming:
                 # Streaming: complex event loop with delta accumulation
                 return self._handle_streaming_response(request)
 
@@ -125,7 +145,8 @@ class OpenAIReasoningClient(OpenAIClient):
                 model=self.model,
                 input=input_params,
                 instructions=request.prompt.system_prompt,
-                reasoning=Reasoning(effort=self.reasoning_effort)
+                reasoning=Reasoning(effort=self.reasoning_effort),
+                store=self.store_responses
             )
 
         except (RateLimitError, APITimeoutError, APIConnectionError):
@@ -150,6 +171,7 @@ class OpenAIReasoningClient(OpenAIClient):
             input=input_params,
             instructions=request.prompt.system_prompt,
             reasoning=Reasoning(effort=self.reasoning_effort),
+            store=self.store_responses,
             stream=True
         )
 
@@ -160,6 +182,8 @@ class OpenAIReasoningClient(OpenAIClient):
             for event in stream:
                 if self.aborted:
                     return
+
+                self._check_stream_event(event)
 
                 # Handle relevant streaming events
                 if isinstance(event, ResponseTextDeltaEvent):
@@ -179,7 +203,7 @@ class OpenAIReasoningClient(OpenAIClient):
                     ))
                     return latest_response
 
-        except RateLimitError:
+        except (RateLimitError, TranslationImpossibleError):
             raise
         except (APITimeoutError, APIConnectionError):
             raise
@@ -204,6 +228,21 @@ class OpenAIReasoningClient(OpenAIClient):
 
         # If we get here without a completion event, something went wrong
         raise TranslationResponseError(_("OpenAI streaming ended without a completed response"), response=None)
+
+    def _check_stream_event(self, event : ResponseStreamEvent) -> None:
+        """Stop at once if the ChatGPT plan cannot be used, since retrying cannot help."""
+        code : str|None = None
+        if isinstance(event, ResponseFailedEvent):
+            error = event.response.error if event.response else None
+            code = getattr(error, 'code', None)
+        elif isinstance(event, ResponseErrorEvent):
+            code = event.code
+
+        if code == USAGE_LIMIT_EXCEEDED:
+            raise TranslationImpossibleError(_("ChatGPT plan usage limit reached. Manage usage at {url}").format(url=MANAGE_USAGE_URL))
+
+        if code == USAGE_UNAVAILABLE:
+            raise TranslationImpossibleError(_("ChatGPT plan usage is not available for this account. Manage usage at {url}").format(url=MANAGE_USAGE_URL))
 
     def _convert_to_input_params(self, content: str|list[str]|list[dict[str, str]]) -> ResponseInputParam:
         """

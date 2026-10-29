@@ -109,6 +109,13 @@ https://demonroute.com/privacy
 
 Models are named family/model and grouped by family, e.g. `openai/gpt-oss-120b`, which is selected by default.
 
+#### Atlas Cloud
+https://www.atlascloud.ai/privacy
+
+[Atlas Cloud](https://www.atlascloud.ai/) provides an OpenAI-compatible API for models from multiple providers. You will need an [Atlas Cloud API key](https://www.atlascloud.ai/console/api-keys) and sufficient account credit to use the service (the app will look for ATLASCLOUD_API_KEY in the environment if this is not provided).
+
+Models are named provider/model and grouped by provider, e.g. `openai/gpt-6-luna`, which is selected by default. Image generation models are excluded.
+
 #### Cheaper Inference
 
 [Cheaper Inference](https://cheaperinference.com) is an OpenAI-compatible gateway which provides access to models from many different makers. You will need a [Cheaper Inference API key](https://cheaperinference.com/signup) to use the service (the app will look for CHEAPER_INFERENCE_API_KEY in the environment if this is not provided).
@@ -281,7 +288,10 @@ claude-subtrans --model claude-3-5-haiku-latest --target-language <target_langua
 llm-subtrans --list-formats
 
 # Batch process files in a folder tree (activate the virtual environment first)
-python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --apikey sk-... --language Spanish
+python scripts/batch-translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --apikey sk-... --language Spanish
+
+# Any provider can be selected by name, including gateways such as Requesty or Atlas Cloud
+python scripts/batch-translate.py ./subtitles ./translated --provider "Atlas Cloud" --model openai/gpt-6-luna --language Spanish
 ```
 
 The output format is inferred from file extensions. To convert between formats, provide an output path with the desired extension.
@@ -588,16 +598,16 @@ You can modify the `DEFAULT_OPTIONS` values directly in the script file, or use 
 
 ```sh
 # Preview mode to test settings without making API calls
-python scripts/batch_translate.py --preview
+python scripts/batch-translate.py --preview
 
 # Basic usage with command line arguments
-python scripts/batch_translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --apikey sk-... --language Spanish
+python scripts/batch-translate.py ./subtitles ./translated --provider openai --model gpt-5-mini --apikey sk-... --language Spanish
 
 # Override output format
-python scripts/batch_translate.py ./subtitles ./translated --provider openai --output-format srt
+python scripts/batch-translate.py ./subtitles ./translated --provider openai --output-format srt
 
 # Use additional options
-python scripts/batch_translate.py ./subtitles ./translated --provider openai --option max_batch_size=150 --option postprocess_subtitles=true
+python scripts/batch-translate.py ./subtitles ./translated --provider openai --option max_batch_size=150 --option postprocess_subtitles=true
 ```
 
 ### Developers

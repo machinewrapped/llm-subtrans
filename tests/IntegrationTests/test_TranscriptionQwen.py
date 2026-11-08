@@ -1,11 +1,9 @@
-import importlib.util
 import logging
 import sys
 import tempfile
 import unittest
 from datetime import timedelta
 from types import SimpleNamespace
-from typing import Any
 from unittest.mock import Mock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
@@ -20,7 +18,6 @@ from PySubtrans.Transcription.Providers.Provider_QwenLocal import QwenLocalProvi
 from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
 from PySubtrans.Transcription.Providers.Clients import QwenLocalClient as qwen_module
 
-QWEN_ASR_AVAILABLE = importlib.util.find_spec("qwen_asr") is not None
 QwenLocalClientClass = qwen_module.QwenLocalClient
 
 # Patch target for the check that a configured Torch environment has the Qwen runtime
@@ -158,133 +155,133 @@ class TestQwenLocalProvider(LoggedTestCase):
         self.assertLoggedEqual("nothing imported", 0, import_module.call_count)
 
 
-@unittest.skipUnless(QWEN_ASR_AVAILABLE, "qwen-asr not installed")
-class TestQwenLocalDevice(LoggedTestCase):
-    def setUp(self):
-        super().setUp()
-        # Warm the lazy client import BEFORE any backend patching: the client
-        # module (and qwen_asr beneath it) reads torch backends at import
-        # time, and the fake backends installed below would break that
-        # first import. Construction alone loads no model.
-        try:
-            QwenLocalProvider(SettingsType()).GetTranscriptionClient(SettingsType())
-        except SubtitleError:
-            self.skipTest("torch not installed")
+# Languages the stand-in runtime reports as supported by qwen-asr
+STAND_IN_LANGUAGES = ['Chinese', 'English']
 
-    def _client(self, device_setting : str, allow_cpu_fallback : bool = False) -> qwen_module.QwenLocalClient:
-        provider = QwenLocalProvider(SettingsType())
-        client = provider.GetTranscriptionClient(SettingsType({
+
+def _fake_torch(cuda : bool = False, mps : bool = False, xpu : bool = False) -> SimpleNamespace:
+    """Stand-in for torch exposing only the backends and dtypes that the client reads."""
+    return SimpleNamespace(
+        cuda=SimpleNamespace(is_available=lambda: cuda, empty_cache=lambda: None),
+        backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: mps, is_built=lambda: mps)),
+        mps=SimpleNamespace(empty_cache=lambda: None),
+        xpu=SimpleNamespace(is_available=lambda: xpu),
+        float16='float16',
+        bfloat16='bfloat16',
+    )
+
+
+def _use_stand_in_runtime(test : unittest.TestCase, cuda : bool = False, mps : bool = False, xpu : bool = False) -> Mock:
+    """
+    Replace the Qwen runtime with stand-ins for the rest of the test, so torch and qwen-asr are never imported.
+    The client reads the runtime from module globals lazily, so the patches stay in place until cleanup.
+    Returns the stand-in Qwen3ASRModel class.
+    """
+    model_class = Mock()
+    for patcher in (
+        patch.object(qwen_module, 'torch', _fake_torch(cuda=cuda, mps=mps, xpu=xpu)),
+        patch.object(qwen_module, 'Qwen3ASRModel', model_class),
+        patch.object(qwen_module, 'PrepareTorchRuntime'),
+        patch.object(qwen_module, '_QWEN_SUPPORTED_LANGUAGES', STAND_IN_LANGUAGES),
+    ):
+        patcher.start()
+        test.addCleanup(patcher.stop)
+
+    return model_class
+
+
+class TestQwenLocalDevice(LoggedTestCase):
+    """Device and dtype selection, which only reads backend availability from torch."""
+    def _client(self, device_setting : str, allow_cpu_fallback : bool = False,
+                cuda : bool = False, mps : bool = False, xpu : bool = False) -> qwen_module.QwenLocalClient:
+        """Construct a client on a stand-in runtime with the given backends available."""
+        _use_stand_in_runtime(self, cuda=cuda, mps=mps, xpu=xpu)
+
+        return QwenLocalClientClass(SettingsType({
             'device': device_setting,
             'allow_cpu_fallback': allow_cpu_fallback,
         }))
-        assert isinstance(client, QwenLocalClientClass)
-        return client
-
-    def _no_accelerator(self):
-        """Patch every GPU backend to unavailable for CPU-fallback cases."""
-        return (
-            patch("torch.cuda.is_available", return_value=False),
-            patch("torch.backends.mps",
-                  SimpleNamespace(is_available=lambda: False, is_built=lambda: False), create=True),
-            patch("torch.xpu",
-                  SimpleNamespace(is_available=lambda: False), create=True),
-        )
 
     def test_auto_prefers_cuda(self):
         """Auto selection uses CUDA when present, with bfloat16 math."""
-        with patch("torch.cuda.is_available", return_value=True):
-            client = self._client('auto')
+        client = self._client('auto', cuda=True, mps=True, xpu=True)
 
-            self.assertLoggedEqual("auto device", "cuda:0", client.device)
-            self.assertLoggedEqual("cuda dtype", "torch.bfloat16", str(client.inference_dtype))
+        self.assertLoggedEqual("auto device", "cuda:0", client.device)
+        self.assertLoggedEqual("cuda dtype", "bfloat16", client.inference_dtype)
 
     def test_auto_uses_mps_without_cuda(self):
         """Auto selection falls through to Apple Silicon with float16 math."""
-        with patch("torch.cuda.is_available", return_value=False):
-            with patch("torch.backends.mps",
-                       SimpleNamespace(is_available=lambda: True, is_built=lambda: True),
-                       create=True):
-                client = self._client('auto')
+        client = self._client('auto', mps=True)
 
-                self.assertLoggedEqual("auto device", "mps", client.device)
-                self.assertLoggedEqual("mps dtype", "torch.float16", str(client.inference_dtype))
+        self.assertLoggedEqual("auto device", "mps", client.device)
+        self.assertLoggedEqual("mps dtype", "float16", client.inference_dtype)
 
+    @skip_if_debugger_attached
     def test_auto_refuses_cpu_without_fallback_consent(self):
         """Auto selection refuses CPU when no accelerator exists without consent."""
-        cuda_off, mps_off, xpu_off = self._no_accelerator()
-        with cuda_off, mps_off, xpu_off:
-            client = self._client('auto')
-
-            with self.assertRaises(SubtitleError) as context:
-                _device = client.device
-            self.assertIn('allow_cpu_fallback', str(context.exception))
-
-    def test_auto_uses_cpu_when_fallback_is_enabled(self):
-        """Auto selection uses CPU only after explicit consent."""
-        cuda_off, mps_off, xpu_off = self._no_accelerator()
-        with cuda_off, mps_off, xpu_off:
-            client = self._client('auto', allow_cpu_fallback=True)
-
-            self.assertLoggedEqual("auto device", "cpu", client.device)
-            self.assertLoggedEqual("cpu dtype", "torch.bfloat16", str(client.inference_dtype))
-
-    def test_explicit_xpu_selected(self):
-        """An explicit XPU request is honoured when the backend exists."""
-        with patch("torch.xpu",
-                   SimpleNamespace(is_available=lambda: True),
-                   create=True):
-            client = self._client('xpu')
-
-            self.assertLoggedEqual("explicit device", "xpu:0", client.device)
-            self.assertLoggedEqual("xpu dtype", "torch.float16", str(client.inference_dtype))
-
-    def test_explicit_mps_selected(self):
-        """An explicit MPS request is honoured when the backend exists."""
-        with patch("torch.backends.mps",
-                   SimpleNamespace(is_available=lambda: True, is_built=lambda: True),
-                   create=True):
-            client = self._client('mps')
-
-            self.assertLoggedEqual("explicit device", "mps", client.device)
-
-    def test_explicit_mps_unavailable_is_refused_without_fallback_consent(self):
-        """An unavailable explicit MPS request fails without CPU consent."""
-        with patch("torch.backends.mps",
-                   SimpleNamespace(is_available=lambda: False, is_built=lambda: False),
-                   create=True):
-            client = self._client('mps')
-
-            with self.assertRaises(SubtitleError) as context:
-                _device = client.device
-            self.assertIn('unavailable', str(context.exception))
-
-    def test_explicit_cuda_unavailable_uses_cpu_with_fallback_consent(self):
-        """An unavailable explicit CUDA request uses CPU after consent."""
-        with patch("torch.cuda.is_available", return_value=False):
-            client = self._client('cuda', allow_cpu_fallback=True)
-
-            self.assertLoggedEqual("fallback device", "cpu", client.device)
-
-    def test_explicit_cpu_is_refused_without_fallback_consent(self):
-        """Explicit CPU selection requires the persistent consent setting."""
-        client = self._client('cpu')
+        client = self._client('auto')
 
         with self.assertRaises(SubtitleError) as context:
             _device = client.device
-        self.assertIn('allow_cpu_fallback', str(context.exception))
+        log_input_expected_error('auto', SubtitleError, context.exception)
+
+    def test_auto_uses_cpu_when_fallback_is_enabled(self):
+        """Auto selection uses CPU only after explicit consent."""
+        client = self._client('auto', allow_cpu_fallback=True)
+
+        self.assertLoggedEqual("auto device", "cpu", client.device)
+        self.assertLoggedEqual("cpu dtype", "bfloat16", client.inference_dtype)
+
+    def test_explicit_xpu_selected(self):
+        """An explicit XPU request is honoured when the backend exists."""
+        client = self._client('xpu', cuda=True, xpu=True)
+
+        self.assertLoggedEqual("explicit device", "xpu:0", client.device)
+        self.assertLoggedEqual("xpu dtype", "float16", client.inference_dtype)
+
+    def test_explicit_mps_selected(self):
+        """An explicit MPS request is honoured when the backend exists."""
+        client = self._client('mps', cuda=True, mps=True)
+
+        self.assertLoggedEqual("explicit device", "mps", client.device)
+
+    @skip_if_debugger_attached
+    def test_explicit_mps_unavailable_is_refused_without_fallback_consent(self):
+        """An unavailable explicit MPS request fails without CPU consent."""
+        client = self._client('mps', cuda=True)
+
+        with self.assertRaises(SubtitleError) as context:
+            _device = client.device
+        log_input_expected_error('mps', SubtitleError, context.exception)
+
+    def test_explicit_cuda_unavailable_uses_cpu_with_fallback_consent(self):
+        """An unavailable explicit CUDA request uses CPU after consent."""
+        client = self._client('cuda', allow_cpu_fallback=True, mps=True)
+
+        self.assertLoggedEqual("fallback device", "cpu", client.device)
+
+    @skip_if_debugger_attached
+    def test_explicit_cpu_is_refused_without_fallback_consent(self):
+        """Explicit CPU selection requires the persistent consent setting."""
+        client = self._client('cpu', cuda=True)
+
+        with self.assertRaises(SubtitleError) as context:
+            _device = client.device
+        log_input_expected_error('cpu', SubtitleError, context.exception)
 
     def test_explicit_cpu_is_allowed_with_fallback_consent(self):
         """Explicit CPU selection is allowed after consent."""
-        client = self._client('cpu', allow_cpu_fallback=True)
+        client = self._client('cpu', allow_cpu_fallback=True, cuda=True)
 
         self.assertLoggedEqual("explicit CPU device", "cpu", client.device)
 
     def test_invalid_device_falls_back_to_auto(self):
         """Unknown device names warn and resolve automatically."""
-        with patch("torch.cuda.is_available", return_value=True):
-            client = self._client('tpu')
+        client = self._client('tpu', cuda=True)
 
-            self.assertLoggedEqual("auto device", "cuda:0", client.device)
+        with self.assertLogs(level=logging.WARNING):
+            device = client.device
+        self.assertLoggedEqual("auto device", "cuda:0", device)
 
     def test_options_offer_accelerators(self):
         """The device dropdown lists every supported backend."""
@@ -341,22 +338,21 @@ class TestQwenLanguage(LoggedTestCase):
             provider.ResolveLanguageCode("Klingon")
         self.log_expected_result(SubtitleError, type(context.exception), description="unknown hint rejected")
 
-    @unittest.skipUnless(QWEN_ASR_AVAILABLE, "qwen-asr not installed")
     def test_client_falls_back_to_auto_detect_outside_sdk_list(self):
         """A resolvable language the SDK cannot handle warns once at construction and auto-detects."""
-        client_type = QwenLocalClientClass
+        _use_stand_in_runtime(self)
 
-        client = client_type(SettingsType({'language': 'Chinese'}))
+        client = QwenLocalClientClass(SettingsType({'language': 'Chinese'}))
         self.assertLoggedEqual("supported language kept", "Chinese", client.language)
 
-        client = client_type(SettingsType({'language': 'Welsh'}))
+        with self.assertLogs(level=logging.WARNING):
+            client = QwenLocalClientClass(SettingsType({'language': 'Welsh'}))
         self.assertLoggedIsNone("unsupported language dropped", client.language)
 
-    @unittest.skipUnless(QWEN_ASR_AVAILABLE, "qwen-asr not installed")
     def test_hint_passes_straight_to_model(self):
         """The client no longer normalises: the resolved name goes to the SDK unchanged."""
-        client_type = QwenLocalClientClass
-        client = client_type(SettingsType({'language': 'Chinese'}))
+        _use_stand_in_runtime(self)
+        client = QwenLocalClientClass(SettingsType({'language': 'Chinese'}))
         result = type("Result", (), {"text": "ni hao", "language": "Chinese", "time_stamps": None})()
         model = Mock()
         model.transcribe.return_value = [result]
@@ -369,12 +365,14 @@ class TestQwenLanguage(LoggedTestCase):
             audio="chunk.wav", language="Chinese", return_time_stamps=True)
 
 
-@unittest.skipUnless(QWEN_ASR_AVAILABLE, "qwen-asr not installed")
 class TestQwenAlignment(LoggedTestCase):
+    def setUp(self):
+        super().setUp()
+        _use_stand_in_runtime(self)
+
     def test_auto_detect_requests_timestamps(self):
         """An omitted hint still enables Qwen forced alignment."""
-        client_type = QwenLocalClientClass
-        client = client_type(SettingsType())
+        client = QwenLocalClientClass(SettingsType())
         result = type("Result", (), {"text": "hello", "language": "English", "time_stamps": None})()
         model = Mock()
         model.transcribe.return_value = [result]
@@ -389,8 +387,7 @@ class TestQwenAlignment(LoggedTestCase):
     @skip_if_debugger_attached
     def test_unsupported_detected_language_falls_back_to_text(self):
         """Unsupported forced alignment tries English before text-only output."""
-        client_type = QwenLocalClientClass
-        client = client_type(SettingsType())
+        client = QwenLocalClientClass(SettingsType())
         result = type("Result", (), {"text": "bonjour", "language": "Klingon", "time_stamps": None})()
         model = Mock()
         model.transcribe.side_effect = [
@@ -438,11 +435,11 @@ class TestQwenAlignment(LoggedTestCase):
         self.assertLoggedIsNone("korean tokenizer", processor.ko_tokenizer)
 
 
-@unittest.skipUnless(QWEN_ASR_AVAILABLE, "qwen-asr not installed")
 class TestQwenModelCache(LoggedTestCase):
     def setUp(self):
         super().setUp()
-        self.client_type : type[Any] = QwenLocalClientClass
+        self.client_type = QwenLocalClientClass
+        self.model_class = _use_stand_in_runtime(self)
 
         self._saved_key = qwen_module._loaded_key
         self._saved_model = qwen_module._loaded_model
@@ -476,28 +473,25 @@ class TestQwenModelCache(LoggedTestCase):
             loaded.append(model)
             return model
 
-        assert qwen_module.torch is not None  # torch loaded by module-level setup
-        _torch_cuda = qwen_module.torch.cuda
-        with patch.object(qwen_module.Qwen3ASRModel, 'from_pretrained', side_effect=fake_load) as from_pretrained, \
-                patch.object(_torch_cuda, 'is_available', return_value=False), \
-                patch.object(qwen_module, '_mps_available', return_value=False):
-            first = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'allow_cpu_fallback': True}))
-            first_model = first._load_model()
-            self.assertLoggedIs("first load cached", first_model, qwen_module._loaded_model)
+        from_pretrained = self.model_class.from_pretrained
+        from_pretrained.side_effect = fake_load
+        first = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'allow_cpu_fallback': True}))
+        first_model = first._load_model()
+        self.assertLoggedIs("first load cached", first_model, qwen_module._loaded_model)
 
-            same = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'allow_cpu_fallback': True, 'max_new_tokens': 4096}))
-            self.assertLoggedIs("budget change reuses model", first_model, same._load_model())
-            self.assertLoggedEqual("single load so far", 1, from_pretrained.call_count)
+        same = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'allow_cpu_fallback': True, 'max_new_tokens': 4096}))
+        self.assertLoggedIs("budget change reuses model", first_model, same._load_model())
+        self.assertLoggedEqual("single load so far", 1, from_pretrained.call_count)
 
-            second = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-0.6B', 'device': 'cpu', 'allow_cpu_fallback': True}))
-            second_model = second._load_model()
-            self.assertLoggedEqual("second load performed", 2, from_pretrained.call_count)
-            self.assertLoggedIs("latest model cached", second_model, qwen_module._loaded_model)
-            self.assertLoggedIsNot("previous model dropped", first_model, qwen_module._loaded_model)
+        second = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-0.6B', 'device': 'cpu', 'allow_cpu_fallback': True}))
+        second_model = second._load_model()
+        self.assertLoggedEqual("second load performed", 2, from_pretrained.call_count)
+        self.assertLoggedIs("latest model cached", second_model, qwen_module._loaded_model)
+        self.assertLoggedIsNot("previous model dropped", first_model, qwen_module._loaded_model)
 
-            again = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'allow_cpu_fallback': True}))
-            again._load_model()
-            self.assertLoggedEqual("original key reloads", 3, from_pretrained.call_count)
+        again = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'allow_cpu_fallback': True}))
+        again._load_model()
+        self.assertLoggedEqual("original key reloads", 3, from_pretrained.call_count)
 
 
 if __name__ == '__main__':

@@ -77,7 +77,7 @@ class LoggedTestCase(unittest.TestCase):
         self.assertIs(actual, expected, msg)
 
     def assertLoggedIsNot(self, description : Any, unexpected : Any, actual : Any, msg : str|None = None, input_value : Any|None = None) -> None:
-        self.log_expected_result(unexpected, actual, description = description, input_value=input_value)
+        self.log_expected_result(True, actual is not unexpected, description = description, input_value=input_value)
         self.assertIsNot(actual, unexpected, msg)
 
     def assertLoggedGreater(self, description : Any, first : Any, second : Any, msg : str|None = None, input_value : Any|None = None) -> None:

@@ -20,7 +20,7 @@ from PySubtrans.Transcription.Torch.Validation import (
 
 class TorchConfigOption(ConfigActionOption):
     """Sentinel for the torch installation directory setting."""
-    label = _("Set up local transcription...")
+    label = _("Set up Qwen...")
 
 
 class TorchRuntimeError(ImportError):

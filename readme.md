@@ -157,9 +157,9 @@ From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separ
 ### Local transcription
 **Qwen Local** runs Qwen3-ASR on your computer without sending audio to a transcription service. This is a beta feature.
 
-It requires a separate [PyTorch](https://pytorch.org/get-started/locally/); install suitable for your hardware. The first run downloads about 6 GB of model weights. For packaged builds, use **Set up local transcription...** in Qwen Local's settings, which installs Torch and the Qwen runtime into a separate environment. If you set up Torch with an earlier version, run the setup again and select the same environment to add the Qwen runtime. For source installs the install script will manage the dependencies.
+It requires a separate [PyTorch](https://pytorch.org/get-started/locally/) installation suitable for your hardware. The first run downloads about 6 GB of model weights. For packaged builds, use **Set up Qwen...** in Qwen Local's settings, which installs Torch and the Qwen runtime into a separate environment. If you set up Torch with an earlier version, run the setup again and select the same environment to add the Qwen runtime. For source installs, `install.bat` and `install.sh` create `envqwen` beside the application's `envsubtrans` environment and install the runtime there.
 
-For source installs, `qwen-asr`'s own dependencies (numpy, scipy, librosa) currently require **Python 3.12+**, higher than the 3.10+ needed for the rest of the project.
+The source runtime installer accepts Python 3.10 or later. Qwen runs in a worker process using `envqwen`'s own interpreter, so Torch and Transformers are kept out of `envsubtrans`. With no explicit Torch directory setting, source runs prefer `envqwen` in the project root and fall back to the current interpreter for older installs that already contain Qwen.
 
 ## Installing from source
 If you want to use the command line tools or modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.
@@ -234,16 +234,14 @@ During the installing process, you can choose to input an API key for each selec
     pip install -e ".[gui,openai,gemini,claude,mistral,bedrock]"   # Full install with optional providers (delete to taste)
     ```
 
-5. Optionally install `qwen-asr` for local transcription. 
-  
-  **First** install a hardware-appropriate [Torch](https://pytorch.org/get-started/locally/) version, then install the Qwen runtime.
+5. Optionally install the Qwen runtime for local transcription into its own environment:
 
     ```sh
-    python scripts/install_torch.py
-    python scripts/install_qwen_runtime.py
+    ./envsubtrans/Scripts/python.exe scripts/install_qwen_runtime.py envqwen  # Windows
+    ./envsubtrans/bin/python scripts/install_qwen_runtime.py envqwen          # Mac/Linux
     ```
 
-    This avoids qwen pulling in a generic Torch version without hardware acceleration. The Qwen runtime script installs qwen-asr without the web frameworks its demo apps depend on. `pip install -e ".[qwen-asr]"` also works, but installs those as well.
+    The script creates `envqwen` if needed, detects your hardware, installs the appropriate Torch build there, and then installs qwen-asr and its runtime dependencies without its demo app web frameworks. Run the installer with `envsubtrans`'s Python; the target environment does not need PySubtrans installed. A different directory can be used by configuring Qwen Local's Torch installation directory setting. Existing environments with Python 3.10 or later can be reused without matching the application's Python version.
 
 ## Usage
 The program works by dividing the subtitles up into batches and sending each one to the translation service in turn. 

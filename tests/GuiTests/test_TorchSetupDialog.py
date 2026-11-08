@@ -131,13 +131,11 @@ class TestTorchSetupSelection(LoggedTestCase):
 
         try:
             with tempfile.TemporaryDirectory() as directory, \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information') as information:
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning:
                 accepted = dialog._validate_and_accept(directory)
 
             self.assertLoggedFalse('environment without Torch is rejected', accepted)
             self.assertLoggedEqual('user is warned', 1, warning.call_count)
-            self.assertLoggedEqual('dialog is not accepted', 0, information.call_count)
         finally:
             self._dispose(dialog)
 
@@ -160,13 +158,11 @@ class TestTorchSetupSelection(LoggedTestCase):
                 with patch('GuiSubtrans.Widgets.TorchSetupDialog.ExpectedCompatibility', return_value=frozen), \
                         patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=root / 'python.exe'), \
                         patch('GuiSubtrans.Widgets.TorchSetupDialog.ProbeVenvCompatibility', return_value=actual), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information') as information:
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning:
                     accepted = dialog._validate_and_accept(directory)
 
             self.assertLoggedTrue('mismatched environment is still accepted', accepted)
             self.assertLoggedEqual('user is warned about compatibility', 1, warning.call_count)
-            self.assertLoggedEqual('restart prompt shown', 1, information.call_count)
         finally:
             self._dispose(dialog)
 
@@ -182,8 +178,7 @@ class TestTorchSetupSelection(LoggedTestCase):
                 with patch('GuiSubtrans.Widgets.TorchSetupDialog.ExpectedCompatibility', return_value={'python_abi': 'cpython-312', 'python_version': '3.12'}), \
                         patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=root / 'python.exe'), \
                         patch('GuiSubtrans.Widgets.TorchSetupDialog.ProbeVenvCompatibility', return_value={'python_abi': 'cpython-313', 'python_version': '3.13'}), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information'):
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning:
                     accepted = dialog._validate_and_accept(directory)
 
             self.assertLoggedTrue('mismatched source environment is still accepted', accepted)
@@ -202,8 +197,7 @@ class TestTorchSetupSelection(LoggedTestCase):
 
                 with patch('GuiSubtrans.Widgets.TorchSetupDialog.ExpectedCompatibility', return_value={'python_abi': 'cpython-313'}), \
                         patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=None), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information'):
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning:
                     accepted = dialog._validate_and_accept(directory)
 
             self.assertLoggedTrue('environment without interpreter is accepted in source mode', accepted)
@@ -267,7 +261,6 @@ class TestTorchSetupSelection(LoggedTestCase):
 
                 with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=root / 'python.exe'), \
                         patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.question', return_value=QMessageBox.StandardButton.Yes), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.information') as information, \
                         patch.object(dialog, '_run_steps') as run_steps:
                     accepted = dialog._validate_and_accept(directory)
 
@@ -275,7 +268,6 @@ class TestTorchSetupSelection(LoggedTestCase):
             self.assertLoggedEqual('runtime steps started', 2, len(run_steps.call_args.args[0]))
             self.assertLoggedEqual('progress page shown', 2, dialog._current_page)
             self.assertLoggedEqual('failure returns to the first page', 0, dialog._retry_page)
-            self.assertLoggedEqual('no restart prompt yet', 0, information.call_count)
         finally:
             self._dispose(dialog)
 

@@ -7,7 +7,7 @@ from PySubtrans.Helpers.Languages import LanguageName
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
-from PySubtrans.SubtitleError import SubtitleError
+from PySubtrans.Transcription.Providers.Clients.QwenLocalClient import QwenLocalClient
 from PySubtrans.Transcription.Torch.QwenRuntime import NeedsQwenRuntime
 from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
@@ -27,11 +27,11 @@ try:
         Local transcription via the qwen-asr package (optional).
 
         The provider always registers so it is discoverable in the frozen
-        application even before torch is installed.  The actual runtime
-        (torch + qwen-asr) is loaded lazily on first use; until then the
+        application even before torch is installed. The worker loads the runtime
+        (torch + qwen-asr) on first use; until then the
         provider info panel guides the user to configure an external Torch
-        installation.  Packaged builds import qwen-asr from that
-        installation too, so it has to contain the Qwen runtime.
+        installation. The worker uses that environment's interpreter,
+        so it has to contain the Qwen runtime.
 
         Prefers a hardware accelerator and requires explicit consent for
         CPU inference.
@@ -63,10 +63,10 @@ try:
                 'min_chunk_seconds': settings.get_float('min_chunk_seconds', 30.0),
                 'max_chunk_seconds': settings.get_float('max_chunk_seconds', 60.0),
                 'allow_cpu_fallback': settings.get_bool('allow_cpu_fallback', False),
-                'torch_installation_directory': settings.get_str('torch_installation_directory', ''),
+                'qwen_installation_directory': settings.get_str('qwen_installation_directory', ''),
             })
 
-            self.refresh_when_changed = ['allow_cpu_fallback', 'torch_installation_directory', 'language']
+            self.refresh_when_changed = ['allow_cpu_fallback', 'qwen_installation_directory', 'language']
 
         def GetAvailableModels(self) -> list[str]:
             """ASR checkpoints served by this provider."""
@@ -74,12 +74,6 @@ try:
 
         def GetTranscriptionClient(self, settings : SettingsType) -> TranscriptionClient:
             """Returns a new client merging provider defaults with call settings."""
-            # Sanctioned lazy import: the client module pulls torch and
-            # qwen_asr (~10s), so it loads on first use, not on registration.
-            try:
-                from PySubtrans.Transcription.Providers.Clients.QwenLocalClient import QwenLocalClient
-            except ImportError as e:
-                raise SubtitleError(_("Qwen transcription runtime is not installed"), error=e)
             client_settings = SettingsType(self.settings.copy())
             client_settings.update(settings)
             return QwenLocalClient(client_settings)
@@ -96,7 +90,7 @@ try:
                     return {}
 
                 return {
-                    'torch_installation_directory': (TorchConfigOption, _("Install Torch and the Qwen runtime for local transcription")),
+                    'qwen_installation_directory': (TorchConfigOption, _("Install Torch and the Qwen runtime for local transcription")),
                 }
 
             options : GuiSettingsType = {
@@ -112,7 +106,7 @@ try:
                     'max_new_tokens': (int, _("Generation budget per chunk (long chunks need headroom)")),
                     'rate_limit': (float, _("Maximum requests per minute (0 for unlimited)")),
                     'allow_cpu_fallback': (bool, _("Allow emergency CPU fallback (may be slow)")),
-                    'torch_installation_directory': (TorchConfigOption, _("Install or change the environment that runs local transcription")),
+                    'qwen_installation_directory': (TorchConfigOption, _("Install or change the environment that runs local transcription")),
                 })
 
                 options.update(self._line_options())
@@ -125,7 +119,7 @@ try:
             When running from source (not frozen) the active venv already
             contains torch, so a separate installation directory is not needed.
             """
-            if bool(self.settings.get_str('torch_installation_directory')):
+            if bool(self.settings.get_str('qwen_installation_directory')):
                 return self._runtime_configured(self.settings)
 
             return not getattr(sys, 'frozen', False)
@@ -140,7 +134,7 @@ try:
             base = super()._get_provider_information(torch_device)
             notes : list[str] = []
 
-            if not self.settings.get_str('torch_installation_directory'):
+            if not self.settings.get_str('qwen_installation_directory'):
                 notes.extend([
                     _("<p><b>Setup required:</b> Qwen3-ASR runs on PyTorch and the Qwen speech recognition packages, which are installed separately from the application. The correct Torch build depends on your operating system and hardware.</p>"),
                     _("<p>Click <b>{button}</b> to detect available hardware and install them.</p>").format(button=TorchConfigOption.label),
@@ -164,7 +158,7 @@ try:
 
         def _runtime_configured(self, settings : SettingsType) -> bool:
             """Whether a Torch environment is configured and has the Qwen runtime this build needs."""
-            directory = settings.get_str('torch_installation_directory')
+            directory = settings.get_str('qwen_installation_directory')
             return bool(directory) and not NeedsQwenRuntime(Path(directory))
 
 

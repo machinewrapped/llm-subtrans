@@ -16,6 +16,8 @@ from PySubtrans.Transcription.Torch.Validation import FindTorchSitePackages
 
 QWEN_ASR_DISTRIBUTION = 'qwen-asr'
 QWEN_ASR_MODULE = 'qwen_asr'
+# Default environment folder beside the application, for source installs and the setup wizard
+QWEN_ENVIRONMENT_NAME = 'envqwen'
 
 # The qwen-asr release the runtime is installed from; its dependency pins come from its own metadata
 QWEN_ASR_REQUIREMENT = 'qwen-asr==0.0.6'

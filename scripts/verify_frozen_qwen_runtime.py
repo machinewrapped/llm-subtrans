@@ -88,7 +88,7 @@ def main(arguments : list[str]|None = None) -> int:
         settings = SettingsType({
             "device": "auto",
             "allow_cpu_fallback": True,
-            "torch_installation_directory": str(external_root),
+            "qwen_installation_directory": str(external_root),
         })
         client = QwenLocalClient(settings)
         _emit(

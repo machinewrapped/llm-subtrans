@@ -17,7 +17,9 @@ from pathlib import Path
 
 import regex
 
+from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Resources import GetAppDir
+from PySubtrans.SubtitleError import SubtitleError
 from PySubtrans.Transcription.Torch.Validation import (
     BuildCurrentCompatibility,
     CompareCompatibility,
@@ -28,21 +30,61 @@ from PySubtrans.Transcription.Torch.Validation import (
 )
 
 
-DEFAULT_TORCH_DIR_NAME = 'torch-env'
-
 # Matches torch's own Requires-Python floor; an older interpreter can create
 # a venv without error but pip install torch will then fail inside it.
 MIN_PYTHON_VERSION = (3, 10)
 PROBE_TIMEOUT_SECONDS = 5
 
 
-def FindExistingTorch() -> str|None:
+def FindEnvironmentPython(root : Path) -> str|None:
+    """Find an environment's interpreter without resolving POSIX venv symlinks."""
+    for candidate in (root / 'Scripts' / 'python.exe', root / 'bin' / 'python', root / 'python.exe'):
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
+def ResolveEnvironmentPython(directory : str|None, default_environment : str|None = None) -> str:
+    """Find the interpreter owning a venv root or a site-packages directory.
+
+    Source runs prefer the runtime's default environment beside the application.
+    Older source installs can still use their current interpreter.
+    Do not resolve interpreter symlinks: POSIX venvs need their own path.
+    """
+    if not directory or not directory.strip():
+        if not getattr(sys, 'frozen', False):
+            if default_environment:
+                python = FindEnvironmentPython(Path(GetAppDir()) / default_environment)
+                if python is not None:
+                    return python
+
+            return sys.executable
+        raise SubtitleError(_("Configure an external Torch environment for local transcription"))
+
+    root = Path(directory.strip()).expanduser().absolute()
+    if root.name.casefold() == 'site-packages':
+        parent = root.parent
+        if parent.name.casefold() == 'lib':
+            root = parent.parent
+        elif parent.parent.name.casefold() in ('lib', 'lib64') and parent.name.startswith('python'):
+            root = parent.parent.parent
+        else:
+            root = parent
+
+    python = FindEnvironmentPython(root)
+    if python is not None:
+        return python
+
+    raise SubtitleError(_("The configured Torch environment has no Python interpreter: {}").format(directory))
+
+
+def FindExistingTorch(default_environment : str) -> str|None:
     """Locate an existing Torch installation, or return None.
 
-    Checks the default install location next to the application first, then
-    falls back to scanning ``sys.path``.
+    Checks the runtime's default environment next to the application first.
+    Falls back to scanning ``sys.path``.
     """
-    default_path = os.path.join(GetAppDir(), DEFAULT_TORCH_DIR_NAME)
+    default_path = os.path.join(GetAppDir(), default_environment)
     if HasTorchPackage(Path(default_path)):
         return default_path
 

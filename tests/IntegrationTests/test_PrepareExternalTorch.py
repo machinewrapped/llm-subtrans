@@ -15,7 +15,7 @@ from unittest.mock import patch
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.Transcription.Torch.Validation import CompareCompatibility, FindTorchSitePackages
-from scripts import prepare_external_torch
+from scripts import install_torch, prepare_external_torch
 
 
 class TestPrepareExternalTorch(LoggedTestCase):
@@ -253,30 +253,17 @@ class TestPrepareExternalTorch(LoggedTestCase):
             self.assertLoggedEqual(f'{name} preserves failure', 23, result.returncode)
             self.assertLoggedNotIn(f'{name} skips metadata', 'METADATA_CALLED', result.stdout)
 
-    def test_install_torch_recognises_xpu_and_installers_require_cpu_consent(self) -> None:
-        """install_torch.py treats XPU as a GPU backend; install scripts show CPU consent text."""
-        from scripts import install_torch
-
-        # Simulate torch with an XPU backend available
-        mock_torch = SimpleNamespace(
-            cuda=SimpleNamespace(is_available=lambda: False),
-            backends=SimpleNamespace(),
-            xpu=SimpleNamespace(is_available=lambda: True),
-        )
-        with patch.dict('sys.modules', {'torch': mock_torch}):
+    def test_install_torch_targets_environment_and_installers_require_cpu_consent(self) -> None:
+        """Torch probes the target interpreter and installers retain CPU consent guidance."""
+        with patch.object(install_torch.subprocess, 'run', return_value=SimpleNamespace(returncode=0)) as run:
             result = install_torch.main()
-        self.assertLoggedEqual("XPU detected exits 0", 0, result)
 
-        # Simulate torch with no GPU backend at all -> falls through to detect_hardware -> CPU install
-        mock_torch_cpu = SimpleNamespace(
-            cuda=SimpleNamespace(is_available=lambda: False),
-            backends=SimpleNamespace(),
-        )
-        mock_pip = SimpleNamespace(returncode=0)
-        with patch.dict('sys.modules', {'torch': mock_torch_cpu}), \
-             patch('PySubtrans.Transcription.Torch.Hardware.DetectHardware', return_value=None), \
-             patch('scripts.install_torch.subprocess.run', return_value=mock_pip):
-             result = install_torch.main()
+        self.assertLoggedEqual('GPU probe exits 0', 0, result)
+        self.assertLoggedEqual('standalone interpreter probed', [sys.executable, '-I', '-c'], run.call_args.args[0][:3])
+
+        with patch.object(install_torch, 'DetectHardware', return_value=None), \
+                patch.object(install_torch.subprocess, 'run', side_effect=[SimpleNamespace(returncode=1), SimpleNamespace(returncode=0)]):
+            result = install_torch.main()
         self.assertLoggedEqual("No GPU exits 1", 1, result)
 
         # Install scripts still carry the CPU consent guidance

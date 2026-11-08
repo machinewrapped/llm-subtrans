@@ -4,13 +4,21 @@ Packaged builds bundle neither Torch nor the Qwen runtime (qwen-asr, Transformer
 
 The venv contributes site-packages but not a standard library, so `hooks/hook-PySubtrans.py` bundles the whole standard library apart from Tk, IDLE and CPython's tests. The distro scripts exclude `numpy` and the packages built on it (`scipy`, `numba`, `llvmlite`, `pandas`, `PIL`): openai and pygments import them optionally, and a bundled numpy would shadow the one the venv's scipy and numba were built against.
 
-Local transcription setup (the Torch setup wizard) installs the Qwen runtime after Torch, and `scripts/install_qwen_runtime.py` does the same for source installs. qwen-asr is installed with `--no-deps` at the version `QwenRuntime.py` pins, then the dependencies its metadata declares are installed as declared, minus those only its demo apps use (gradio, flask, sox, qwen-omni-utils, pytz). Bumping qwen-asr's pin brings its dependency pins with it. Environments set up by 1.7.0 contain Torch alone; the provider reports the missing runtime, and selecting the environment in the setup wizard offers to install it there.
+Local transcription setup (the Torch setup wizard) installs the Qwen runtime after Torch. Source installs use `scripts/install_qwen_runtime.py <directory>` to create or reuse a dedicated runtime venv, install the hardware-appropriate Torch build, and then install Qwen. qwen-asr is installed with `--no-deps` at the version `QwenRuntime.py` pins, then the dependencies its metadata declares are installed as declared, minus those only its demo apps use (gradio, flask, sox, qwen-omni-utils, pytz). The source installer reads this metadata from the target venv's site-packages and runs every pip step with its interpreter. Bumping qwen-asr's pin brings its dependency pins with it. Environments set up by 1.7.0 contain Torch alone; the provider reports the missing runtime, and selecting the environment in the setup wizard offers to install it there.
 
 Distribution scripts do not install Torch or qwen-asr into the build environment. Dependency-audit checks remain a release gate for the bundled packages.
 
 After PyInstaller completes, the distro scripts run `scripts/prepare_external_torch.py --metadata-only`, writing `frozen-python-compatibility.json` into the frozen application's `_internal/assets/` directory (PyInstaller 6+ layout). At runtime, the metadata is located via `GetResourcePath("assets", METADATA_FILENAME)`, which resolves through `sys._MEIPASS` in frozen builds and `./assets/` in development. The helper's `--prepare-external-dir` and `--validate-external-dir` modes operate on a complete user-managed venv/site-packages location; they never reconstruct package or native dependency files. Users selecting a hardware build should use the official PyTorch selector.
 
 Both external setup modes require `--frozen-metadata` pointing to the frozen application's JSON. Schema version 1 uses `compatibility` fields `python_implementation`, `python_abi`, `python_version` (major.minor), `os`, `architecture`, and `pointer_bits`. The helper compares the external interpreter's facts to those fields using a 15-second `-I -S` subprocess probe, bypassing site initialization and `.pth` execution. Venv roots resolve Windows `Lib/site-packages` and POSIX `lib/pythonX.Y/site-packages`; a root containing `torch` or a `site-packages` child is also recognized. The validation command requires a venv interpreter and checks directory presence and compatibility, not Torch import or native dependency readiness. PyInstaller failure stops every distro script before metadata generation.
+
+## Source Runtime Environments
+
+Run the Qwen installer using `envsubtrans`'s Python, for example `./envsubtrans/Scripts/python.exe scripts/install_qwen_runtime.py envqwen` on Windows or `./envsubtrans/bin/python scripts/install_qwen_runtime.py envqwen` on Linux/macOS. `install.bat` and `install.sh` use this command when local transcription is selected. The app's environment stays free of Torch and Transformers; the standalone Qwen worker uses `envqwen`'s interpreter. Other local runtimes can have their own environment and dependency versions.
+
+An existing target interpreter can be any Python 3.10 or later. When the target has no interpreter, the installer checks the current interpreter with `Discovery.PythonMeetsMinimum` before creating a venv. It reuses `install_torch.InstallTorch` for GPU build selection. Exit codes are 0 for GPU support, 1 for CPU-only success and 2 for failure.
+
+`QwenRuntime.QWEN_ENVIRONMENT_NAME` names the default environment folder, `envqwen`, used by source installs and as the setup wizard's default. In source runs, `Discovery.ResolveEnvironmentPython` prefers that directory under `GetAppDir()` when no setting is supplied. A missing or incomplete default falls back to the current interpreter, preserving older source installs with Qwen in `envsubtrans`. Explicit settings take precedence. Frozen builds still require an external environment setting.
 
 ## Torch Subpackage (`PySubtrans/Transcription/Torch/`)
 
@@ -30,7 +38,8 @@ Consumers:
 |----------|-------------|
 | `TorchSetupDialog.py` (GUI wizard) | `Hardware` (detection, index URLs), `Validation` (ABI checking), `Discovery` (interpreter and existing-install discovery), `QwenRuntime` (requirements and runtime checks) |
 | `prepare_external_torch.py` (build tool) | `Validation` (metadata stamping and venv probing) |
-| `install_torch.py` (installer) | `Hardware` (detection for pre-install torch variant selection) |
+| `install_torch.py` (installer helpers) | `Hardware` (Torch build selection), `Discovery` (runtime interpreter discovery and minimum version checks) |
+| `install_qwen_runtime.py` (source installer) | `install_torch` (venv preparation and target Torch installation), `QwenRuntime` (requirements), `Validation` (target site-packages lookup) |
 | `Provider_QwenLocal.py` / `QwenLocalClient.py` | `Runtime` (config option sentinel, runtime loader), `QwenRuntime` (missing-runtime checks) |
 | `SettingsDialog.py` | `Runtime` (`TorchConfigOption` sentinel) |
 

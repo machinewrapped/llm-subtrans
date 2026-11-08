@@ -85,13 +85,11 @@ else:
             @classmethod
             def WarmUp(cls) -> None:
                 """Load Mistral dependencies before the provider is selected in the settings dialog."""
-                # Sanctioned background warm-up: preloads the httpx dependency that previously added to the 0.38-second first-use cost.
-                import httpx
                 # Sanctioned background warm-up: preloads the Mistral SDK that previously cost about 0.38 seconds on first use.
                 from mistralai.client import Mistral
                 # Sanctioned background warm-up: preloads the Mistral client path that shares the measured 0.38-second SDK cost.
                 from PySubtrans.Providers.Clients.MistralClient import MistralClient
-                _warmup_imports = (httpx, Mistral, MistralClient)
+                _warmup_imports = (Mistral, MistralClient)
                 del _warmup_imports
 
             def GetAvailableModels(self) -> list[str]:
@@ -103,14 +101,14 @@ else:
                         logging.debug("No Mistral API key provided")
                         return []
 
-                    # Sanctioned lazy import: defer the measured Mistral/httpx import path of about 0.38 seconds until model listing.
-                    import httpx
-
-                    # Sanctioned lazy import: defer the measured 0.38-second Mistral SDK load until model listing is requested.
+                    # Sanctioned lazy import: defer the measured 0.38-second Mistral SDK load (including its HTTP library) until model listing is requested.
                     from mistralai.client import Mistral
 
+                    # Sanctioned lazy import: shares the SDK load above, so adds no further cost.
+                    from PySubtrans.Providers.Clients.MistralClient import CreateMistralHttpClient
+
                     proxy_url = self.settings.get_str('proxy')
-                    http_client = httpx.Client(proxy=proxy_url) if proxy_url else None
+                    http_client = CreateMistralHttpClient(proxy_url)
                     client = Mistral(
                         api_key=self.api_key,
                         server_url=self.server_url or None,

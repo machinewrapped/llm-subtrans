@@ -1,10 +1,10 @@
 import logging
+from typing import Any
 
 from PySubtrans.Options import SettingsType
 from PySubtrans.SubtitleError import TranslationResponseError
 
-import httpx
-from mistralai.client import Mistral
+from mistralai.client import Mistral, httpclient
 from mistralai.client.models import ChatCompletionResponse as ChatCompletion
 
 from PySubtrans.Helpers import FormatMessages
@@ -13,6 +13,17 @@ from PySubtrans.SubtitleError import TranslationError, TranslationImpossibleErro
 from PySubtrans.Translation import Translation
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationRequest import TranslationRequest
+
+def CreateMistralHttpClient(proxy_url : str|None) -> Any:
+    """
+    Create the HTTP client for the Mistral SDK, routed through a proxy if one is given (otherwise None, so the SDK uses its default).
+    Uses the HTTP library the SDK was built against, which is httpx or its httpx2 fork depending on the SDK version.
+    """
+    if not proxy_url:
+        return None
+
+    sdk_httpx = getattr(httpclient, 'httpx')
+    return sdk_httpx.Client(proxy=proxy_url)
 
 class MistralClient(TranslationClient):
     """
@@ -31,7 +42,7 @@ class MistralClient(TranslationClient):
 
         # Configure proxy if specified
         proxy_url = self.proxy_url
-        http_client = httpx.Client(proxy=proxy_url) if proxy_url else None
+        http_client = CreateMistralHttpClient(proxy_url)
 
         self.client = Mistral(api_key=self.api_key, server_url=self.server_url, client=http_client)
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pysubtrans"
-version = "1.7.3"
+version = "1.7.4"
 description = "Core subtitle translation toolkit used by LLM-Subtrans"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,6 +19,7 @@ dependencies = [
     "blinker",
     "requests",
     "setuptools",
+    "certifi>=2026.10.19",
     "httpx",
     "httpx[socks]"
 ]
@@ -59,6 +60,7 @@ Issues = "https://github.com/machinewrapped/llm-subtrans/issues"
 [tool.setuptools]
 packages = [
     "PySubtrans",
+    "PySubtrans.Auth",
     "PySubtrans.Formats",
     "PySubtrans.Helpers",
     "PySubtrans.Providers",

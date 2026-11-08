@@ -271,7 +271,9 @@ class AnthropicClient(TranslationClient):
             if role not in ('user', 'assistant') or content is None:
                 raise TranslationError(_("Content must be a list of messages"))
 
-            messages.append(MessageParam(role=role, content=content))
+            # MessageParam is a TypedDict in older SDKs and a Union alias in newer ones, so build dict literals rather than calling it
+            message_param : MessageParam = {'role': 'user', 'content': content} if role == 'user' else {'role': 'assistant', 'content': content}
+            messages.append(message_param)
 
         return messages
 

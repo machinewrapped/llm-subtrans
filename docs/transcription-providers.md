@@ -10,6 +10,7 @@ How the project uses each provider (requests, parsing, retries) is documented in
 |---|---|---|---|---|
 | OpenRouter, MAI Transcribe 2 | Segments plus words | Yes, also as separate timed tokens | Yes, accurate | Yes, with diarization |
 | OpenRouter, ElevenLabs Scribe v2 | Transcript plus words | Yes, attached to words | Yes, short words clipped | Yes, with diarization |
+| OpenRouter, Fish Audio Transcribe 1 Pro | Transcript plus words | Yes, in transcript | Yes, many zero-duration words | Inline markers only; no structured labels |
 | ElevenLabs Scribe v2 (direct) | Transcript plus words | Yes, attached to words | Yes, short words clipped | Yes, with diarization |
 | Gemini 3.5 Transcribe | Transcript plus words | Varies, absent in some captures | Yes | Yes, with diarization, verbatim mode only |
 | Qwen Local | Transcript plus aligned words | In the transcript only | Partial, from a forced aligner | No |
@@ -42,6 +43,34 @@ MAI Transcribe 2 has given the best results in this project's testing, and is th
 - *Timing.* Starts agree with MAI to about 0.1 s. Short words are clipped: 315 of 2,808 words last 60 ms or less, against 31 for MAI, e.g. `예.` in 20 ms. Lines are shorter for their text, with a median of 0.76 of the speech estimate against 0.84, and 28 lines below 0.5 against 2. The OpenRouter defaults are tuned for MAI, so no timing correction is applied.
 - *Language hint.* The captures above used a `Korean` hint. A full transcription and translation of the same episode in the GUI, with no hint, looked excellent when watched.
 - *Cost.* $0.11 for the episode at a 50% launch discount, against $0.10 for MAI. The list price is $0.22 per hour.
+
+**Fish Audio Transcribe 1 Pro (3 November 2026).** Tested `fish-audio/transcribe-1-pro` on the first five minutes of `Interview With Sammo, Biao & Frankie (Prodigal Son).mkv`.
+The mixed English/Cantonese sample was sent as one 300-second, 16 kHz mono PCM WAV, with no language hint.
+Requests and raw responses are saved locally in `test_transcriptions/fish_audio_pro_interview/`; `baseline_comparison.json` records the comparison.
+
+- *Official diarization argument.* Top-level `diarize: true`, with `response_format: "verbose_json"` and `timestamp_granularities: ["word", "segment"]`, was rejected with HTTP 400 because the selected model does not support diarization.
+  The public OpenRouter endpoint metadata also reported `supports_diarization: false`.
+- *Vendor options and baseline.* A request with `provider.options.fish-audio = {"diarize": true, "ignore_timestamps": false, "tag_audio_events": false}` succeeded.
+  A baseline used the same audio, model, response format and timestamp granularities, omitting both the provider block and top-level `diarize`.
+  It also succeeded.
+- *Output.* Both successful requests returned 744 words and one segment spanning 5.35-290.855 seconds.
+  Both contained inline speaker markers in the sequence `0, 1, 0, 1, 2`, but no structured `speaker` or `speaker_label` fields on words, and no speaker field on the segment.
+  The current client cannot use these inline markers as structured speaker labels.
+- *Missing dialogue.* Both outputs had no timed words from 01:22.21 to 02:27.96 (65.75 seconds).
+  The corresponding transcript passage contained Cantonese, accent and clapping tags instead of dialogue.
+  Another gap ran from 02:57.56 to 03:11.36 (13.80 seconds).
+  Transcription accuracy was not scored against a reference.
+- *Timing.* There were 139 zero-duration words with vendor options and 141 in the baseline, about 19% in each.
+  Neither response had reversed word intervals or decreasing word starts.
+- *Audio events.* Both transcripts contained 26 event or vocal-style tags, including the request with `tag_audio_events: false`.
+  The test does not establish that the vendor options were forwarded or honoured.
+- *Cost and latency.* The vendor-options request took 7.82 seconds; the baseline took 8.45 seconds.
+  Each reported $0.0301 for 301 billed seconds.
+- *Decision.* Do not expose Fish-specific OpenRouter controls based on this test.
+  The options showed no useful improvement in structured speaker labels, missing dialogue or event suppression.
+  Wording, punctuation, tag placement and word timings varied slightly; one pair of requests cannot distinguish an option effect from inference variation.
+  A direct Fish API test is needed to assess its documented native speaker turns and decide whether a separate integration is worthwhile.
+  These findings apply to the tested OpenRouter route, not to the native Fish API.
 
 **Account restrictions.** Requests can fail with a 404 citing zero available endpoints when the account or workspace has zero-data-retention guardrails that exclude the model's providers.
 

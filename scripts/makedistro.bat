@@ -29,6 +29,7 @@ rem numpy and the packages built on it are optional imports of openai (pandas) a
 rem The Qwen runtime brings its own copies, which a bundled numpy would shadow.
 rem cython is an optional import of pydantic.v1, present when the Qwen runtime is installed in the build environment.
 .\envsubtrans\scripts\pyinstaller --noconfirm ^
+    --icon "assets/gui-subtrans.ico" ^
     --additional-hooks-dir="hooks" ^
     --exclude-module torch ^
     --exclude-module torchgen ^

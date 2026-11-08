@@ -56,3 +56,4 @@ batch-translate.sh
 /test_videos
 /test_transcriptions
 transcribe.sh
+/docs/local

@@ -69,6 +69,7 @@ packages = [
     "PySubtrans.Transcription",
     "PySubtrans.Transcription.Providers",
     "PySubtrans.Transcription.Providers.Clients",
-    "PySubtrans.Transcription.Torch"
+    "PySubtrans.Transcription.Torch",
+    "PySubtrans.Transcription.Workers"
 ]
 package-dir = {"PySubtrans" = "."}

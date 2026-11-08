@@ -230,30 +230,29 @@ if not exist "!QT_FONTS_DIR!" mkdir "!QT_FONTS_DIR!" >nul 2>&1
 
 if /i "!install_transcription!"=="y" (
     echo.
+    if exist "envqwen" (
+        echo Updating the existing local transcription environment in "envqwen".
+        echo If local transcription is not working, delete the "envqwen" folder and run this installer again.
+    ) else (
+        echo Installing Torch and the Qwen runtime into "envqwen"...
+    )
     echo Detecting GPU hardware and installing torch...
-    .\envsubtrans\Scripts\python.exe scripts\install_torch.py
+    .\envsubtrans\Scripts\python.exe scripts\install_qwen_runtime.py envqwen
     set TORCH_EXIT=!errorlevel!
 
     if !TORCH_EXIT! equ 2 (
         echo.
-        echo Warning: torch installation encountered an error.
+        echo Failed to install the Qwen runtime.
         echo Skipping local transcription; cloud transcription remains available.
+    ) else if !TORCH_EXIT! equ 1 (
+        echo.
+        echo No GPU-accelerated torch variant was detected.
+        echo CPU inference is disabled by default. Enable allow_cpu_fallback in Qwen Local advanced settings to consent to slow CPU inference.
+        echo For GPU acceleration, install the hardware-appropriate PyTorch build from:
+        echo   https://pytorch.org/get-started/locally/
     ) else (
         echo.
-        echo Installing local transcription package...
-        .\envsubtrans\Scripts\python.exe scripts\install_qwen_runtime.py
-        if errorlevel 1 (
-            echo Failed to install the Qwen runtime.
-        ) else if !TORCH_EXIT! equ 1 (
-            echo.
-            echo No GPU-accelerated torch variant was detected.
-            echo CPU inference is disabled by default. Enable allow_cpu_fallback in Qwen Local advanced settings to consent to slow CPU inference.
-            echo For GPU acceleration, install the hardware-appropriate PyTorch build from:
-            echo   https://pytorch.org/get-started/locally/
-        ) else (
-            echo.
-            echo Local transcription installed successfully with GPU support.
-        )
+        echo Local transcription installed successfully with GPU support.
     )
     echo.
 )
@@ -313,7 +312,7 @@ echo Bedrock setup complete. Default provider set to Bedrock.
 goto :eof
 
 :install_qwen_local
-REM qwen-asr is installed separately after GPU torch detection -- do not add to EXTRAS
+REM Qwen and Torch are installed in envqwen -- do not add to EXTRAS
 goto :eof
 
 :set_env_var

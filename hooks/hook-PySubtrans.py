@@ -14,7 +14,10 @@ def _is_test_module(name : str) -> bool:
     return parts[0].startswith(('_test', '_xx', 'xx')) or any(part in ('test', 'tests', 'idle_test') for part in parts)
 
 try:
-    from PyInstaller.utils.hooks import collect_submodules  # type: ignore
+    from PyInstaller.utils.hooks import collect_data_files, collect_submodules  # type: ignore
+
+    # Standalone workers run under an external Python, so they must exist on disk.
+    datas = collect_data_files('PySubtrans', includes=['Transcription/Workers/*.py'], include_py_files=True)
 
     hiddenimports = collect_submodules('PySubtrans.Providers')
     hiddenimports += collect_submodules('PySubtrans.Formats')

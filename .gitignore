@@ -22,6 +22,8 @@ __pycache__
 /build
 /dist
 /envsubtrans
+/envqwen
+/envmoss
 /llm_subtrans.egg-info
 /Projects
 /.worktrees

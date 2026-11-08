@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
+import html
 import logging
-import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 
-from PySide6.QtCore import QProcess
+from PySide6.QtCore import QProcess, Qt
 from PySide6.QtGui import QTextOption
 from PySide6.QtWidgets import (
     QButtonGroup,
@@ -33,9 +33,8 @@ from PySide6.QtWidgets import (
 )
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Resources import GetAppDir
 from PySubtrans.Transcription.Torch.Discovery import (
-    DEFAULT_TORCH_DIR_NAME,
+    ApplicationRoot,
     ExpectedCompatibility,
     FindCompatiblePython,
     FindExistingTorch,
@@ -49,6 +48,7 @@ from PySubtrans.Transcription.Torch.Hardware import (
 from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
 from PySubtrans.Transcription.Torch.QwenRuntime import (
     QWEN_ASR_REQUIREMENT,
+    QWEN_ENVIRONMENT_NAME,
     NeedsQwenRuntime,
     QwenAsrPipArguments,
     QwenDependencyPipArguments,
@@ -180,18 +180,22 @@ class TorchSetupDialog(QDialog):
 
         self._existing_group = QGroupBox(_("Use an existing installation"), page)
         existing_layout = QVBoxLayout(self._existing_group)
-        self._existing_radio = QRadioButton(_("Use the detected Torch environment"), self._existing_group)
+
+        # The scan result comes first, so the radio below it reads as the choice to use it
+        self._existing_label = QLabel(_("Searching for an existing Qwen installation..."), self._existing_group)
+        self._existing_label.setWordWrap(True)
+        self._existing_label.setTextFormat(Qt.TextFormat.RichText)
+        existing_layout.addWidget(self._existing_label)
+
+        self._existing_radio = QRadioButton(_("Use the detected Qwen environment"), self._existing_group)
         self._existing_radio.setEnabled(False)
         existing_layout.addWidget(self._existing_radio)
-        self._existing_label = QLabel(_("Searching for an existing Torch installation..."), self._existing_group)
-        self._existing_label.setWordWrap(True)
-        existing_layout.addWidget(self._existing_label)
 
         self._manual_radio = QRadioButton(_("Locate an existing installation manually"), self._existing_group)
         existing_layout.addWidget(self._manual_radio)
         manual_row = QHBoxLayout()
         self._manual_path_field = QLineEdit(self._existing_group)
-        self._manual_path_field.setPlaceholderText(_("Path to a Python virtual environment containing torch"))
+        self._manual_path_field.setPlaceholderText(_("Path to a Python virtual environment containing Qwen"))
         self._manual_path_field.textChanged.connect(self._on_choice_changed)
         manual_row.addWidget(self._manual_path_field)
         manual_browse_button = QPushButton(_("Browse..."), self._existing_group)
@@ -203,7 +207,7 @@ class TorchSetupDialog(QDialog):
 
         install_group = QGroupBox(_("Install automatically"), page)
         install_layout = QVBoxLayout(install_group)
-        self._automatic_radio = QRadioButton(_("Create a new environment and install Torch and the Qwen runtime"), install_group)
+        self._automatic_radio = QRadioButton(_("Create a new environment and install Qwen"), install_group)
         self._automatic_radio.setChecked(True)
         install_layout.addWidget(self._automatic_radio)
         install_layout.addWidget(QLabel(_("The next page will ask where to create it and show the detected hardware.")))
@@ -233,7 +237,7 @@ class TorchSetupDialog(QDialog):
         directory_group = QGroupBox(_("Installation folder"), page)
         directory_layout = QVBoxLayout(directory_group)
         dir_row = QHBoxLayout()
-        default_path = current_path or os.path.join(GetAppDir(), DEFAULT_TORCH_DIR_NAME)
+        default_path = current_path or str(ApplicationRoot() / QWEN_ENVIRONMENT_NAME)
         self._dir_field = QLineEdit(default_path, directory_group)
         self._dir_field.setCursorPosition(0)
         self._dir_field.setToolTip(_("A new Python virtual environment will be created here."))
@@ -427,18 +431,20 @@ class TorchSetupDialog(QDialog):
 
     def _scan_for_existing_torch(self) -> None:
         """Look for a torch installation already on the system."""
-        existing = FindExistingTorch()
+        existing = FindExistingTorch(QWEN_ENVIRONMENT_NAME)
         if existing:
-            description = _("Found an existing Torch installation at: {path}").format(path=existing)
+            # Rich text, so the path stands out; everything else is escaped
+            bold_path = f"<b>{html.escape(existing)}</b>"
+            description = html.escape(_("Found an existing Qwen environment at: {path}")).format(path=bold_path)
             if NeedsQwenRuntime(Path(existing)):
-                description += "\n" + _("It does not include the Qwen runtime yet, which will be installed into it ({size}).").format(size=_ESTIMATED_SIZE_QWEN_RUNTIME)
+                description += "<br>" + html.escape(_("It does not include the Qwen runtime yet, which will be installed into it ({size}).").format(size=_ESTIMATED_SIZE_QWEN_RUNTIME))
             self._existing_label.setText(description)
             self._existing_path = existing
             self._existing_radio.setEnabled(True)
             self._existing_radio.setChecked(True)
             self._automatic_radio.setChecked(False)
         else:
-            self._existing_label.setText(_("No existing Torch installation found on this system."))
+            self._existing_label.setText(_("No existing Qwen installation found on this system."))
             self._existing_path = None
             self._existing_radio.setEnabled(False)
 
@@ -653,8 +659,8 @@ class TorchSetupDialog(QDialog):
     def _validate_and_accept(self, directory : str) -> bool:
         """Validate that the directory contains a usable torch installation.
 
-        A missing Torch package is a hard error, since accepting it would only
-        fail on restart.  A missing Qwen runtime is offered for installation,
+        A missing Torch package is a hard error, since transcription would fail
+        when it starts.  A missing Qwen runtime is offered for installation,
         and the environment is validated again once it is installed.  An
         interpreter mismatch is a strong warning instead: the environment may
         still work, and if it does not the user needs to know what to change.
@@ -681,14 +687,8 @@ class TorchSetupDialog(QDialog):
         if warning:
             QMessageBox.warning(self, _("Torch Compatibility Warning"), warning)
 
+        # Transcription runs in a worker process started from this environment, so no restart is needed
         self.chosen_path = directory
-
-        QMessageBox.information(
-            self,
-            _("Restart Required"),
-            _("Torch environment selected at:\n{path}\n\n"
-              "The application needs to be restarted for the change to take effect.").format(path=directory),
-        )
         self.accept()
         return True
 

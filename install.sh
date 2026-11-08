@@ -100,7 +100,7 @@ function install_bedrock() {
 }
 
 function install_qwen_local() {
-    # qwen-asr is installed separately after GPU torch detection -- do not add to extras
+    # Qwen and Torch are installed in envqwen -- do not add to extras.
     :
 }
 
@@ -272,29 +272,30 @@ qt_fonts_dir=$(python3 -c "import PySide6, os; print(os.path.join(os.path.dirnam
 
 if [ "$install_transcription" = "y" ] || [ "$install_transcription" = "Y" ]; then
     echo
+    if [ -d "envqwen" ]; then
+        echo "Updating the existing local transcription environment in \"envqwen\"."
+        echo "If local transcription is not working, delete the \"envqwen\" folder and run this installer again."
+    else
+        echo "Installing Torch and the Qwen runtime into \"envqwen\"..."
+    fi
     echo "Detecting GPU hardware and installing torch..."
-    ./envsubtrans/bin/python scripts/install_torch.py
-    torch_exit=$?
+    # CPU-only success returns 1, so capture it without triggering set -e.
+    torch_exit=0
+    ./envsubtrans/bin/python scripts/install_qwen_runtime.py envqwen || torch_exit=$?
 
     if [ $torch_exit -eq 2 ]; then
         echo
-        echo "Warning: torch installation encountered an error."
+        echo "Failed to install the Qwen runtime."
         echo "Skipping local transcription; cloud transcription remains available."
+    elif [ $torch_exit -eq 1 ]; then
+        echo
+        echo "No GPU-accelerated torch variant was detected."
+        echo "CPU inference is disabled by default. Enable allow_cpu_fallback in Qwen Local advanced settings to consent to slow CPU inference."
+        echo "For GPU acceleration, install the hardware-appropriate PyTorch build from:"
+        echo "  https://pytorch.org/get-started/locally/"
     else
         echo
-        echo "Installing local transcription package..."
-        if ! ./envsubtrans/bin/python scripts/install_qwen_runtime.py; then
-            echo "Failed to install the Qwen runtime."
-        elif [ $torch_exit -eq 1 ]; then
-            echo
-            echo "No GPU-accelerated torch variant was detected."
-            echo "CPU inference is disabled by default. Enable allow_cpu_fallback in Qwen Local advanced settings to consent to slow CPU inference."
-            echo "For GPU acceleration, install the hardware-appropriate PyTorch build from:"
-            echo "  https://pytorch.org/get-started/locally/"
-        else
-            echo
-            echo "Local transcription installed successfully with GPU support."
-        fi
+        echo "Local transcription installed successfully with GPU support."
     fi
     echo
 fi

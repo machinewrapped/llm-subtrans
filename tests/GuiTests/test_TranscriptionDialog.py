@@ -381,7 +381,7 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             } if scope is OptionsScope.PER_RUN else {
                 'model': (['model-a'], ''),
                 'allow_cpu_fallback': (bool, ''),
-                'torch_installation_directory': (str, ''),
+                'qwen_installation_directory': (str, ''),
             }
             dialog.provider = provider
             dialog._rebuild_provider_form()
@@ -389,7 +389,7 @@ class TestTranscriptionDialogLayout(LoggedTestCase):
             self.assertLoggedEqual('only per-run rows inserted', 1, dialog._provider_row_count)
             self.assertLoggedIn('per-run field present', 'model', dialog.provider_fields)
             self.assertNotIn('allow_cpu_fallback', dialog.provider_fields)
-            self.assertNotIn('torch_installation_directory', dialog.provider_fields)
+            self.assertNotIn('qwen_installation_directory', dialog.provider_fields)
         finally:
             dialog.deleteLater()
             self.application.processEvents()

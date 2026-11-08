@@ -357,6 +357,12 @@ class Options(SettingsType):
             self['provider_settings'] = {'OpenAI': {}} if self.get_str('api_key') else {}
             self.MoveSettingsToProvider('OpenAI', ['api_key', 'api_base', 'model', 'free_plan', 'max_instruct_tokens', 'temperature', 'rate_limit'])
 
+        # Qwen Local's environment setting was renamed when runtimes got their own environments
+        qwen_settings = self.provider_settings.get('Qwen Local Transcription')
+        if qwen_settings is not None and 'torch_installation_directory' in qwen_settings:
+            directory = qwen_settings.pop('torch_installation_directory')
+            qwen_settings.setdefault('qwen_installation_directory', directory)
+
         latest_version  : str = str(default_settings['version'])
 
         self['version'] = latest_version

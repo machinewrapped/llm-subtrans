@@ -117,6 +117,8 @@ A safety filter was suggested as a cause, but the raw responses showed no safety
 
 ## Qwen Local
 
+**Source setup.** Select local transcription in `install.bat` / `install.sh`, or run `scripts/install_qwen_runtime.py envqwen` with `envsubtrans`'s Python. This creates a separate venv and installs Torch and Qwen there. Source runs automatically prefer `envqwen` in the project root unless an explicit Torch installation directory is configured. Older installs with Qwen in the active app environment still work when `envqwen` is absent.
+
 **Models.** `Qwen/Qwen3-ASR-1.7B` by default, or `Qwen/Qwen3-ASR-0.6B`, with `Qwen/Qwen3-ForcedAligner-0.6B` for word timings. The models are about 6.1 GB in total, downloaded to the Hugging Face cache on first use.
 
 **What it returns.** A transcript and a detected language from the ASR model, and word timings from the aligner. There are no speaker labels, and no punctuation in the words.

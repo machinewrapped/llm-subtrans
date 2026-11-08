@@ -1,63 +1,71 @@
-import logging
+"""Qwen provider integration and an opt-in real worker smoke test.
+
+Set QWEN_TEST_ENVIRONMENT to a Torch/Qwen venv and QWEN_TEST_AUDIO to speech media.
+QWEN_TEST_START_SECONDS optionally selects the beginning of the 20-second excerpt.
+"""
+
+import io
+import json
+import os
 import sys
-import tempfile
 import unittest
 from datetime import timedelta
+from pathlib import Path
 from types import SimpleNamespace
+from typing import Any
 from unittest.mock import Mock, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
-from PySubtrans.Helpers.Tests import log_input_expected_error, skip_if_debugger_attached
+from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.SettingsType import SettingsType
-from PySubtrans.Transcription.TranscriptionProvider import OptionsScope
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.Transcription.TranscriptionCoordinator import TranscriptionCoordinator
-from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
-from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
+from PySubtrans.Transcription.AudioExtractor import AudioExtractor
+from PySubtrans.Transcription.Providers.Clients import QwenLocalClient as client_module
+from PySubtrans.Transcription.Providers.Clients.QwenLocalClient import QwenLocalClient
 from PySubtrans.Transcription.Providers.Provider_QwenLocal import QwenLocalProvider
+from PySubtrans.Transcription.Torch.QwenRuntime import HasQwenRuntime
 from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
-from PySubtrans.Transcription.Providers.Clients import QwenLocalClient as qwen_module
+from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
+from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
+from PySubtrans.Transcription.WorkerHost import WorkerError
+from PySubtrans.Transcription.Workers import qwen_worker
 
-QwenLocalClientClass = qwen_module.QwenLocalClient
-
-# Patch target for the check that a configured Torch environment has the Qwen runtime
 NEEDS_QWEN_RUNTIME = 'PySubtrans.Transcription.Providers.Provider_QwenLocal.NeedsQwenRuntime'
+QWEN_TEST_ENVIRONMENT = os.getenv('QWEN_TEST_ENVIRONMENT', '')
+QWEN_TEST_AUDIO = os.getenv('QWEN_TEST_AUDIO', '')
 
 class TestQwenLocalProvider(LoggedTestCase):
-    def setUp(self):
-        super().setUp()
-
-    def test_registered(self):
-        """Qwen Local registers when its SDK is present."""
+    def test_registered(self) -> None:
+        """Qwen Local registers without importing its SDK."""
         providers = TranscriptionProvider.get_providers()
 
         self.assertLoggedIn("qwen present", "Qwen Local", providers)
 
-    def test_options_ungated_when_torch_configured(self):
-        """Full schema is shown when torch_installation_directory is set."""
-        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/fake/path'}))
+    def test_options_ungated_when_torch_configured(self) -> None:
+        """Full schema is shown when qwen_installation_directory is set."""
+        provider = QwenLocalProvider(SettingsType({'qwen_installation_directory': '/fake/path'}))
         with patch(NEEDS_QWEN_RUNTIME, return_value=False):
             options = provider.GetOptions(provider.settings)
             per_run = provider.GetOptions(provider.settings, OptionsScope.PER_RUN)
 
         for key in ("model", "language", "device", "aligner_model", "max_new_tokens", "rate_limit",
-                    "allow_cpu_fallback", "torch_installation_directory"):
+                    "allow_cpu_fallback", "qwen_installation_directory"):
             self.assertLoggedIn(f"{key} option", key, options)
         self.assertLoggedIn("checkpoint", "Qwen/Qwen3-ASR-1.7B", provider.GetAvailableModels())
 
         self.assertLoggedEqual("CPU fallback default", False, provider.settings.get_bool('allow_cpu_fallback'))
         self.assertLoggedNotIn("CPU fallback is not a per-run choice", "allow_cpu_fallback", per_run)
-        self.assertLoggedNotIn("Torch directory is not a per-run choice", "torch_installation_directory", per_run)
+        self.assertLoggedNotIn("Torch directory is not a per-run choice", "qwen_installation_directory", per_run)
 
-    def test_options_progressive_disclosure_when_unconfigured(self):
+    def test_options_progressive_disclosure_when_unconfigured(self) -> None:
         """Only the torch setup option is shown when torch is not configured."""
         provider = QwenLocalProvider(SettingsType())
         options = provider.GetOptions(provider.settings)
 
-        self.assertLoggedIn("torch_installation_directory shown", "torch_installation_directory", options)
+        self.assertLoggedIn("qwen_installation_directory shown", "qwen_installation_directory", options)
         self.assertLoggedEqual("only one option", 1, len(options))
 
-    def test_provider_information_has_no_none_literal(self):
+    def test_provider_information_has_no_none_literal(self) -> None:
         """Provider information contains no interpolation artefacts."""
         provider = QwenLocalProvider(SettingsType())
         info = provider.GetInformation(torch_device='cuda:0')
@@ -66,7 +74,7 @@ class TestQwenLocalProvider(LoggedTestCase):
         if info:
             self.assertNotIn('None', info)
 
-    def test_provider_information_explains_torch_setup_when_unconfigured(self):
+    def test_provider_information_explains_torch_setup_when_unconfigured(self) -> None:
         """Unconfigured Qwen Local explains how to install and select Torch."""
         provider = QwenLocalProvider(SettingsType())
         info = provider.GetInformation(ffmpeg_available=True)
@@ -75,9 +83,9 @@ class TestQwenLocalProvider(LoggedTestCase):
         if info:
             self.assertLoggedIn("setup action named", TorchConfigOption.label, info)
 
-    def test_provider_information_hides_setup_guidance_when_configured(self):
+    def test_provider_information_hides_setup_guidance_when_configured(self) -> None:
         """Configured Qwen Local does not repeat the initial setup walkthrough."""
-        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/fake/path'}))
+        provider = QwenLocalProvider(SettingsType({'qwen_installation_directory': '/fake/path'}))
         with patch(NEEDS_QWEN_RUNTIME, return_value=False):
             info = provider.GetInformation(ffmpeg_available=True, torch_device='cuda:0')
 
@@ -85,40 +93,38 @@ class TestQwenLocalProvider(LoggedTestCase):
         if info:
             self.assertLoggedNotIn("setup action omitted", TorchConfigOption.label, info)
 
-    def test_cpu_fallback_setting_refreshes_provider_information(self):
+    def test_cpu_fallback_setting_refreshes_provider_information(self) -> None:
         """The settings dialog refreshes the disclaimer when consent changes."""
         provider = QwenLocalProvider(SettingsType())
 
         self.assertLoggedIn('CPU fallback refresh trigger', 'allow_cpu_fallback', provider.refresh_when_changed)
 
-    def test_validate_requires_torch_directory_in_frozen_build(self):
+    def test_validate_requires_torch_directory_in_frozen_build(self) -> None:
         """Frozen builds reject Qwen when no external Torch directory is configured."""
         provider = QwenLocalProvider(SettingsType())
         with patch.object(sys, 'frozen', True, create=True):
             self.assertLoggedEqual("frozen build without Torch", False, provider.ValidateSettings())
 
-    def test_validate_passes_with_torch_directory(self):
-        """ValidateSettings returns True when torch_installation_directory is set."""
-        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/fake/path'}))
+    def test_validate_passes_with_torch_directory(self) -> None:
+        """ValidateSettings returns True when qwen_installation_directory is set."""
+        provider = QwenLocalProvider(SettingsType({'qwen_installation_directory': '/fake/path'}))
         with patch(NEEDS_QWEN_RUNTIME, return_value=False):
             self.assertLoggedEqual("valid with torch", True, provider.ValidateSettings())
 
-    def test_frozen_build_gates_torch_environment_without_qwen_runtime(self):
+    def test_frozen_build_gates_torch_environment_without_qwen_runtime(self) -> None:
         """A Torch environment set up for 1.7.0 lacks the Qwen runtime, so only the setup option is offered."""
-        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/torch-env'}))
+        provider = QwenLocalProvider(SettingsType({'qwen_installation_directory': '/torch-env'}))
 
         with patch(NEEDS_QWEN_RUNTIME, return_value=True), patch.object(sys, 'frozen', True, create=True):
             options = provider.GetOptions(provider.settings)
             valid = provider.ValidateSettings()
-            info = provider.GetInformation(ffmpeg_available=True)
 
-        self.assertLoggedEqual("only the setup option", ['torch_installation_directory'], list(options))
+        self.assertLoggedEqual("only the setup option", ['qwen_installation_directory'], list(options))
         self.assertLoggedEqual("settings invalid without the Qwen runtime", False, valid)
-        self.assertLoggedIn("setup action named", TorchConfigOption.label, info or '')
 
-    def test_frozen_build_accepts_torch_environment_with_qwen_runtime(self):
+    def test_frozen_build_accepts_torch_environment_with_qwen_runtime(self) -> None:
         """A Torch environment with the Qwen runtime is ready for transcription."""
-        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/torch-env'}))
+        provider = QwenLocalProvider(SettingsType({'qwen_installation_directory': '/torch-env'}))
 
         with patch(NEEDS_QWEN_RUNTIME, return_value=False), patch.object(sys, 'frozen', True, create=True):
             options = provider.GetOptions(provider.settings)
@@ -127,204 +133,10 @@ class TestQwenLocalProvider(LoggedTestCase):
         self.assertLoggedIn("model option offered", 'model', options)
         self.assertLoggedEqual("settings valid", True, valid)
 
-    @patch('PySubtrans.Transcription.AudioExtractor.CheckFfmpegAvailable')
-    @patch.object(qwen_module, "_load_qwen_dependencies", side_effect=ImportError("missing torch"))
-    def test_missing_torch_returns_coordinator_compatible_error(self, _load_dependencies, _check_ffmpeg):
-        """A missing Torch runtime becomes a failed outcome instead of leaking ImportError."""
-        provider = QwenLocalProvider(SettingsType())
-        coordinator = TranscriptionCoordinator(provider, SettingsType())
-
-        with tempfile.NamedTemporaryFile(suffix=".wav") as media:
-            outcome = coordinator.TranscribeMedia(media.name)
-
-        self.assertLoggedEqual("missing Torch status", TranscriptionStatus.FAILED, outcome.status)
-        self.assertLoggedIsInstance("missing Torch error", outcome.error, SubtitleError)
-        assert outcome.error is not None
-        self.assertLoggedIn("actionable Torch message", "external Torch", outcome.error.message or "")
-        self.assertLoggedIsInstance("original loader cause", outcome.error.error, ImportError)
-
-    @skip_if_debugger_attached
-    def test_missing_qwen_runtime_fails_before_importing(self):
-        """A Torch environment without qwen-asr fails with an ImportError instead of a failed import partway through."""
-        settings = SettingsType({'torch_installation_directory': '/fake/path'})
-        with patch.object(qwen_module, 'torch', None),                 patch.object(qwen_module, 'Qwen3ASRModel', None),                 patch.object(qwen_module, 'PrepareTorchRuntime'),                 patch.object(qwen_module.importlib.util, 'find_spec', return_value=None),                 patch.object(qwen_module.importlib, 'import_module') as import_module:
-            with self.assertRaises(ImportError) as raised:
-                qwen_module._load_qwen_dependencies(settings)
-
-        log_input_expected_error(settings, ImportError, raised.exception)
-        self.assertLoggedEqual("nothing imported", 0, import_module.call_count)
-
-
-# Languages the stand-in runtime reports as supported by qwen-asr
-STAND_IN_LANGUAGES = ['Chinese', 'English']
-
-
-def _fake_torch(cuda : bool = False, mps : bool = False, xpu : bool = False) -> SimpleNamespace:
-    """Stand-in for torch exposing only the backends and dtypes that the client reads."""
-    return SimpleNamespace(
-        cuda=SimpleNamespace(is_available=lambda: cuda, empty_cache=lambda: None),
-        backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: mps, is_built=lambda: mps)),
-        mps=SimpleNamespace(empty_cache=lambda: None),
-        xpu=SimpleNamespace(is_available=lambda: xpu),
-        float16='float16',
-        bfloat16='bfloat16',
-    )
-
-
-def _use_stand_in_runtime(test : unittest.TestCase, cuda : bool = False, mps : bool = False, xpu : bool = False) -> Mock:
-    """
-    Replace the Qwen runtime with stand-ins for the rest of the test, so torch and qwen-asr are never imported.
-    The client reads the runtime from module globals lazily, so the patches stay in place until cleanup.
-    Returns the stand-in Qwen3ASRModel class.
-    """
-    model_class = Mock()
-    for patcher in (
-        patch.object(qwen_module, 'torch', _fake_torch(cuda=cuda, mps=mps, xpu=xpu)),
-        patch.object(qwen_module, 'Qwen3ASRModel', model_class),
-        patch.object(qwen_module, 'PrepareTorchRuntime'),
-        patch.object(qwen_module, '_QWEN_SUPPORTED_LANGUAGES', STAND_IN_LANGUAGES),
-    ):
-        patcher.start()
-        test.addCleanup(patcher.stop)
-
-    return model_class
-
-
-class TestQwenLocalDevice(LoggedTestCase):
-    """Device and dtype selection, which only reads backend availability from torch."""
-    def _client(self, device_setting : str, allow_cpu_fallback : bool = False,
-                cuda : bool = False, mps : bool = False, xpu : bool = False) -> qwen_module.QwenLocalClient:
-        """Construct a client on a stand-in runtime with the given backends available."""
-        _use_stand_in_runtime(self, cuda=cuda, mps=mps, xpu=xpu)
-
-        return QwenLocalClientClass(SettingsType({
-            'device': device_setting,
-            'allow_cpu_fallback': allow_cpu_fallback,
-        }))
-
-    def test_auto_prefers_cuda(self):
-        """Auto selection uses CUDA when present, with bfloat16 math."""
-        client = self._client('auto', cuda=True, mps=True, xpu=True)
-
-        self.assertLoggedEqual("auto device", "cuda:0", client.device)
-        self.assertLoggedEqual("cuda dtype", "bfloat16", client.inference_dtype)
-
-    def test_auto_uses_mps_without_cuda(self):
-        """Auto selection falls through to Apple Silicon with float16 math."""
-        client = self._client('auto', mps=True)
-
-        self.assertLoggedEqual("auto device", "mps", client.device)
-        self.assertLoggedEqual("mps dtype", "float16", client.inference_dtype)
-
-    @skip_if_debugger_attached
-    def test_auto_refuses_cpu_without_fallback_consent(self):
-        """Auto selection refuses CPU when no accelerator exists without consent."""
-        client = self._client('auto')
-
-        with self.assertRaises(SubtitleError) as context:
-            _device = client.device
-        log_input_expected_error('auto', SubtitleError, context.exception)
-
-    def test_auto_uses_cpu_when_fallback_is_enabled(self):
-        """Auto selection uses CPU only after explicit consent."""
-        client = self._client('auto', allow_cpu_fallback=True)
-
-        self.assertLoggedEqual("auto device", "cpu", client.device)
-        self.assertLoggedEqual("cpu dtype", "bfloat16", client.inference_dtype)
-
-    def test_explicit_xpu_selected(self):
-        """An explicit XPU request is honoured when the backend exists."""
-        client = self._client('xpu', cuda=True, xpu=True)
-
-        self.assertLoggedEqual("explicit device", "xpu:0", client.device)
-        self.assertLoggedEqual("xpu dtype", "float16", client.inference_dtype)
-
-    def test_explicit_mps_selected(self):
-        """An explicit MPS request is honoured when the backend exists."""
-        client = self._client('mps', cuda=True, mps=True)
-
-        self.assertLoggedEqual("explicit device", "mps", client.device)
-
-    @skip_if_debugger_attached
-    def test_explicit_mps_unavailable_is_refused_without_fallback_consent(self):
-        """An unavailable explicit MPS request fails without CPU consent."""
-        client = self._client('mps', cuda=True)
-
-        with self.assertRaises(SubtitleError) as context:
-            _device = client.device
-        log_input_expected_error('mps', SubtitleError, context.exception)
-
-    def test_explicit_cuda_unavailable_uses_cpu_with_fallback_consent(self):
-        """An unavailable explicit CUDA request uses CPU after consent."""
-        client = self._client('cuda', allow_cpu_fallback=True, mps=True)
-
-        self.assertLoggedEqual("fallback device", "cpu", client.device)
-
-    @skip_if_debugger_attached
-    def test_explicit_cpu_is_refused_without_fallback_consent(self):
-        """Explicit CPU selection requires the persistent consent setting."""
-        client = self._client('cpu', cuda=True)
-
-        with self.assertRaises(SubtitleError) as context:
-            _device = client.device
-        log_input_expected_error('cpu', SubtitleError, context.exception)
-
-    def test_explicit_cpu_is_allowed_with_fallback_consent(self):
-        """Explicit CPU selection is allowed after consent."""
-        client = self._client('cpu', allow_cpu_fallback=True, cuda=True)
-
-        self.assertLoggedEqual("explicit CPU device", "cpu", client.device)
-
-    def test_invalid_device_falls_back_to_auto(self):
-        """Unknown device names warn and resolve automatically."""
-        client = self._client('tpu', cuda=True)
-
-        with self.assertLogs(level=logging.WARNING):
-            device = client.device
-        self.assertLoggedEqual("auto device", "cuda:0", device)
-
-    def test_options_offer_accelerators(self):
-        """The device dropdown lists every supported backend."""
-        provider = QwenLocalProvider(SettingsType({'torch_installation_directory': '/fake/path'}))
-        options = provider.GetOptions(provider.settings)
-        devices, _tooltip = options['device']
-
-        for name in ("auto", "cuda", "mps", "xpu", "cpu"):
-            self.assertLoggedIn(f"{name} device", name, devices)
-
-class TestQwenResultParsing(LoggedTestCase):
-    def test_parse_timestamps(self):
-        """qwen-asr results extract text, language and word timings."""
-        unit = type("Unit", (), {'text': 'hello', 'start_time': 0.5, 'end_time': 0.9})()
-        result = type("Result", (), {'text': 'hello', 'language': 'Chinese', 'time_stamps': [unit]})()
-        text, language, words = qwen_module.parse_qwen_result(result)
-
-        self.assertLoggedEqual("text", "hello", text)
-        self.assertLoggedEqual("language", "Chinese", language)
-        self.assertLoggedEqual("word count", 1, len(words))
-        self.assertLoggedEqual("word start", timedelta(seconds=0.5), words[0].start)
-
-    def test_zero_length_words_kept(self):
-        """Zero-length words keep their text and start; reversed timings are still dropped."""
-        units = [type("Unit", (), {'text': text, 'start_time': start, 'end_time': end})()
-                 for text, start, end in [('a', 1.0, 1.2), ('b', 1.3, 1.3), ('c', 2.0, 1.9)]]
-        result = type("Result", (), {'text': 'a b c', 'language': None, 'time_stamps': units})()
-        _text, _language, words = qwen_module.parse_qwen_result(result)
-
-        self.assertLoggedEqual("words kept", ['a', 'b'], [word.text for word in words])
-
-    def test_parse_flat_result(self):
-        """Results without timestamps parse to text-only."""
-        result = type("Result", (), {'text': 'hi', 'language': None, 'time_stamps': None})()
-        text, language, words = qwen_module.parse_qwen_result(result)
-
-        self.assertLoggedEqual("text", "hi", text)
-        self.assertLoggedEqual("language", None, language)
-        self.assertLoggedEqual("word count", 0, len(words))
 
 class TestQwenLanguage(LoggedTestCase):
     @skip_if_debugger_attached
-    def test_provider_resolves_english_names(self):
+    def test_provider_resolves_english_names(self) -> None:
         """Hints become the English names qwen-asr expects; unknown hints are rejected."""
         provider = QwenLocalProvider(SettingsType())
 
@@ -338,161 +150,278 @@ class TestQwenLanguage(LoggedTestCase):
             provider.ResolveLanguageCode("Klingon")
         self.log_expected_result(SubtitleError, type(context.exception), description="unknown hint rejected")
 
-    def test_client_falls_back_to_auto_detect_outside_sdk_list(self):
-        """A resolvable language the SDK cannot handle warns once at construction and auto-detects."""
-        _use_stand_in_runtime(self)
+class TestQwenWorkerMapping(LoggedTestCase):
+    """The SDK-free client owns transcript normalization and WordTiming creation."""
 
-        client = QwenLocalClientClass(SettingsType({'language': 'Chinese'}))
-        self.assertLoggedEqual("supported language kept", "Chinese", client.language)
+    def test_result_mapping(self) -> None:
+        """Keep valid stamps in emission order, clamp negatives and keep zero lengths."""
+        response = {
+            'text': ' hello world ', 'language': ' English ',
+            'time_stamps': [dict(text=text, start_time=start, end_time=end) for text, start, end in (
+                (' world ', 1.2, 1.5), (' hello ', -0.1, 0.0), ('zero', 1.3, 1.3),
+                ('bad', 2.0, 1.0), ('missing', None, 3.0), (' ', 0, 1))],
+        }
+        result = client_module.QwenLocalClient.ParseResult(response)
+        self.assertLoggedIsInstance('application result', result, TranscriptionResult)
+        self.assertLoggedEqual('transcript normalized', 'hello world', result.text)
+        self.assertLoggedEqual('language normalized', 'English', result.language)
+        self.assertLoggedEqual('stamp order preserved', ['world', 'hello', 'zero'], [word.text for word in result.words])
+        self.assertLoggedEqual('negative start clamped', timedelta(), result.words[1].start)
+        self.assertLoggedEqual('zero duration kept', result.words[2].start, result.words[2].end)
+        self.assertLoggedEqual('no invented parts', [], result.parts)
 
-        with self.assertLogs(level=logging.WARNING):
-            client = QwenLocalClientClass(SettingsType({'language': 'Welsh'}))
-        self.assertLoggedIsNone("unsupported language dropped", client.language)
-
-    def test_hint_passes_straight_to_model(self):
-        """The client no longer normalises: the resolved name goes to the SDK unchanged."""
-        _use_stand_in_runtime(self)
-        client = QwenLocalClientClass(SettingsType({'language': 'Chinese'}))
-        result = type("Result", (), {"text": "ni hao", "language": "Chinese", "time_stamps": None})()
-        model = Mock()
-        model.transcribe.return_value = [result]
-        with patch.object(client, '_load_model', return_value=model), \
-                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
-                patch.object(qwen_module.os, 'remove'):
-            client._transcribe_chunk(b"audio", "wav")
-
-        model.transcribe.assert_called_once_with(
-            audio="chunk.wav", language="Chinese", return_time_stamps=True)
-
-
-class TestQwenAlignment(LoggedTestCase):
-    def setUp(self):
-        super().setUp()
-        _use_stand_in_runtime(self)
-
-    def test_auto_detect_requests_timestamps(self):
-        """An omitted hint still enables Qwen forced alignment."""
-        client = QwenLocalClientClass(SettingsType())
-        result = type("Result", (), {"text": "hello", "language": "English", "time_stamps": None})()
-        model = Mock()
-        model.transcribe.return_value = [result]
-        with patch.object(client, '_load_model', return_value=model), \
-                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
-                patch.object(qwen_module.os, 'remove'):
-            client._transcribe_chunk(b"audio", "wav")
-
-        model.transcribe.assert_called_once_with(
-            audio="chunk.wav", language=None, return_time_stamps=True)
+    def test_empty_and_text_only_results(self) -> None:
+        """Silence and unsupported alignment retain the hint when detection is absent."""
+        for text in ('', 'flat transcript'):
+            result = client_module.QwenLocalClient.ParseResult({'text': text, 'language': None, 'time_stamps': []}, 'Chinese')
+            self.assertLoggedEqual('transcript', text, result.text)
+            self.assertLoggedEqual('hint fallback', 'Chinese', result.language)
+            self.assertLoggedEqual('no words', [], result.words)
 
     @skip_if_debugger_attached
-    def test_unsupported_detected_language_falls_back_to_text(self):
-        """Unsupported forced alignment tries English before text-only output."""
-        client = QwenLocalClientClass(SettingsType())
-        result = type("Result", (), {"text": "bonjour", "language": "Klingon", "time_stamps": None})()
-        model = Mock()
-        model.transcribe.side_effect = [
-            ValueError("Unsupported language: Klingon"),
-            ValueError("Unsupported language: English"),
-            [result],
-        ]
-        with patch.object(client, '_load_model', return_value=model), \
-                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
-                patch.object(qwen_module.os, 'remove'):
-            transcription = client._transcribe_chunk(b"audio", "wav")
-
-        self.assertLoggedEqual("fallback text", "bonjour", transcription.text)
-        self.assertLoggedEqual("retry count", 3, model.transcribe.call_count)
-        self.assertLoggedEqual("alignment retry language", "English",
-                               model.transcribe.call_args_list[1].kwargs['language'])
-        self.assertLoggedEqual("alignment retry timestamps", True,
-                               model.transcribe.call_args_list[1].kwargs['return_time_stamps'])
-        self.assertLoggedEqual("fallback timestamps", False,
-                               model.transcribe.call_args_list[2].kwargs['return_time_stamps'])
-
-    def test_missing_soynlp_installs_space_split_korean_tokenizer(self):
-        """Without soynlp, the aligner gets a Korean tokenizer that splits on spaces and warns once."""
-        processor = SimpleNamespace(ko_tokenizer=None)
-        model = SimpleNamespace(forced_aligner=SimpleNamespace(aligner_processor=processor))
-        with patch.object(qwen_module.importlib.util, 'find_spec', return_value=None):
-            qwen_module._install_korean_tokenizer_fallback(model)
-
-        self.assertLoggedIsInstance("korean tokenizer", processor.ko_tokenizer, qwen_module._SpaceSplitKoreanTokenizer)
-
-        with self.assertLogs(level=logging.WARNING) as logs:
-            first = processor.ko_tokenizer.tokenize("안녕하세요, 만나서 반갑습니다.")
-            processor.ko_tokenizer.tokenize("감사합니다")
-
-        self.assertLoggedEqual("tokens", ["안녕하세요,", "만나서", "반갑습니다."], first)
-        self.assertLoggedEqual("warning count", 1, len(logs.records))
-
-    def test_installed_soynlp_is_left_to_the_aligner(self):
-        """With soynlp installed, the aligner's own Korean tokenizer is used."""
-        processor = SimpleNamespace(ko_tokenizer=None)
-        model = SimpleNamespace(forced_aligner=SimpleNamespace(aligner_processor=processor))
-        with patch.object(qwen_module.importlib.util, 'find_spec', return_value=object()):
-            qwen_module._install_korean_tokenizer_fallback(model)
-
-        self.assertLoggedIsNone("korean tokenizer", processor.ko_tokenizer)
+    def test_bad_payloads(self) -> None:
+        """Invalid worker result shapes fail at the application boundary."""
+        for response in ({}, {'text': 4, 'time_stamps': []}, {'text': '', 'time_stamps': None},
+                         {'text': '', 'time_stamps': [], 'language': 5}, {'text': '', 'time_stamps': [None]}):
+            with self.assertRaises(WorkerError):
+                client_module.QwenLocalClient.ParseResult(response)
 
 
-class TestQwenModelCache(LoggedTestCase):
-    def setUp(self):
+class TestQwenWorkerSession(LoggedTestCase):
+    """Model cache and abort use fake hosts and never write temporary chunks."""
+
+    def setUp(self) -> None:
         super().setUp()
-        self.client_type = QwenLocalClientClass
-        self.model_class = _use_stand_in_runtime(self)
+        self.state = patch.multiple(client_module, _loaded_worker=None, _loaded_key=None, _loaded_ready={})
+        self.state.start()
+        self.addCleanup(self.state.stop)
+        self.resolve = patch.object(client_module, 'ResolveEnvironmentPython', return_value='python')
+        self.resolve.start()
+        self.addCleanup(self.resolve.stop)
+        self.hosts : list[Mock] = []
 
-        self._saved_key = qwen_module._loaded_key
-        self._saved_model = qwen_module._loaded_model
-        qwen_module._loaded_key = None
-        qwen_module._loaded_model = None
+        def Host(*args : Any) -> Mock:
+            host = Mock()
+            host.running = True
+            host.Request.return_value = {'type': 'ready', 'device': 'cuda:0', 'supported_languages': ['English', 'Chinese']}
+            self.hosts.append(host)
+            return host
 
-    def tearDown(self):
-        qwen_module._loaded_key = self._saved_key
-        qwen_module._loaded_model = self._saved_model
-        super().tearDown()
+        self.factory = patch.object(client_module, 'WorkerHost', side_effect=Host)
+        self.factory.start()
+        self.addCleanup(self.factory.stop)
 
-    def test_generation_budget_applied_per_call(self):
-        """A changed max_new_tokens setting applies to a reused model."""
-        client = self.client_type(SettingsType({'max_new_tokens': 2048}))
-        result = type("Result", (), {"text": "hello", "language": "English", "time_stamps": None})()
-        model = Mock()
-        model.transcribe.return_value = [result]
-        with patch.object(client, '_load_model', return_value=model), \
-                patch.object(client, '_write_chunk', return_value="chunk.wav"), \
-                patch.object(qwen_module.os, 'remove'):
-            client._transcribe_chunk(b"audio", "wav")
+    def test_cache_and_eviction(self) -> None:
+        """Budget changes reuse a worker; load and environment changes evict it."""
+        first = client_module.QwenLocalClient(SettingsType())
+        worker = first._LoadWorker()
+        again = client_module.QwenLocalClient(SettingsType({'max_new_tokens': 4096}))
+        self.assertLoggedIs('budget change reuses model', worker, again._LoadWorker())
+        for setting in ({'model': 'different'}, {'aligner_model': 'other'}, {'device': 'cpu'}, {'allow_cpu_fallback': True}):
+            previous = self.hosts[-1]
+            client_module.QwenLocalClient(SettingsType(setting))._LoadWorker()
+            self.assertLoggedEqual('old worker shut down', 1, previous.Shutdown.call_count)
+        with patch.object(client_module, 'ResolveEnvironmentPython', return_value='different-python'):
+            client_module.QwenLocalClient(SettingsType())._LoadWorker()
+        self.assertLoggedEqual('replacement per load change', 6, len(self.hosts))
 
-        self.assertLoggedEqual("budget set on model", 2048, model.max_new_tokens)
+    def test_generation_and_chunk_cleanup(self) -> None:
+        """Each call sends its current budget, hint and alignment setting, then removes the WAV."""
+        client = client_module.QwenLocalClient(SettingsType({'language': 'Chinese', 'max_new_tokens': 4096}))
+        client._LoadWorker()
+        worker = self.hosts[-1]
+        worker.Request.return_value = {'type': 'result', 'text': 'hello', 'language': None, 'time_stamps': []}
+        with patch.object(client, '_WriteChunk', return_value='chunk.wav'), patch.object(client_module.os, 'remove') as remove:
+            result = client.TranscribeChunk(b'audio', 'wav')
+        request = worker.Request.call_args.args[0]
+        self.assertLoggedEqual('generation budget', 4096, request['max_new_tokens'])
+        self.assertLoggedEqual('hint passed to worker', 'Chinese', request['language'])
+        self.assertLoggedEqual('align by default', True, request['align'])
+        self.assertLoggedEqual('hint retained in result', 'Chinese', result.language)
+        self.assertLoggedEqual('WAV removed', 1, remove.call_count)
 
-    def test_settings_change_replaces_cached_model(self):
-        """Only the most recently loaded model is retained; the previous one is released."""
-        loaded : list[Mock] = []
+    @skip_if_debugger_attached
+    def test_failed_request_cleans_chunk(self) -> None:
+        """Temporary audio is removed after a runtime failure too."""
+        client = client_module.QwenLocalClient(SettingsType())
+        client._LoadWorker()
+        worker = self.hosts[-1]
+        worker.Request.side_effect = WorkerError('failure')
+        with patch.object(client, '_WriteChunk', return_value='chunk.wav'), patch.object(client_module.os, 'remove') as remove:
+            with self.assertRaises(WorkerError):
+                client.TranscribeChunk(b'audio', 'wav')
+        self.assertLoggedEqual('failed WAV removed', 1, remove.call_count)
 
-        def fake_load(checkpoint, **kwargs):
-            model = Mock(name=checkpoint)
-            loaded.append(model)
-            return model
+    def test_unsupported_hint(self) -> None:
+        """Language-list validation stays on the application side."""
+        client = client_module.QwenLocalClient(SettingsType({'language': 'Welsh'}))
+        with self.assertLogs(level='WARNING'):
+            client._LoadWorker()
+        self.assertLoggedIsNone('auto detect unsupported hint', client.language)
 
-        from_pretrained = self.model_class.from_pretrained
-        from_pretrained.side_effect = fake_load
-        first = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'allow_cpu_fallback': True}))
-        first_model = first._load_model()
-        self.assertLoggedIs("first load cached", first_model, qwen_module._loaded_model)
+    def test_abort(self) -> None:
+        """An active client abort terminates its worker."""
+        client = client_module.QwenLocalClient(SettingsType())
+        client._LoadWorker()
+        host = self.hosts[-1]
+        client.AbortTranscription()
+        self.assertLoggedTrue('client aborted', client.aborted)
+        self.assertLoggedEqual('host terminated', 1, host.Abort.call_count)
 
-        same = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'allow_cpu_fallback': True, 'max_new_tokens': 4096}))
-        self.assertLoggedIs("budget change reuses model", first_model, same._load_model())
-        self.assertLoggedEqual("single load so far", 1, from_pretrained.call_count)
-
-        second = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-0.6B', 'device': 'cpu', 'allow_cpu_fallback': True}))
-        second_model = second._load_model()
-        self.assertLoggedEqual("second load performed", 2, from_pretrained.call_count)
-        self.assertLoggedIs("latest model cached", second_model, qwen_module._loaded_model)
-        self.assertLoggedIsNot("previous model dropped", first_model, qwen_module._loaded_model)
-
-        again = self.client_type(SettingsType({'model': 'Qwen/Qwen3-ASR-1.7B', 'device': 'cpu', 'allow_cpu_fallback': True}))
-        again._load_model()
-        self.assertLoggedEqual("original key reloads", 3, from_pretrained.call_count)
+    @skip_if_debugger_attached
+    def test_abort_before_loading(self) -> None:
+        """A cancelled client cannot start a new worker."""
+        client = client_module.QwenLocalClient(SettingsType())
+        client.AbortTranscription()
+        with self.assertRaises(SubtitleError):
+            client._LoadWorker()
+        self.assertLoggedEqual('no process created', 0, len(self.hosts))
 
 
-if __name__ == '__main__':
-    unittest.main()
+class TestQwenWorkerRuntime(LoggedTestCase):
+    """Qwen SDK and Torch backends are represented by in-memory objects."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.worker = qwen_worker.QwenWorker()
+        self.model = Mock()
+        self.worker.model = self.model
+
+    @skip_if_debugger_attached
+    def test_alignment_fallback(self) -> None:
+        """An unsupported detected language retries English, then text only."""
+        self.model.transcribe.side_effect = [ValueError('Unsupported language: Welsh'), ValueError('alignment'),
+                                            [SimpleNamespace(text='text', language='Welsh', time_stamps=None)]]
+        with self.assertLogs(level='WARNING') as logs:
+            response = self.worker.Transcribe({'path': 'chunk.wav', 'language': None, 'max_new_tokens': 2048})
+        calls = self.model.transcribe.call_args_list
+        self.assertLoggedEqual('fallback attempts', 3, len(calls))
+        self.assertLoggedEqual('English retry', 'English', calls[1].kwargs['language'])
+        self.assertLoggedFalse('last call text only', calls[2].kwargs['return_time_stamps'])
+        self.assertLoggedEqual('empty stamps returned', [], response['time_stamps'])
+        self.assertLoggedEqual('warnings captured', 2, len(logs.records))
+
+    @skip_if_debugger_attached
+    def test_unrelated_error_is_not_retried(self) -> None:
+        """Only unsupported aligner languages trigger retry."""
+        self.model.transcribe.side_effect = ValueError('invalid audio')
+        with self.assertRaises(ValueError):
+            self.worker.Transcribe({'path': 'chunk.wav', 'max_new_tokens': 1024})
+        self.assertLoggedEqual('single attempt', 1, self.model.transcribe.call_count)
+
+    def test_raw_stamps_and_generation_budget(self) -> None:
+        """The worker serializes raw fields without normalizing or reordering."""
+        unit = SimpleNamespace(text=' raw ', start_time=-0.1, end_time=0.4)
+        self.model.transcribe.return_value = [SimpleNamespace(text=' text ', language='English', time_stamps=[unit])]
+        response = self.worker.Transcribe({'path': 'chunk.wav', 'max_new_tokens': 4096, 'align': False})
+        self.assertLoggedEqual('budget applied', 4096, self.model.max_new_tokens)
+        self.assertLoggedEqual('raw transcript', ' text ', response['text'])
+        self.assertLoggedEqual('raw negative stamp', -0.1, response['time_stamps'][0]['start_time'])
+        self.assertLoggedFalse('alignment disabled', self.model.transcribe.call_args.kwargs['return_time_stamps'])
+
+    def test_silence(self) -> None:
+        """No SDK results is expected for silence."""
+        self.model.transcribe.return_value = []
+        response = self.worker.Transcribe({'path': 'chunk.wav', 'max_new_tokens': 1024})
+        self.assertLoggedEqual('empty transcription', '', response['text'])
+        self.assertLoggedEqual('empty stamps', [], response['time_stamps'])
+
+    @skip_if_debugger_attached
+    def test_protocol_service(self) -> None:
+        """Malformed requests and runtime failures return errors without corrupting the channel."""
+        requests = io.StringIO('not JSON\n[]\n{"type":"unknown"}\n{"type":"load"}\n'
+                               '{"type":"transcribe"}\n{"type":"shutdown"}\n')
+        channel = io.StringIO()
+        fake = Mock()
+        fake.model = None
+        fake.Load.return_value = {'type': 'ready', 'device': 'cpu', 'supported_languages': ['English']}
+        fake.Transcribe.side_effect = ValueError('SDK failure')
+        with patch.object(qwen_worker.sys, 'stdin', requests), patch.object(qwen_worker, '_channel', channel), \
+                patch.object(qwen_worker, 'QwenWorker', return_value=fake):
+            qwen_worker.Main()
+        responses = [json.loads(line) for line in channel.getvalue().splitlines()]
+        self.assertLoggedEqual('one reply per request except shutdown', 5, len(responses))
+        self.assertLoggedEqual('protocol sequence', ['error', 'error', 'error', 'ready', 'error'],
+                               [response['type'] for response in responses])
+        self.assertLoggedEqual('runtime exception classification', 'ValueError', responses[-1]['error_type'])
+
+    def test_load_model_and_aligner(self) -> None:
+        """Both models keep the original device, dtype and generation settings."""
+        for configured, expected_device, expected_dtype in (('cuda', 'cuda:0', 'bf16'), ('mps', 'mps', 'fp16'),
+                                                            ('xpu', 'xpu:0', 'fp16'), ('cpu', 'cpu', 'bf16')):
+            torch = SimpleNamespace(
+                cuda=SimpleNamespace(is_available=lambda: True), bfloat16='bf16', float16='fp16',
+                backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: True, is_built=lambda: True)),
+                xpu=SimpleNamespace(is_available=lambda: True))
+            factory = Mock(return_value=self.model)
+            modules = {'torch': torch, 'qwen_asr': SimpleNamespace(Qwen3ASRModel=SimpleNamespace(from_pretrained=factory)),
+                       'qwen_asr.inference.utils': SimpleNamespace(SUPPORTED_LANGUAGES=['English'])}
+            with patch.object(qwen_worker.importlib, 'import_module', side_effect=modules.__getitem__), \
+                    patch.object(self.worker, 'InstallKoreanTokenizerFallback'):
+                ready = self.worker.Load({'checkpoint': 'asr', 'aligner_checkpoint': 'aligner', 'device': configured,
+                                          'max_new_tokens': 2048, 'allow_cpu_fallback': True})
+            kwargs = factory.call_args.kwargs
+            self.assertLoggedEqual('device selected', expected_device, ready['device'])
+            self.assertLoggedEqual('model dtype', expected_dtype, kwargs['dtype'])
+            self.assertLoggedEqual('aligner dtype and device', {'dtype': expected_dtype, 'device_map': expected_device},
+                                   kwargs['forced_aligner_kwargs'])
+            self.assertLoggedEqual('forced aligner loaded', 'aligner', kwargs['forced_aligner'])
+            self.assertLoggedEqual('initial generation budget', 2048, kwargs['max_new_tokens'])
+
+    def test_korean_fallback(self) -> None:
+        """Missing soynlp preserves space-based Korean alignment and warns once."""
+        processor = SimpleNamespace(ko_tokenizer=None)
+        model = SimpleNamespace(forced_aligner=SimpleNamespace(aligner_processor=processor))
+        with patch.object(qwen_worker.importlib.util, 'find_spec', return_value=None):
+            self.worker.InstallKoreanTokenizerFallback(model)
+        tokenizer = processor.ko_tokenizer
+        assert tokenizer is not None
+        with self.assertLogs(level='WARNING') as logs:
+            tokens = tokenizer.tokenize('one two')
+            tokenizer.tokenize('three')
+        self.assertLoggedEqual('space tokens', ['one', 'two'], tokens)
+        self.assertLoggedEqual('single warning', 1, len(logs.records))
+
+    @skip_if_debugger_attached
+    def test_device_selection(self) -> None:
+        """All GPU backends retain their priority, and all CPU paths require consent."""
+        for cuda, mps, xpu, expected in ((True, True, True, 'cuda:0'), (False, True, True, 'mps'),
+                                          (False, False, True, 'xpu:0'), (False, False, False, 'cpu')):
+            torch = SimpleNamespace(cuda=SimpleNamespace(is_available=lambda: cuda),
+                                    backends=SimpleNamespace(mps=SimpleNamespace(is_available=lambda: mps, is_built=lambda: mps)),
+                                    xpu=SimpleNamespace(is_available=lambda: xpu))
+            self.assertLoggedEqual('automatic device priority', expected, self.worker.SelectDevice(torch, 'auto', True))
+            for candidate in ('cpu', 'cuda', 'mps', 'xpu', 'auto'):
+                if candidate == 'cpu' or (candidate == 'auto' and expected == 'cpu') or (
+                        candidate == 'cuda' and not cuda) or (candidate == 'mps' and not mps) or (candidate == 'xpu' and not xpu):
+                    with self.assertRaises(RuntimeError):
+                        self.worker.SelectDevice(torch, candidate, False)
+                    self.assertLoggedEqual('consented CPU fallback', 'cpu', self.worker.SelectDevice(torch, candidate, True))
+
+
+@unittest.skipUnless(QWEN_TEST_ENVIRONMENT and QWEN_TEST_AUDIO, 'Set QWEN_TEST_ENVIRONMENT and QWEN_TEST_AUDIO to run the real Qwen worker')
+class TestQwenWorkerIntegration(LoggedTestCase):
+    """Run the installed runtime on a short excerpt without importing its SDK in the app."""
+
+    def test_real_worker(self) -> None:
+        """The worker loads its models, transcribes a WAV and shuts down cleanly."""
+        if not HasQwenRuntime(Path(QWEN_TEST_ENVIRONMENT)):
+            self.skipTest('Configured environment does not contain the Qwen runtime')
+        if not Path(QWEN_TEST_AUDIO).is_file():
+            self.skipTest('Configured test audio does not exist')
+        settings = SettingsType({'qwen_installation_directory': QWEN_TEST_ENVIRONMENT, 'device': 'auto',
+                                 'max_new_tokens': 2048, 'language': 'Chinese'})
+        client = QwenLocalClient(settings)
+        self.addCleanup(client.AbortTranscription)
+        start = timedelta(seconds=float(os.getenv('QWEN_TEST_START_SECONDS', '0')))
+        audio = AudioExtractor().ReadChunkBytes(QWEN_TEST_AUDIO, start, start + timedelta(seconds=20))
+        result = client.TranscribeChunk(audio, 'wav')
+        self.assertLoggedIsInstance('application result', result, TranscriptionResult)
+        self.assertLoggedGreater('transcript length', len(result.text), 0)
+        self.assertLoggedGreater('forced aligner stamps', len(result.words), 0)
+        self.assertLoggedIsNotNone('detected language', result.language)
+        worker = client._worker
+        assert worker is not None
+        self.assertLoggedTrue('worker remains loaded across chunks', worker.running)
+        worker.Shutdown()
+        self.assertLoggedFalse('worker shut down', worker.running)

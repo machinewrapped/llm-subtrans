@@ -31,7 +31,7 @@ class TestTorchDiscovery(LoggedTestCase):
 
     def test_find_existing_torch_prefers_default_location(self) -> None:
         """The install location beside the application is checked first."""
-        with patch.object(Discovery, 'GetAppDir', return_value='app'), \
+        with patch.object(Discovery, 'ApplicationRoot', return_value=Path('app')), \
                 patch.object(Discovery, 'HasTorchPackage', return_value=True):
             found = Discovery.FindExistingTorch('envqwen')
 
@@ -39,7 +39,7 @@ class TestTorchDiscovery(LoggedTestCase):
 
     def test_find_existing_torch_returns_none_when_absent(self) -> None:
         """No default install and no importable Torch yields None."""
-        with patch.object(Discovery, 'GetAppDir', return_value='app'), \
+        with patch.object(Discovery, 'ApplicationRoot', return_value=Path('app')), \
                 patch.object(Discovery, 'HasTorchPackage', return_value=False), \
                 patch.object(Discovery.importlib.util, 'find_spec', return_value=None):
             found = Discovery.FindExistingTorch('envqwen')
@@ -120,7 +120,7 @@ class TestEnvironmentInterpreter(LoggedTestCase):
     def test_source_fallback(self) -> None:
         """An older source install can still use Qwen in the app's interpreter."""
         with patch.object(Discovery.sys, 'frozen', False, create=True), \
-                patch.object(Discovery, 'GetAppDir', return_value='app'), \
+                patch.object(Discovery, 'ApplicationRoot', return_value=Path('app')), \
                 patch.object(Path, 'is_file', return_value=False):
             self.assertLoggedEqual('source Python', Discovery.sys.executable, Discovery.ResolveEnvironmentPython(None, 'envqwen'))
 
@@ -130,7 +130,7 @@ class TestEnvironmentInterpreter(LoggedTestCase):
         for relative in ('Scripts/python.exe', 'bin/python'):
             expected = root / 'envqwen' / relative
             with patch.object(Discovery.sys, 'frozen', False, create=True), \
-                    patch.object(Discovery, 'GetAppDir', return_value=str(root)), \
+                    patch.object(Discovery, 'ApplicationRoot', return_value=root), \
                     patch.object(Path, 'is_file', lambda path: path == expected):
                 self.assertLoggedEqual('default runtime Python', str(expected), Discovery.ResolveEnvironmentPython(None, 'envqwen'))
 
@@ -138,11 +138,18 @@ class TestEnvironmentInterpreter(LoggedTestCase):
         """An explicit setting is authoritative even when a default environment exists."""
         expected = Path('custom').absolute() / 'Scripts/python.exe'
         with patch.object(Path, 'is_file', lambda path: path == expected), \
-                patch.object(Discovery, 'GetAppDir') as app_dir:
+                patch.object(Discovery, 'ApplicationRoot') as app_dir:
             actual = Discovery.ResolveEnvironmentPython('custom', 'envqwen')
 
         self.assertLoggedEqual('configured Python', str(expected), actual)
         self.assertLoggedEqual('default directory not consulted', 0, app_dir.call_count)
+
+    def test_source_root_ignores_working_directory(self) -> None:
+        """A source install finds its default environments in the project root, not the working directory."""
+        project_root = Path(__file__).resolve().parents[2]
+        with patch.object(Discovery.sys, 'frozen', False, create=True), \
+                patch.object(Discovery, 'GetAppDir', return_value='elsewhere'):
+            self.assertLoggedEqual('project root', project_root, Discovery.ApplicationRoot())
 
     @skip_if_debugger_attached
     def test_missing_interpreter(self) -> None:

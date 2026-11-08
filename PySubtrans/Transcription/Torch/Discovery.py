@@ -36,6 +36,21 @@ MIN_PYTHON_VERSION = (3, 10)
 PROBE_TIMEOUT_SECONDS = 5
 
 
+# The project root of a source install: PySubtrans/Transcription/Torch/Discovery.py is three levels below it
+_SOURCE_ROOT = Path(__file__).resolve().parents[3]
+
+
+def ApplicationRoot() -> Path:
+    """The folder that holds the default runtime environments.
+
+    Frozen builds keep them beside the executable.
+    Source installs keep them in the project root beside envsubtrans, wherever the app is launched from.
+    """
+    if getattr(sys, 'frozen', False):
+        return Path(GetAppDir())
+    return _SOURCE_ROOT
+
+
 def FindEnvironmentPython(root : Path) -> str|None:
     """Find an environment's interpreter without resolving POSIX venv symlinks."""
     for candidate in (root / 'Scripts' / 'python.exe', root / 'bin' / 'python', root / 'python.exe'):
@@ -54,7 +69,7 @@ def ResolveEnvironmentPython(directory : str|None, default_environment : str|Non
     if not directory or not directory.strip():
         if not getattr(sys, 'frozen', False):
             if default_environment:
-                python = FindEnvironmentPython(Path(GetAppDir()) / default_environment)
+                python = FindEnvironmentPython(ApplicationRoot() / default_environment)
                 if python is not None:
                     return python
 
@@ -84,7 +99,7 @@ def FindExistingTorch(default_environment : str) -> str|None:
     Checks the runtime's default environment next to the application first.
     Falls back to scanning ``sys.path``.
     """
-    default_path = os.path.join(GetAppDir(), default_environment)
+    default_path = str(ApplicationRoot() / default_environment)
     if HasTorchPackage(Path(default_path)):
         return default_path
 

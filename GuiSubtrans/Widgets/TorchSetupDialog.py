@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import html
 import logging
-import os
 import sys
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -34,8 +33,8 @@ from PySide6.QtWidgets import (
 )
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Helpers.Resources import GetAppDir
 from PySubtrans.Transcription.Torch.Discovery import (
+    ApplicationRoot,
     ExpectedCompatibility,
     FindCompatiblePython,
     FindExistingTorch,
@@ -238,7 +237,7 @@ class TorchSetupDialog(QDialog):
         directory_group = QGroupBox(_("Installation folder"), page)
         directory_layout = QVBoxLayout(directory_group)
         dir_row = QHBoxLayout()
-        default_path = current_path or os.path.join(GetAppDir(), QWEN_ENVIRONMENT_NAME)
+        default_path = current_path or str(ApplicationRoot() / QWEN_ENVIRONMENT_NAME)
         self._dir_field = QLineEdit(default_path, directory_group)
         self._dir_field.setCursorPosition(0)
         self._dir_field.setToolTip(_("A new Python virtual environment will be created here."))

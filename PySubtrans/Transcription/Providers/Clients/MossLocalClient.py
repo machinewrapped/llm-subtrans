@@ -80,11 +80,17 @@ class MossLocalClient(TranscriptionClient):
                 raise SubtitleError(_("Transcription aborted"))
 
             chunk_path = self._WriteChunk(audio_bytes)
+            diarize = self.diarize
+
+            def on_segment(message : dict[str, Any]) -> None:
+                part = self.ParseSegment(message.get('segment'), diarize)
+                if part is not None:
+                    self._report_part(part)
 
             try:
                 response = worker.Request({
                     'type': 'transcribe', 'path': chunk_path, 'max_new_tokens': self.max_new_tokens,
-                }, 'result')
+                }, 'result', on_segment)
             except WorkerError:
                 worker.Abort()
                 raise
@@ -106,24 +112,27 @@ class MossLocalClient(TranscriptionClient):
         if not isinstance(segments, list):
             raise WorkerError(_("Malformed MOSS worker result"))
 
-        parts : list[TranscriptionSegment] = []
-        for segment in segments:
-            if not isinstance(segment, dict):
-                raise WorkerError(_("Malformed MOSS worker segment"))
-
-            text = str(segment.get('text') or '').strip()
-            start = TryParseFloat(segment.get('start'))
-            end = TryParseFloat(segment.get('end'))
-            if not text or start is None or end is None or end < start:
-                continue
-
-            speaker = segment.get('speaker') if diarize else None
-            parts.append(TranscriptionSegment(
-                start=timedelta(seconds=max(0.0, start)), end=timedelta(seconds=max(0.0, end)),
-                text=text, speaker=str(speaker) if speaker else None))
+        parts = [part for segment in segments if (part := MossLocalClient.ParseSegment(segment, diarize)) is not None]
 
         text = '\n'.join(part.text for part in parts)
         return TranscriptionResult(text=text, parts=parts)
+
+    @staticmethod
+    def ParseSegment(segment : Any, diarize : bool = True) -> TranscriptionSegment|None:
+        """Convert one worker segment to a chunk-relative part, or None if it has no usable text or timing."""
+        if not isinstance(segment, dict):
+            raise WorkerError(_("Malformed MOSS worker segment"))
+
+        text = str(segment.get('text') or '').strip()
+        start = TryParseFloat(segment.get('start'))
+        end = TryParseFloat(segment.get('end'))
+        if not text or start is None or end is None or end < start:
+            return None
+
+        speaker = segment.get('speaker') if diarize else None
+        return TranscriptionSegment(
+            start=timedelta(seconds=max(0.0, start)), end=timedelta(seconds=max(0.0, end)),
+            text=text, speaker=str(speaker) if speaker else None)
 
     def _LoadWorker(self) -> WorkerHost:
         """Reuse a matching model and evict the old process before loading a replacement."""

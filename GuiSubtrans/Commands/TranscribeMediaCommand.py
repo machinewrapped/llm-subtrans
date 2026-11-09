@@ -23,7 +23,7 @@ class TranscribeMediaCommand(Command):
     statusChanged = Signal(str)
     progressed = Signal(int, str)
     audioProgressed = Signal(float, float)
-    segmented = Signal(object)
+    segmented = Signal(object, bool)
 
     def __init__(self, provider : TranscriptionProvider, media_path : str,
                  settings : SettingsType, options : Options|None = None,
@@ -137,8 +137,8 @@ class TranscribeMediaCommand(Command):
     def _on_audio_progress(self, sender, processed : float, total : float) -> None:
         self.audioProgressed.emit(processed, total)
 
-    def _on_segment(self, sender, segment : TranscriptionSegment) -> None:
-        self.segmented.emit(segment)
+    def _on_segment(self, sender, segment : TranscriptionSegment, overlong : bool = False) -> None:
+        self.segmented.emit(segment, overlong)
 
     def _record_runtime_evidence(self) -> None:
         """Record dependency facts proven by a real run for future sessions."""

@@ -4,6 +4,7 @@ import atexit
 import json
 import logging
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from threading import RLock, Thread
 from typing import Any
@@ -52,7 +53,7 @@ def _RejectConstant(value : str) -> None:
 def ValidateMessage(message : Any) -> None:
     """Validate the envelope; runtime-specific payloads belong to the client."""
     if not isinstance(message, dict) or message.get('type') not in (
-            'load', 'ready', 'transcribe', 'result', 'error', 'shutdown'):
+            'load', 'ready', 'transcribe', 'segment', 'result', 'error', 'shutdown'):
         raise WorkerError(_("Unexpected worker message shape"))
 
     if message['type'] == 'error' and not all(isinstance(message.get(key), str) for key in ('error_type', 'message')):
@@ -116,8 +117,12 @@ class WorkerHost:
             self._stderr_thread = Thread(target=self._ForwardStderr, args=(self._process,), daemon=True)
             self._stderr_thread.start()
 
-    def Request(self, message : dict[str, Any], expected : str) -> dict[str, Any]:
-        """Send a request and wait for exactly one response or an error."""
+    def Request(self, message : dict[str, Any], expected : str,
+                on_segment : Callable[[dict[str, Any]], None]|None = None) -> dict[str, Any]:
+        """
+        Send a request and wait for exactly one response or an error.
+        Segment messages sent while the request runs are passed to on_segment.
+        """
         encoded = EncodeMessage(message)
 
         with self._request_lock:
@@ -129,11 +134,12 @@ class WorkerHost:
                 process.stdin.write(encoded)
                 process.stdin.flush()
 
-                line = process.stdout.readline()
-                if not line:
-                    raise WorkerError(_("Transcription worker exited before replying (exit code {})").format(process.poll()))
+                response = self._ReadMessage(process)
+                while response['type'] == 'segment':
+                    if on_segment is not None:
+                        on_segment(response)
+                    response = self._ReadMessage(process)
 
-                response = DecodeMessage(line)
                 if response['type'] == 'error':
                     raise WorkerError(_("Transcription worker failed ({}): {}").format(
                         response['error_type'], response['message']), response['error_type'])
@@ -144,7 +150,8 @@ class WorkerHost:
             except (OSError, ValueError) as error:
                 self.Abort()
                 raise WorkerError(_("Transcription worker communication failed: {}").format(error)) from error
-            except WorkerError:
+            except Exception:
+                # The worker may still be mid-request, so its later output would answer the next request
                 self.Abort()
                 raise
 
@@ -187,6 +194,16 @@ class WorkerHost:
                             pass
 
             atexit.unregister(self.Abort)
+
+    @staticmethod
+    def _ReadMessage(process : subprocess.Popen[str]) -> dict[str, Any]:
+        """Read the next protocol message from the worker."""
+        assert process.stdout is not None
+        line = process.stdout.readline()
+        if not line:
+            raise WorkerError(_("Transcription worker exited before replying (exit code {})").format(process.poll()))
+
+        return DecodeMessage(line)
 
     def _ForwardStderr(self, process : subprocess.Popen[str]) -> None:
         """Drain diagnostics concurrently so library output cannot stall inference."""

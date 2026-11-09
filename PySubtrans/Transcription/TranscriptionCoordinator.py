@@ -19,6 +19,7 @@ from PySubtrans.Transcription.AudioExtractor import AudioExtractor, AudioTrack, 
 from PySubtrans.Transcription.LineSettings import (DEFAULT_MERGE_ELIGIBLE_GAP_SECONDS, DEFAULT_MIN_GAP_SECONDS,
                                                    DEFAULT_SAME_SPEAKER_MERGE_ELIGIBLE_GAP_SECONDS,
                                                    DEFAULT_TIMING_CORRECTION_FACTOR, LineSettings)
+from PySubtrans.Transcription.StreamedChunk import StreamedChunk
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionCapture import CapturePath, TranscriptionCapture
 from PySubtrans.Transcription.TranscriptionEvents import TranscriptionEvents
@@ -218,9 +219,12 @@ class TranscriptionCoordinator:
             # Total is unknown while the plan streams in (0 signals that)
             self.events.progress.send(self, done=done, span=SpanLabel(chunk.start, chunk.end))
 
-        def report_audio(chunk : AudioChunk) -> None:
+        def report_position(position : timedelta) -> None:
             if run.audio_total_seconds > 0.0:
-                self.events.audio_progress.send(self, processed=run.AudioPosition(chunk), total=run.audio_total_seconds)
+                self.events.audio_progress.send(self, processed=run.AudioPosition(position), total=run.audio_total_seconds)
+
+        def report_audio(chunk : AudioChunk) -> None:
+            report_position(chunk.end)
 
         # Manual pool management so we can shutdown(wait=False) on abort
         # instead of blocking until a running ffmpeg extraction finishes.
@@ -259,7 +263,7 @@ class TranscriptionCoordinator:
                 if prev_chunk is not None and prev_audio is not None:
                     stop = self._process_chunk(
                         run, client, prev_chunk, prev_audio, prev_done,
-                        report_progress, report_audio)
+                        report_progress, report_audio, report_position)
                     if stop:
                         if future is not None:
                             future.cancel()
@@ -309,12 +313,13 @@ class TranscriptionCoordinator:
     def _process_chunk(self, run : TranscriptionRun, client : TranscriptionClient,
                        chunk : AudioChunk, audio_bytes : bytes, done : int,
                        report_progress : Callable[[int, AudioChunk], None],
-                       report_audio : Callable[[AudioChunk], None]) -> bool:
+                       report_audio : Callable[[AudioChunk], None],
+                       report_position : Callable[[timedelta], None]) -> bool:
         """Transcribe one chunk with pre-extracted audio. Returns True to stop the run."""
         report_progress(done, chunk)
 
         try:
-            segment, provider_responded = self._transcribe_audio(run, client, chunk, audio_bytes)
+            segment, provider_responded = self._transcribe_audio(run, client, chunk, audio_bytes, report_position)
 
         except SubtitleError as e:
             report_audio(chunk)
@@ -352,16 +357,22 @@ class TranscriptionCoordinator:
         """Fold a successfully processed chunk into the run."""
         run.chunks_done += 1
 
-        if segment is None:
-            return
+        if segment is not None:
+            self._add_lines(run, segment)
 
+    def _add_lines(self, run : TranscriptionRun, segment : TranscriptionSegment) -> None:
+        """Turn a transcribed segment into lines and add them to the run."""
         # Record the segment as the provider returned it, before line assembly
         if self._capture is not None:
             self._capture.Add(segment)
 
         for line in self.line_builder.LinesForSegment(segment):
             if run.AddLine(line) is not None:
-                self.events.segment.send(self, segment=line)
+                overlong = self.line_builder.IsOverlong(line)
+                if overlong:
+                    run.overlong_lines += 1
+
+                self.events.segment.send(self, segment=line, overlong=overlong)
 
     def _finish_run(self, run : TranscriptionRun, media_path : str) -> TranscriptionOutcome:
         """Assemble the run's lines into Subtitles and report the outcome."""
@@ -369,6 +380,11 @@ class TranscriptionCoordinator:
             return self._failed(SubtitleError(_("No timed subtitles could be produced from {}").format(media_path)))
 
         logging.info(_("Transcribed {} lines from {} chunks").format(run.transcribed, run.chunks_done))
+
+        # Engines without word timings can return spans too long to split, so they are counted rather than logged one by one
+        if run.overlong_lines > 0:
+            logging.warning(_("{} lines are longer than the maximum line duration, with no word timings to split them").format(
+                run.overlong_lines))
 
         if run.total_cost > 0:
             logging.info(_("Transcription cost: ${:.4f}").format(run.total_cost))
@@ -403,25 +419,32 @@ class TranscriptionCoordinator:
         return self.extractor.ReadChunkBytes(media_path, chunk.start, chunk.end, self.track_index)
 
     def _transcribe_audio(self, run : TranscriptionRun, client : TranscriptionClient,
-                          chunk : AudioChunk, audio_bytes : bytes) -> tuple[TranscriptionSegment|None, bool]:
+                          chunk : AudioChunk, audio_bytes : bytes,
+                          report_position : Callable[[timedelta], None]) -> tuple[TranscriptionSegment|None, bool]:
         """
-        Transcribe pre-extracted audio. Returns the segment (None for silent
-        or empty chunks) and whether the provider was actually asked.
+        Transcribe pre-extracted audio.
+        Parts a client streams become lines as soon as they can no longer change, and report how far into the chunk it has got.
+        Returns the rest of the chunk (None for silent or empty chunks) and whether the provider was actually asked.
         """
         if self.extractor.IsSilent(audio_bytes, self.silence_skip_db):
             logging.debug(_("Skipping silent chunk {} before requesting").format(SpanLabel(chunk.start, chunk.end)))
             return None, False
 
-        result = client.TranscribeChunk(audio_bytes, 'wav')
+        stream = StreamedChunk(chunk, self.line_builder.settings, self.language)
+
+        def on_part(part : TranscriptionSegment) -> None:
+            report_position(chunk.start + part.end)
+            released = stream.Add(part)
+            if released is not None:
+                self._add_lines(run, released)
+
+        result = client.TranscribeChunk(audio_bytes, 'wav', on_part)
 
         if result.cost:
             run.total_cost += result.cost
 
-        text = (result.text or '').strip()
-        if not text:
+        segment = stream.Remainder(result)
+        if segment is None and stream.released == 0:
             logging.debug(_("Empty transcription for chunk {}").format(SpanLabel(chunk.start, chunk.end)))
-            return None, True
 
-        return TranscriptionSegment(start=chunk.start, end=chunk.end, text=text,
-                                    language=result.language or self.language,
-                                    words=result.words, parts=result.parts), True
+        return segment, True

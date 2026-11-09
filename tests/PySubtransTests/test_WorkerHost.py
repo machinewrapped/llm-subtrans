@@ -21,6 +21,7 @@ class TestWorkerProtocol(LoggedTestCase):
         for message in (
                 {'type': 'load', 'checkpoint': 'model'}, {'type': 'ready', 'device': 'cpu'},
                 {'type': 'transcribe', 'path': 'a.wav'},
+                {'type': 'segment', 'segment': {'start': 0.5, 'end': 1.5, 'speaker': 'S01', 'text': 'hello'}},
                 {'type': 'result', 'text': '\u4f60\u597d\nworld', 'time_stamps': [{'start_time': 0.5}]},
                 {'type': 'error', 'error_type': 'ValueError', 'message': 'first\nsecond'},
                 {'type': 'shutdown'}):
@@ -79,6 +80,33 @@ class TestWorkerHost(LoggedTestCase):
         self.assertLoggedEqual('isolated invocation', ['environment-python', '-I', 'worker.py'], args[0])
         self.assertLoggedEqual('UTF-8 channel', 'utf-8', kwargs['encoding'])
         self.assertLoggedEqual('stderr is piped', subprocess.PIPE, kwargs['stderr'])
+
+    def test_segments_before_result(self) -> None:
+        """Segments sent while a request runs reach the callback, and the request still returns its result."""
+        segments = [{'type': 'segment', 'segment': {'start': index, 'end': index + 1, 'text': 'text'}} for index in range(2)]
+        self.process.stdout = io.StringIO(''.join(EncodeMessage(message) for message in [*segments, {'type': 'result'}]))
+        received : list[dict] = []
+
+        response = self.host.Request({'type': 'transcribe'}, 'result', received.append)
+
+        self.assertLoggedEqual('segments passed on in order', segments, received)
+        self.assertLoggedEqual('result returned', 'result', response['type'])
+
+    def test_segments_ignored_without_callback(self) -> None:
+        """A caller that does not stream still gets the result."""
+        self.process.stdout = io.StringIO(EncodeMessage({'type': 'segment', 'segment': {}}) + EncodeMessage({'type': 'result'}))
+
+        self.assertLoggedEqual('result returned', 'result', self.host.Request({'type': 'transcribe'}, 'result')['type'])
+
+    @skip_if_debugger_attached
+    def test_failed_callback_stops_worker(self) -> None:
+        """The worker is stopped if the callback fails, since its remaining output would answer the next request."""
+        self.process.stdout = io.StringIO(EncodeMessage({'type': 'segment', 'segment': {}}) + EncodeMessage({'type': 'result'}))
+
+        with self.assertRaises(RuntimeError):
+            self.host.Request({'type': 'transcribe'}, 'result', Mock(side_effect=RuntimeError('callback failure')))
+
+        self.assertLoggedFalse('worker retired', self.host.running)
 
     @skip_if_debugger_attached
     def test_early_exit(self) -> None:

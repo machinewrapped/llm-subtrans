@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import time
+from collections.abc import Callable
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -12,7 +13,7 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Parse import ParseDelayFromHeader
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
+from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult, TranscriptionSegment
 
 
 class TranscriptionClient:
@@ -40,6 +41,7 @@ class TranscriptionClient:
     def __init__(self, settings : SettingsType):
         self.settings : SettingsType = SettingsType(settings)
         self.aborted : bool = False
+        self._on_part : Callable[[TranscriptionSegment], None]|None = None
 
     @property
     def supports_timestamps(self) -> bool:
@@ -71,9 +73,12 @@ class TranscriptionClient:
         """Proxy to route HTTP requests through, or None when unset."""
         return self.settings.get_str_or_none('proxy')
 
-    def TranscribeChunk(self, audio_bytes : bytes, audio_format : str) -> TranscriptionResult:
+    def TranscribeChunk(self, audio_bytes : bytes, audio_format : str,
+                        on_part : Callable[[TranscriptionSegment], None]|None = None) -> TranscriptionResult:
         """
         Transcribe a single audio chunk and return its text.
+        Clients that stream pass each chunk-relative part to on_part as soon as it is complete.
+        The parts passed are always the leading parts of the result, in the same order.
         """
         if self.aborted:
             raise SubtitleError(_("Transcription aborted"))
@@ -82,7 +87,11 @@ class TranscriptionClient:
             raise SubtitleError(_("No audio data provided for transcription"))
 
         start_time = time.monotonic()
-        result = self._transcribe_chunk(audio_bytes, audio_format)
+        self._on_part = on_part
+        try:
+            result = self._transcribe_chunk(audio_bytes, audio_format)
+        finally:
+            self._on_part = None
 
         # If a rate limit is applied ensure a minimum duration for each request
         rate_limit = self.rate_limit
@@ -106,6 +115,11 @@ class TranscriptionClient:
         Make the backend request using self.language as the hint. Must be implemented by subclasses.
         """
         raise NotImplementedError
+
+    def _report_part(self, part : TranscriptionSegment) -> None:
+        """Pass a completed part to the caller while the chunk is still being transcribed."""
+        if self._on_part is not None:
+            self._on_part(part)
 
     def _sleep_abortable(self, seconds : float) -> None:
         """Wait out a rate-limit backoff, still honouring aborts."""

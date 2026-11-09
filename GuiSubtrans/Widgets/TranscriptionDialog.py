@@ -5,7 +5,7 @@ from collections.abc import Callable
 from typing import Any
 
 from PySide6.QtCore import QTimer, Qt, Signal, Slot
-from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtGui import QColor, QDragEnterEvent, QDropEvent, QPalette
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -751,19 +751,41 @@ class TranscriptionDialog(QDialog):
 
         self._update_run_status()
 
-    @Slot(object)
-    def _on_segment(self, segment : TranscriptionSegment) -> None:
-        """Append each transcribed line to the results pane as it completes."""
+    @Slot(object, bool)
+    def _on_segment(self, segment : TranscriptionSegment, overlong : bool = False) -> None:
+        """
+        Append each transcribed line to the results pane as it completes.
+        Lines too long to split are shaded, with their duration, so they can be reviewed.
+        """
         start = TimedeltaToText(segment.start) or ""
         end = TimedeltaToText(segment.end) or ""
         speaker = f"[{segment.speaker}] " if segment.speaker else ""
-        self.results_view.append(f"[{start} --> {end}] {speaker}{segment.text}")
+        line = html.escape(f"[{start} --> {end}] {speaker}{segment.text}")
+
+        # Every line is a span, so the pane always reads it as rich text and shows escaped characters as themselves
+        if overlong:
+            duration = (segment.end - segment.start).total_seconds()
+            label = html.escape(_("({:.1f}s)").format(duration))
+            self.results_view.append(f'<span style="background-color: {self._OverlongShade()}">{line} <b>{label}</b></span>')
+        else:
+            self.results_view.append(f'<span>{line}</span>')
 
         scrollbar = self.results_view.verticalScrollBar()
         if scrollbar is not None:
             scrollbar.setValue(scrollbar.maximum())
 
         self._update_run_status()
+
+    def _OverlongShade(self) -> str:
+        """A tint of the theme's highlight over the pane's background, so it reads in light and dark themes."""
+        palette = self.results_view.palette()
+        base = palette.color(QPalette.ColorRole.Base)
+        highlight = palette.color(QPalette.ColorRole.Highlight)
+        shade = QColor(
+            round(base.red() * 0.7 + highlight.red() * 0.3),
+            round(base.green() * 0.7 + highlight.green() * 0.3),
+            round(base.blue() * 0.7 + highlight.blue() * 0.3))
+        return shade.name()
 
     def _update_run_status(self) -> None:
         self.status_label.setText(self.run_progress.StatusText())

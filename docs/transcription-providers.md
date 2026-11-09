@@ -142,6 +142,8 @@ A safety filter was suggested as a cause, but the raw responses showed no safety
 
 **What it returns.** Segments in the form `[start][Sxx]text[end]`, each with a speaker label. There are no word timings, so each segment becomes a part. The prompt is fixed and takes no language hint.
 
+**Streaming.** The worker decodes the transcript as it is generated and sends each segment once the next one starts. Progress moves with each segment, and lines appear at each pause too long for lines to merge across, instead of when the whole chunk is finished.
+
 **Timing.** Measured against MAI on Fist of Fury (Cantonese, 93 min) and La Madre Muerta (Spanish, 111 min) in 1200 s chunks, in November 2026:
 - 97.7% and 96.0% of MAI's words fall inside a MOSS segment.
 - The median segment start is within 0.02 s of the first MAI word, with P10 to P90 between -0.12 s and +0.28 s. Ends are similar.

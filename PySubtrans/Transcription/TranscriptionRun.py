@@ -18,6 +18,7 @@ class TranscriptionRun:
         self.line_number : int = 0
         self.resume_after : timedelta|None = None
         self.transcribed : int = 0
+        self.overlong_lines : int = 0
         self.chunks_done : int = 0
         self.had_failures : bool = False
         self.error : SubtitleError|None = None
@@ -50,6 +51,6 @@ class TranscriptionRun:
         self.transcribed += 1
         return line
 
-    def AudioPosition(self, chunk : AudioChunk) -> float:
-        """Seconds of audio processed once this chunk is done, clamped to the total."""
-        return min(self.audio_total_seconds, max(0.0, chunk.end.total_seconds()))
+    def AudioPosition(self, position : timedelta) -> float:
+        """Seconds of audio processed up to a position in the media, clamped to the total."""
+        return min(self.audio_total_seconds, max(0.0, position.total_seconds()))

@@ -8,6 +8,7 @@ import io
 import json
 import os
 import sys
+from contextlib import nullcontext
 from datetime import timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -30,6 +31,53 @@ from PySubtrans.Transcription.Workers import moss_worker
 HAS_MOSS_RUNTIME = 'PySubtrans.Transcription.Providers.Provider_MossLocal.HasMossRuntime'
 MOSS_TEST_ENVIRONMENT = os.getenv('MOSS_TEST_ENVIRONMENT', '')
 MOSS_TEST_AUDIO = os.getenv('MOSS_TEST_AUDIO', '')
+
+
+class _Tokens:
+    """A tensor of token ids, here strings so the fake tokenizer can join them."""
+
+    def __init__(self, tokens : list[str]) -> None:
+        self.tokens : list[str] = tokens
+
+    def reshape(self, *_shape : int) -> '_Tokens':
+        return self
+
+    def tolist(self) -> list[str]:
+        return self.tokens
+
+
+class _FakeTokenizer:
+    """Joins tokens, decoding a lone replacement mark as an incomplete character, like a byte-level tokenizer."""
+
+    def decode(self, tokens : list[str], skip_special_tokens : bool = False) -> str:
+        text = ''.join(tokens)
+        return text.replace('�é', 'é')
+
+
+class _FakeParser:
+    """Treats '|' as the end of a segment."""
+
+    def __init__(self) -> None:
+        self.text : str = ''
+        self._current : str = ''
+
+    def feed(self, text : str) -> list[SimpleNamespace]:
+        self.text += text
+        segments = []
+        for character in text:
+            if character == '|':
+                segments.append(self._Segment())
+            else:
+                self._current += character
+        return segments
+
+    def close(self) -> list[SimpleNamespace]:
+        return [self._Segment()] if self._current else []
+
+    def _Segment(self) -> SimpleNamespace:
+        segment = SimpleNamespace(start=0.0, end=1.0, speaker='S01', text=self._current)
+        self._current = ''
+        return segment
 
 
 class TestMossLocalProvider(LoggedTestCase):
@@ -207,6 +255,27 @@ class TestMossWorkerSession(LoggedTestCase):
         self.assertLoggedEqual("one part", 1, len(result.parts))
         self.assertLoggedEqual("WAV removed", 1, remove.call_count)
 
+    def test_streamed_segments_reported(self) -> None:
+        """Segments the worker streams are reported as parts, and match the leading parts of the result."""
+        client = MossLocalClient(SettingsType())
+        client._LoadWorker()
+        segments = [{'start': 0, 'end': 1, 'speaker': 'S01', 'text': 'hi'}, {'start': 1, 'end': 1, 'speaker': 'S01', 'text': ' '},
+                    {'start': 2, 'end': 3, 'speaker': 'S02', 'text': 'there'}]
+
+        def Request(message : dict[str, Any], expected : str, on_segment : Any = None) -> dict[str, Any]:
+            for segment in segments[:2]:
+                on_segment({'type': 'segment', 'segment': segment})
+            return {'type': 'result', 'segments': segments, 'tokens': 10, 'stopped_at_limit': False}
+
+        self.hosts[-1].Request.side_effect = Request
+        reported : list[Any] = []
+
+        with patch.object(client, '_WriteChunk', return_value='chunk.wav'), patch.object(client_module.os, 'remove'):
+            result = client.TranscribeChunk(b'audio', 'wav', reported.append)
+
+        self.assertLoggedEqual("usable streamed segment reported", 1, len(reported))
+        self.assertLoggedEqual("reported parts lead the result", reported, result.parts[:len(reported)])
+
     def test_token_limit_warns(self) -> None:
         """A chunk that stopped at its token budget is reported, since its end may be missing."""
         client = MossLocalClient(SettingsType())
@@ -247,23 +316,46 @@ class TestMossWorkerSession(LoggedTestCase):
 class TestMossWorkerRuntime(LoggedTestCase):
     """The MOSS package and Torch are represented by in-memory objects."""
 
-    def test_transcribe_reports_segments_and_limit(self) -> None:
-        """Parsed segments are returned with the token count and whether the budget was reached."""
+    def test_transcribe_streams_segments(self) -> None:
+        """Each segment is sent once complete, and all are returned with whether the budget was reached."""
+        inputs = {key: key for key in ('input_ids', 'attention_mask', 'input_features', 'audio_feature_lengths', 'audio_chunk_mapping')}
         inference = SimpleNamespace(
             build_transcription_messages=Mock(return_value=['messages']),
-            generate_transcription=Mock(return_value={'text': 'raw', 'generated_tokens': 100}))
-        package = SimpleNamespace(parse_transcript=Mock(return_value=[
-            SimpleNamespace(start=0.5, end=1.5, speaker='S01', text='hello')]))
-        modules = {'moss_transcribe_diarize.inference_utils': inference, 'moss_transcribe_diarize': package}
+            prepare_inputs=Mock(return_value=SimpleNamespace(to=lambda _device: inputs)))
+        package = SimpleNamespace(TranscriptStreamParser=_FakeParser)
+        torch = SimpleNamespace(inference_mode=nullcontext, no_grad=nullcontext, float16='fp16', bfloat16='bf16')
+        modules = {'torch': torch, 'moss_transcribe_diarize.inference_utils': inference, 'moss_transcribe_diarize': package}
+
+        def Generate(**kwargs : Any) -> None:
+            streamer = kwargs['streamer']
+            for tokens in (['prompt'], ['he'], ['llo|'], ['wor'], ['ld']):
+                streamer.put(_Tokens(tokens))
+            streamer.end()
 
         worker = moss_worker.MossWorker()
-        worker.model = Mock()
-        with patch.object(moss_worker.importlib, 'import_module', side_effect=modules.__getitem__):
-            response = worker.Transcribe({'path': 'chunk.wav', 'max_new_tokens': 100})
+        worker.model = Mock(generation_config=SimpleNamespace(), generate=Mock(side_effect=Generate))
+        worker.processor = SimpleNamespace(tokenizer=_FakeTokenizer())
+        worker.device = SimpleNamespace(type='cpu')
+        sent : list[dict[str, Any]] = []
 
-        self.assertLoggedEqual("segments", [{'start': 0.5, 'end': 1.5, 'speaker': 'S01', 'text': 'hello'}], response['segments'])
+        with patch.object(moss_worker.importlib, 'import_module', side_effect=modules.__getitem__):
+            response = worker.Transcribe({'path': 'chunk.wav', 'max_new_tokens': 4}, sent.append)
+
+        self.assertLoggedEqual("completed segment sent", ['hello'], [message['segment']['text'] for message in sent])
+        self.assertLoggedEqual("all segments returned", ['hello', 'world'], [segment['text'] for segment in response['segments']])
         self.assertLoggedTrue("stopped at limit", response['stopped_at_limit'])
-        self.assertLoggedEqual("budget passed on", 100, inference.generate_transcription.call_args.kwargs['max_new_tokens'])
+        self.assertLoggedEqual("budget passed on", 4, worker.model.generate.call_args.kwargs['generation_config'].max_new_tokens)
+
+    def test_split_character_waits_for_its_last_token(self) -> None:
+        """Text is only parsed once a character split across tokens is complete."""
+        parser = _FakeParser()
+        streamer = moss_worker._SegmentStreamer(_FakeTokenizer(), parser, Mock())
+
+        for tokens in (['prompt'], ['caf'], ['�'], ['é']):
+            streamer.put(_Tokens(tokens))
+
+        self.assertLoggedEqual("whole character parsed", 'café', parser.text)
+        self.assertLoggedEqual("every token counted", 3, streamer.generated_tokens)
 
     def test_device_and_dtype(self) -> None:
         """Accelerators are preferred, CPU needs consent, and CPU runs in float32."""

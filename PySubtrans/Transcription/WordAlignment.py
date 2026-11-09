@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from difflib import SequenceMatcher
 from enum import Enum
 
 import regex
@@ -40,20 +39,96 @@ def AlignWords(text : str, words : list[WordTiming]) -> list[AlignedWord]:
     Matching keeps order on both sides, so the result is in transcript order.
     """
     offsets = [index for index, char in enumerate(text) if SPOKEN_CHAR.match(char)]
-    owners = [index for index, word in enumerate(words) for char in word.text if SPOKEN_CHAR.match(char)]
-    word_chars = ''.join(char for word in words for char in word.text if SPOKEN_CHAR.match(char))
+    owners : list[int] = []
+    spoken : list[str] = []
+    for index, word in enumerate(words):
+        chars = [char for char in word.text if SPOKEN_CHAR.match(char)]
+        owners.extend([index] * len(chars))
+        spoken.extend(chars)
+
+    word_chars = ''.join(spoken)
     text_chars = ''.join(text[offset] for offset in offsets)
+    if not word_chars or not text_chars:
+        return []
 
-    spans : dict[int, tuple[int, int, int]] = {}
-    matcher = SequenceMatcher(None, word_chars, text_chars, autojunk=False)
-    for word_index, text_index, size in matcher.get_matching_blocks():
-        for step in range(size):
-            owner = owners[word_index + step]
-            offset = offsets[text_index + step]
-            first, last, count = spans.get(owner, (offset, offset, 0))
-            spans[owner] = (min(first, offset), max(last, offset), count + 1)
+    def longest_match(alo : int, ahi : int, blo : int, bhi : int) -> tuple[int, int, int]:
+        """
+        The same match as SequenceMatcher(None, word_chars, text_chars, autojunk=False).find_longest_match:
+        the longest common run, then the earliest in word_chars, then the earliest in text_chars.
+        Found with a suffix automaton of text_chars[blo:bhi], so it takes linear rather than quadratic time.
+        """
+        length, link, first_end, transitions = [0], [-1], [-1], [{}]
+        last = 0
+        for position in range(blo, bhi):
+            char = text_chars[position]
+            current = len(length)
+            length.append(length[last] + 1)
+            link.append(0)
+            first_end.append(position)
+            transitions.append({})
+            state = last
+            while state != -1 and char not in transitions[state]:
+                transitions[state][char] = current
+                state = link[state]
 
-    return [AlignedWord(words[index], first, last + 1, count) for index, (first, last, count) in sorted(spans.items())]
+            if state != -1:
+                target = transitions[state][char]
+                if length[state] + 1 == length[target]:
+                    link[current] = target
+                else:
+                    clone = len(length)
+                    length.append(length[state] + 1)
+                    link.append(link[target])
+                    first_end.append(first_end[target])
+                    transitions.append(dict(transitions[target]))
+                    while state != -1 and transitions[state].get(char) == target:
+                        transitions[state][char] = clone
+                        state = link[state]
+                    link[target] = clone
+                    link[current] = clone
+
+            last = current
+
+        best_i, best_j, best_size = alo, blo, 0
+        state, size = 0, 0
+        for position in range(alo, ahi):
+            char = word_chars[position]
+            while state and char not in transitions[state]:
+                state = link[state]
+                size = length[state]
+
+            state = transitions[state].get(char, 0)
+            size = size + 1 if state else 0
+            if size > best_size:
+                best_i, best_j, best_size = position - size + 1, first_end[state] - size + 1, size
+
+        return best_i, best_j, best_size
+
+    # The same recursion as SequenceMatcher.get_matching_blocks, around each longest match
+    blocks : list[tuple[int, int, int]] = []
+    queue = [(0, len(word_chars), 0, len(text_chars))]
+    while queue:
+        alo, ahi, blo, bhi = queue.pop()
+        i, j, size = longest_match(alo, ahi, blo, bhi)
+        if size:
+            blocks.append((i, j, size))
+            if alo < i and blo < j:
+                queue.append((alo, i, blo, j))
+            if i + size < ahi and j + size < bhi:
+                queue.append((i + size, ahi, j + size, bhi))
+
+    # Blocks keep order on both sides, so each word's first match is its start and its last is its end
+    spans : dict[int, list[int]] = {}
+    for word_index, text_index, size in sorted(blocks):
+        for owner, offset in zip(owners[word_index:word_index + size], offsets[text_index:text_index + size]):
+            span = spans.get(owner)
+            if span is None:
+                spans[owner] = [offset, offset, 1]
+            else:
+                span[1] = offset
+                span[2] += 1
+
+    return [AlignedWord(words[index], first, last + 1, count) for index, (first, last, count) in spans.items()]
 
 
 def CutPoints(text : str, aligned : list[AlignedWord], start : int, end : int) -> list[int]:

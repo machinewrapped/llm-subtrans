@@ -5,6 +5,23 @@ All notable changes to PySubtrans will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0]
+Added MOSS Local transcription with speaker labels and streamed segments.
+
+Changed: Qwen Local and MOSS Local now run in separate worker processes. Existing Qwen installations may need `qwen-asr` reinstalled.
+
+Changed: the source install scripts now offer Qwen Local, MOSS Local, or both, with separate runtime environments.
+
+Improved transcription speed for long chunks and utterances, and improved feedback for streamed segments and duration limits.
+
+Fixed short final audio chunks exceeding the maximum chunk length.
+
+Flag repeated response labels in translated subtitles for retry.
+
+Added Runcrate as a translation gateway and controls to hide gateway and cloud providers in the GUI.
+
+Fixed compatibility with `anthropic` 2.x and `mistralai` 3.x.
+
 ## [1.7.4]
 Added translation with a ChatGPT plan through the OpenAI provider (`use_chatgpt_plan`). Applications must identify themselves with `ConfigureChatGPTApp` before signing in, and each application keeps its own sign-in.
 

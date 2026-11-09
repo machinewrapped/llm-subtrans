@@ -13,6 +13,7 @@ from PySide6.QtWidgets import (
     QFileDialog
 )
 from PySide6.QtCore import Qt, QEvent, QObject, Signal, QSignalBlocker
+from PySide6.QtGui import QStandardItemModel
 from GuiSubtrans.EditInstructionsDialog import EditInstructionsDialog
 from GuiSubtrans.GuiHelpers import GetProviderDropdownValues
 from GuiSubtrans.Widgets.OptionsWidgets import DropdownHeader
@@ -155,11 +156,7 @@ class ProjectSettings(QGroupBox):
             self.AddButton("", _("Edit Instructions"), self._edit_instructions)
             self.AddButton("", _("Copy From Another Project"), self._copy_from_another_project)
 
-            disabled = self.datamodel.project_options.get_str_list('disabled_gateways') if self.datamodel else []
-            disabled_cloud = self.datamodel.project_options.get_str_list('disabled_cloud_providers') if self.datamodel else []
-            providers = [name for name in GetProviderDropdownValues(self.provider_list, disabled, disabled_cloud) if not isinstance(name, DropdownHeader)]
-            if len(providers) > 1:
-                self.AddDropdownOption(_("Provider"), settings, 'provider', providers)
+            self._add_provider_option(settings)
             if len(self.model_list) > 0:
                 self.AddDropdownOption(_("Model"), settings, 'model', self.model_list)
 
@@ -227,6 +224,32 @@ class ProjectSettings(QGroupBox):
         self.grid_layout.addWidget(label_widget, self.current_row, 0)
         self.grid_layout.addWidget(button_widget, self.current_row, 1)
         self.current_row += 1
+
+    def _add_provider_option(self, settings : dict) -> None:
+        """Add the provider selector while preserving the project's current choice."""
+        providers = self._get_enabled_providers()
+        active_provider = settings.get('provider')
+        unavailable_provider = active_provider if isinstance(active_provider, str) and active_provider not in providers else None
+        if unavailable_provider:
+            # Keep an existing project's provider visible without offering it as a new selection.
+            providers.insert(0, unavailable_provider)
+        if len(providers) <= 1:
+            return
+
+        self.AddDropdownOption(_("Provider"), settings, 'provider', providers)
+        selector = self.widgets.get('provider')
+        if unavailable_provider and isinstance(selector, QComboBox):
+            model = selector.model()
+            if isinstance(model, QStandardItemModel):
+                model.item(selector.findText(unavailable_provider)).setEnabled(False)
+
+    def _get_enabled_providers(self) -> list[str]:
+        """Return provider names allowed by the application's visibility settings."""
+        options = self.datamodel.project_options if self.datamodel else None
+        disabled_gateways = options.get_str_list('disabled_gateways') if options else []
+        disabled_cloud = options.get_str_list('disabled_cloud_providers') if options else []
+        values = GetProviderDropdownValues(self.provider_list, disabled_gateways, disabled_cloud)
+        return [name for name in values if not isinstance(name, DropdownHeader)]
 
     def _add_row(self, key, label_widget, input_widget):
         self.grid_layout.addWidget(label_widget, self.current_row, 0)

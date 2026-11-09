@@ -6,6 +6,7 @@ from tests.GuiTestSupport import ConfigureOffscreenPlatform
 
 ConfigureOffscreenPlatform()
 
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication, QComboBox
 
 from GuiSubtrans.MainWindow import MainWindow
@@ -181,6 +182,34 @@ class TestGatewaySettings(LoggedTestCase):
         finally:
             panel.deleteLater()
             self.application.processEvents()
+
+    def test_disabled_active_project_provider_survives_unrelated_edit(self) -> None:
+        direct = _DirectSettingsProvider.name
+        gateway = _GatewaySettingsProvider.name
+        cloud = _CloudSettingsProvider.name
+        for active, setting in ((gateway, 'disabled_gateways'), (cloud, 'disabled_cloud_providers')):
+            with self.subTest(active=active):
+                model = ProjectDataModel(options=SettingsType({'provider': None, setting: [active]}))
+                panel = ProjectSettings()
+                panel.datamodel = model
+                panel.provider_list = [cloud, direct, gateway]
+                panel.model_list = ['existing-model']
+                panel.settings = SettingsType({'provider': active, 'model': 'existing-model'})
+                panel.BuildForm(panel.settings)
+                try:
+                    selector = panel.widgets.get('provider')
+                    self.assertLoggedIsInstance("provider selector", selector, QComboBox)
+                    if not isinstance(selector, QComboBox):
+                        continue
+                    self.assertLoggedEqual("active provider displayed", active, selector.currentText())
+                    self.assertLoggedFalse("disabled provider cannot be selected", bool(selector.model().flags(selector.model().index(selector.currentIndex(), 0)) & Qt.ItemFlag.ItemIsEnabled))
+                    panel._text_changed()
+                    settings = panel.GetSettings()
+                    self.assertLoggedEqual("provider preserved after edit", active, settings.get_str('provider'))
+                    self.assertLoggedEqual("model preserved after edit", 'existing-model', settings.get_str('model'))
+                finally:
+                    panel.deleteLater()
+                    self.application.processEvents()
 
     def test_gateway_selection_and_fallback(self) -> None:
         gateway = _GatewaySettingsProvider(SettingsType())

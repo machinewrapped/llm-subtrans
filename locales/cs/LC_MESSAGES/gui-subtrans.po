@@ -41,7 +41,10 @@ msgstr ""
 
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:19
 msgid "\n    <p>Requires sufficient credit balance. ElevenLabs Scribe 2 costs about 67 credits per minute.</p>\n    "
-msgstr "Vyžaduje dostatečný kreditní zůstatek. ElevenLabs Scribe 2 stojí přibližně 67 kreditů za minutu."
+msgstr ""
+"\n"
+"    <p>Vyžaduje dostatečný kreditní zůstatek. ElevenLabs Scribe 2 stojí přibližně 67 kreditů za minutu.</p>\n"
+"    "
 
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:23
 msgid "\n    <p>To use this provider you need <a href=\"https://elevenlabs.io/app/settings/api-keys\">an ElevenLabs API key</a> with speech-to-text access.</p>\n    "

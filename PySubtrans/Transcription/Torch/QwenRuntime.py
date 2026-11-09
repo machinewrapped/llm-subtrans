@@ -12,6 +12,7 @@ from pathlib import Path
 
 import regex
 
+from PySubtrans.Transcription.Torch.Requirements import IsInstalled as _IsInstalled, RequirementName
 from PySubtrans.Transcription.Torch.Validation import FindTorchSitePackages
 
 QWEN_ASR_DISTRIBUTION = 'qwen-asr'
@@ -25,15 +26,7 @@ QWEN_ASR_REQUIREMENT = 'qwen-asr==0.0.6'
 # qwen-asr dependencies used only by its demo apps and server, which the runtime leaves out
 QWEN_ASR_UNUSED_DEPENDENCIES = {'gradio', 'flask', 'sox', 'qwen-omni-utils', 'pytz'}
 
-_REQUIREMENT_NAME_PATTERN = regex.compile(r'^[A-Za-z0-9][A-Za-z0-9._-]*')
 _EXTRA_MARKER_PATTERN = regex.compile(r';.*\bextra\s*==')
-
-
-def RequirementName(requirement : str) -> str:
-    """Return the normalised distribution name of a pip requirement."""
-    match = _REQUIREMENT_NAME_PATTERN.match(requirement.strip())
-    name = match.group(0) if match else requirement.strip()
-    return regex.sub(r'[-_.]+', '-', name).lower()
 
 
 def ReadQwenAsrDependencies(search_path : list[str]) -> list[str]|None:
@@ -103,7 +96,3 @@ def NeedsQwenRuntime(root : Path) -> bool:
 
     return bool(getattr(sys, 'frozen', False)) or importlib.util.find_spec(QWEN_ASR_MODULE) is None
 
-
-def _IsInstalled(distribution_name : str, search_path : list[str]) -> bool:
-    """Whether a distribution is installed on the search path."""
-    return next(iter(metadata.distributions(name=distribution_name, path=search_path)), None) is not None

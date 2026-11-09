@@ -67,34 +67,41 @@ class SubtitleBatcher:
 
     def _split_lines(self, lines : list[SubtitleLine]) -> list[list[SubtitleLine]]:
         """
-        Recursively divide the lines at the largest gap until there is no batch larger than the maximum batch size
+        Divide the lines at the largest gap until there is no batch larger than the maximum batch size
         """
-        # If the batch is small enough, we're done
         num_lines = len(lines)
-        if num_lines <= self.max_batch_size:
-            return [ lines ]
+        batches : list[list[SubtitleLine]] = []
 
-        # Find the longest gap starting from the min_batch_size index
-        longest_gap : timedelta = timedelta(seconds=0)
-        split_index : int = self.min_batch_size
-        last_split_index : int = num_lines - self.min_batch_size
+        # Work on (start, end) offsets into lines and only slice once per final batch
+        ranges : list[tuple[int, int]] = [ (0, num_lines) ]
+        while ranges:
+            start, end = ranges.pop()
 
-        if last_split_index > split_index:
-            for i in range(split_index, last_split_index):
-                if lines[i].start is None:
-                    raise ValueError(f"Line {lines[i].number} has no start time.")
+            # If the batch is small enough, we're done
+            if end - start <= self.max_batch_size:
+                batches.append(lines if end - start == num_lines else lines[start:end])
+                continue
 
-                if lines[i - 1].end is None:
-                    raise ValueError(f"Line {lines[i - 1].number} has no end time.")
+            # Find the longest gap starting from the min_batch_size index
+            longest_gap : timedelta = timedelta(seconds=0)
+            split_index : int = start + self.min_batch_size
+            last_split_index : int = end - self.min_batch_size
 
-                gap : timedelta = lines[i].start - lines[i - 1].end
-                if gap > longest_gap:
-                    longest_gap = gap
-                    split_index = i
+            if last_split_index > split_index:
+                for i in range(split_index, last_split_index):
+                    if lines[i].start is None:
+                        raise ValueError(f"Line {lines[i].number} has no start time.")
 
-        # Split the batch into two
-        left = lines[:split_index]
-        right = lines[split_index:]
+                    if lines[i - 1].end is None:
+                        raise ValueError(f"Line {lines[i - 1].number} has no end time.")
 
-        # Recursively split the batches and concatenate the lists
-        return self._split_lines(left) + self._split_lines(right)
+                    gap : timedelta = lines[i].start - lines[i - 1].end
+                    if gap > longest_gap:
+                        longest_gap = gap
+                        split_index = i
+
+            # Push the right part first so the left part is split first
+            ranges.append((split_index, end))
+            ranges.append((start, split_index))
+
+        return batches

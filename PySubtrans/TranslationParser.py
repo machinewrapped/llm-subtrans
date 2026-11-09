@@ -10,9 +10,9 @@ from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtrans.Helpers.Text import IsTextContentEqual
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleError import NoTranslationError, TranslationError
-from PySubtrans.ValidationError import RepeatedResponseLabelError, UntranslatedLinesError
-from PySubtrans.SubtitleValidator import SubtitleValidator
+from PySubtrans.SubtitleValidator import CheckResponseLabels, SubtitleValidator
 from PySubtrans.Translation import Translation
+from PySubtrans.ValidationError import UntranslatedLinesError
 
 default_pattern = (
     r"#(?P<number>\d+)"
@@ -112,11 +112,11 @@ class TranslationParser:
         self.translated = MergeTranslations(self.translated, list(self.translations.values()))
 
         if validate:
-            self.errors = self._check_response_labels() or self.ValidateTranslations()
+            self.errors = CheckResponseLabels(self.translated, self.task_type) or self.ValidateTranslations()
 
             if self.errors and self.translated:
                 self._fix_unclosed_tags()
-                self.errors = self._check_response_labels() or self.ValidateTranslations()
+                self.errors = CheckResponseLabels(self.translated, self.task_type) or self.ValidateTranslations()
 
         return self.translated
 
@@ -208,18 +208,6 @@ class TranslationParser:
 
         validator = SubtitleValidator(self.options)
         return list(validator.ValidateTranslations(self.translated))
-
-    def _check_response_labels(self) -> list[TranslationError]:
-        """Find standalone response labels left in the extracted subtitle bodies."""
-        label = regex.compile(rf"^[^\S\r\n]*{regex.escape(self.task_type)}[>:][^\S\r\n]*\r?$", regex.MULTILINE)
-        repeated_labels = [line for line in self.translated if line.text and label.search(line.text)]
-        if not repeated_labels:
-            return []
-
-        return [RepeatedResponseLabelError(
-            _("Unexpected response label {label} inside translated subtitle text").format(label=self.task_type),
-            lines=repeated_labels,
-        )]
 
     def _fix_unclosed_tags(self):
         """

@@ -1,5 +1,9 @@
 from datetime import timedelta
 
+import regex
+
+from PySubtrans.Helpers.Localization import _
+from PySubtrans.Instructions import DEFAULT_TASK_TYPE
 from PySubtrans.Options import Options
 from PySubtrans.SubtitleBatch import SubtitleBatch
 from PySubtrans.SubtitleError import SubtitleError, TranslationError
@@ -9,6 +13,7 @@ from PySubtrans.ValidationError import (
     ExcessiveDurationError,
     IsValidationWarning,
     LineTooLongError,
+    RepeatedResponseLabelError,
     TooManyNewlinesError,
     TranslationValidationError,
     UnmatchedLinesError,
@@ -31,7 +36,9 @@ class SubtitleValidator:
         issues : list[TranslationError] = []
 
         if batch.translated:
-            issues.extend(self.ValidateTranslations(batch.translated))
+            task_type = self.options.get_str('task_type') or DEFAULT_TASK_TYPE
+            label_errors = CheckResponseLabels(batch.translated, task_type)
+            issues.extend(label_errors or self.ValidateTranslations(batch.translated))
 
         if batch.any_translated and not batch.all_translated and not self.options.get_int('max_lines'):
             issues.append(UntranslatedLinesError(f"No translation found for {len(batch.originals) - len(batch.translated)} lines", translation=batch.translation))
@@ -128,6 +135,19 @@ class SubtitleValidator:
                 f"{len(overlong)} transcribed lines exceed {max_duration_seconds:g} seconds", lines=overlong))
 
         return errors
+
+
+def CheckResponseLabels(translated : list[SubtitleLine], task_type : str) -> list[TranslationError]:
+    """Find standalone response labels left in the translated subtitle text."""
+    label = regex.compile(rf"^[^\S\r\n]*{regex.escape(task_type)}[>:][^\S\r\n]*\r?$", regex.MULTILINE)
+    repeated_labels = [line for line in translated if line.text and label.search(line.text)]
+    if not repeated_labels:
+        return []
+
+    return [RepeatedResponseLabelError(
+        _("Unexpected response label {label} inside translated subtitle text").format(label=task_type),
+        lines=repeated_labels,
+    )]
 
 
 def _bucket_text_issues(lines : list[SubtitleLine], max_characters : int|None, max_newlines : int

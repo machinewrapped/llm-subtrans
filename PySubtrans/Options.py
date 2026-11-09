@@ -56,6 +56,8 @@ default_settings = {
     'provider': env_str('PROVIDER', None),
     'transcription_provider': env_str('TRANSCRIPTION_PROVIDER', "OpenRouter"),
     'provider_settings': SettingsType({}),
+    'disabled_gateways': [],
+    'disabled_cloud_providers': [],
     'prompt': env_str('PROMPT', default_user_prompt),
     'instruction_file': env_str('INSTRUCTION_FILE', None),
     'target_language': env_str('TARGET_LANGUAGE', 'English'),

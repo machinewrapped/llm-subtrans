@@ -23,7 +23,8 @@ class FileKind(Enum):
     Subtitles = auto()
     Media = auto()
 
-def GetProviderDropdownValues(provider_names : list[str]) -> list[str|DropdownHeader]:
+def GetProviderDropdownValues(provider_names : list[str], disabled_gateways : list[str]|None = None,
+                              disabled_cloud_providers : list[str]|None = None) -> list[str|DropdownHeader]:
     """
     Group provider names by kind under headings, for a provider selector.
     A single group is returned without a heading.
@@ -34,6 +35,13 @@ def GetProviderDropdownValues(provider_names : list[str]) -> list[str|DropdownHe
         ProviderKind.Gateway: _("Gateways and routers"),
         ProviderKind.Custom: _("Custom"),
     }
+
+    disabled_by_kind = {
+        ProviderKind.Gateway: set(disabled_gateways or []),
+        ProviderKind.Platform: set(disabled_cloud_providers or []),
+    }
+    provider_names = [name for name in provider_names
+                      if name not in disabled_by_kind.get(TranslationProvider.get_provider_kind(name), set())]
 
     groups : dict[ProviderKind, list[str]] = {}
     for name in provider_names:

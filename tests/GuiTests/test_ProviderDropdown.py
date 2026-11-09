@@ -23,6 +23,10 @@ class _DropdownGatewayProvider(TranslationProvider):
     name = "Dropdown Gateway Provider"
     kind = ProviderKind.Gateway
 
+class _DropdownCloudProvider(TranslationProvider):
+    name = "Dropdown Cloud Provider"
+    kind = ProviderKind.Platform
+
 class _DropdownCustomProvider(TranslationProvider):
     name = "Dropdown Custom Provider"
     kind = ProviderKind.Custom
@@ -42,6 +46,21 @@ class TestProviderDropdownValues(LoggedTestCase):
             [_DropdownDirectProvider.name, _DropdownGatewayProvider.name, _DropdownCustomProvider.name], providers)
         self.assertLoggedEqual("one heading per kind", 3, header_count)
         self.assertLoggedIsInstance("list starts with a heading", values[0], DropdownHeader)
+
+    def test_disabled_gateways_are_excluded(self) -> None:
+        names = [_DropdownDirectProvider.name, _DropdownGatewayProvider.name, _DropdownCustomProvider.name]
+        values = GetProviderDropdownValues(names, [_DropdownGatewayProvider.name, _DropdownDirectProvider.name])
+        self.assertLoggedEqual("disabled gateway removed, direct provider retained",
+                               [_DropdownDirectProvider.name, _DropdownCustomProvider.name],
+                               [value for value in values if isinstance(value, str)])
+        self.assertLoggedEqual("no gateway heading", 2, sum(isinstance(value, DropdownHeader) for value in values))
+
+    def test_disabled_cloud_provider_removes_its_group(self) -> None:
+        names = [_DropdownDirectProvider.name, _DropdownCloudProvider.name, _DropdownGatewayProvider.name]
+        values = GetProviderDropdownValues(names, [], [_DropdownCloudProvider.name])
+        self.assertLoggedEqual("cloud removed", [_DropdownDirectProvider.name, _DropdownGatewayProvider.name],
+                               [value for value in values if isinstance(value, str)])
+        self.assertLoggedEqual("empty cloud group omitted", 2, sum(isinstance(value, DropdownHeader) for value in values))
 
     def test_single_kind_has_no_headings(self) -> None:
         names = [_DropdownGatewayProvider.name]

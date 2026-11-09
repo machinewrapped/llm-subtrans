@@ -1,11 +1,11 @@
 import logging
 from collections.abc import Callable
 from PySide6.QtCore import Slot
-from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBox, QWidget, QFormLayout, QFrame, QMessageBox)
+from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBox, QWidget, QFormLayout, QFrame, QMessageBox, QCheckBox, QScrollArea, QGridLayout, QGroupBox, QLabel)
 from GuiSubtrans.GuiHelpers import ClearForm, GetProviderDropdownValues, GetThemeNames, GetTranscriptionProviderDropdownValues
 
 from GuiSubtrans.Widgets.ChatGPTSignInDialog import ChatGPTSignInDialog
-from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget, ParseOptionDefinition
+from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, DropdownOptionWidget, OptionWidget, ParseOptionDefinition
 from GuiSubtrans.Widgets.ProviderSettingsForm import ProviderSettingsForm
 from GuiSubtrans.Widgets.TranscriptionProviderLoader import TranscriptionProviderLoader
 from PySubtrans.Helpers.InstructionsHelpers import GetInstructionsFiles, LoadInstructions
@@ -16,7 +16,7 @@ from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.Subtitles import OriginalTextPlacement
 from PySubtrans.Transcription.Torch.LocalRuntime import LocalRuntimeForOption
-from PySubtrans.TranslationProvider import TranslationProvider
+from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Helpers.Localization import LocaleDisplayItem, _, get_locale_display_items
 
@@ -37,6 +37,7 @@ class SettingsDialog(QDialog):
     """
     PROVIDER_SECTION = 'Provider Settings'
     TRANSCRIPTION_SECTION = 'Transcription Settings'
+    GATEWAYS_SECTION = 'Gateways'
     SECTIONS = {
         'General': {
             'ui_language': (str, _("The language of the application interface")),
@@ -107,13 +108,15 @@ class SettingsDialog(QDialog):
             'backoff_time': (float, _("Seconds to wait before retrying a failed translation")),
             'prewarm_providers': (bool, _("Load previously used translation providers after startup to make switching providers faster")),
             'original_text_placement': (OriginalTextPlacement, _("Whether the original text goes above or below the translation when the original text is included")),
-        }
+        },
+        GATEWAYS_SECTION: {}
     }
 
     _translated_sections = {
         'General': _("General"),
         PROVIDER_SECTION: _("Provider Settings"),
         TRANSCRIPTION_SECTION: _("Transcription Settings"),
+        GATEWAYS_SECTION: _("Gateways"),
         'Processing': _("Processing"),
         'Advanced': _("Advanced")
     }
@@ -165,6 +168,9 @@ class SettingsDialog(QDialog):
         self.provider_cache = provider_cache or {}
         self.settings : SettingsType = options.GetSettings()
         self.widgets = {}
+        self.available_providers = options.available_providers
+        self.gateway_checkboxes : dict[str, QCheckBox] = {}
+        self.cloud_provider_checkboxes : dict[str, QCheckBox] = {}
 
         # Instance copy so dynamic population never mutates the class schema
         self.SECTIONS = {name: dict(section) for name, section in self.__class__.SECTIONS.items()}
@@ -182,7 +188,8 @@ class SettingsDialog(QDialog):
             self.SECTIONS['General']['instruction_file'] = instruction_files
 
         # Populate available providers
-        provider_values = GetProviderDropdownValues(options.available_providers)
+        provider_values = GetProviderDropdownValues(options.available_providers, self.settings.get_str_list('disabled_gateways'),
+                                                    self.settings.get_str_list('disabled_cloud_providers'))
         self.SECTIONS[self.PROVIDER_SECTION]['provider'] = (provider_values, self.SECTIONS[self.PROVIDER_SECTION]['provider'][1])
 
         try:
@@ -237,6 +244,8 @@ class SettingsDialog(QDialog):
 
         try:
             for section_name in self.SECTIONS.keys():
+                if section_name == self.GATEWAYS_SECTION:
+                    continue
                 section_widget = self._tabs.findChild(QWidget, section_name)
                 if section_widget is None:
                     logging.warning(f"Unable to find section widget for {section_name}")
@@ -282,6 +291,8 @@ class SettingsDialog(QDialog):
                             self.settings[key] = field.GetValue().code
                     else:
                         self.settings[key] = field.GetValue()
+
+            self._refresh_gateway_provider_choices()
 
         except Exception as e:
             logging.error(f"Unable to update settings: {e}")
@@ -333,6 +344,9 @@ class SettingsDialog(QDialog):
         """
         Create the form for a settings tab
         """
+        if section_name == self.GATEWAYS_SECTION:
+            return self._create_gateways_tab()
+
         section_widget = QFrame(self)
         section_widget.setObjectName(section_name)
         
@@ -345,6 +359,73 @@ class SettingsDialog(QDialog):
 
         return section_widget
 
+    def _create_gateways_tab(self) -> QWidget:
+        """List cloud providers and gateways with their saved availability."""
+        scroll = QScrollArea(self)
+        scroll.setWidgetResizable(True)
+        scroll.setObjectName(self.GATEWAYS_SECTION)
+        content = QWidget(scroll)
+        layout = QVBoxLayout(content)
+        description = QLabel(_("Choose which cloud providers and gateways appear in the translation provider lists."), content)
+        description.setWordWrap(True)
+        layout.addWidget(description)
+
+        for kind, title, setting, checkboxes in (
+            (ProviderKind.Gateway, _("Gateways"), 'disabled_gateways', self.gateway_checkboxes),
+            (ProviderKind.Platform, _("Cloud providers"), 'disabled_cloud_providers', self.cloud_provider_checkboxes),
+        ):
+            group = QGroupBox(title, content)
+            grid = QGridLayout(group)
+            grid.setHorizontalSpacing(24)
+            grid.setVerticalSpacing(12)
+            disabled = set(self.settings.get_str_list(setting))
+            providers = sorted((name for name in self.available_providers
+                                if TranslationProvider.get_provider_kind(name) == kind), key=str.casefold)
+            columns = 3
+            for index, name in enumerate(providers):
+                checkbox = QCheckBox(name, group)
+                checkbox.setChecked(name not in disabled)
+                checkboxes[name] = checkbox
+                checkbox.toggled.connect(self._on_gateway_selection_changed)
+                grid.addWidget(checkbox, index // columns, index % columns)
+            for column in range(columns):
+                grid.setColumnStretch(column, 1)
+            layout.addWidget(group)
+        layout.addStretch()
+        scroll.setWidget(content)
+        self._sections[self.GATEWAYS_SECTION] = scroll
+        return scroll
+
+    def _on_gateway_selection_changed(self) -> None:
+        """Update the dialog's provider choices when a checkbox is toggled."""
+        for setting, checkboxes in (('disabled_gateways', self.gateway_checkboxes),
+                                    ('disabled_cloud_providers', self.cloud_provider_checkboxes)):
+            disabled = set(self.settings.get_str_list(setting))
+            disabled.difference_update(checkboxes)
+            disabled.update(name for name, checkbox in checkboxes.items() if not checkbox.isChecked())
+            self.settings[setting] = sorted(disabled, key=str.casefold)
+        self._refresh_gateway_provider_choices()
+
+    def _refresh_gateway_provider_choices(self) -> None:
+        """Refresh the provider selector and switch providers if necessary."""
+        values = GetProviderDropdownValues(self.available_providers, self.settings.get_str_list('disabled_gateways'),
+                                           self.settings.get_str_list('disabled_cloud_providers'))
+        schema = self.SECTIONS[self.PROVIDER_SECTION]['provider']
+        self.SECTIONS[self.PROVIDER_SECTION]['provider'] = (values, schema[1])
+        names = [value for value in values if isinstance(value, str)]
+        current = self.settings.get_str('provider')
+        selected = current if current in names else (names[0] if names else None)
+        selector = self.widgets.get('provider')
+        if isinstance(selector, DropdownOptionWidget):
+            selector.SetOptions(values, selected)
+        if selected != current:
+            self.settings['provider'] = selected
+            if selected:
+                self._initialise_translation_provider()
+            else:
+                self.translation_provider = None
+            self._populate_provider_tab()
+
     def _populate_provider_tab(self, provider_form : ProviderSettingsForm|None = None) -> None:
         """
         Rebuild the provider tab with the provider selector and the current provider's options
@@ -353,10 +434,6 @@ class SettingsDialog(QDialog):
         ClearForm(layout)
 
         provider = self.translation_provider
-        if not provider:
-            logging.warning("Translation provider is not configured")
-            return
-
         provider_key = 'provider'
         key_type, tooltip, placeholder = ParseOptionDefinition(self.SECTIONS[self.PROVIDER_SECTION][provider_key])
         selector = CreateOptionWidget(
@@ -368,6 +445,15 @@ class SettingsDialog(QDialog):
         selector.contentChanged.connect(lambda field=selector: self._on_setting_changed(self.PROVIDER_SECTION, field.key, field.GetValue()))
         layout.addRow(selector.name, selector)
         self.widgets[provider_key] = selector
+
+        if provider is None:
+            logging.warning("Translation provider is not configured")
+            if self.provider_form is not None:
+                self.provider_form.Stop()
+                self.provider_form.settingChanged.disconnect()
+                self.provider_form.modelsResolved.disconnect()
+                self.provider_form = None
+            return
 
         if provider_form is not None:
             # Reuse the form that loaded the models, just repopulate its rows

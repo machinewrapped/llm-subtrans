@@ -111,25 +111,36 @@ class UtteranceSplitter:
         half_span = (end - start).total_seconds() / 2.0
         best_index : int|None = None
         best_score : float = float('-inf')
+        min_split_chars = self.settings.min_split_chars
+        abbreviations = self.settings.abbreviations
+        texts = [w.text for w in words]
+
+        # A joined run keeps every non-space character, so its length is at least their count.
+        # Only runs with too few of them need the exact join.
+        visible = [0]
+        for text in texts:
+            visible.append(visible[-1] + len(''.join(text.split())))
+        total_visible = visible[-1]
 
         for index in range(1, len(words)):
-            head = JoinWords([w.text for w in words[:index]])
-            tail = JoinWords([w.text for w in words[index:]])
-            if len(head) < self.settings.min_split_chars or len(tail) < self.settings.min_split_chars:
+            if visible[index] < min_split_chars and len(JoinWords(texts[:index])) < min_split_chars:
+                continue
+            if total_visible - visible[index] < min_split_chars and len(JoinWords(texts[index:])) < min_split_chars:
                 continue
 
-            previous, word = words[index - 1], words[index]
-            pause = max(0.0, (word.start - previous.end).total_seconds())
-            position = (previous.end - start).total_seconds()
+            previous_end = words[index - 1].end
+            previous_text = texts[index - 1]
+            pause = max(0.0, (words[index].start - previous_end).total_seconds())
+            position = (previous_end - start).total_seconds()
             centrality = 1.0 - abs(position - half_span) / half_span if half_span > 0.0 else 1.0
             score = (pause + PAUSE_SCORE_FLOOR) * max(0.0, centrality)
 
-            if EndsSentence(previous.text, self.settings.abbreviations):
+            if EndsSentence(previous_text, abbreviations):
                 score += SENTENCE_END_BONUS
-            elif previous.text and previous.text[-1] in CLAUSE_END_CHARS:
+            elif previous_text and previous_text[-1] in CLAUSE_END_CHARS:
                 score += CLAUSE_END_BONUS
 
-            if sum(1 for c in previous.text if c.isalnum()) <= SHORT_WORD_CHARS:
+            if sum(map(str.isalnum, previous_text)) <= SHORT_WORD_CHARS:
                 score -= SHORT_WORD_PENALTY
 
             if score > best_score:

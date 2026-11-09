@@ -43,10 +43,13 @@ class TestRepeatedResponseLabels(LoggedTestCase):
         """A trailing label invalidates its cue with or without text after it."""
         for suffix in ("", "\nHello.", "\nDifferent text."):
             with self.subTest(suffix=suffix):
-                parser = TranslationParser("Translation", Options())
+                options = Options()
+                options.add('max_characters', 6)
+                parser = TranslationParser("Translation", options)
                 response = Translation({'text': f"#21\nTranslation>\nHello.\nTranslation>{suffix}"})
                 parser.ProcessTranslation(response)
 
+                self.assertLoggedEqual("only the label error is reported", 1, len(parser.errors))
                 self.assertLoggedEqual("affected cue numbers", [[21]], [
                     error.line_numbers for error in parser.errors if isinstance(error, RepeatedResponseLabelError)
                 ])

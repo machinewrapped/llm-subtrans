@@ -112,11 +112,11 @@ class TranslationParser:
         self.translated = MergeTranslations(self.translated, list(self.translations.values()))
 
         if validate:
-            self.errors = [*self._check_response_labels(), *self.ValidateTranslations()]
+            self.errors = self._check_response_labels() or self.ValidateTranslations()
 
             if self.errors and self.translated:
                 self._fix_unclosed_tags()
-                self.errors = [*self._check_response_labels(), *self.ValidateTranslations()]
+                self.errors = self._check_response_labels() or self.ValidateTranslations()
 
         return self.translated
 
@@ -209,7 +209,7 @@ class TranslationParser:
         validator = SubtitleValidator(self.options)
         return list(validator.ValidateTranslations(self.translated))
 
-    def _check_response_labels(self) -> list[RepeatedResponseLabelError]:
+    def _check_response_labels(self) -> list[TranslationError]:
         """Find standalone response labels left in the extracted subtitle bodies."""
         label = regex.compile(rf"^[^\S\r\n]*{regex.escape(self.task_type)}[>:][^\S\r\n]*\r?$", regex.MULTILINE)
         repeated_labels = [line for line in self.translated if line.text and label.search(line.text)]

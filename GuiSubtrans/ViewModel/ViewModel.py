@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QModelIndex, QRecursiveMutex, QMutexLocker, Signa
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from GuiSubtrans.ViewModel.BatchItem import BatchItem
-from GuiSubtrans.ViewModel.LineItem import LineItem
+from GuiSubtrans.ViewModel.LineItem import LineDurationLimits, LineItem
 from GuiSubtrans.ViewModel.SceneItem import SceneItem
 from GuiSubtrans.ViewModel.ViewModelError import ViewModelError
 
@@ -38,9 +38,10 @@ class ProjectViewModel(QStandardItemModel):
     """
     updatesPending = Signal()
 
-    def __init__(self):
+    def __init__(self, duration_limits : LineDurationLimits|None = None):
         super().__init__()
         self.model : dict[int, SceneItem] = {}
+        self.duration_limits : LineDurationLimits = duration_limits or LineDurationLimits()
         self.updates : list[Callable[[ProjectViewModel], None]] = []
         self.update_lock = QRecursiveMutex()
         self.debug_view : bool = os.environ.get("DEBUG_MODE") == "1"
@@ -136,6 +137,7 @@ class ProjectViewModel(QStandardItemModel):
                 'start': line.txt_start,
                 'end': line.txt_end,
                 'duration': line.txt_duration,
+                'duration_check': self.duration_limits.Classify(line.duration).value,
                 'gap': TimedeltaToText(line.start - gap_start) if gap_start else "",
                 'text': line.text,
                 'style': line.metadata.get('style'),
@@ -456,6 +458,7 @@ class ProjectViewModel(QStandardItemModel):
                 'start': line.txt_start,
                 'end': line.txt_end,
                 'duration': line.txt_duration,
+                'duration_check': self.duration_limits.Classify(line.duration).value,
                 'gap': TimedeltaToText(gap_duration),
                 'text': line.text,
                 'style': line.metadata.get('style'),

@@ -4,6 +4,7 @@ import logging
 
 from PySide6.QtCore import QRecursiveMutex, QMutexLocker
 
+from GuiSubtrans.ViewModel.LineItem import LineDurationLimits
 from GuiSubtrans.ViewModel.ViewModel import ProjectViewModel
 from GuiSubtrans.ViewModel.ViewModelUpdate import ModelUpdate
 
@@ -157,7 +158,7 @@ class ProjectDataModel:
         Create a viewmodel for the subtitles
         """
         with QMutexLocker(self.mutex):
-            self.viewmodel = ProjectViewModel()
+            self.viewmodel = ProjectViewModel(LineDurationLimits.FromOptions(self.project_options))
             if self.project is not None:
                 self.viewmodel.CreateModel(self.project.subtitles, self.project.task_type)
         return self.viewmodel

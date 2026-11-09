@@ -1,5 +1,10 @@
+from dataclasses import dataclass
+from datetime import timedelta
+from enum import Enum
+
 from GuiSubtrans.GuiHelpers import GetWrapKey, WrapKeyDominates
 from PySubtrans.Helpers import UpdateFields
+from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Helpers.Dialog import emdash
 from PySubtrans.Helpers.Text import Linearise
 
@@ -9,6 +14,37 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItem
 
 blank_line = f"<font color='lightgrey'>{emdash}</font>"
+
+
+class LineDuration(Enum):
+    """How a line's duration compares with the line duration limits."""
+    WITHIN_LIMITS = ''
+    TOO_SHORT = 'short'
+    TOO_LONG = 'long'
+
+
+@dataclass(frozen=True)
+class LineDurationLimits:
+    """The minimum and maximum line durations in seconds, where zero means no limit."""
+    min_seconds : float = 0.0
+    max_seconds : float = 0.0
+
+    @classmethod
+    def FromOptions(cls, options : SettingsType) -> 'LineDurationLimits':
+        """The limits the options set for loaded, translated and transcribed lines."""
+        return cls(min_seconds=options.get_float('min_line_duration') or 0.0,
+                   max_seconds=options.get_float('max_line_duration') or 0.0)
+
+    def Classify(self, duration : timedelta) -> LineDuration:
+        """Whether a line is shorter or longer than the limits allow."""
+        seconds = duration.total_seconds()
+        if self.max_seconds > 0.0 and seconds > self.max_seconds:
+            return LineDuration.TOO_LONG
+
+        if self.min_seconds > 0.0 and seconds < self.min_seconds:
+            return LineDuration.TOO_SHORT
+
+        return LineDuration.WITHIN_LIMITS
 
 class LineItem(QStandardItem):
     """
@@ -78,6 +114,15 @@ class LineItem(QStandardItem):
             raise ViewModelError(f"Model field 'duration' is not a string: {self.line_model}")
 
         return duration
+
+    @property
+    def duration_check(self) -> LineDuration:
+        """How the line's duration compares with the limits, as the view model judged it."""
+        value = self.line_model.get('duration_check', LineDuration.WITHIN_LIMITS.value)
+        try:
+            return LineDuration(value)
+        except ValueError:
+            raise ViewModelError(f"Model field 'duration_check' is not a line duration: {self.line_model}")
 
     @property
     def gap(self) -> str:

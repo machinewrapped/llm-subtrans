@@ -157,6 +157,11 @@ QListView:item {
     font-size: 9pt;
 }
 
+#line-header-right[duration="short"],
+#line-header-right[duration="long"] {
+    color: salmon;
+}
+
 .LineItemBody {
     margin: 2px;
     padding: 2px 1em;

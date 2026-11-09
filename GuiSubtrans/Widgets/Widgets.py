@@ -121,6 +121,9 @@ class LineItemHeader(QFrame):
         rightLabel.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         rightLabel.setObjectName("line-header-right")
 
+        # The theme tints the details of lines outside the duration limits, so they stand out for review
+        rightLabel.setProperty("duration", line.duration_check.value)
+
         layout.addWidget(leftLabel)
         layout.addWidget(rightLabel)
         self.setLayout(layout)

@@ -173,7 +173,8 @@ QListView:item {
 
 #line-header-right[duration="short"],
 #line-header-right[duration="long"] {
-    color: #c0482a;
+    color: #d01818;
+    font-weight: bold;
 }
 
 .LineItemBody {

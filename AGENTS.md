@@ -10,6 +10,7 @@ If testable code covered by unit tests was changed, ensure that unit_tests has b
 
 ## Commits
 - NEVER push commits without approval from the user
+- After pushing a commit that addresses a PR review comment, reply in the same thread with the commit and a brief summary of the fix, then resolve the thread. Leave it open if the commit only partially addresses the comment.
 - Don't hard-wrap commit messages; write one line per paragraph.
 - NEVER use `--no-verify` to bypass the pre-commit hook. The hook runs pyright type checking and errors must be fixed before committing. If pyright is not installed, install it with `pip install pyright` before committing.
 

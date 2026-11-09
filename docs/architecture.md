@@ -47,6 +47,8 @@ Supports translating subtitle files and transcribing subtitles from video/audio.
 
 `PySubtrans` is usable as a Python library independently of the GUI. The `llm-subtrans` distribution includes the core package, GUI, and scripts; GUI dependencies are optional. See `pyproject.toml` for packaging and extras.
 
+The `pysubtrans` package on PyPI contains only `PySubtrans`, without the GUI, scripts or locales. `scripts/publish_package.py` generates `PySubtrans/pyproject.toml` from the root `pyproject.toml` and `PySubtrans/version.py` when it publishes, so the version committed there lags until a release. `scripts/verify_package.py` installs the published package into a fresh environment and runs its tests. `PySubtrans/README.md` is the package's description on PyPI.
+
 The package root, `PySubtrans/__init__.py`, exports core classes and integration helpers:
 
 - `init_options`, `init_subtitles`, and `init_project` prepare settings and subtitle data or a project.

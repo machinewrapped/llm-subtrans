@@ -124,6 +124,14 @@ class LineItem(QStandardItem):
         except ValueError:
             raise ViewModelError(f"Model field 'duration_check' is not a line duration: {self.line_model}")
 
+    def ApplyDurationLimits(self, limits : LineDurationLimits) -> None:
+        """Check the line's duration against the limits, so the view can mark lines outside them."""
+        seconds = self.line_model.get('duration_seconds', 0.0)
+        if not isinstance(seconds, (int, float)):
+            raise ViewModelError(f"Model field 'duration_seconds' is not a number: {self.line_model}")
+
+        self.line_model['duration_check'] = limits.Classify(timedelta(seconds=seconds)).value
+
     @property
     def gap(self) -> str:
         if 'gap' not in self.line_model:

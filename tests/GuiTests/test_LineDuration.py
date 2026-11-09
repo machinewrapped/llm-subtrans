@@ -40,6 +40,18 @@ class TestLineDuration(GuiSubtitleTestCase):
 
         self.assertLoggedEqual("line checks", [LineDuration.WITHIN_LIMITS, LineDuration.TOO_LONG, LineDuration.TOO_SHORT], checks)
 
+    def test_settings_change_rechecks_lines(self):
+        """Changing the duration limits re-checks the lines already in the view."""
+        datamodel, _subtitles = self.create_datamodel_from_line_counts([[3]])
+        datamodel.UpdateSettings(SettingsType({'min_line_duration': 0.0, 'max_line_duration': 0.0}))
+        viewmodel = datamodel.CreateViewModel()
+        lines = [line for scene in viewmodel.model.values() for batch in scene.batches.values() for line in batch.lines.values()]
+
+        datamodel.UpdateSettings(SettingsType({'max_line_duration': 0.001}))
+        viewmodel.ProcessUpdates()
+
+        self.assertLoggedEqual("every line too long", [LineDuration.TOO_LONG] * len(lines), [line.duration_check for line in lines])
+
     def test_unmarked_line(self):
         """A line model without a check is within the limits."""
         item = LineItem(1, {'start': "00:00:01,000", 'end': "00:00:02,000", 'duration': "01,000", 'text': "hello"})

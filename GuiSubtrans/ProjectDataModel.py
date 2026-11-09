@@ -105,6 +105,7 @@ class ProjectDataModel:
             self._update_save_settings()
 
         self._update_translation_provider()
+        self._update_duration_limits()
 
     def UpdateProjectSettings(self, settings : SettingsType|Mapping[str, SettingType]):
         """ 
@@ -115,6 +116,7 @@ class ProjectDataModel:
             self.project_options.update(settings)
             self._update_save_settings()
             self._update_translation_provider()
+            self._update_duration_limits()
 
             self.project.UpdateProjectSettings(settings)
 
@@ -172,6 +174,12 @@ class ProjectDataModel:
 
         if self.viewmodel:
             self.viewmodel.AddUpdate(lambda viewmodel=self.viewmodel, model_update=update : model_update.ApplyToViewModel(viewmodel))
+
+    def _update_duration_limits(self) -> None:
+        """Re-check the lines in the view when the line duration limits change."""
+        if self.viewmodel:
+            limits = LineDurationLimits.FromOptions(self.project_options)
+            self.viewmodel.AddUpdate(lambda viewmodel : viewmodel.SetDurationLimits(limits))
 
     def _update_translation_provider(self):
         """

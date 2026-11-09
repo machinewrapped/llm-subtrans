@@ -137,6 +137,7 @@ class ProjectViewModel(QStandardItemModel):
                 'start': line.txt_start,
                 'end': line.txt_end,
                 'duration': line.txt_duration,
+                'duration_seconds': line.duration.total_seconds(),
                 'duration_check': self.duration_limits.Classify(line.duration).value,
                 'gap': TimedeltaToText(line.start - gap_start) if gap_start else "",
                 'text': line.text,
@@ -187,6 +188,19 @@ class ProjectViewModel(QStandardItemModel):
                     line_item: LineItem = line_item_qt
                     if line_item.number == line_number:
                         return line_item
+
+    def SetDurationLimits(self, limits : LineDurationLimits) -> None:
+        """Check every line against new duration limits, and repaint them."""
+        if limits == self.duration_limits:
+            return
+
+        self.duration_limits = limits
+        for scene_item in self.model.values():
+            for batch_item in scene_item.batches.values():
+                for line_item in batch_item.lines.values():
+                    line_item.ApplyDurationLimits(limits)
+
+                batch_item.emitDataChanged()
 
     def GetBatchNumbers(self):
         """
@@ -458,6 +472,7 @@ class ProjectViewModel(QStandardItemModel):
                 'start': line.txt_start,
                 'end': line.txt_end,
                 'duration': line.txt_duration,
+                'duration_seconds': line.duration.total_seconds(),
                 'duration_check': self.duration_limits.Classify(line.duration).value,
                 'gap': TimedeltaToText(gap_duration),
                 'text': line.text,

@@ -9,7 +9,7 @@ from PySubtrans.Options import env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.Providers.Clients.QwenLocalClient import QwenLocalClient
 from PySubtrans.Transcription.Torch.QwenRuntime import NeedsQwenRuntime
-from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
+from PySubtrans.Transcription.Torch.LocalRuntime import TorchConfigOption
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
 from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider, TranscriptionProviderKind
 from PySubtrans.Transcription.WordAlignment import WordCoverage

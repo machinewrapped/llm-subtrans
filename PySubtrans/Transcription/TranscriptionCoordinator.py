@@ -438,7 +438,10 @@ class TranscriptionCoordinator:
             if released is not None:
                 self._add_lines(run, released)
 
-        result = client.TranscribeChunk(audio_bytes, 'wav', on_part)
+        def on_status(text : str) -> None:
+            self.events.status.send(self, text=text)
+
+        result = client.TranscribeChunk(audio_bytes, 'wav', on_part, on_status)
 
         if result.cost:
             run.total_cost += result.cost

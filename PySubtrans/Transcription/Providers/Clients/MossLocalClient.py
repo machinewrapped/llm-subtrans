@@ -90,7 +90,7 @@ class MossLocalClient(TranscriptionClient):
             try:
                 response = worker.Request({
                     'type': 'transcribe', 'path': chunk_path, 'max_new_tokens': self.max_new_tokens,
-                }, 'result', on_segment)
+                }, 'result', on_segment, on_progress=self._report_status)
             except WorkerError:
                 worker.Abort()
                 raise
@@ -165,7 +165,7 @@ class MossLocalClient(TranscriptionClient):
             ready = worker.Request({
                 'type': 'load', 'model': MOSS_MODEL, 'revision': MOSS_MODEL_REVISION,
                 'device': configured, 'allow_cpu_fallback': allow_cpu,
-            }, 'ready')
+            }, 'ready', on_progress=self._report_status)
 
             if not isinstance(ready.get('device'), str):
                 worker.Abort()

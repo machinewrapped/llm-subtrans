@@ -169,6 +169,22 @@ class TestWorkerHost(LoggedTestCase):
                 self.assertLoggedEqual('forwarded record count', 1, len(logs.records))
                 self.assertLoggedEqual('forwarded log level', expected, logs.records[0].levelno)
 
+    def test_progress_bars_become_status(self) -> None:
+        """Progress bar updates go to the request's callback, not the log, and only the finished bar is logged at DEBUG."""
+        updates = ['Loading weights:   4%|3         | 25/683 [00:00<00:02, 238.14it/s]',
+                   'Loading weights: 100%|##########| 683/683 [00:00<00:00, 729.39it/s]']
+
+        # Universal newlines, as the worker's text-mode stream reads them, so each redraw is its own line
+        self.process.stderr = io.StringIO('\r'.join(updates) + '\nmodel loaded\n', newline=None)
+        statuses : list[str] = []
+        self.host._on_progress = statuses.append
+
+        with self.assertLogs(level=logging.DEBUG) as logs:
+            self.host._ForwardStderr(self.process)
+
+        self.assertLoggedEqual('each update reported', 2, len(statuses))
+        self.assertLoggedEqual('log levels', [logging.DEBUG, logging.INFO], [record.levelno for record in logs.records])
+
     def test_abort(self) -> None:
         """Abort terminates and waits without sending another protocol request."""
         self.host.Start()

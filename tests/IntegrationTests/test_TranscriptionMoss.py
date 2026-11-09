@@ -13,7 +13,7 @@ from datetime import timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, mock_open, patch
 
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
@@ -262,7 +262,7 @@ class TestMossWorkerSession(LoggedTestCase):
         segments = [{'start': 0, 'end': 1, 'speaker': 'S01', 'text': 'hi'}, {'start': 1, 'end': 1, 'speaker': 'S01', 'text': ' '},
                     {'start': 2, 'end': 3, 'speaker': 'S02', 'text': 'there'}]
 
-        def Request(message : dict[str, Any], expected : str, on_segment : Any = None) -> dict[str, Any]:
+        def Request(message : dict[str, Any], expected : str, on_segment : Any = None, on_progress : Any = None) -> dict[str, Any]:
             for segment in segments[:2]:
                 on_segment({'type': 'segment', 'segment': segment})
             return {'type': 'result', 'segments': segments, 'tokens': 10, 'stopped_at_limit': False}
@@ -356,6 +356,24 @@ class TestMossWorkerRuntime(LoggedTestCase):
 
         self.assertLoggedEqual("whole character parsed", 'café', parser.text)
         self.assertLoggedEqual("every token counted", 3, streamer.generated_tokens)
+
+    def test_tokenizer_loads_from_cache(self) -> None:
+        """The tokenizer's files are fetched at the pinned revision, then it loads from the cache, so it makes no Hub queries of its own."""
+        hub = SimpleNamespace(hf_hub_download=Mock(return_value='file'))
+        transformers = SimpleNamespace(Qwen2Tokenizer=Mock(), AutoFeatureExtractor=Mock())
+        package = SimpleNamespace(MossTranscribeDiarizeForConditionalGeneration=Mock(), MossTranscribeDiarizeProcessor=Mock())
+        torch = SimpleNamespace(cuda=SimpleNamespace(is_available=lambda: True), backends=SimpleNamespace(),
+                                bfloat16='bf16', device=Mock())
+        modules = {'torch': torch, 'transformers': transformers, 'huggingface_hub': hub, 'moss_transcribe_diarize': package}
+
+        # open is patched first, since resolving its module goes through import_module
+        with patch('builtins.open', mock_open(read_data='{}')), \
+                patch.object(moss_worker.importlib, 'import_module', side_effect=modules.__getitem__):
+            moss_worker.MossWorker().Load({'model': 'model', 'revision': 'pinned', 'device': 'auto'})
+
+        downloaded = {call.args[1] for call in hub.hf_hub_download.call_args_list if call.kwargs.get('revision') == 'pinned'}
+        self.assertLoggedTrue("tokenizer files fetched at the revision", set(moss_worker.TOKENIZER_FILES) <= downloaded)
+        self.assertLoggedTrue("tokenizer loaded from the cache", transformers.Qwen2Tokenizer.from_pretrained.call_args.kwargs['local_files_only'])
 
     def test_device_and_dtype(self) -> None:
         """Accelerators are preferred, CPU needs consent, and CPU runs in float32."""

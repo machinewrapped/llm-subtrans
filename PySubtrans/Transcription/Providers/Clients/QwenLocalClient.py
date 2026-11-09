@@ -89,7 +89,7 @@ class QwenLocalClient(TranscriptionClient):
                     'type': 'transcribe', 'path': chunk_path, 'language': self.language,
                     'align': self.settings.get_bool('transcription_align', True),
                     'max_new_tokens': self.max_new_tokens,
-                }, 'result')
+                }, 'result', on_progress=self._report_status)
                 return self.ParseResult(response, self.language)
             except WorkerError:
                 worker.Abort()
@@ -165,7 +165,7 @@ class QwenLocalClient(TranscriptionClient):
             ready = worker.Request({
                 'type': 'load', 'checkpoint': self.checkpoint, 'aligner_checkpoint': self.aligner_checkpoint,
                 'device': configured, 'allow_cpu_fallback': allow_cpu, 'max_new_tokens': self.max_new_tokens,
-            }, 'ready')
+            }, 'ready', on_progress=self._report_status)
 
             if not isinstance(ready.get('device'), str) or not isinstance(ready.get('supported_languages'), list):
                 worker.Abort()

@@ -9,6 +9,8 @@ from pathlib import Path
 from threading import RLock, Thread
 from typing import Any
 
+import regex
+
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleError import SubtitleError
 
@@ -60,6 +62,23 @@ def ValidateMessage(message : Any) -> None:
         raise WorkerError(_("Malformed worker error"))
 
 
+# A progress bar update, such as 'Loading weights:  65%|######5   | 444/683 [...]'.
+# The bar redraws itself with carriage returns, which the text-mode stream reads as separate lines.
+_PROGRESS_BAR = regex.compile(r'^\s*(?:(?P<label>[^|]*?):\s*)?(?P<percent>\d{1,3})%\|')
+
+
+def ProgressBarStatus(line : str) -> tuple[str, bool]|None:
+    """The status text for a progress bar update, with whether the bar is complete, or None if the line is not one."""
+    match = _PROGRESS_BAR.match(line)
+    if match is None:
+        return None
+
+    label = (match.group('label') or '').strip()
+    percent = int(match.group('percent'))
+    text = f"{label}: {percent}%" if label else f"{percent}%"
+    return text, percent >= 100
+
+
 def WorkerScriptPath(name : str) -> Path:
     """Find scripts beside this module, including PyInstaller's data directory."""
     return Path(__file__).resolve().parent / 'Workers' / name
@@ -88,6 +107,7 @@ class WorkerHost:
         self._state_lock = RLock()
         self._stderr_thread : Thread|None = None
         self._aborted : bool = False
+        self._on_progress : Callable[[str], None]|None = None
         atexit.register(self.Abort)
 
     @property
@@ -118,10 +138,12 @@ class WorkerHost:
             self._stderr_thread.start()
 
     def Request(self, message : dict[str, Any], expected : str,
-                on_segment : Callable[[dict[str, Any]], None]|None = None) -> dict[str, Any]:
+                on_segment : Callable[[dict[str, Any]], None]|None = None,
+                on_progress : Callable[[str], None]|None = None) -> dict[str, Any]:
         """
         Send a request and wait for exactly one response or an error.
         Segment messages sent while the request runs are passed to on_segment.
+        Progress bars the worker's libraries draw while it runs are passed to on_progress as status text, from the stderr thread.
         """
         encoded = EncodeMessage(message)
 
@@ -129,6 +151,7 @@ class WorkerHost:
             self.Start()
             process = self._process
             assert process is not None and process.stdin is not None and process.stdout is not None
+            self._on_progress = on_progress
 
             try:
                 process.stdin.write(encoded)
@@ -154,6 +177,8 @@ class WorkerHost:
                 # The worker may still be mid-request, so its later output would answer the next request
                 self.Abort()
                 raise
+            finally:
+                self._on_progress = None
 
     def Shutdown(self) -> None:
         """Ask an idle worker to exit, with bounded termination as a fallback."""
@@ -215,6 +240,17 @@ class WorkerHost:
 
                 level = logging.INFO
                 message = line.rstrip()
+
+                # Progress bars go to the request's status rather than the log, apart from their completion
+                progress = ProgressBarStatus(message)
+                if progress is not None:
+                    text, complete = progress
+                    on_progress = self._on_progress
+                    if on_progress is not None:
+                        on_progress(text)
+                    if complete:
+                        logging.debug("Transcription worker: %s", text)
+                    continue
 
                 # Only worker log records carry this prefix.
                 # Unmarked SDK output and traceback continuations retain INFO.

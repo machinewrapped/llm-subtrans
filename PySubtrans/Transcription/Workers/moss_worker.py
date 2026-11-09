@@ -18,6 +18,9 @@ from typing import Any
 # A chunk takes minutes to transcribe, so report generation progress at this interval
 PROGRESS_INTERVAL_SECONDS = 30.0
 
+# The tokenizer's files in the model repository
+TOKENIZER_FILES = ('tokenizer_config.json', 'tokenizer.json', 'vocab.json', 'merges.txt', 'added_tokens.json', 'special_tokens_map.json')
+
 # Progress is diagnostic, so it is sent at DEBUG while library loggers stay at INFO
 _progress_logger = logging.getLogger('moss_worker.progress')
 _progress_logger.setLevel(logging.DEBUG)
@@ -54,7 +57,12 @@ class MossWorker:
 
         # AutoTokenizer resolves the tokenizer through the model config, which needs the model repository's code.
         # The tokenizer, feature extractor and processor settings are loaded directly instead.
-        tokenizer = transformers.Qwen2Tokenizer.from_pretrained(model_id, revision=revision)
+        # Loading a tokenizer by name queries the Hub for chat templates, repository files and model tags, even from the cache.
+        # Its files are fetched at the pinned revision instead, which needs no request once cached, and loaded from the cache.
+        for filename in TOKENIZER_FILES:
+            hub.hf_hub_download(model_id, filename, revision=revision)
+
+        tokenizer = transformers.Qwen2Tokenizer.from_pretrained(model_id, revision=revision, local_files_only=True)
         feature_extractor = transformers.AutoFeatureExtractor.from_pretrained(model_id, revision=revision)
 
         with open(hub.hf_hub_download(model_id, 'processor_config.json', revision=revision), encoding='utf-8') as stream:

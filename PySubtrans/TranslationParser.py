@@ -112,11 +112,11 @@ class TranslationParser:
         self.translated = MergeTranslations(self.translated, list(self.translations.values()))
 
         if validate:
-            self.errors = self.ValidateTranslations()
+            self.errors = [*self._check_response_labels(), *self.ValidateTranslations()]
 
             if self.errors and self.translated:
                 self._fix_unclosed_tags()
-                self.errors = self.ValidateTranslations()
+                self.errors = [*self._check_response_labels(), *self.ValidateTranslations()]
 
         return self.translated
 
@@ -207,18 +207,19 @@ class TranslationParser:
             return [ NoTranslationError("Failed to extract translations from response", translation=self.text) ]
 
         validator = SubtitleValidator(self.options)
-        errors : list[TranslationError] = list(validator.ValidateTranslations(self.translated))
+        return list(validator.ValidateTranslations(self.translated))
 
-        # Check the extracted bodies so every format uses the same validation.
+    def _check_response_labels(self) -> list[RepeatedResponseLabelError]:
+        """Find standalone response labels left in the extracted subtitle bodies."""
         label = regex.compile(rf"^[^\S\r\n]*{regex.escape(self.task_type)}[>:][^\S\r\n]*\r?$", regex.MULTILINE)
         repeated_labels = [line for line in self.translated if line.text and label.search(line.text)]
-        if repeated_labels:
-            errors.append(RepeatedResponseLabelError(
-                _("Unexpected response label {label} inside translated subtitle text").format(label=self.task_type),
-                lines=repeated_labels,
-            ))
+        if not repeated_labels:
+            return []
 
-        return errors
+        return [RepeatedResponseLabelError(
+            _("Unexpected response label {label} inside translated subtitle text").format(label=self.task_type),
+            lines=repeated_labels,
+        )]
 
     def _fix_unclosed_tags(self):
         """

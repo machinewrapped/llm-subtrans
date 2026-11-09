@@ -63,6 +63,15 @@ class TestRepeatedResponseLabels(LoggedTestCase):
             error.line_numbers for error in parser.errors if isinstance(error, RepeatedResponseLabelError)
         ])
 
+    def test_label_check_runs_again_after_tag_repair(self) -> None:
+        """A label inside a discarded metadata fragment does not leave a stale error."""
+        parser = TranslationParser("Translation", Options())
+        response = Translation({'text': "#21\nTranslation>\nHello.\n<terminology>\nTranslation>"})
+        parser.ProcessTranslation(response)
+
+        self.assertLoggedEqual("repaired cue text", "Hello.", parser.translations[21].text)
+        self.assertLoggedEqual("validation errors", [], parser.errors)
+
     def test_inline_label_text_is_preserved(self) -> None:
         """A label mentioned within dialogue remains ordinary subtitle text."""
         parser = TranslationParser("Translation", Options())

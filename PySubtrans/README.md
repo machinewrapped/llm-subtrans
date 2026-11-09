@@ -345,12 +345,21 @@ transcriber.events.audio_progress.connect(on_audio_progress)
 | `OpenAI` | `gpt-4o-transcribe-diarize` | Yes | No, segment timings only |
 | `Muse` | `muse-voice-transcribe-1.0` (default) | Yes | No, turn timings only |
 | `Qwen Local` | `Qwen/Qwen3-ASR-1.7B` (default), `Qwen/Qwen3-ASR-0.6B` | No | Partial, for languages the aligner supports |
+| `MOSS Local` | `OpenMOSS-Team/MOSS-Transcribe-Diarize` | Yes | No, segment timings only |
 
 `OpenRouter`, `ElevenLabs`, `OpenAI` and `Muse` work with the basic installation and an API key. `Gemini` requires `pip install pysubtrans[gemini]`.
 
 `ElevenLabs` can send the whole clip in one request. Pass `transcribe_whole_clip=True`, or `max_chunk_seconds=0`, to do so.
 
 `Qwen Local` runs Qwen3-ASR on your own hardware. Install a PyTorch build for your hardware from [pytorch.org](https://pytorch.org/get-started/locally/) first, then `pip install pysubtrans[qwen-asr]`. The first run downloads the model weights (about 6 GB). Pass `allow_cpu_fallback=True` to run without a GPU, though this is much slower.
+
+`MOSS Local` runs MOSS-Transcribe-Diarize on your own hardware, in a separate Python environment. MOSS needs Transformers 5 and `qwen-asr` pins Transformers 4, so they cannot share an environment. MOSS is not on PyPI, so there is no `pysubtrans` extra for it. [`scripts/install_moss_runtime.py`](https://github.com/machinewrapped/llm-subtrans/blob/main/scripts/install_moss_runtime.py) in the LLM-Subtrans repository creates the environment and installs Torch, the MOSS package and its dependencies. Pass the environment's directory as `moss_installation_directory`:
+
+```python
+transcriber = init_transcription("MOSS Local", moss_installation_directory="/path/to/envmoss")
+```
+
+The first run downloads the model weights (about 2 GB). MOSS detects the spoken language itself and ignores `language`. Pass `allow_cpu_fallback=True` to run without a GPU, though this is much slower.
 
 ## Advanced workflows
 
@@ -554,7 +563,7 @@ Adapting the examples to your use case can greatly improve the model's performan
 
 Lines with a speaker label, e.g. from a transcription with diarization, are sent with a `Speaker>` field. When a batch contains any, `speaker_instructions` is added to the instructions to explain the field. The default tells the model to treat labels as a weak hint, since they can restart between sections. Override it with a `### speaker_instructions` section in an instruction file, or on the Speakers tab of the GUI's instructions editor.
   
-See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/instructions) for examples of instructions tailored to specific use cases.
+See [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans/tree/main/instructions) for examples of instructions tailored to specific use cases.
 
 ### A programmatic workflow example
 This example shows how to construct subtitles and translate them with progress feedback, working directly with the PySubtrans business logic.
@@ -667,7 +676,7 @@ There are many possible and correct ways to use PySubtrans. [LLM-Subtrans](https
 
 ### Batch automation example
 
-The [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans)repository also includes [`scripts/batch_translate.py`](https://github.com/machinewrapped/llm-subtrans/scripts/batch_translate.py) as a ready-to-run sample. The script shows how to:
+The [LLM-Subtrans](https://github.com/machinewrapped/llm-subtrans) repository also includes [`scripts/batch-translate.py`](https://github.com/machinewrapped/llm-subtrans/blob/main/scripts/batch-translate.py) as a ready-to-run sample. The script shows how to:
 
 - build an `Options` instance with `init_options`, including command line overrides for provider, model and preview settings,
 - walk a source directory using `SubtitleFormatRegistry.enumerate_formats()` to filter files that PySubtrans can translate,

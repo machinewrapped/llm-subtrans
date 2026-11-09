@@ -53,6 +53,9 @@ class UnmatchedLinesError(TranslationValidationError):
 class EmptyLinesError(TranslationValidationError):
     pass
 
+class RepeatedResponseLabelError(TranslationValidationError):
+    """A response label was left inside the parsed subtitle text."""
+
 class TooManyNewlinesError(TranslationValidationError):
     severity = ValidationSeverity.Warning
 

@@ -10,9 +10,9 @@ from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtrans.Helpers.Text import IsTextContentEqual
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleError import NoTranslationError, TranslationError
-from PySubtrans.ValidationError import UntranslatedLinesError
-from PySubtrans.SubtitleValidator import SubtitleValidator
+from PySubtrans.SubtitleValidator import CheckResponseLabels, SubtitleValidator
 from PySubtrans.Translation import Translation
+from PySubtrans.ValidationError import UntranslatedLinesError
 
 default_pattern = (
     r"#(?P<number>\d+)"
@@ -112,11 +112,11 @@ class TranslationParser:
         self.translated = MergeTranslations(self.translated, list(self.translations.values()))
 
         if validate:
-            self.errors = self.ValidateTranslations()
+            self.errors = CheckResponseLabels(self.translated, self.task_type) or self.ValidateTranslations()
 
             if self.errors and self.translated:
                 self._fix_unclosed_tags()
-                self.errors = self.ValidateTranslations()
+                self.errors = CheckResponseLabels(self.translated, self.task_type) or self.ValidateTranslations()
 
         return self.translated
 

@@ -80,10 +80,15 @@ class TestMossLocalProvider(LoggedTestCase):
             self.assertLoggedFalse("invalid without directory", provider.ValidateSettings())
 
     def test_chunks_limited_by_context(self) -> None:
-        """Chunks longer than the model's context allows are rejected before a run starts."""
-        provider = MossLocalProvider(SettingsType({'max_chunk_seconds': 2400.0}))
-        with patch(HAS_MOSS_RUNTIME, return_value=True):
-            self.assertLoggedFalse("long chunks invalid", provider.ValidateSettings())
+        """Chunk settings that could plan a chunk longer than the model's context allows are rejected before a run starts."""
+        cases = [
+            ("long maximum", {'max_chunk_seconds': 2400.0}),
+            ("maximum leaves no room for the lookahead", {'max_chunk_seconds': 1200.0}),
+        ]
+        for label, settings in cases:
+            provider = MossLocalProvider(SettingsType(settings))
+            with patch(HAS_MOSS_RUNTIME, return_value=True):
+                self.assertLoggedFalse(label, provider.ValidateSettings())
 
     def test_language_hint_ignored(self) -> None:
         """The model takes no language hint, so every hint resolves to auto-detection."""

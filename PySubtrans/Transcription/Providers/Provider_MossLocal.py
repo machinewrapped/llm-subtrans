@@ -6,6 +6,7 @@ from pathlib import Path
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import env_float, env_int
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
+from PySubtrans.Transcription.AudioChunker import DEFAULT_LOOKAHEAD_SECONDS
 from PySubtrans.Transcription.Providers.Clients.MossLocalClient import MossLocalClient
 from PySubtrans.Transcription.Torch.Discovery import ApplicationRoot
 from PySubtrans.Transcription.Torch.MossRuntime import (
@@ -43,7 +44,8 @@ try:
                 'diarize': settings.get_bool('diarize', True),
                 'max_new_tokens': settings.get_int('max_new_tokens', env_int('MOSS_MAX_NEW_TOKENS', 32768)),
                 # Long chunks keep speaker labels consistent for longer, with headroom below the model's context limit.
-                'min_chunk_seconds': settings.get_float('min_chunk_seconds', 600.0),
+                # Cuts already favour pauses near the maximum, so the minimum only rules out very short chunks.
+                'min_chunk_seconds': settings.get_float('min_chunk_seconds', 60.0),
                 'max_chunk_seconds': settings.get_float('max_chunk_seconds', 900.0),
                 'allow_cpu_fallback': settings.get_bool('allow_cpu_fallback', False),
                 'moss_installation_directory': settings.get_str('moss_installation_directory', ''),
@@ -104,9 +106,10 @@ try:
                 self.validation_message = _("MOSS Local needs a Python environment with the MOSS runtime installed")
                 return False
 
-            max_chunk_seconds = self.settings.get_float('max_chunk_seconds', MOSS_MAX_CHUNK_SECONDS) or MOSS_MAX_CHUNK_SECONDS
-            if max_chunk_seconds > MOSS_MAX_CHUNK_SECONDS:
-                self.validation_message = _("MOSS Local chunks can be at most {} seconds long").format(int(MOSS_MAX_CHUNK_SECONDS))
+            # The chunker can run a chunk past the maximum to reach a pause in its lookahead
+            max_chunk_seconds = self.settings.get_float('max_chunk_seconds') or 0.0
+            if max_chunk_seconds + DEFAULT_LOOKAHEAD_SECONDS > MOSS_MAX_CHUNK_SECONDS:
+                self.validation_message = _("MOSS Local chunks can be at most {} seconds long").format(int(MOSS_MAX_CHUNK_SECONDS - DEFAULT_LOOKAHEAD_SECONDS))
                 return False
 
             return True

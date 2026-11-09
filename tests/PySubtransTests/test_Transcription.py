@@ -242,6 +242,27 @@ class TestAudioChunker(LoggedTestCase):
                 actual = [(chunk.start.total_seconds(), chunk.end.total_seconds()) for chunk in chunks]
                 self.assertLoggedEqual(label, expected, actual)
 
+    def test_short_tail_never_takes_last_chunk_past_maximum(self):
+        """A short remainder joins the last chunk only if it still fits the maximum; otherwise the rest is split in two."""
+        cases = [
+            ("absorbed within the maximum", 58, [(50, 51)], 10, 60, [(0, 58)]),
+            ("split at the pause nearest the midpoint", 140, [(40, 41), (68, 69), (88, 89)], 60, 90, [(0, 68), (69, 140)]),
+            ("split at the midpoint without a pause", 140, [], 60, 90, [(0, 70), (70, 140)]),
+        ]
+        for label, duration, gaps, minimum, maximum, expected in cases:
+            with self.subTest(label=label):
+                chunker = AudioChunker(SettingsType({
+                    'min_chunk_seconds': minimum, 'max_chunk_seconds': maximum, 'lookahead_seconds': 30.0}))
+                silences = [(timedelta(seconds=start), timedelta(seconds=end)) for start, end in gaps]
+
+                with patch.object(chunker.extractor, 'GetDuration', return_value=timedelta(seconds=duration)), \
+                     patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(silences)), \
+                     patch.object(chunker.extractor, 'ReadChunkBytes', return_value=b''):
+                    chunks = chunker.PlanChunks('fake.wav')
+
+                actual = [(chunk.start.total_seconds(), chunk.end.total_seconds()) for chunk in chunks]
+                self.assertLoggedEqual(label, expected, actual)
+
     def test_quietest_stretch_used_when_there_is_no_pause(self):
         """Without any pause the chunk ends in the quietest stretch before the cap."""
         chunker = AudioChunker(SettingsType({'min_chunk_seconds': 30.0, 'max_chunk_seconds': 60.0}))

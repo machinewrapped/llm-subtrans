@@ -150,7 +150,7 @@ A safety filter was suggested as a cause, but the raw responses showed no safety
 
 **Speakers.** Labels are per chunk, so the same person may have a different label in the next chunk. Within MAI's request windows, MOSS kept 91% of MAI's same-speaker pairs together on La Madre Muerta but only 45% on Fist of Fury, where it finds about 4 speakers per window to MAI's 2. MAI is not ground truth for speakers.
 
-**Chunk length.** The model's context is 40,960 tokens, and audio takes about 12.5 tokens per second. Single passes of 2400 s and longer stopped at about 16,500 output tokens, so the provider limits chunks to 1200 s, and defaults to 600 to 900 s. The client warns when a chunk stops at its `max_new_tokens` budget.
+**Chunk length.** The model's context is 40,960 tokens, and audio takes about 12.5 tokens per second. Single passes of 2400 s and longer stopped at about 16,500 output tokens, so the provider limits chunks to 1200 s. The chunker can run a chunk up to 30 s past the maximum to reach a pause, so the maximum chunk setting can be at most 1170 s. The defaults are 60 to 900 s. The client warns when a chunk stops at its `max_new_tokens` budget.
 
 **Speed.** On an RTX 5070 Ti in bf16, Fist of Fury took 2062 s and La Madre Muerta 862 s, with peak GPU memory of 4.3 and 3.8 GB. CPU and macOS (MPS) are unmeasured.
 
@@ -179,4 +179,4 @@ No OpenAI transcription has been assessed on real media yet.
 - **Punctuation tokens.** Of the providers with captures, only MAI returns punctuation as separate timed words. Gemini and Qwen return none.
 - **Empty audio.** Music or noise returns a successful empty result from all the API providers.
 - **Zero-length words.** Gemini and ElevenLabs Scribe return words whose start and end are the same. Every client keeps them, since the start is still usable, and drops only words that end before they start.
-- **Chunk lengths are project choices.** The defaults (Qwen Local 30–60 s, MOSS Local 10–15 minutes, OpenAI and Muse 8–60 s, OpenRouter 30–120 s, chunked ElevenLabs 10–15 minutes, Gemini 10–15 minutes) were chosen by the project. ElevenLabs accepts files of up to 5 GB, and can send the whole clip in one request.
+- **Chunk lengths are project choices.** The defaults (Qwen Local 30–60 s, MOSS Local 1–15 minutes, OpenAI and Muse 8–60 s, OpenRouter 30–120 s, chunked ElevenLabs 10–15 minutes, Gemini 10–15 minutes) were chosen by the project. ElevenLabs accepts files of up to 5 GB, and can send the whole clip in one request.

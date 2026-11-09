@@ -5,6 +5,8 @@ from GuiSubtrans.ProjectDataModel import ProjectDataModel
 from .DataModelHelpers import CreateTestDataModelBatched
 from PySubtrans.Helpers.TestCases import SubtitleTestCase, AddResponsesFromMap
 from PySubtrans.Subtitles import Subtitles
+from PySubtrans.Translation import Translation
+from PySubtrans.ValidationError import RepeatedResponseLabelError
 from ..TestData.chinese_dinner import chinese_dinner_data
 
 class ReparseTranslationsCommandTest(SubtitleTestCase):
@@ -25,6 +27,29 @@ class ReparseTranslationsCommandTest(SubtitleTestCase):
             'line_numbers': None
         }
     ]
+
+    def test_reparse_revalidates_repeated_labels(self) -> None:
+        """Reparse flags the active task label and undo clears the error."""
+        options = deepcopy(self.options)
+        options.add('task_type', 'Rewrite')
+        datamodel = CreateTestDataModelBatched(chinese_dinner_data, options=options)
+        project = datamodel.project
+        self.assertLoggedIsNotNone("project", project)
+        assert project is not None
+
+        batch = project.subtitles.GetBatch(1, 1)
+        line_number = batch.originals[0].number
+        batch.translation = Translation({'text': f"#{line_number}\nRewrite>\nHello.\nRewrite>"})
+        command = ReparseTranslationsCommand([(1, 1)], [line_number], datamodel=datamodel)
+
+        self.assertLoggedTrue("reparse succeeded", command.execute())
+        self.assertLoggedEqual("affected cue numbers", [[line_number]], [
+            error.line_numbers for error in batch.errors if isinstance(error, RepeatedResponseLabelError)
+        ])
+        self.assertLoggedFalse("batch is incomplete", batch.translation_complete)
+
+        self.assertLoggedTrue("undo succeeded", command.undo())
+        self.assertLoggedTrue("restored batch is complete", batch.translation_complete)
 
     def test_ReparseTranslationsCommand(self):
 

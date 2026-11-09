@@ -8,7 +8,7 @@ from unittest.mock import patch
 from PySubtrans.Helpers.TestCases import LoggedTestCase
 from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.Transcription.Torch import Discovery
+from PySubtrans.Transcription.Torch import Discovery, Validation
 
 
 class TestTorchDiscovery(LoggedTestCase):
@@ -56,37 +56,27 @@ class TestTorchDiscovery(LoggedTestCase):
         self.assertLoggedEqual('environment with the runtime offered', 'other_env', with_runtime)
         self.assertLoggedIsNone('environment without the runtime not offered', without_runtime)
 
-    def test_find_compatible_python_prefers_abi_match_over_newer_interpreter(self) -> None:
-        """A matching interpreter is selected ahead of a newer mismatched one."""
-        frozen = {
-            'python_implementation': 'cpython', 'python_abi': 'cpython-312',
-            'python_version': '3.12', 'os': 'Windows', 'architecture': 'AMD64', 'pointer_bits': 64,
-        }
-        mismatched = dict(frozen)
-        mismatched['python_abi'] = 'cpython-313'
-        mismatched['python_version'] = '3.13'
-        matching = dict(frozen)
+    def test_find_torch_site_packages_recognises_other_python_version(self) -> None:
+        """A venv from another Python minor version is still detected."""
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            site_packages = root / 'lib' / 'python3.9' / 'site-packages'
+            (site_packages / 'torch').mkdir(parents=True)
 
+            found = Validation.FindTorchSitePackages(root)
+
+        self.assertLoggedEqual('versioned POSIX layout detected', site_packages.resolve(), found)
+
+    def test_find_compatible_python_uses_first_frozen_candidate_meeting_minimum(self) -> None:
+        """A frozen build selects the first candidate that meets the Python floor."""
         with patch.object(sys, 'frozen', True, create=True), \
-                patch.object(Discovery, 'CandidatePythons', return_value=['/newer/python3.13', '/matching/python3.12']), \
-                patch.object(Discovery, 'ExpectedCompatibility', return_value=frozen), \
-                patch.object(Discovery, 'ProbeVenvCompatibility', side_effect=[mismatched, matching]):
+                patch.object(Discovery, 'CandidatePythons', return_value=['/old/python3.9', '/first/python3.10', '/later/python3.13']), \
+                patch.object(Discovery, 'PythonMeetsMinimum', side_effect=[False, True]) as meets_minimum:
             chosen = Discovery.FindCompatiblePython()
 
-        self.assertLoggedEqual('matching interpreter selected', '/matching/python3.12', chosen)
-
-    def test_find_compatible_python_falls_back_when_no_match(self) -> None:
-        """Without an ABI match the newest usable interpreter is still returned."""
-        frozen = {'python_abi': 'cpython-312', 'python_version': '3.12'}
-
-        with patch.object(sys, 'frozen', True, create=True), \
-                patch.object(Discovery, 'CandidatePythons', return_value=['/newer/python3.13']), \
-                patch.object(Discovery, 'ExpectedCompatibility', return_value=frozen), \
-                patch.object(Discovery, 'ProbeVenvCompatibility', return_value={'python_abi': 'cpython-313'}), \
-                patch.object(Discovery, 'PythonMeetsMinimum', return_value=True):
-            chosen = Discovery.FindCompatiblePython()
-
-        self.assertLoggedEqual('fallback interpreter selected', '/newer/python3.13', chosen)
+        self.assertLoggedEqual('first usable interpreter selected', '/first/python3.10', chosen)
+        self.assertLoggedEqual('candidates checked in order', ['/old/python3.9', '/first/python3.10'],
+                               [call.args[0] for call in meets_minimum.call_args_list])
 
     def test_py_launcher_interpreters_handles_path_with_space(self) -> None:
         """A launcher entry whose install path contains a space is still recognised."""
@@ -104,16 +94,6 @@ class TestTorchDiscovery(LoggedTestCase):
                 interpreters = Discovery._PyLauncherInterpreters('py')
 
         self.assertLoggedEqual('full path with space recovered', [str(python_exe)], interpreters)
-
-    def test_expected_compatibility_uses_running_interpreter_when_not_frozen(self) -> None:
-        """A source run checks selected environments against its own interpreter."""
-        with patch.object(Discovery, 'FindCompatibilityMetadata', return_value=None), \
-                patch.object(Discovery, 'BuildCurrentCompatibility', return_value={'python_abi': 'cpython-313'}) as build:
-            compatibility = Discovery.ExpectedCompatibility()
-
-        self.assertLoggedEqual('running interpreter is the reference', {'python_abi': 'cpython-313'}, compatibility)
-        self.assertLoggedEqual('running interpreter queried once', 1, build.call_count)
-
 
 class TestEnvironmentInterpreter(LoggedTestCase):
     """Resolve virtual environments with mocked filesystem predicates."""

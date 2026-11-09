@@ -24,7 +24,7 @@ from PySubtrans.Transcription.Providers.Clients import QwenLocalClient as client
 from PySubtrans.Transcription.Providers.Clients.QwenLocalClient import QwenLocalClient
 from PySubtrans.Transcription.Providers.Provider_QwenLocal import QwenLocalProvider
 from PySubtrans.Transcription.Torch.QwenRuntime import HasQwenRuntime
-from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
+from PySubtrans.Transcription.Torch.LocalRuntime import TorchConfigOption
 from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionSegment import TranscriptionResult
 from PySubtrans.Transcription.WorkerHost import WorkerError

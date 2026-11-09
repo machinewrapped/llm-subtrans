@@ -27,7 +27,11 @@ from PySubtrans.Transcription.Torch.QwenRuntime import (
     QwenAsrPipArguments,
     QwenDependencyPipArguments,
 )
-from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
+
+
+class TorchConfigOption(ConfigActionOption):
+    """Sentinel for the Torch and Qwen installation directory setting."""
+    label = _("Set up Qwen...")
 
 
 class MossConfigOption(ConfigActionOption):

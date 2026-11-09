@@ -33,11 +33,7 @@ from PySide6.QtWidgets import (
 )
 
 from PySubtrans.Helpers.Localization import _
-from PySubtrans.Transcription.Torch.Discovery import (
-    ApplicationRoot,
-    ExpectedCompatibility,
-    FindCompatiblePython,
-)
+from PySubtrans.Transcription.Torch.Discovery import ApplicationRoot, FindCompatiblePython
 from PySubtrans.Transcription.Torch.Hardware import (
     CPU_INDEX_URL,
     DetectHardware,
@@ -46,11 +42,9 @@ from PySubtrans.Transcription.Torch.Hardware import (
 )
 from PySubtrans.Transcription.Torch.LocalRuntime import LocalRuntime, OtherRuntimesIn, QWEN_RUNTIME
 from PySubtrans.Transcription.Torch.Validation import (
-    CompareCompatibility,
     FindTorchSitePackages,
     FindVenvPython,
     HasTorchPackage,
-    ProbeVenvCompatibility,
 )
 
 
@@ -682,9 +676,7 @@ class TorchSetupDialog(QDialog):
 
         A missing Torch package is a hard error, since transcription would fail
         when it starts.  A missing runtime is offered for installation,
-        and the environment is validated again once it is installed.  An
-        interpreter mismatch is a strong warning instead: the environment may
-        still work, and if it does not the user needs to know what to change.
+        and the environment is validated again once it is installed.
         Returns whether the environment was accepted.
         """
         root = Path(directory).expanduser()
@@ -704,46 +696,10 @@ class TorchSetupDialog(QDialog):
 
         self._log(_("Validated Torch installation at {path}.").format(path=directory))
 
-        warning = self._compatibility_warning(root)
-        if warning:
-            QMessageBox.warning(self, _("Torch Compatibility Warning"), warning)
-
-        # Transcription runs in a worker process started from this environment, so no restart is needed
+        # Transcription runs in a worker process started from this environment, so no restart is needed.
         self.chosen_path = directory
         self.accept()
         return True
-
-    def _compatibility_warning(self, root : Path) -> str|None:
-        """Describe why the selected venv may be incompatible, or None if it matches."""
-        try:
-            compatibility = ExpectedCompatibility()
-        except (ValueError, RuntimeError) as error:
-            return _("The compatibility information for this build could not be read: {error}").format(error=error)
-
-        if compatibility is None:
-            return None
-
-        venv_python = FindVenvPython(root)
-        if venv_python is None:
-            # Packaged builds expect a complete venv; a source run may point at
-            # a bare site-packages directory with no interpreter to probe.
-            if getattr(sys, 'frozen', False):
-                return _("The selected environment has no Python interpreter, so its compatibility could not be verified.")
-            return None
-
-        actual = ProbeVenvCompatibility(venv_python)
-        if actual is None:
-            return _("The selected environment's Python interpreter could not be checked.")
-
-        mismatches = CompareCompatibility(actual, compatibility)
-        if not mismatches:
-            self._log(_("ABI compatibility check passed."))
-            return None
-
-        return _("The selected Torch environment may be incompatible with this application:\n{details}\n\n"
-                 "Torch is loaded into this application, so its Python ABI, OS, architecture and pointer width "
-                 "should match the build. If Torch fails to load, install a matching environment.").format(
-                     details="\n".join(mismatches))
 
     def reject(self) -> None:
         """Stop an active installer before closing the dialog."""

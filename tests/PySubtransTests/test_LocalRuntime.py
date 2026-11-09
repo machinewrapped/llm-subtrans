@@ -8,10 +8,10 @@ from PySubtrans.Transcription.Torch.LocalRuntime import (
     MOSS_RUNTIME,
     MossConfigOption,
     QWEN_RUNTIME,
+    TorchConfigOption,
     LocalRuntimeForOption,
     OtherRuntimesIn,
 )
-from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
 
 _MODULE = 'PySubtrans.Transcription.Torch.LocalRuntime'
 

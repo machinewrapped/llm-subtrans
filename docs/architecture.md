@@ -118,7 +118,7 @@ Media transcription lives in `PySubtrans/Transcription/`:
 
 - `AudioExtractor` and `AudioChunker` read media audio and plan chunks.
 - `TranscriptionProvider` and `TranscriptionClient` provide pluggable speech-to-text backends in `PySubtrans/Transcription/Providers/`. Each provider declares whether it runs in the cloud or locally, which the GUI uses to group provider selectors.
-- Local providers use `WorkerHost` and standalone scripts in `Transcription/Workers/` to run models in separate environments. `Transcription/Torch/` describes and discovers those runtimes; `scripts/install_qwen_runtime.py`, `scripts/install_moss_runtime.py`, and the GUI's `TorchSetupDialog` prepare them.
+- Local providers use `WorkerHost` and standalone scripts in `Transcription/Workers/` to run models in separate environments. `WorkerHost` starts each worker with the selected environment's own Python, keeping Torch and model dependencies out of the application process. `Transcription/Torch/` describes and discovers those runtimes; `scripts/install_qwen_runtime.py`, `scripts/install_moss_runtime.py`, and the GUI's `TorchSetupDialog` prepare them.
 - `TranscriptionLineBuilder` assembles timed subtitle lines. `TranscriptCutter`, `UtteranceSplitter`, `WordAlignment`, and `LineMerger` support segmentation, timing, and line assembly.
 - `TranscriptionCoordinator` plans chunks, calls the selected provider client, handles resume, abort and failure, and reports outcomes and progress. It can also process streamed segments as they arrive.
 

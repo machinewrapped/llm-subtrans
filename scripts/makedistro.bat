@@ -25,21 +25,11 @@ if %errorlevel% neq 0 (
     exit /b %errorlevel%
 )
 
-rem numpy and the packages built on it are optional imports of openai (pandas) and httpx's command-line client (pygments, PIL).
-rem The Qwen runtime brings its own copies, which a bundled numpy would shadow.
-rem cython is an optional import of pydantic.v1, present when the Qwen runtime is installed in the build environment.
 .\envsubtrans\scripts\pyinstaller --noconfirm ^
     --icon "assets/gui-subtrans.ico" ^
     --additional-hooks-dir="hooks" ^
     --exclude-module torch ^
     --exclude-module torchgen ^
-    --exclude-module numpy ^
-    --exclude-module scipy ^
-    --exclude-module numba ^
-    --exclude-module llvmlite ^
-    --exclude-module pandas ^
-    --exclude-module PIL ^
-    --exclude-module cython ^
     --add-data "theme/*;theme/" ^
     --add-data "assets/*;assets/" ^
     --add-data "instructions/*;instructions/" ^
@@ -49,14 +39,6 @@ rem cython is an optional import of pydantic.v1, present when the Qwen runtime i
 if errorlevel 1 (
     echo PyInstaller failed. Exiting...
     exit /b %errorlevel%
-)
-
-.\envsubtrans\Scripts\python.exe scripts\prepare_external_torch.py ^
-    --metadata-only ^
-    --metadata-path "dist\gui-subtrans\_internal\assets\frozen-python-compatibility.json"
-if errorlevel 1 (
-    echo Failed to write frozen Python compatibility metadata.
-    exit /b 1
 )
 
 .\envsubtrans\Scripts\python.exe scripts\collect_third_party_notices.py --dist-dir "dist\gui-subtrans"

@@ -2,8 +2,7 @@
 
 Pure logic with no Qt or Torch imports, shared by the setup wizard and any
 other consumer that needs to locate an interpreter for a new Torch
-environment.  The running interpreter is the compatibility reference for
-source runs; packaged builds use their frozen metadata instead.
+environment.
 """
 
 import glob
@@ -21,14 +20,7 @@ import regex
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Helpers.Resources import GetAppDir
 from PySubtrans.SubtitleError import SubtitleError
-from PySubtrans.Transcription.Torch.Validation import (
-    BuildCurrentCompatibility,
-    CompareCompatibility,
-    FindCompatibilityMetadata,
-    HasTorchPackage,
-    ProbeVenvCompatibility,
-    ReadCompatibilityMetadata,
-)
+from PySubtrans.Transcription.Torch.Validation import HasTorchPackage
 
 
 # Matches torch's own Requires-Python floor; an older interpreter can create
@@ -183,32 +175,11 @@ def CandidatePythons() -> list[str]:
     return unique_candidates
 
 
-def ExpectedCompatibility() -> dict[str, object]|None:
-    """Return the interpreter facts a selected environment has to match.
-
-    Packaged builds carry frozen metadata.  Source runs have none, so the
-    running interpreter is the reference instead -- Torch is loaded into this
-    process in both cases, so its wheels must match either way.
-    """
-    metadata_path = FindCompatibilityMetadata()
-    if metadata_path is not None:
-        metadata = ReadCompatibilityMetadata(metadata_path)
-        compatibility = metadata.get("compatibility")
-        return compatibility if isinstance(compatibility, dict) else None
-
-    if getattr(sys, 'frozen', False):
-        return None
-
-    return BuildCurrentCompatibility()
-
-
 def FindCompatiblePython() -> str|None:
     """Locate an interpreter to build the Torch environment with.
 
-    Torch is loaded into the frozen application's process, so its wheels must
-    match the build's Python ABI, OS, architecture and pointer width.  Prefer
-    an exact match and only fall back to any interpreter new enough for torch,
-    so a mismatched environment is a deliberate last resort.
+    Source runs use the current interpreter. Frozen builds use the first
+    candidate interpreter that meets Torch's minimum Python version.
     """
     # Prefer the running interpreter if it's not frozen; the project's own
     # minimum supported version already satisfies torch's floor.
@@ -216,20 +187,6 @@ def FindCompatiblePython() -> str|None:
         return sys.executable
 
     candidates = CandidatePythons()
-    try:
-        compatibility = ExpectedCompatibility()
-    except (ValueError, RuntimeError) as error:
-        logging.warning("Could not read frozen Python compatibility metadata: %s", error)
-        compatibility = None
-
-    if compatibility is not None:
-        for candidate in candidates:
-            actual = ProbeVenvCompatibility(Path(candidate))
-            if actual is not None and not CompareCompatibility(actual, compatibility):
-                return candidate
-
-        logging.warning("No installed Python matches the frozen build's interpreter.")
-
     for candidate in candidates:
         if PythonMeetsMinimum(candidate):
             return candidate
@@ -241,8 +198,7 @@ def _PyLauncherInterpreters(py_launcher : str) -> list[str]:
     """Enumerate the interpreters registered with the Windows ``py`` launcher.
 
     Versioned names such as ``python3.12`` are rarely on PATH on Windows, so the
-    launcher's own list is the reliable way to find an interpreter that matches
-    the frozen build's ABI.
+    launcher's own list is a useful source of candidate interpreters.
     """
     try:
         result = subprocess.run(

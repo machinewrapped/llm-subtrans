@@ -142,35 +142,8 @@ class TestTorchSetupSelection(LoggedTestCase):
         finally:
             self._dispose(dialog)
 
-    def test_validate_warns_but_accepts_on_abi_mismatch(self) -> None:
-        """A mismatched interpreter produces a strong warning, not a blocker."""
-        dialog = self._new_dialog()
-
-        try:
-            with tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                (root / 'torch').mkdir()
-                frozen = {
-                    'python_implementation': 'cpython', 'python_abi': 'cpython-312',
-                    'python_version': '3.12', 'os': 'Windows', 'architecture': 'AMD64', 'pointer_bits': 64,
-                }
-                actual = dict(frozen)
-                actual['python_abi'] = 'cpython-313'
-                actual['python_version'] = '3.13'
-
-                with patch('GuiSubtrans.Widgets.TorchSetupDialog.ExpectedCompatibility', return_value=frozen), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=root / 'python.exe'), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.ProbeVenvCompatibility', return_value=actual), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning:
-                    accepted = dialog._validate_and_accept(directory)
-
-            self.assertLoggedTrue('mismatched environment is still accepted', accepted)
-            self.assertLoggedEqual('user is warned about compatibility', 1, warning.call_count)
-        finally:
-            self._dispose(dialog)
-
-    def test_validate_warns_on_mismatch_in_source_run(self) -> None:
-        """A source run warns about a mismatched manually selected environment."""
+    def test_validate_accepts_environment_without_compatibility_warning(self) -> None:
+        """A worker environment is accepted without an in-process ABI warning."""
         dialog = self._new_dialog()
 
         try:
@@ -178,33 +151,11 @@ class TestTorchSetupSelection(LoggedTestCase):
                 root = Path(directory)
                 (root / 'torch').mkdir()
 
-                with patch('GuiSubtrans.Widgets.TorchSetupDialog.ExpectedCompatibility', return_value={'python_abi': 'cpython-312', 'python_version': '3.12'}), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=root / 'python.exe'), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.ProbeVenvCompatibility', return_value={'python_abi': 'cpython-313', 'python_version': '3.13'}), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning:
+                with patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning:
                     accepted = dialog._validate_and_accept(directory)
 
-            self.assertLoggedTrue('mismatched source environment is still accepted', accepted)
-            self.assertLoggedEqual('user is warned', 1, warning.call_count)
-        finally:
-            self._dispose(dialog)
-
-    def test_validate_skips_probe_when_source_path_has_no_interpreter(self) -> None:
-        """A source path without a discoverable interpreter does not warn spuriously."""
-        dialog = self._new_dialog()
-
-        try:
-            with tempfile.TemporaryDirectory() as directory:
-                root = Path(directory)
-                (root / 'torch').mkdir()
-
-                with patch('GuiSubtrans.Widgets.TorchSetupDialog.ExpectedCompatibility', return_value={'python_abi': 'cpython-313'}), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=None), \
-                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning:
-                    accepted = dialog._validate_and_accept(directory)
-
-            self.assertLoggedTrue('environment without interpreter is accepted in source mode', accepted)
-            self.assertLoggedEqual('no spurious warning', 0, warning.call_count)
+            self.assertLoggedTrue('selected environment is accepted', accepted)
+            self.assertLoggedEqual('no compatibility warning', 0, warning.call_count)
         finally:
             self._dispose(dialog)
 

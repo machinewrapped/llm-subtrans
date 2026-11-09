@@ -10,7 +10,7 @@ from PySubtrans.Helpers.SubtitleHelpers import MergeTranslations
 from PySubtrans.Helpers.Text import IsTextContentEqual
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.SubtitleError import NoTranslationError, TranslationError
-from PySubtrans.ValidationError import UntranslatedLinesError
+from PySubtrans.ValidationError import RepeatedResponseLabelError, UntranslatedLinesError
 from PySubtrans.SubtitleValidator import SubtitleValidator
 from PySubtrans.Translation import Translation
 
@@ -207,7 +207,18 @@ class TranslationParser:
             return [ NoTranslationError("Failed to extract translations from response", translation=self.text) ]
 
         validator = SubtitleValidator(self.options)
-        return list(validator.ValidateTranslations(self.translated))
+        errors : list[TranslationError] = list(validator.ValidateTranslations(self.translated))
+
+        # Check the extracted bodies so every format uses the same validation.
+        label = regex.compile(rf"^[^\S\r\n]*{regex.escape(self.task_type)}[>:][^\S\r\n]*\r?$", regex.MULTILINE)
+        repeated_labels = [line for line in self.translated if line.text and label.search(line.text)]
+        if repeated_labels:
+            errors.append(RepeatedResponseLabelError(
+                _("Unexpected response label {label} inside translated subtitle text").format(label=self.task_type),
+                lines=repeated_labels,
+            ))
+
+        return errors
 
     def _fix_unclosed_tags(self):
         """

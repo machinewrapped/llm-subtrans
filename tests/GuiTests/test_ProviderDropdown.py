@@ -1,4 +1,6 @@
 """Verify the provider selector groups providers by kind under headings that cannot be selected."""
+from unittest.mock import patch
+
 from tests.GuiTestSupport import ConfigureOffscreenPlatform
 
 ConfigureOffscreenPlatform()
@@ -7,9 +9,10 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QStandardItemModel
 from PySide6.QtWidgets import QApplication
 
-from GuiSubtrans.GuiHelpers import GetProviderDropdownValues
+from GuiSubtrans.GuiHelpers import GetProviderDropdownValues, GetTranscriptionProviderDropdownValues
 from GuiSubtrans.Widgets.OptionsWidgets import DropdownHeader, DropdownOptionWidget
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider, TranscriptionProviderKind
 from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
 
@@ -43,6 +46,35 @@ class TestProviderDropdownValues(LoggedTestCase):
     def test_single_kind_has_no_headings(self) -> None:
         names = [_DropdownGatewayProvider.name]
         self.assertLoggedEqual("names unchanged", names, GetProviderDropdownValues(names))
+
+
+class TestTranscriptionProviderDropdownValues(LoggedTestCase):
+    """Transcription providers are grouped by where they run."""
+
+    def test_cloud_and_local_groups(self) -> None:
+        class Cloud:
+            kind = TranscriptionProviderKind.Cloud
+
+        class Local:
+            kind = TranscriptionProviderKind.Local
+
+        providers = {'Local A': Local, 'Cloud A': Cloud, 'Local B': Local}
+        with patch.object(TranscriptionProvider, 'get_providers', return_value=providers):
+            values = GetTranscriptionProviderDropdownValues(list(providers))
+
+        self.assertLoggedEqual("grouped provider order", ['Cloud A', 'Local A', 'Local B'],
+                               [value for value in values if not isinstance(value, DropdownHeader)])
+        self.assertLoggedEqual("one header per group", 2, sum(isinstance(value, DropdownHeader) for value in values))
+        self.assertLoggedIsInstance("first group has a header", values[0], DropdownHeader)
+        self.assertLoggedIsInstance("second group has a header", values[2], DropdownHeader)
+
+    def test_single_group_has_no_header(self) -> None:
+        class Cloud:
+            kind = TranscriptionProviderKind.Cloud
+
+        with patch.object(TranscriptionProvider, 'get_providers', return_value={'Cloud A': Cloud}):
+            values = GetTranscriptionProviderDropdownValues(['Cloud A'])
+        self.assertLoggedEqual("single group unchanged", ['Cloud A'], values)
 
 
 class TestDropdownHeaders(LoggedTestCase):

@@ -4,7 +4,7 @@ import os
 from collections.abc import Callable
 from typing import Any
 
-from PySide6.QtCore import QTimer, Qt, Signal, Slot
+from PySide6.QtCore import QSignalBlocker, QTimer, Qt, Signal, Slot
 from PySide6.QtGui import QColor, QDragEnterEvent, QDropEvent, QPalette
 from PySide6.QtWidgets import (
     QComboBox,
@@ -25,10 +25,12 @@ from PySide6.QtWidgets import (
 )
 
 from GuiSubtrans.Commands.TranscribeMediaCommand import TranscribeMediaCommand
-from GuiSubtrans.GuiHelpers import FileKind, GetDroppedFile
+from GuiSubtrans.GuiHelpers import FileKind, GetDroppedFile, GetTranscriptionProviderDropdownValues
 from GuiSubtrans.SettingsDialog import SettingsDialog
 from GuiSubtrans.Widgets.OptionsWidgets import (
+    AddDropdownHeader,
     CreateOptionWidget,
+    DropdownHeader,
     OptionWidget,
     ParseOptionDefinition,
 )
@@ -295,16 +297,20 @@ class TranscriptionDialog(QDialog):
     def _on_providers_loaded(self, names : list) -> None:
         """Populate the provider combo once module imports complete."""
         self.loader = None
-        self.provider_combo.addItems(names)
+        with QSignalBlocker(self.provider_combo):
+            for value in GetTranscriptionProviderDropdownValues(names):
+                if isinstance(value, DropdownHeader):
+                    AddDropdownHeader(self.provider_combo, value)
+                else:
+                    self.provider_combo.addItem(value)
 
         if names:
             saved = self.global_options.get_str('transcription_provider')
             choice = saved if isinstance(saved, str) and saved in names else names[0]
 
-            if self.provider_combo.currentText() != choice:
+            with QSignalBlocker(self.provider_combo):
                 self.provider_combo.setCurrentText(choice)
-            else:
-                self._on_provider_changed(choice)
+            self._on_provider_changed(choice)
 
         if self.media_path and os.path.isfile(self.media_path) and self.track_combo.count() == 0:
             self._load_tracks()

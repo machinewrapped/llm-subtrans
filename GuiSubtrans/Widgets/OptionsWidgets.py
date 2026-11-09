@@ -300,7 +300,7 @@ class DropdownOptionWidget(OptionWidget):
             selected_value_name = GetValueName(selected_value) if selected_value else None
             for value in values:
                 if isinstance(value, DropdownHeader):
-                    self._add_header(value)
+                    AddDropdownHeader(self.combo_box, value)
                     continue
 
                 value_name = GetValueName(value)
@@ -325,32 +325,32 @@ class DropdownOptionWidget(OptionWidget):
     def SetVisible(self, is_visible : bool):
         self.combo_box.setVisible(is_visible)
 
-    def _add_header(self, header : DropdownHeader) -> None:
-        """
-        Add a heading row that cannot be selected, separated from the group above it.
-        """
-        if self.combo_box.count() > 0:
-            self.combo_box.insertSeparator(self.combo_box.count())
+def AddDropdownHeader(combo_box : QComboBox, header : DropdownHeader) -> None:
+    """
+    Add a heading row that cannot be selected, separated from the group above it.
+    """
+    if combo_box.count() > 0:
+        combo_box.insertSeparator(combo_box.count())
 
-        self.combo_box.addItem(header.label)
+    combo_box.addItem(header.label)
 
-        model = self.combo_box.model()
-        if not isinstance(model, QStandardItemModel):
-            return
+    model = combo_box.model()
+    if not isinstance(model, QStandardItemModel):
+        return
 
-        item = model.item(self.combo_box.count() - 1)
-        item.setFlags(item.flags() & ~(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled))
+    item = model.item(combo_box.count() - 1)
+    item.setFlags(item.flags() & ~(Qt.ItemFlag.ItemIsSelectable | Qt.ItemFlag.ItemIsEnabled))
 
-        font = item.font()
-        font.setBold(True)
-        item.setFont(font)
+    font = item.font()
+    font.setBold(True)
+    item.setFont(font)
 
-        # A disabled row is drawn greyed out, so set the colours explicitly to read as a heading instead
-        palette = self.combo_box.palette()
-        band = QColor(palette.color(QPalette.ColorRole.Highlight))
-        band.setAlpha(48)
-        item.setBackground(QBrush(band))
-        item.setForeground(QBrush(palette.color(QPalette.ColorRole.Text)))
+    # A disabled row is drawn greyed out, so set the colours explicitly to read as a heading instead
+    palette = combo_box.palette()
+    band = QColor(palette.color(QPalette.ColorRole.Highlight))
+    band.setAlpha(48)
+    item.setBackground(QBrush(band))
+    item.setForeground(QBrush(palette.color(QPalette.ColorRole.Text)))
 
 class ButtonOptionWidget(OptionWidget):
     """A single action button. The action callable receives the current value

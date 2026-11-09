@@ -2,7 +2,7 @@ import logging
 from collections.abc import Callable
 from PySide6.QtCore import Slot
 from PySide6.QtWidgets import (QDialog, QVBoxLayout, QTabWidget, QDialogButtonBox, QWidget, QFormLayout, QFrame, QMessageBox)
-from GuiSubtrans.GuiHelpers import ClearForm, GetProviderDropdownValues, GetThemeNames
+from GuiSubtrans.GuiHelpers import ClearForm, GetProviderDropdownValues, GetThemeNames, GetTranscriptionProviderDropdownValues
 
 from GuiSubtrans.Widgets.ChatGPTSignInDialog import ChatGPTSignInDialog
 from GuiSubtrans.Widgets.OptionsWidgets import CreateOptionWidget, OptionWidget, ParseOptionDefinition
@@ -566,7 +566,7 @@ class SettingsDialog(QDialog):
         schema = self.SECTIONS[self.TRANSCRIPTION_SECTION]['transcription_provider']
         _key_type, tooltip, placeholder = ParseOptionDefinition(schema)
         self.SECTIONS[self.TRANSCRIPTION_SECTION]['transcription_provider'] = (
-            list(names),
+            GetTranscriptionProviderDropdownValues(names),
             tooltip,
             placeholder)
 

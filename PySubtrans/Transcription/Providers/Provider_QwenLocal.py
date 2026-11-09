@@ -11,7 +11,7 @@ from PySubtrans.Transcription.Providers.Clients.QwenLocalClient import QwenLocal
 from PySubtrans.Transcription.Torch.QwenRuntime import NeedsQwenRuntime
 from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
-from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
+from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider, TranscriptionProviderKind
 from PySubtrans.Transcription.WordAlignment import WordCoverage
 
 _QWEN_CHECKPOINTS : list[str] = [
@@ -37,6 +37,7 @@ try:
         CPU inference.
         """
         name = "Qwen Local"
+        kind = TranscriptionProviderKind.Local
 
         information = _("""
         <p>Transcribe audio on your local machine with Qwen3-ASR.</p>

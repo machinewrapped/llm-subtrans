@@ -17,7 +17,7 @@ from PySubtrans.Transcription.Torch.MossRuntime import (
     MOSS_MODEL,
 )
 from PySubtrans.Transcription.TranscriptionClient import TranscriptionClient
-from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
+from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider, TranscriptionProviderKind
 
 try:
     class MossLocalProvider(TranscriptionProvider):
@@ -29,6 +29,7 @@ try:
         Segments come back with speaker labels and no word timings.
         """
         name = "MOSS Local"
+        kind = TranscriptionProviderKind.Local
 
         information = _("""
         <p>Transcribe audio on your local machine with MOSS-Transcribe-Diarize, which also identifies speakers.</p>

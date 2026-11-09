@@ -1,7 +1,7 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: LLM-Subtrans\n"
-"POT-Creation-Date: 2026-10-30 05:33+0000\n"
+"POT-Creation-Date: 2026-11-09 21:25+0000\n"
 "PO-Revision-Date: 2025-08-09 21:00+0000\n"
 "Last-Translator: AI Assistant\n"
 "Language-Team: Czech\n"
@@ -26,7 +26,11 @@ msgstr ""
 "            <p>Gemini Transcribe má přísné limity požadavků a denní limity, proto se doporučují velké dávky.</p>\n"
 "            "
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:41
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:34
+msgid "\n        <p>Transcribe audio on your local machine with MOSS-Transcribe-Diarize, which also identifies speakers.</p>\n        <p>The first transcription downloads model weights (~2 GB) to the Hugging Face cache.\n        Subsequent runs reuse the cached files.</p>\n        <p>MOSS returns short timed segments, without word timings.</p>\n        "
+msgstr "\n        <p>Přepisujte zvuk na svém místním počítači pomocí MOSS-Transcribe-Diarize, který také identifikuje mluvčí.</p>\n        <p>Při prvním přepisu se stáhnou váhy modelu (~2 GB) do mezipaměti Hugging Face.\n        Následná spuštění již znovu využívají soubory v mezipaměti.</p>\n        <p>MOSS vrací krátké časované segmenty bez časování jednotlivých slov.</p>\n        "
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:42
 msgid "\n        <p>Transcribe audio on your local machine with Qwen3-ASR.</p>\n        <p>The first transcription downloads model weights (~6 GB) to the\n        Hugging Face cache. Subsequent runs reuse the cached files.</p>\n        "
 msgstr ""
 "\n"
@@ -110,17 +114,21 @@ msgstr " z {}"
 
 #: PySubtrans/Auth/ChatGPTAuth.py:79
 msgid "'{app}' cannot be used as an application name for Sign in with ChatGPT"
-msgstr ""
+msgstr "'{app}' nelze použít jako název aplikace pro Přihlášení přes ChatGPT"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:201
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:202
 msgid "'{}' cannot provide subtitle timings (no word or segment timestamps). Transcription without timings has no value here, so nothing was requested and no credits were spent."
 msgstr "'{}' nemůže poskytnout časování titulků (žádná časová razítka slov ani segmentů). Transkripce bez časování zde nemá žádnou hodnotu, takže nebylo nic vyžádáno a nebyly vynaloženy žádné kredity."
 
-#: GuiSubtrans/Widgets/Widgets.py:155
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:775
+msgid "({:.1f}s)"
+msgstr "({:.1f} s)"
+
+#: GuiSubtrans/Widgets/Widgets.py:158
 msgid ", Speaker: {speaker}"
 msgstr ", Mluvčí: {speaker}"
 
-#: GuiSubtrans/Widgets/Widgets.py:153
+#: GuiSubtrans/Widgets/Widgets.py:156
 msgid ", Style: {style}"
 msgstr ", Styl: {style}"
 
@@ -129,11 +137,15 @@ msgstr ", Styl: {style}"
 msgid "1 line"
 msgstr "1 řádek"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:150
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:145
 msgid "<p><b>Qwen runtime required:</b> The Torch environment does not include the Qwen speech recognition packages. Earlier versions bundled them with the application.</p>"
 msgstr "<p><b>Qwen runtime vyžadován:</b> Prostředí Torch neobsahuje balíčky pro rozpoznávání řeči Qwen. Starší verze je měly zabudované v aplikaci.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:145
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:130
+msgid "<p><b>Setup required:</b> MOSS runs on PyTorch in its own Python environment, installed separately from the application. The correct Torch build depends on your operating system and hardware.</p>"
+msgstr "<p><b>Je vyžadováno nastavení:</b> MOSS běží na PyTorchu ve svém vlastním prostředí Pythonu, instalovaném odděleně od aplikace. Správné sestavení knihovny Torch závisí na vašem operačním systému a hardwaru.</p>"
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:140
 msgid "<p><b>Setup required:</b> Qwen3-ASR runs on PyTorch and the Qwen speech recognition packages, which are installed separately from the application. The correct Torch build depends on your operating system and hardware.</p>"
 msgstr "<p><b>Nastavení vyžadováno:</b> Qwen3-ASR běží na PyTorchu a balíčcích pro rozpoznávání řeči Qwen, které jsou instalovány odděleně od aplikace. Správná sestavení Torchu závisí na vašem operačním systému a hardwaru.</p>"
 
@@ -145,23 +157,24 @@ msgstr "<p><b>Celý klip</b> přepíše celý soubor v jediném požadavku, tak�
 msgid "<p><b>Whole clip</b> transcribes the entire file in a single request. With speaker identification off, there is little reason to do this.</p>"
 msgstr "<p><b>Celý klip</b> přepíše celý soubor v jediném požadavku. Když je identifikace mluvčích vypnutá, není důvod to dělat.</p>"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:145
+#: PySubtrans/Transcription/TranscriptionProvider.py:153
 msgid "<p>Audio extraction needs <a href=\"https://ffmpeg.org/download.html\">ffmpeg</a> installed."
 msgstr "<p>Extrakce zvuku vyžaduje nainstalovaný <a href=\\\"https://ffmpeg.org/download.html\\\">ffmpeg</a>."
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:160
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:155
 msgid "<p>CPU inference is disabled. Enable it if you accept the performance implications.</p>"
 msgstr "<p>Inference na CPU je zakázána. Povolte ji, pokud přijímáte dopady na výkon.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:151
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:146
 msgid "<p>Click <b>{button}</b> and select the same environment to install them into it.</p>"
 msgstr "<p>Klikněte na <b>{button}</b> a vyberte stejné prostředí pro jejich instalaci do něj.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:146
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:131
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:141
 msgid "<p>Click <b>{button}</b> to detect available hardware and install them.</p>"
 msgstr "<p>Klikněte na <b>{button}</b> pro detekci dostupného hardwaru a jejich instalaci.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:158
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:153
 msgid "<p>Running on CPU: transcription will work but likely much slower than on a GPU.</p>"
 msgstr "<p>Běh na CPU: přepis bude fungovat, ale pravděpodobně mnohem pomaleji než na GPU.</p>"
 
@@ -169,11 +182,11 @@ msgstr "<p>Běh na CPU: přepis bude fungovat, ale pravděpodobně mnohem pomale
 msgid "<p>Speaker IDs reset with each chunk, which may cause the translator to misinterpret dialogue. Transcribing the whole clip may help maintain speaker consistency.</p>"
 msgstr "<p>ID mluvčích se u každého bloku resetují, což může způsobit, že překladatel špatně interpretuje dialog. Přepis celého klipu může pomoci zachovat konzistenci mluvčích.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:155
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:150
 msgid "<p>The first transcription will download model weights (~6 GB) to the Hugging Face cache.</p>"
 msgstr "<p>První přepis stáhne váhy modelu (~6 GB) do mezipaměti Hugging Face.</p>"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:154
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:149
 msgid "<p>Torch is configured but has not been verified by a transcription yet.</p>"
 msgstr "<p>Torch je nastaven, ale zatím nebyl ověřen přepisem.</p>"
 
@@ -197,17 +210,9 @@ msgstr "API klíč Meta Model (MODEL_API_KEY)"
 msgid "A Mistral API key is required to use this provider (https://console.mistral.ai/api-keys/)"
 msgstr "Pro použití tohoto poskytovatele je vyžadován Mistral API klíč (https://console.mistral.ai/api-keys/)"
 
-#: PySubtrans/Transcription/Torch/Runtime.py:128
-msgid "A different external Torch installation was already selected. Restart the application after changing Torch installation settings."
-msgstr "Již byla vybrána jiná externí instalace Torch. Po změně nastavení instalace Torch restartujte aplikaci."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:239
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:229
 msgid "A new Python virtual environment will be created here."
 msgstr "Zde bude vytvořeno nové virtuální prostředí Pythonu."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:719
-msgid "ABI compatibility check passed."
-msgstr "Kontrola kompatibility ABI proběhla úspěšně."
 
 #: GuiSubtrans/NewProjectSettings.py:33
 #: GuiSubtrans/Widgets/ProviderSettingsForm.py:63
@@ -219,11 +224,11 @@ msgstr "Kontrola kompatibility ABI proběhla úspěšně."
 msgid "AI model to use as the translator"
 msgstr "AI model pro použití jako překladač"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:96
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:80
 msgid "AMD"
 msgstr "AMD"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:97
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:81
 msgid "AMD selected"
 msgstr "Vybráno AMD"
 
@@ -231,7 +236,7 @@ msgstr "Vybráno AMD"
 #: PySubtrans/Providers/Provider_Azure.py:95
 #: PySubtrans/Providers/Provider_DeepSeek.py:127
 #: PySubtrans/Providers/Provider_Gemini.py:128
-#: PySubtrans/Providers/Provider_Mistral.py:142
+#: PySubtrans/Providers/Provider_Mistral.py:140
 #: PySubtrans/Providers/Provider_OpenAI.py:314
 #: PySubtrans/Providers/Provider_OpenRouter.py:194
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:133
@@ -271,7 +276,7 @@ msgid "API key if needed (this is normally not needed for a local server)"
 msgstr "API klíč, pokud je potřeba (pro místní server obvykle není potřeba)"
 
 #: PySubtrans/Providers/Clients/AzureOpenAIClient.py:25
-#: PySubtrans/Providers/Clients/MistralClient.py:25
+#: PySubtrans/Providers/Clients/MistralClient.py:36
 #: PySubtrans/Providers/Clients/OpenAIClient.py:31
 msgid "API key must be set in .env or provided as an argument"
 msgstr "Klíč API musí být nastaven v .env nebo poskytnut jako argument"
@@ -288,11 +293,11 @@ msgstr "Verze API musí být nastavena v .env nebo poskytnuta jako argument"
 msgid "AWS region must be set in .env or provided as an argument"
 msgstr "Region AWS musí být nastaven v .env nebo poskytnut jako argument"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:207
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:209
 msgid "Abort"
 msgstr "Přerušit"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:814
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:843
 msgid "Aborted - partial results ({} lines)."
 msgstr "Přerušeno – částečné výsledky ({} řádků)."
 
@@ -310,7 +315,7 @@ msgstr "Přerušeno zahřívání překladatelského poskytovatele"
 msgid "Aborted {type}"
 msgstr "Přerušeno {type}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:723
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:729
 msgid "Aborting..."
 msgstr "Přerušování…"
 
@@ -335,37 +340,33 @@ msgstr "Kvóta účtu byla dosažena, prosím, upgradujte si plán"
 msgid "Account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Kvóta účtu byla dosažena, prosím, upgradujte si plán nebo počkejte na jeho obnovení"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:142
+#: GuiSubtrans/Widgets/ProjectSettings.py:145
 msgid "Add RTL Markers"
 msgstr "Přidat RTL značky"
 
-#: GuiSubtrans/SettingsDialog.py:47
+#: GuiSubtrans/SettingsDialog.py:48
 msgid "Add RTL markers around translated lines that contain primarily right-to-left script on save"
 msgstr "Při uložení přidat značky RTL kolem přeložených řádků, které obsahují primárně písmo zprava doleva"
 
-#: GuiSubtrans/SettingsDialog.py:89
+#: GuiSubtrans/SettingsDialog.py:90
 msgid "Add line breaks to long single lines (post-process)"
 msgstr "Přidat zalomení řádků do dlouhých samostatných řádků (následné zpracování)"
 
-#: GuiSubtrans/SettingsDialog.py:84
+#: GuiSubtrans/SettingsDialog.py:85
 msgid "Add line breaks to text with dialog markers"
 msgstr "Přidat zalomení řádků do textu s dialogovými značkami"
 
-#: GuiSubtrans/SettingsDialog.py:118
+#: GuiSubtrans/SettingsDialog.py:121
 msgid "Advanced"
 msgstr "Pokročilé"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:111
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:106
 msgid "Aligner model for word timestamps"
 msgstr "Model pro zarovnání časových razítek slov"
 
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:268
-msgid "Alignment failed, timestamps will be approximate"
-msgstr "Zarovnání selhalo, časové údaje budou přibližné"
-
 #: GuiSubtrans/ProjectActions.py:134 GuiSubtrans/ProjectActions.py:168
 #: GuiSubtrans/ProjectActions.py:170
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:472
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:478
 msgid "All Files"
 msgstr "Všechny soubory"
 
@@ -377,11 +378,12 @@ msgstr "Všechny dávky přeloženy"
 msgid "All scenes are fully translated"
 msgstr "Všechny scény jsou plně přeloženy"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:232
+#: PySubtrans/Transcription/TranscriptionProvider.py:240
 msgid "Allow brief lines by different speakers to be combined into a single line of dialogue"
 msgstr "Povolit spojení krátkých řádků různých mluvčích do jednoho řádku dialogu"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:114
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:98
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:109
 msgid "Allow emergency CPU fallback (may be slow)"
 msgstr "Povolit nouzové přepnutí na CPU (může být pomalé)"
 
@@ -470,7 +472,7 @@ msgstr "Anthropic SDK není nainstalováno. Poskytovatel Claude nebude k dispozi
 msgid "Anthropic account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Kvóta účtu Anthropic byla dosažena, prosím, upgradujte si plán nebo počkejte na jeho obnovení"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:79
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:81
 msgid "Apply the same post-processing used for translations (dashes, filler words, line breaks, etc.)"
 msgstr "Použít stejné následné zpracování jako u překladů (pomlčky, výplňová slova, zalomení řádků apod.)"
 
@@ -482,7 +484,7 @@ msgstr "Pokusit se komunikovat s koncovým bodem pomocí formátu chatu"
 msgid "Audio extraction failed: {}"
 msgstr "Extrakce zvuku se nezdařila: {}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:156
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:158
 msgid "Audio track"
 msgstr "Zvuková stopa"
 
@@ -502,19 +504,19 @@ msgstr "Automaticky vybrán model {model} pro {provider}, aby byla zajištěna p
 msgid "Auto-splitting batch {scene} batch {batch}"
 msgstr "Automatické rozdělování dávky {scene} dávka {batch}"
 
-#: GuiSubtrans/SettingsDialog.py:52
+#: GuiSubtrans/SettingsDialog.py:53
 msgid "Automatically save the project/translation after each scene is translated"
 msgstr "Automaticky uložit projekt/překlad po přeložení každé scény"
 
-#: GuiSubtrans/SettingsDialog.py:98
+#: GuiSubtrans/SettingsDialog.py:99
 msgid "Avoid creating a new batch smaller than this"
 msgstr "Vyhnout se vytváření nové dávky menší než tato"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:159
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:145
 msgid "Back"
 msgstr "Zpět"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:208
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:210
 msgid "Back to Settings"
 msgstr "Zpět do Nastavení"
 
@@ -531,25 +533,21 @@ msgstr "Batch {batch} ve scéně {scene} není přeložen"
 msgid "Batch {num}"
 msgstr "Dávka {num}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:197
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:241
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:151
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:187
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:231
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:153
 msgid "Browse..."
 msgstr "Procházet…"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:145
+#: GuiSubtrans/Widgets/ProjectSettings.py:148
 msgid "Build Terminology Map"
 msgstr "Vytvořit mapu terminologie"
 
-#: GuiSubtrans/NewProjectSettings.py:38 GuiSubtrans/SettingsDialog.py:45
+#: GuiSubtrans/NewProjectSettings.py:38 GuiSubtrans/SettingsDialog.py:46
 msgid "Build a terminology map during translation to keep terminology consistent"
 msgstr "Během překladu vytvořte mapu terminologie pro zajištění konzistence."
 
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:186
-msgid "CPU inference is disabled. Enable 'allow_cpu_fallback' in Qwen Local advanced settings to give consent for this emergency fallback."
-msgstr "Inference na CPU je zakázána. Povolte 'allow_cpu_fallback' v pokročilých nastaveních Qwen Local, abyste souhlasili s tímto nouzovým přepnutím."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:114
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:98
 msgid "CPU selected -- transcription will work but will be significantly slower than with a GPU"
 msgstr "Vybráno CPU -- přepis bude fungovat, ale bude výrazně pomalejší než s GPU"
 
@@ -557,7 +555,7 @@ msgstr "Vybráno CPU -- přepis bude fungovat, ale bude výrazně pomalejší ne
 msgid "Can only autosplit a single batch"
 msgstr "Lze automaticky rozdělit pouze jednu dávku"
 
-#: GuiSubtrans/ViewModel/ViewModel.py:109
+#: GuiSubtrans/ViewModel/ViewModel.py:110
 msgid "Can only model subtitle files"
 msgstr "Lze modelovat pouze soubory s titulky"
 
@@ -658,31 +656,35 @@ msgstr "Zkontrolujte, zda je API klíč autorizován, a zkuste to znovu"
 msgid "CheckProviderSettings: {error}"
 msgstr "KontrolaNastaveníPoskytovatele: {error}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:231
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:221
 msgid "Choose a folder for the new environment. Hardware detection selects the Torch build automatically."
 msgstr "Vyberte složku pro nové prostředí. Detekce hardwaru vybere verzi Torch automaticky."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:470
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:464
 msgid "Choose an installation folder before continuing."
 msgstr "Před pokračováním vyberte instalační složku."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:357
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:347
 msgid "Choose installation options"
 msgstr "Vyberte možnosti instalace"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:179
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:165
 msgid "Choose one option, then click Continue. You will not need to complete both."
 msgstr "Vyberte jednu možnost a poté klikněte na Pokračovat. Nebudete muset dokončit obě."
 
-#: PySubtrans/Transcription/TranscriptionLines.py:176
+#: GuiSubtrans/SettingsDialog.py:369
+msgid "Choose which cloud providers and gateways appear in the translation provider lists."
+msgstr "Vyberte, kteří cloudoví poskytovatelé a brány se mají zobrazovat v seznamech poskytovatelů překladu."
+
+#: PySubtrans/Transcription/TranscriptionLines.py:167
 msgid "Chunk {}: low-confidence segment ({:.0%} no-speech probability): '{}'"
 msgstr "Segment {}: segment s nízkou jistotou ({:.0%} pravděpodobnost absence řeči): '{}'"
 
-#: PySubtrans/Transcription/TranscriptionLines.py:80
+#: PySubtrans/Transcription/TranscriptionLines.py:74
 msgid "Chunk {}: no word timings match the transcript, so lines are placed by length"
 msgstr "Část {}: žádné časové údaje slov neodpovídají přepisu, proto jsou řádky umístěny podle délky"
 
-#: GuiSubtrans/SettingsDialog.py:66
+#: GuiSubtrans/SettingsDialog.py:67
 msgid "Clean transcribed lines with the same normalizations used for loaded subtitles (dashes, filler words, line breaks)"
 msgstr "Vyčistit transkribované řádky stejnými normalizacemi jako u načtených titulků (pomlčky, výplňová slova, zalomení řádků)"
 
@@ -698,15 +700,23 @@ msgstr "Chyba klienta: {status_code} {text}"
 msgid "Client is not initialized"
 msgstr "Klient není inicializován"
 
-#: GuiSubtrans/GuiHelpers.py:32
+#: GuiSubtrans/GuiHelpers.py:72
+msgid "Cloud"
+msgstr "Cloud"
+
+#: GuiSubtrans/GuiHelpers.py:34
 msgid "Cloud platforms"
 msgstr "Cloudové platformy"
 
-#: GuiSubtrans/SettingsDialog.py:93
+#: GuiSubtrans/SettingsDialog.py:375
+msgid "Cloud providers"
+msgstr "Cloudoví poskytovatelé"
+
+#: GuiSubtrans/SettingsDialog.py:94
 msgid "Comma-separated list of filler_words to remove"
 msgstr "Čárkami oddělený seznam výplňkových slov k odstranění"
 
-#: GuiSubtrans/SettingsDialog.py:94
+#: GuiSubtrans/SettingsDialog.py:95
 msgid "Comma-separated list of titles whose full stop does not end a sentence, such as Mr or Dr (case-sensitive)"
 msgstr "Seznam oddělený čárkami názvů titulů, jejichž tečka neznamená konec věty, jako jsou Mr nebo Dr (citlivé na velikost písmen)"
 
@@ -718,15 +728,20 @@ msgstr "Dokončete přihlášení ve svém webovém prohlížeči a poté se sem
 msgid "Completed translation provider warm-up (%d providers)"
 msgstr "Dokončeno zahřívání překladatelského poskytovatele (%d poskytovatelů)"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:110
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:96
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:105
 msgid "Compute device for local inference"
 msgstr "Výpočetní zařízení pro lokální inferenci"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:160
+#: PySubtrans/Transcription/Torch/Discovery.py:70
+msgid "Configure an external Torch environment for local transcription"
+msgstr "Konfigurovat externí prostředí Torch pro místní přepis"
+
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:162
 msgid "Configure..."
 msgstr "Nastavit…"
 
-#: GuiSubtrans/SettingsDialog.py:100
+#: GuiSubtrans/SettingsDialog.py:101
 msgid "Consider a new scene to have started after this many seconds without subtitles"
 msgstr "Považovat novou scénu za zahájenou po tolika sekundách bez titulků"
 
@@ -761,7 +776,7 @@ msgstr "Obsah musí být řetězec pro Gemini"
 msgid "Context"
 msgstr "Kontext"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:160
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:146
 msgid "Continue"
 msgstr "Pokračovat"
 
@@ -769,15 +784,15 @@ msgstr "Pokračovat"
 msgid "Continue with ChatGPT"
 msgstr "Pokračovat s ChatGPT"
 
-#: GuiSubtrans/SettingsDialog.py:86
+#: GuiSubtrans/SettingsDialog.py:87
 msgid "Convert blocks of whitespace and Chinese Commas to newlines"
 msgstr "Převést bloky bílých znaků a čínských čárek na nové řádky"
 
-#: GuiSubtrans/SettingsDialog.py:88
+#: GuiSubtrans/SettingsDialog.py:89
 msgid "Convert wide dashes (emdash) to standard dashes"
 msgstr "Převést široké pomlčky (emdash) na standardní pomlčky"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:154
+#: GuiSubtrans/Widgets/ProjectSettings.py:157
 msgid "Copy From Another Project"
 msgstr "Kopírovat z jiného projektu"
 
@@ -785,27 +800,27 @@ msgstr "Kopírovat z jiného projektu"
 msgid "Could not detect subtitle format for file: {}"
 msgstr "Nelze detekovat formát titulků pro soubor: {}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:206
-msgid "Create a new environment and install Torch and the Qwen runtime"
-msgstr "Vytvořte nové prostředí a nainstalujte Torch a runtime Qwen"
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:196
+msgid "Create a new environment and install {runtime}"
+msgstr "Vytvořit nové prostředí a nainstalovat {runtime}"
 
-#: GuiSubtrans/SettingsDialog.py:50
+#: GuiSubtrans/SettingsDialog.py:51
 msgid "Create a project file to allow resuming or revising translation"
 msgstr "Vytvořit soubor projektu pro možnost pokračování nebo revize překladu"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:525
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:543
 msgid "Creating the private Python environment..."
 msgstr "Vytvářím soukromé Python prostředí..."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:526
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:544
 msgid "Creating virtual environment at {path}..."
 msgstr "Vytváření virtuálního prostředí v {path}..."
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:195
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:196
 msgid "Creating {} transcription client..."
 msgstr "Vytváření klienta pro přepis {}..."
 
-#: GuiSubtrans/GuiHelpers.py:34
+#: GuiSubtrans/GuiHelpers.py:36
 msgid "Custom"
 msgstr "Vlastní"
 
@@ -838,7 +853,7 @@ msgstr "Mazání řádků {lines}"
 msgid "Deployment name must be set in .env or provided as an argument"
 msgstr "Název nasazení musí být nastaven v .env nebo poskytnut jako argument"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:143
+#: GuiSubtrans/Widgets/ProjectSettings.py:146
 msgid "Description"
 msgstr "Popis"
 
@@ -846,13 +861,9 @@ msgstr "Popis"
 msgid "Detailed instructions for the translator"
 msgstr "Podrobné pokyny pro překladatele"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:251
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:241
 msgid "Detected hardware"
 msgstr "Detekovaný hardware"
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:260
-msgid "Detected language unsupported by aligner, retrying with English"
-msgstr "Detekovaný jazyk aligner nepodporuje, opakuji s angličtinou"
 
 #: PySubtrans/SubtitleFormatRegistry.py:167
 msgid "Detected subtitle format '{format}'"
@@ -866,7 +877,7 @@ msgstr "Detekován formát titulků '{format}' z obsahu"
 msgid "Detected subtitle format '{format}' is not supported."
 msgstr "Detekovaný formát titulků '{format}' není podporován."
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:243
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:247
 msgid "Detecting audio..."
 msgstr "Detekce zvuku..."
 
@@ -874,20 +885,20 @@ msgstr "Detekce zvuku..."
 msgid "Developed by: MachineWrapped<br>Contact: machinewrapped@gmail.com<br><a href=\"https://github.com/machinewrapped/llm-subtrans\">GitHub Repository</a><br>Thanks to all contributors and those who have reported issues."
 msgstr "Vyvinul: MachineWrapped<br>Kontakt: machinewrapped@gmail.com<br><a href=\"https://github.com/machinewrapped/llm-subtrans\">Repozitář na GitHubu</a><br>Díky všem přispěvatelům a těm, kteří nahlásili problémy."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:868
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:897
 msgid "Discard the {} transcribed lines? They have not been opened as a project."
 msgstr "Zahodit {} transkribovaných řádků? Nebyly otevřeny jako projekt."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:867
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:896
 msgid "Discard transcription?"
 msgstr "Zahodit transkripci?"
 
-#: GuiSubtrans/SettingsDialog.py:99
+#: GuiSubtrans/SettingsDialog.py:100
 msgid "Divide any batches larger than this into multiple batches"
 msgstr "Rozdělit všechny dávky větší než tato na více dávek"
 
 #: GuiSubtrans/EditInstructionsDialog.py:25
-#: GuiSubtrans/Widgets/ProjectSettings.py:153
+#: GuiSubtrans/Widgets/ProjectSettings.py:156
 msgid "Edit Instructions"
 msgstr "Upravit pokyny"
 
@@ -904,7 +915,7 @@ msgstr "Úprava dávky ({scene},{batch})"
 msgid "Editing line {line}"
 msgstr "Úprava řádku {line}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:422
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:451
 msgid "Empty transcription for chunk {}"
 msgstr "Prázdná transkripce pro segment {}"
 
@@ -916,11 +927,11 @@ msgstr "Povolit streamování odpovědí pro aktualizace překladů v reálném 
 msgid "Enable thinking mode for translations"
 msgstr "Povolit režim přemýšlení pro překlady"
 
-#: GuiSubtrans/SettingsDialog.py:85
+#: GuiSubtrans/SettingsDialog.py:86
 msgid "Ensure dialog markers match in multi-line subtitles"
 msgstr "Zajistit, aby se dialogové značky shodovaly ve víceřádkových titulcích"
 
-#: GuiSubtrans/SettingsDialog.py:87
+#: GuiSubtrans/SettingsDialog.py:88
 msgid "Ensure full-width punctuation is used in Asian languages"
 msgstr "Zajistit použití interpunkce plné šířky v asijských jazycích"
 
@@ -958,7 +969,7 @@ msgstr "Chyba při načítání modelů: {status} {text}"
 msgid "Error in {command}: {message}"
 msgstr "Chyba v {command}: {message}"
 
-#: PySubtrans/Options.py:256
+#: PySubtrans/Options.py:258
 msgid "Error loading settings from {}"
 msgstr "Chyba při načítání nastavení z {}"
 
@@ -978,7 +989,7 @@ msgstr "Chyba při opakování posledního příkazu: {error}"
 msgid "Error reparsing scene {scene} batch {batch}: {error}"
 msgstr "Chyba při opětovné analýze scény {scene} dávky {batch}: {error}"
 
-#: PySubtrans/Options.py:285
+#: PySubtrans/Options.py:287
 msgid "Error saving settings to {}"
 msgstr "Chyba při ukládání nastavení do {}"
 
@@ -996,37 +1007,37 @@ msgstr "Chyba při překladu scény {scene}: {error}"
 msgid "Error undoing the last command: {error}"
 msgstr "Chyba při vracení posledního příkazu: {error}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:582
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:603
 msgid "Error: No Python interpreter was found in {path}."
 msgstr "Chyba: V cestě {path} nebyl nalezen Python interpreter."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:563
-msgid "Error: Qwen runtime dependency installation failed (exit code {code}). Check the output above for details."
-msgstr "Chyba: Instalace závislostí runtime Qwen selhala (kód ukončení {code}). Zkontrolujte výše uvedený výpis pro podrobnosti."
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:594
+msgid "Error: The {package} package metadata could not be found in {path}."
+msgstr "Chyba: Metadata balíčku {package} nebyla v {path} nalezena."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:637
-msgid "Error: The Qwen runtime could not be found in {path} after installation."
-msgstr "Chyba: Po instalaci nebyl runtime Qwen nalezen v {path}."
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:658
+msgid "Error: The {runtime} runtime could not be found in {path} after installation."
+msgstr "Chyba: Běhové prostředí {runtime} nebylo po instalaci v {path} nalezeno."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:573
-msgid "Error: The qwen-asr package metadata could not be found in {path}."
-msgstr "Chyba: Metadatová informace balíčku qwen-asr nebyla v {path} nalezena."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:542
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:560
 msgid "Error: Torch installation failed (exit code {code}). Check the output above for details."
 msgstr "Chyba: Instalace Torch selhala (kód ukončení {code}). Podrobnosti najdete ve výstupu výše."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:528
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:546
 msgid "Error: Virtual environment creation failed (exit code {code})."
 msgstr "Chyba: Vytvoření virtuálního prostředí selhalo (kód ukončení {code})."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:556
-msgid "Error: qwen-asr installation failed (exit code {code}). Check the output above for details."
-msgstr "Chyba: Instalace qwen-asr selhala (kód ukončení {code}). Zkontrolujte výše uvedený výpis pro podrobnosti."
-
-#: GuiSubtrans/NewProjectSettings.py:292
+#: GuiSubtrans/NewProjectSettings.py:293
 msgid "Error: {error}"
 msgstr "Chyba: {error}"
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:577
+msgid "Error: {package} installation failed (exit code {{code}}). Check the output above for details."
+msgstr "Chyba: Instalace balíčku {package} selhala (návratový kód {{code}}). Podrobnosti naleznete ve výstupu výše."
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:584
+msgid "Error: {runtime} runtime dependency installation failed (exit code {{code}}). Check the output above for details."
+msgstr "Chyba: Instalace závislostí běhového prostředí {runtime} selhala (návratový kód {{code}}). Podrobnosti naleznete ve výstupu výše."
 
 #: PySubtrans/SubtitleTranslator.py:214
 msgid "Errors encountered translating scene {scene} batch {batch}"
@@ -1040,8 +1051,8 @@ msgstr "Chyby při překladu scény {scene} - překlad se přerušuje"
 msgid "Errors: {errors}"
 msgstr "Chyby: {errors}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:288
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:422
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:278
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:412
 msgid "Estimated disk usage: {size}"
 msgstr "Odhadovaná velikost na disku: {size}"
 
@@ -1061,16 +1072,16 @@ msgstr "Ukončování programu"
 msgid "Expected a dictionary, got a {type}"
 msgstr "Očekáván slovník, obdržen {type}"
 
-#: GuiSubtrans/ViewModel/ViewModel.py:368
-#: GuiSubtrans/ViewModel/ViewModel.py:473
+#: GuiSubtrans/ViewModel/ViewModel.py:384
+#: GuiSubtrans/ViewModel/ViewModel.py:491
 msgid "Expected a patch dictionary"
 msgstr "Očekáván slovník s opravami"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:226
+#: PySubtrans/Transcription/TranscriptionProvider.py:234
 msgid "Extend lines shorter than this fraction of their estimated speaking time (0 = never)"
 msgstr "Prodloužit řádky kratší než tento zlomek odhadovaného času řeči (0 = nikdy)"
 
-#: GuiSubtrans/SettingsDialog.py:74
+#: GuiSubtrans/SettingsDialog.py:75
 msgid "Extend short subtitles to a minimum reading duration when saving"
 msgstr "Při ukládání prodloužit krátké titulky na minimální dobu čtení"
 
@@ -1079,7 +1090,7 @@ msgstr "Při ukládání prodloužit krátké titulky na minimální dobu čten�
 #: PySubtrans/Providers/Clients/GeminiClient.py:123
 #: PySubtrans/Providers/Clients/LiteLLMClient.py:173
 #: PySubtrans/Providers/Clients/LiteLLMClient.py:185
-#: PySubtrans/Providers/Clients/MistralClient.py:138
+#: PySubtrans/Providers/Clients/MistralClient.py:149
 #: PySubtrans/Providers/Clients/OpenAIClient.py:177
 msgid "Failed to communicate with provider after {max_retries} retries"
 msgstr "Nepodařilo se navázat spojení s poskytovatelem po {max_retries} pokusech"
@@ -1095,6 +1106,10 @@ msgstr "Selhalo připojení k serveru na adrese {server_address}{endpoint}: {err
 #: GuiSubtrans/Commands/SplitBatchCommand.py:45
 msgid "Failed to create new batch after splitting"
 msgstr "Nepodařilo se vytvořit novou dávku po rozdělení"
+
+#: scripts/install_torch.py:53
+msgid "Failed to create the local runtime environment."
+msgstr "Nepodařilo se vytvořit místní běhové prostředí."
 
 #: PySubtrans/SubtitleFormatRegistry.py:146
 #: PySubtrans/SubtitleFormatRegistry.py:160
@@ -1116,6 +1131,26 @@ msgstr "Nepodařilo se inicializovat OpenAI SDK. Poskytovatel OpenAI nebude k di
 #: PySubtrans/Providers/Clients/AnthropicClient.py:90
 msgid "Failed to initialize Anthropic client"
 msgstr "Nepodařilo se inicializovat klienta Anthropic"
+
+#: scripts/install_moss_runtime.py:38
+msgid "Failed to install MOSS runtime dependencies."
+msgstr "Nepodařilo se nainstalovat závislosti běhového prostředí MOSS."
+
+#: scripts/install_qwen_runtime.py:47
+msgid "Failed to install Qwen runtime dependencies."
+msgstr "Nepodařilo se nainstalovat závislosti běhového prostředí Qwen."
+
+#: scripts/install_qwen_runtime.py:34
+msgid "Failed to install qwen-asr."
+msgstr "Nepodařilo se nainstalovat qwen-asr."
+
+#: scripts/install_moss_runtime.py:33
+msgid "Failed to install the MOSS package."
+msgstr "Nepodařilo se nainstalovat balíček MOSS."
+
+#: scripts/install_torch.py:104
+msgid "Failed to install torch."
+msgstr "Nepodařilo se nainstalovat torch."
 
 #: GuiSubtrans/GuiInterface.py:254
 msgid "Failed to load instructions from {instructions_file}"
@@ -1156,6 +1191,10 @@ msgstr "Nepodařilo se parsovat řetězec titulků: {}"
 msgid "Failed to parse subtitles: {}"
 msgstr "Selhání parsování titulků: {}"
 
+#: scripts/install_torch.py:91
+msgid "Failed to remove the CPU-only torch build."
+msgstr "Nepodařilo se odebrat sestavení torch určené pouze pro CPU."
+
 #: PySubtrans/SubtitleProject.py:460
 msgid "Failed to save project file after translation: {}"
 msgstr "Nepodařilo se uložit soubor projektu po překladu: {}"
@@ -1188,9 +1227,9 @@ msgstr "Možnosti prvního spuštění"
 msgid "Format cannot be deduced from filename or extension '{name}'. Available formats: {formats}"
 msgstr "Formát nelze odvodit z názvu souboru nebo přípony '{name}'. Dostupné formáty: {formats}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:432
-msgid "Found an existing Torch installation at: {path}"
-msgstr "Nalezena existující instalace Torch v: {path}"
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:425
+msgid "Found an existing {runtime} environment at: {path}"
+msgstr "Nalezeno existující prostředí {runtime} v: {path}"
 
 #: PySubtrans/TranslationParser.py:198
 msgid "Found fuzzy match for line {number} in translations"
@@ -1200,23 +1239,23 @@ msgstr "Nalezena neostrá shoda pro řádek {number} v překladech"
 msgid "Found unclosed tag {tag} in translation"
 msgstr "Nalezen neuzavřený tag {tag} v překladu"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:490
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:496
 msgid "Found {} audio track(s)."
 msgstr "Nalezeno {} zvukových stop."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:265
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:255
 msgid "GPU acceleration is strongly recommended. See <a href=\"https://pytorch.org/get-started/locally/\">pytorch.org</a> for hardware-specific instructions."
 msgstr "GPU akcelerace je důrazně doporučena. Pokyny pro konkrétní hardware najdete na <a href=\\\"https://pytorch.org/get-started/locally/\\\">pytorch.org</a>."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:273
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:263
 msgid "GPU detection was inconclusive. Choose the closest option:"
 msgstr "Detekce GPU byla nejednoznačná. Vyberte nejbližší možnost:"
 
-#: GuiSubtrans/MainWindow.py:34 GuiSubtrans/MainWindow.py:260
+#: GuiSubtrans/MainWindow.py:34 GuiSubtrans/MainWindow.py:262
 msgid "GUI-Subtrans"
 msgstr "GUI-Subtrans"
 
-#: GuiSubtrans/SettingsDialog.py:157
+#: GuiSubtrans/SettingsDialog.py:160
 msgid "GUI-Subtrans Settings"
 msgstr "Nastavení GUI-Subtrans"
 
@@ -1239,11 +1278,15 @@ msgstr "GUI-Subtrans využívá LLM k překladu titulků do jiných jazyků nebo
 msgid "GUI-Subtrans would not work without these libraries:\n"
 msgstr "GUI-Subtrans by bez těchto knihoven nefungoval:\n"
 
-#: GuiSubtrans/Widgets/Widgets.py:149
+#: GuiSubtrans/Widgets/Widgets.py:152
 msgid "Gap: {gap}, Length: {duration}"
 msgstr "Mezera: {gap}, Délka: {duration}"
 
-#: GuiSubtrans/GuiHelpers.py:33
+#: GuiSubtrans/SettingsDialog.py:119 GuiSubtrans/SettingsDialog.py:374
+msgid "Gateways"
+msgstr "Brány"
+
+#: GuiSubtrans/GuiHelpers.py:35
 msgid "Gateways and routers"
 msgstr "Brány a směrovače"
 
@@ -1303,11 +1346,12 @@ msgstr "Transkripce Gemini se nezdařila: {}"
 msgid "Gemini transcription runtime is not installed"
 msgstr "Runtime pro transkripci Gemini není nainstalován"
 
-#: GuiSubtrans/SettingsDialog.py:114
+#: GuiSubtrans/SettingsDialog.py:116
 msgid "General"
 msgstr "Obecné"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:112
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:97
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:107
 msgid "Generation budget per chunk (long chunks need headroom)"
 msgstr "Rozpočet generování na blok (dlouhé bloky potřebují rezervu)"
 
@@ -1349,6 +1393,7 @@ msgid "I don't know where to save the translated subtitles"
 msgstr "Nevím, kam uložit přeložené titulky"
 
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:109
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:90
 #: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:154
 msgid "Identify speakers"
 msgstr "Identifikovat mluvčí"
@@ -1361,113 +1406,109 @@ msgstr "Rozpoznávat mluvčí (režim DIARIZACE)"
 msgid "Identify speakers (up to 8, experimental past 3)"
 msgstr "Rozpoznávat mluvčí (až 8, nad 3 experimentální)"
 
-#: GuiSubtrans/SettingsDialog.py:53
+#: GuiSubtrans/SettingsDialog.py:54
 msgid "If a batch fails validation, split it in half and retry each half separately"
 msgstr "Pokud dávka neprojde validací, rozdělte ji na polovinu a každou polovinu opakujte samostatně"
 
-#: GuiSubtrans/SettingsDialog.py:54
+#: GuiSubtrans/SettingsDialog.py:55
 msgid "If true, translations that fail validation will be retried with a note about the error"
 msgstr "Pokud je povoleno, neúspěšné překlady budou zopakovány s poznámkou o chybě"
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:54
-msgid "Importing qwen_asr (this can take a while on first run)..."
-msgstr "Importování qwen_asr (při prvním spuštění to může chvíli trvat)..."
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:62
-msgid "Importing qwen_asr.inference.utils..."
-msgstr "Importování qwen_asr.inference.utils..."
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:51
-msgid "Importing torch..."
-msgstr "Importování torch..."
 
 #: GuiSubtrans/Widgets/SelectionView.py:58
 msgid "Improve Selection"
 msgstr "Vylepšit výběr"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:151
+#: GuiSubtrans/Widgets/ProjectSettings.py:154
 msgid "Include Original Text"
 msgstr "Zahrnout původní text"
 
-#: GuiSubtrans/SettingsDialog.py:46
+#: GuiSubtrans/SettingsDialog.py:47
 msgid "Include original text in translated subtitles"
 msgstr "Zahrnout původní text do přeložených titulků"
 
-#: GuiSubtrans/SettingsDialog.py:64
+#: PySubtrans/Transcription/WorkerHost.py:39
+msgid "Incomplete worker message"
+msgstr "Neúplná zpráva workeru"
+
+#: GuiSubtrans/SettingsDialog.py:65
 msgid "Information about the selected transcription provider"
 msgstr "Informace o vybraném poskytovateli přepisu"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:342
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:406
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:332
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:396
 msgid "Install"
 msgstr "Nainstalovat"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:293
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:283
 msgid "Install CPU-only Torch anyway (transcription will be slower)"
 msgstr "Stejně nainstalovat pouze CPU verzi Torch (přepis bude pomalejší)"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:506
-msgid "Install Qwen Runtime"
-msgstr "Nainstalovat runtime Qwen"
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:83
+msgid "Install Torch and the MOSS runtime, or choose an environment that has them"
+msgstr "Nainstalujte Torch a běhové prostředí MOSS, nebo vyberte prostředí, které je již obsahuje"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:99
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:94
 msgid "Install Torch and the Qwen runtime for local transcription"
 msgstr "Nainstalujte Torch a runtime Qwen pro místní transkrici"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:204
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:194
 msgid "Install automatically"
 msgstr "Nainstalovat automaticky"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:115
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:110
 msgid "Install or change the environment that runs local transcription"
 msgstr "Nainstalujte nebo změňte prostředí pro místní transkrici"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:465
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:459
 msgid "Install or update the GPU driver, then run setup again, or select Install CPU-only Torch anyway."
 msgstr "Nainstalujte nebo aktualizujte ovladač GPU, poté spusťte nastavení znovu, nebo vyberte možnost „Stejně nainstalovat pouze CPU verzi Torch“."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:91
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:75
 msgid "Install the latest NVIDIA driver for this GPU from nvidia.com, restart the computer, and choose {button} again."
 msgstr "Nainstalujte nejnovější ovladač NVIDIA pro tuto GPU z nvidia.com, restartujte počítač a zvolte {button} znovu."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:342
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:406
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:332
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:396
 msgid "Install with CPU-only Torch"
 msgstr "Nainstalovat Torch pouze pro CPU"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:634
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:523
+msgid "Install {runtime} Runtime"
+msgstr "Nainstalovat běhové prostředí {runtime}"
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:655
 msgid "Installation finished. Verifying the Torch environment..."
 msgstr "Instalace dokončena. Ověřování prostředí Torch..."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:233
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:223
 msgid "Installation folder"
 msgstr "Instalační složka"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:540
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:558
 msgid "Installing Torch (this may take several minutes)..."
 msgstr "Instalace Torch (může to trvat několik minut)..."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:553
-msgid "Installing qwen-asr..."
-msgstr "Instaluji qwen-asr..."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:516
-msgid "Installing the Qwen runtime"
-msgstr "Instaluji runtime Qwen"
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:561
-msgid "Installing the Qwen runtime dependencies (this may take several minutes)..."
-msgstr "Instaluji závislosti runtime Qwen (může to trvat několik minut)..."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:560
-msgid "Installing the Qwen runtime dependencies..."
-msgstr "Instaluji závislosti runtime Qwen..."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:539
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:557
 msgid "Installing the Torch build for your hardware..."
 msgstr "Instaluji sestavení Torch pro vaše hardware..."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:554
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:534
+msgid "Installing the {runtime} runtime"
+msgstr "Instalace běhového prostředí {runtime}"
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:582
+msgid "Installing the {runtime} runtime dependencies (this may take several minutes)..."
+msgstr "Instalace závislostí běhového prostředí {runtime} (může trvat několik minut)..."
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:581
+msgid "Installing the {runtime} runtime dependencies..."
+msgstr "Instalace závislostí běhového prostředí {runtime}..."
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:574
+msgid "Installing {package}..."
+msgstr "Instalace balíčku {package}..."
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:575
 msgid "Installing {requirement}..."
 msgstr "Instaluji {requirement}..."
 
@@ -1479,7 +1520,7 @@ msgstr "Pokyny"
 msgid "Instructions for building a terminology list"
 msgstr "Pokyny pro vytvoření seznamu terminologie"
 
-#: GuiSubtrans/SettingsDialog.py:48
+#: GuiSubtrans/SettingsDialog.py:49
 msgid "Instructions for the translation provider to follow"
 msgstr "Pokyny pro poskytovatele překladu"
 
@@ -1491,15 +1532,15 @@ msgstr "Pokyny pro překlad řádků s označením mluvčího"
 msgid "Instructions will be sent as system messages rather than the user prompt"
 msgstr "Pokyny budou odeslány jako systémové zprávy, nikoli jako uživatelská výzva"
 
-#: GuiSubtrans/NewProjectSettings.py:141
+#: GuiSubtrans/NewProjectSettings.py:142
 msgid "Instructions: {text}"
 msgstr "Pokyny: {text}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:105
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:89
 msgid "Intel"
 msgstr "Intel"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:106
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:90
 msgid "Intel selected"
 msgstr "Vybráno: Intel"
 
@@ -1519,7 +1560,7 @@ msgstr "Neplatný časový rozsah bloku"
 msgid "Invalid message role: {role}. Must be one of 'user', 'system', 'developer', or 'assistant'."
 msgstr "Neplatná role zprávy: {role}. Musí být jedna z hodnot: 'uživatel', 'systém', 'vývojář' nebo 'asistent'"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:596
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:602
 msgid "Invalid provider settings"
 msgstr "Neplatné nastavení poskytovatele"
 
@@ -1555,15 +1596,11 @@ msgstr "Neplatné časové razítko"
 msgid "Invalid translation provider"
 msgstr "Neplatný poskytovatel překladu"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:434
-msgid "It does not include the Qwen runtime yet, which will be installed into it ({size})."
-msgstr "Zatím neobsahuje runtime Qwen, který bude nainstalován do něj ({size})."
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:428
+msgid "It does not include the {runtime} runtime yet, which will be installed into it ({size})."
+msgstr "Zatím neobsahuje běhové prostředí {runtime}, které do něj bude nainstalováno ({size})."
 
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:104
-msgid "Korean word timestamps need the soynlp package, which is not installed in the Torch environment. Aligning Korean text on spaces instead, so timestamps are less precise."
-msgstr "Korejské časové značky slov potřebují balíček soynlp, který není nainstalován v prostředí Torch. Namísto toho text na korejštině vyrovnávám na mezery, takže časové značky jsou méně přesné."
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:145
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:184
 msgid "Language '{}' is not in qwen-asr's supported list, using auto-detection"
 msgstr "Jazyk '{}' není v seznamu podporovaných jazyků qwen-asr, používám automatickou detekci"
 
@@ -1575,15 +1612,15 @@ msgstr "Jazyk, do kterého se mají titulky přeložit"
 msgid "Latest Google AI SDK (google-genai) is not installed. Gemini provider will not be available. Run installer or `pip install google-genai` to fix."
 msgstr "Nejnovější Google AI SDK (google-genai) není nainstalováno. Poskytovatel Gemini nebude k dispozici. Spusťte instalátor nebo použijte `pip install google-genai` k opravě."
 
-#: GuiSubtrans/SettingsDialog.py:69
+#: GuiSubtrans/SettingsDialog.py:70
 msgid "Leave blank to use ffmpeg and ffprobe from the system PATH"
 msgstr "Ponechte prázdné pro použití ffmpeg a ffprobe ze systémové PATH"
 
-#: GuiSubtrans/Widgets/Widgets.py:151
+#: GuiSubtrans/Widgets/Widgets.py:154
 msgid "Length: {duration}"
 msgstr "Délka: {duration}"
 
-#: GuiSubtrans/SettingsDialog.py:102
+#: GuiSubtrans/SettingsDialog.py:103
 msgid "Limits the number of scene/batch summaries to include as context with each translation batch"
 msgstr "Omezuje počet shrnutí scén/dávek, které se mají zahrnout jako kontext ke každé překladové dávce"
 
@@ -1611,7 +1648,7 @@ msgstr "Řádek {line}: {start} --> {end}"
 msgid "Lines {first}-{last} ({start} -> {end})"
 msgstr "Řádky {first}-{last} ({start} -> {end})"
 
-#: GuiSubtrans/ViewModel/ViewModel.py:531
+#: GuiSubtrans/ViewModel/ViewModel.py:549
 msgid "Lines {lines} not found in batch {batch}"
 msgstr "Řádky {lines} nebyly nalezeny v dávce {batch}"
 
@@ -1636,7 +1673,7 @@ msgstr "Dočasná chyba LiteLLM (pokus {retry}/{max_retries}): {error}, opaková
 msgid "Load Instructions"
 msgstr "Načíst pokyny"
 
-#: GuiSubtrans/SettingsDialog.py:108
+#: GuiSubtrans/SettingsDialog.py:109
 msgid "Load previously used translation providers after startup to make switching providers faster"
 msgstr "Načíst dříve použité překladatelské služby po spuštění, aby se přepínání služeb zrychlilo"
 
@@ -1648,23 +1685,31 @@ msgstr "Načíst projekt/překlad (Podržte shift pro načtení titulků znovu)"
 msgid "Load project/translation (reload subtitles)"
 msgstr "Načíst projekt/překlad (načíst titulky znovu)"
 
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:305
-msgid "Loading Qwen model {} on {}"
-msgstr "Načítání modelu Qwen {} na {}"
+#: PySubtrans/Transcription/Providers/Clients/MossLocalClient.py:164
+msgid "Loading MOSS model {} in worker"
+msgstr "Načítání modelu MOSS {} ve workeru"
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:164
+msgid "Loading Qwen model {} in worker"
+msgstr "Načítání modelu Qwen {} ve workeru"
 
 #: PySubtrans/SubtitleProject.py:144
 msgid "Loading existing project file {}"
 msgstr "Načítání existujícího souboru projektu {}"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:280
+#: PySubtrans/Transcription/TranscriptionProvider.py:288
 msgid "Loading transcription providers"
 msgstr "Načítání poskytovatelů přepisu"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:116
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:118
 msgid "Loading transcription providers..."
 msgstr "Načítání poskytovatelů přepisu..."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:190
+#: GuiSubtrans/GuiHelpers.py:72
+msgid "Local"
+msgstr "Místní"
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:180
 msgid "Locate an existing installation manually"
 msgstr "Vyhledat existující instalaci ručně"
 
@@ -1676,13 +1721,29 @@ msgstr "Zaznamenávání do {path}"
 msgid "Logo generated with <a href=\"https://qwen.ai/home\">Qwen3</a>"
 msgstr "Logo vygenerováno pomocí <a href=\"https://qwen.ai/home\">Qwen3</a>"
 
-#: PySubtrans/Transcription/TranscriptionLines.py:65
-msgid "Long transcription line ({:.1f}s, no word timings to split it): '{}'"
-msgstr "Dlouhý řádek přepisu ({:.1f} s, chybí časování slov pro jeho rozdělení): '{}'"
-
-#: PySubtrans/Transcription/TranscriptionProvider.py:219
+#: PySubtrans/Transcription/TranscriptionProvider.py:227
 msgid "Longest audio chunk to send in one request"
 msgstr "Nejdelší audio chunk k odeslání v jedné žádosti"
+
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:114
+msgid "MOSS Local chunks can be at most {} seconds long"
+msgstr "Segmenty MOSS Local mohou mít délku nejvýše {} sekund"
+
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:108
+msgid "MOSS Local needs a Python environment with the MOSS runtime installed"
+msgstr "MOSS Local vyžaduje prostředí Pythonu s nainstalovaným běhovým prostředím MOSS"
+
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:150
+msgid "MOSS Local provider could not be registered: {}"
+msgstr "Poskytovatele MOSS Local se nepodařilo zaregistrovat: {}"
+
+#: scripts/install_moss_runtime.py:43
+msgid "MOSS runtime installation failed: {}"
+msgstr "Instalace běhového prostředí MOSS selhala: {}"
+
+#: PySubtrans/Transcription/Providers/Clients/MossLocalClient.py:104
+msgid "MOSS stopped at its limit of {} new tokens, so the end of this chunk may be missing. Use shorter chunks or raise max_new_tokens."
+msgstr "MOSS se zastavil na limitu {} nových tokenů, takže konec tohoto segmentu může chybět. Použijte kratší segmenty nebo zvyšte Max New Tokens."
 
 #: PySubtrans/SubtitleTranslator.py:327
 msgid "Made substitutions in input:\n{replaced}"
@@ -1700,7 +1761,43 @@ msgstr ""
 msgid "Main Toolbar"
 msgstr "Hlavní panel nástrojů"
 
-#: GuiSubtrans/NewProjectSettings.py:281
+#: PySubtrans/Transcription/Providers/Clients/MossLocalClient.py:172
+msgid "Malformed MOSS worker ready message"
+msgstr "Neplatná zpráva o připravenosti workeru MOSS"
+
+#: PySubtrans/Transcription/Providers/Clients/MossLocalClient.py:113
+msgid "Malformed MOSS worker result"
+msgstr "Neplatný výsledek workeru MOSS"
+
+#: PySubtrans/Transcription/Providers/Clients/MossLocalClient.py:124
+msgid "Malformed MOSS worker segment"
+msgstr "Neplatný segment workeru MOSS"
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:110
+msgid "Malformed Qwen worker language"
+msgstr "Neplatný jazyk workeru Qwen"
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:172
+msgid "Malformed Qwen worker ready message"
+msgstr "Neplatná zpráva o připravenosti workeru Qwen"
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:107
+msgid "Malformed Qwen worker result"
+msgstr "Neplatný výsledek workeru Qwen"
+
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:118
+msgid "Malformed Qwen worker timestamp"
+msgstr "Neplatné časové razítko workeru Qwen"
+
+#: PySubtrans/Transcription/WorkerHost.py:62
+msgid "Malformed worker error"
+msgstr "Neplatná chyba workeru"
+
+#: PySubtrans/Transcription/WorkerHost.py:44
+msgid "Malformed worker message: {}"
+msgstr "Neplatná zpráva workeru: {}"
+
+#: GuiSubtrans/NewProjectSettings.py:282
 msgid "Max batch size is less than min batch size"
 msgstr "Maximální velikost dávky je menší než minimální velikost dávky"
 
@@ -1728,19 +1825,19 @@ msgstr "Maximální počet požadavků API za minutu."
 msgid "Maximum OpenAI API requests per minute. Mainly useful if you are on the restricted free plan"
 msgstr "Maximální počet požadavků OpenAI API za minutu. Užitečné hlavně pokud máte omezený bezplatný plán"
 
-#: GuiSubtrans/SettingsDialog.py:77
+#: GuiSubtrans/SettingsDialog.py:78
 msgid "Maximum duration of a single line of subtitles"
 msgstr "Maximální délka jednoho řádku titulků"
 
-#: GuiSubtrans/SettingsDialog.py:82
+#: GuiSubtrans/SettingsDialog.py:83
 msgid "Maximum gap between lines for them to be considered part of the same utterance"
 msgstr "Maximální mezera mezi řádky, aby byly považovány za součást stejné věty"
 
-#: GuiSubtrans/SettingsDialog.py:90
+#: GuiSubtrans/SettingsDialog.py:91
 msgid "Maximum length of a single line of subtitles"
 msgstr "Maximální délka jednoho řádku titulků"
 
-#: GuiSubtrans/SettingsDialog.py:103
+#: GuiSubtrans/SettingsDialog.py:104
 msgid "Maximum length of the context summary to include with each translation batch"
 msgstr "Maximální délka kontextového shrnutí, které se má zahrnout ke každé překladové dávce"
 
@@ -1754,11 +1851,11 @@ msgstr "Maximální počet výstupních tokenů v odpovědi"
 msgid "Maximum number of output tokens to return in the response."
 msgstr "Maximální počet výstupních tokenů, které se mají vrátit v odpovědi."
 
-#: GuiSubtrans/SettingsDialog.py:97
+#: GuiSubtrans/SettingsDialog.py:98
 msgid "Maximum number of simultaneous translation threads for fast translation"
 msgstr "Maximální počet souběžných vláken překladu pro rychlý překlad"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:113
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:108
 msgid "Maximum requests per minute (0 for unlimited)"
 msgstr "Maximální počet požadavků za minutu (0 = neomezeně)"
 
@@ -1766,21 +1863,21 @@ msgstr "Maximální počet požadavků za minutu (0 = neomezeně)"
 msgid "Maximum tokens a completion can contain (only applicable for -instruct models)"
 msgstr "Maximální počet tokenů, které může dokončení obsahovat (platí pouze pro modely -instruct)"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:152
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:154
 msgid "Media file"
 msgstr "Mediální soubor"
 
-#: PySubtrans/Transcription/AudioChunker.py:125
+#: PySubtrans/Transcription/AudioChunker.py:126
 msgid "Media file has no playable duration"
 msgstr "Mediální soubor nemá přehratelnou délku"
 
 #: PySubtrans/Transcription/AudioExtractor.py:256
 #: PySubtrans/Transcription/SilenceStream.py:51
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:123
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:124
 msgid "Media file not found: {}"
 msgstr "Mediální soubor nenalezen: {}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:472
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:478
 msgid "Media files"
 msgstr "Mediální soubory"
 
@@ -1796,7 +1893,7 @@ msgstr "Sloučit řádky"
 msgid "Merge Scenes"
 msgstr "Sloučit scény"
 
-#: GuiSubtrans/SettingsDialog.py:81
+#: GuiSubtrans/SettingsDialog.py:82
 msgid "Merge lines with a duration less than this with the previous line"
 msgstr "Sloučit řádky s délkou menší než tato s předchozím řádkem"
 
@@ -1812,23 +1909,23 @@ msgstr "Slučování scén {scenes}"
 msgid "Messages"
 msgstr "Zprávy"
 
-#: PySubtrans/Transcription/AudioChunker.py:52
+#: PySubtrans/Transcription/AudioChunker.py:53
 msgid "Minimum chunk length cannot exceed maximum chunk length"
 msgstr "Minimální délka bloku nemůže přesáhnout maximální délku bloku"
 
-#: GuiSubtrans/SettingsDialog.py:78
+#: GuiSubtrans/SettingsDialog.py:79
 msgid "Minimum duration of a single line of subtitles"
 msgstr "Minimální délka jednoho řádku titulků"
 
-#: GuiSubtrans/SettingsDialog.py:80
+#: GuiSubtrans/SettingsDialog.py:81
 msgid "Minimum gap between consecutive subtitles, in seconds, used when preprocess_subtitles, extend_short_subtitles, or prevent_overlapping_times is enabled"
 msgstr "Minimální mezera mezi po sobě následujícími titulky v sekundách, používaná při zapnutém předzpracování titulků, prodlužování krátkých titulků nebo předcházení překrývání časů"
 
-#: GuiSubtrans/SettingsDialog.py:91
+#: GuiSubtrans/SettingsDialog.py:92
 msgid "Minimum length of a single line of subtitles"
 msgstr "Minimální délka jednoho řádku titulků"
 
-#: GuiSubtrans/SettingsDialog.py:83
+#: GuiSubtrans/SettingsDialog.py:84
 msgid "Minimum number of characters to split a line at"
 msgstr "Minimální počet znaků pro rozdělení řádku"
 
@@ -1836,7 +1933,7 @@ msgstr "Minimální počet znaků pro rozdělení řádku"
 msgid "Minimum probability threshold for token sampling (0.0 to disable)"
 msgstr "Minimální prahová hodnota pravděpodobnosti pro vzorkování tokenů (0.0 pro vypnutí)"
 
-#: GuiSubtrans/SettingsDialog.py:79
+#: GuiSubtrans/SettingsDialog.py:80
 msgid "Minimum reading time per visible character in seconds"
 msgstr "Minimální doba čtení na jeden viditelný znak v sekundách"
 
@@ -1844,15 +1941,15 @@ msgstr "Minimální doba čtení na jeden viditelný znak v sekundách"
 msgid "Mistral SDK is not installed. Mistral provider will not be available"
 msgstr "Mistral SDK není nainstalováno. Poskytovatel Mistral nebude k dispozici"
 
-#: PySubtrans/Providers/Provider_Mistral.py:158
+#: PySubtrans/Providers/Provider_Mistral.py:156
 msgid "Mistral SDK not installed. Mistral provider will not be available"
 msgstr "Mistral SDK není nainstalováno. Poskytovatel Mistral nebude k dispozici"
 
-#: PySubtrans/Providers/Clients/MistralClient.py:73
+#: PySubtrans/Providers/Clients/MistralClient.py:84
 msgid "Mistral account quota reached, please upgrade your plan or wait until it renews"
 msgstr "Kvóta účtu Mistral byla dosažena, prosím, upgradujte si plán nebo počkejte na jeho obnovení"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:159
+#: GuiSubtrans/Widgets/ProjectSettings.py:161
 msgid "Model"
 msgstr "Model"
 
@@ -1873,7 +1970,7 @@ msgstr "ID modelu musí být poskytnuto jako argument"
 msgid "Model family/provider to choose from"
 msgstr "Rodina modelů/poskytovatel k výběru"
 
-#: GuiSubtrans/GuiHelpers.py:31
+#: GuiSubtrans/GuiHelpers.py:33
 msgid "Model providers"
 msgstr "Poskytovatelé modelů"
 
@@ -1881,19 +1978,19 @@ msgstr "Poskytovatelé modelů"
 msgid "Most lines to send in each batch (modern LLMs can easily handle 100+ lines)"
 msgstr "Nejvíce řádků k odeslání v každém batchi (moderní LLM snadno zvládnou 100+ řádků)"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:140
+#: GuiSubtrans/Widgets/ProjectSettings.py:143
 msgid "Movie Name"
 msgstr "Název filmu"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:87
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:71
 msgid "NVIDIA"
 msgstr "NVIDIA"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:88
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:72
 msgid "NVIDIA selected -- install the NVIDIA driver before setting up Torch"
 msgstr "Vybráno: NVIDIA – před nastavením Torch nainstalujte ovladač NVIDIA"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:144
+#: GuiSubtrans/Widgets/ProjectSettings.py:147
 msgid "Names"
 msgstr "Jména"
 
@@ -1901,11 +1998,11 @@ msgstr "Jména"
 msgid "Network error communicating with server: {error}"
 msgstr "Chyba sítě při komunikaci se serverem: {error}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:113
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:97
 msgid "No GPU / CPU only"
 msgstr "Bez GPU / pouze CPU"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:669
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:688
 msgid "No Torch package could be found in:\n{path}\n\nSelect a virtual environment that contains Torch, or use the automatic install."
 msgstr ""
 "Žádný balíček Torch nebyl nalezen v:\n"
@@ -1913,7 +2010,7 @@ msgstr ""
 "\n"
 "Vyberte virtuální prostředí, které obsahuje Torch, nebo použijte automatickou instalaci."
 
-#: PySubtrans/Transcription/TranscriptionClient.py:82
+#: PySubtrans/Transcription/TranscriptionClient.py:90
 msgid "No audio data provided for transcription"
 msgstr "Nebyla poskytnuta žádná zvuková data pro přepis"
 
@@ -1929,8 +2026,8 @@ msgstr "Nebyly nalezeny žádné dávky pro sloučení řádků"
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:58
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:74
 #: PySubtrans/Providers/Clients/LiteLLMClient.py:144
-#: PySubtrans/Providers/Clients/MistralClient.py:113
-#: PySubtrans/Providers/Clients/MistralClient.py:129
+#: PySubtrans/Providers/Clients/MistralClient.py:124
+#: PySubtrans/Providers/Clients/MistralClient.py:140
 msgid "No choices returned in the response"
 msgstr "V odpovědi nebyly vráceny žádné volby"
 
@@ -1944,8 +2041,8 @@ msgstr "V odpovědi nebyly vráceny žádné možnosti: {text}"
 #: PySubtrans/Providers/Clients/GeminiClient.py:98
 #: PySubtrans/Providers/Clients/LiteLLMClient.py:55
 #: PySubtrans/Providers/Clients/LiteLLMClient.py:84
-#: PySubtrans/Providers/Clients/MistralClient.py:62
-#: PySubtrans/Providers/Clients/MistralClient.py:90
+#: PySubtrans/Providers/Clients/MistralClient.py:73
+#: PySubtrans/Providers/Clients/MistralClient.py:101
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:134
 #: PySubtrans/TranslationPrompt.py:153
 msgid "No content provided for translation"
@@ -1963,9 +2060,9 @@ msgstr "Není poskytnut žádný datový model"
 msgid "No deletions to undo"
 msgstr "Žádné smazání k vrácení zpět"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:441
-msgid "No existing Torch installation found on this system."
-msgstr "Na tomto systému nebyla nalezena žádná existující instalace Torch."
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:435
+msgid "No existing {runtime} installation found on this system."
+msgstr "V tomto systému nebyla nalezena žádná existující instalace {runtime}."
 
 #: PySubtrans/Subtitles.py:316
 msgid "No file path set"
@@ -2005,7 +2102,7 @@ msgstr "Ve výběru nebyla vrácena žádná zpráva"
 #: PySubtrans/Providers/Clients/GeminiClient.py:112
 #: PySubtrans/Providers/Clients/GeminiClient.py:139
 #: PySubtrans/Providers/Clients/LiteLLMClient.py:81
-#: PySubtrans/Providers/Clients/MistralClient.py:87
+#: PySubtrans/Providers/Clients/MistralClient.py:98
 #: PySubtrans/Providers/Clients/OpenAIReasoningClient.py:104
 msgid "No model specified"
 msgstr "Není specifikován žádný model"
@@ -2037,7 +2134,7 @@ msgstr "Není specifikována výstupní cesta, ukládání do {}"
 msgid "No output returned in the response"
 msgstr "V odpovědi nebyl vrácen žádný výstup"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:666
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:672
 msgid "No partial results to resume from."
 msgstr "Nejsou žádné částečné výsledky, ze kterých by bylo možné pokračovat."
 
@@ -2141,10 +2238,6 @@ msgstr "Nebyly přeloženy žádné titulky"
 msgid "No subtitles were transcribed from '{}'"
 msgstr "Nepřepisany žádné titulky z '{}'"
 
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:204
-msgid "No supported hardware accelerator is available. Enable 'allow_cpu_fallback' in Qwen Local advanced settings to permit CPU inference."
-msgstr "Není k dispozici žádný podporovaný hardwarový akcelerátor. V pokročilých nastaveních Qwen Local povolte volbu 'allow_cpu_fallback', aby byla povolena inference na CPU."
-
 #: PySubtrans/Providers/Clients/BedrockClient.py:69
 msgid "No system prompt provided"
 msgstr "Nebyla poskytnuta žádná systémová výzva"
@@ -2157,7 +2250,7 @@ msgstr "V odpovědi nebyl nalezen žádný textový obsah"
 msgid "No text returned in the response: {text}"
 msgstr "V odpovědi nebyl vrácen žádný text: {text}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:369
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:380
 msgid "No timed subtitles could be produced from {}"
 msgstr "Z {} nebylo možné vytvořit žádné časované titulky"
 
@@ -2257,7 +2350,7 @@ msgstr "Není co vracet zpět"
 msgid "Number of seconds gap to consider it a new scene"
 msgstr "Počet sekund mezery pro považování za novou scénu"
 
-#: GuiSubtrans/SettingsDialog.py:106
+#: GuiSubtrans/SettingsDialog.py:107
 msgid "Number of times to retry a failed translation before giving up"
 msgstr "Počet pokusů o opakování neúspěšného překladu před vzdáním se"
 
@@ -2273,7 +2366,7 @@ msgstr "Zobrazit pouze modely z kategorie překladů"
 msgid "Open File"
 msgstr "Otevřít soubor"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:214
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:216
 msgid "Open as Project"
 msgstr "Otevřít jako projekt"
 
@@ -2281,7 +2374,7 @@ msgstr "Otevřít jako projekt"
 msgid "Open this address in your browser to sign in with ChatGPT: {url}"
 msgstr "Pro přihlášení přes ChatGPT otevřete tuto adresu ve svém prohlížeči: {url}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:161
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:163
 msgid "Open transcription settings for this provider"
 msgstr "Otevřít nastavení přepisu pro tohoto poskytovatele"
 
@@ -2309,7 +2402,7 @@ msgstr "Chyba OpenAI {error}, opakuji za {sleep_time}..."
 msgid "OpenAI streaming ended without a completed response"
 msgstr "Streamování OpenAI skončilo bez dokončené odpovědi"
 
-#: GuiSubtrans/SettingsDialog.py:67
+#: GuiSubtrans/SettingsDialog.py:68
 msgid "Optional path to the ffmpeg executable. Leave blank to use ffmpeg and ffprobe from the system PATH"
 msgstr "Volitelná cesta ke spustitelnému souboru ffmpeg. Ponechte prázdné pro použití ffmpeg a ffprobe ze systémové PATH"
 
@@ -2321,21 +2414,21 @@ msgstr "Volitelný proxy server pro požadavky (např. https://api.not-anthropic
 msgid "Original line {line} not found in batch {batch}"
 msgstr "Původní řádek {line} nebyl nalezen v dávce {batch}"
 
-#: GuiSubtrans/NewProjectSettings.py:41 GuiSubtrans/NewProjectSettings.py:69
+#: GuiSubtrans/NewProjectSettings.py:41 GuiSubtrans/NewProjectSettings.py:70
 msgid "Output subtitle format"
 msgstr "Výstupní formát titulků"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:629
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:650
 msgid "Part {number} could not be completed. Check the log and try again."
 msgstr "Část {number} se nedokončila. Zkontrolujte protokol a zkuste to znovu."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:602
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:623
 msgid "Part {number} of {total}: {status}"
 msgstr "Část {number} z {total}: {status}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:194
-msgid "Path to a Python virtual environment containing torch"
-msgstr "Cesta k virtuálnímu prostředí Pythonu obsahujícímu Torch"
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:184
+msgid "Path to a Python virtual environment containing {runtime}"
+msgstr "Cesta k virtuálnímu prostředí Pythonu obsahujícímu {runtime}"
 
 #: PySubtrans/Providers/Provider_Custom.py:114
 msgid "Penalise token repetition — values > 1.0 reduce repetitive output (0.0 to disable)"
@@ -2383,19 +2476,15 @@ msgstr "Dodatečně zpracovat výběr"
 msgid "Post-processing lines {lines}"
 msgstr "Probíhá dodatečné zpracování řádků {lines}"
 
-#: GuiSubtrans/SettingsDialog.py:73
+#: GuiSubtrans/SettingsDialog.py:74
 msgid "Postprocess subtitles after translation"
 msgstr "Dodatečně zpracovat titulky po překladu"
 
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:41
-msgid "Preparing Torch runtime..."
-msgstr "Připravuje se běhové prostředí Torch..."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:313
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:303
 msgid "Preparing installation..."
 msgstr "Připravuje se instalace..."
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:125
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:126
 msgid "Preparing {} transcription..."
 msgstr "Připravuje se přepis {}..."
 
@@ -2403,21 +2492,21 @@ msgstr "Připravuje se přepis {}..."
 msgid "Preprocess subtitles before batching"
 msgstr "Předzpracovat titulky před dávkováním"
 
-#: GuiSubtrans/SettingsDialog.py:72
+#: GuiSubtrans/SettingsDialog.py:73
 msgid "Preprocess subtitles when they are loaded"
 msgstr "Předzpracovat titulky při načítání"
 
-#: GuiSubtrans/SettingsDialog.py:75
+#: GuiSubtrans/SettingsDialog.py:76
 msgid "Prevent overlapping subtitle display times"
 msgstr "Zabránit překrývání časů zobrazení titulků"
 
-#: GuiSubtrans/SettingsDialog.py:117
+#: GuiSubtrans/SettingsDialog.py:120
 msgid "Processing"
 msgstr "Zpracování"
 
 #: GuiSubtrans/NewProjectSettings.py:49
-#: GuiSubtrans/Widgets/ProjectSettings.py:39
-#: GuiSubtrans/Widgets/ProjectSettings.py:92
+#: GuiSubtrans/Widgets/ProjectSettings.py:42
+#: GuiSubtrans/Widgets/ProjectSettings.py:95
 msgid "Project Settings"
 msgstr "Nastavení projektu"
 
@@ -2441,7 +2530,7 @@ msgstr "Soubor projektu {} existuje, ale nebude použit"
 msgid "Project file {} not found"
 msgstr "Soubor projektu {} nebyl nalezen"
 
-#: GuiSubtrans/NewProjectSettings.py:127
+#: GuiSubtrans/NewProjectSettings.py:128
 msgid "Project instructions set from {file}"
 msgstr "Pokyny pro projekt nastaveny ze souboru {file}"
 
@@ -2457,24 +2546,24 @@ msgstr "Výzva"
 msgid "Prompt for each translation request"
 msgstr "Výzva pro každý požadavek na překlad"
 
-#: GuiSubtrans/NewProjectSettings.py:140
+#: GuiSubtrans/NewProjectSettings.py:141
 msgid "Prompt: {text}"
 msgstr "Výzva: {text}"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:157
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:163
+#: GuiSubtrans/Widgets/ProjectSettings.py:239
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:165
 msgid "Provider"
 msgstr "Poskytovatel"
 
-#: GuiSubtrans/SettingsDialog.py:115
+#: GuiSubtrans/SettingsDialog.py:117
 msgid "Provider Settings"
 msgstr "Nastavení poskytovatele"
 
-#: GuiSubtrans/NewProjectSettings.py:170
+#: GuiSubtrans/NewProjectSettings.py:171
 msgid "Provider error: {error}"
 msgstr "Chyba poskytovatele: {error}"
 
-#: GuiSubtrans/SettingsDialog.py:530
+#: GuiSubtrans/SettingsDialog.py:616
 #: GuiSubtrans/Widgets/ProviderSettingsForm.py:100
 msgid "Provider information"
 msgstr "Informace o poskytovateli"
@@ -2499,49 +2588,29 @@ msgstr "Poskytovatel {provider} vyžaduje konfiguraci: {message}"
 msgid "Provider-prefixed model name (e.g. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
 msgstr "Název modelu s prefixem poskytovatele (např. anthropic/claude-sonnet-4-6, openai/gpt-4o, gemini/gemini-2.5-flash)"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:101
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:85
 msgid "PyTorch GPU support for AMD requires Linux with ROCm."
 msgstr "Podpora GPU v PyTorchu pro AMD vyžaduje Linux s ROCm."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:109
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:93
 msgid "PyTorch XPU support requires the Intel oneAPI toolkit (intel.com/oneapi)."
 msgstr "Podpora XPU v PyTorchu vyžaduje sadu Intel oneAPI (intel.com/oneapi)."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:476
+#: scripts/install_torch.py:48
+msgid "Python 3.10 or later is required to create a local runtime environment."
+msgstr "K vytvoření místního běhového prostředí je vyžadován Python verze 3.10 nebo novější."
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:478
 msgid "Python 3.10 or newer is required. Install Python, then try again."
 msgstr "Je vyžadován Python 3.10 nebo novější. Nainstalujte Python a zkuste to znovu."
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:172
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:167
 msgid "Qwen Local provider could not be registered: {}"
 msgstr "Nepodařilo se zaregistrovat poskytovatele Qwen Local: {}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:497
-msgid "Qwen Runtime Not Found"
-msgstr "Qwen Runtime nebyl nalezen"
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:562
-msgid "Qwen runtime dependencies installed successfully."
-msgstr "Závislosti runtime Qwen byly nainstalovány úspěšně."
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:66
-msgid "Qwen runtime imports complete"
-msgstr "Importy běhového prostředí Qwen jsou dokončeny"
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:276
-msgid "Qwen transcription failed: {}"
-msgstr "Přepis Qwen selhal: {}"
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:133
-msgid "Qwen transcription runtime could not be loaded. Check that the configured external Torch installation is compatible with this application, then restart after changing the Torch installation setting. Details: {}"
-msgstr "Běhové prostředí pro přepis Qwen se nepodařilo načíst. Ověřte, že nakonfigurovaná externí instalace Torch je kompatibilní s touto aplikací, a po změně nastavení instalace Torch restartujte. Podrobnosti: {}"
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:70
-msgid "Qwen transcription runtime could not be loaded: {}. Restart after changing the Torch installation setting."
-msgstr "Běhové prostředí pro přepis Qwen se nepodařilo načíst: {}. Po změně nastavení instalace Torch restartujte."
-
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:82
-msgid "Qwen transcription runtime is not installed"
-msgstr "Běhové prostředí pro přepis Qwen není nainstalováno"
+#: scripts/install_qwen_runtime.py:52
+msgid "Qwen runtime installation failed: {}"
+msgstr "Instalace běhového prostředí Qwen selhala: {}"
 
 #: PySubtrans/Providers/Clients/OpenAIClient.py:122
 msgid "Rate limit hit, retrying in {backoff_time} seconds..."
@@ -2551,7 +2620,7 @@ msgstr "Dosažen limit rychlosti, opakuji za {backoff_time} sekund..."
 msgid "Rate limit hit, retrying in {retry_seconds} seconds..."
 msgstr "Dosažen limit rychlosti, opakuji za {retry_seconds} sekund..."
 
-#: PySubtrans/Transcription/TranscriptionClient.py:139
+#: PySubtrans/Transcription/TranscriptionClient.py:164
 msgid "Rate limited (attempt {}/{}), retrying in {:.0f}s..."
 msgstr "Omezení rychlosti (pokus {}/{}), opakování za {:.0f}s..."
 
@@ -2567,7 +2636,7 @@ msgstr "Byl dosažen limit max_lines ({lines} řádků)... dokončuje se"
 msgid "Reading project data from {}"
 msgstr "Načítání dat projektu z {}"
 
-#: GuiSubtrans/MainWindow.py:94 GuiSubtrans/MainWindow.py:261
+#: GuiSubtrans/MainWindow.py:94 GuiSubtrans/MainWindow.py:263
 msgid "Ready."
 msgstr "Připraveno."
 
@@ -2583,15 +2652,11 @@ msgstr "Znovu provést poslední vrácenou akci"
 msgid "Redo {command}"
 msgstr "Znovu provést {command}"
 
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:333
-msgid "Releasing previously loaded Qwen model {}"
-msgstr "Uvolňuji dříve načtený model Qwen {}"
-
 #: PySubtrans/SubtitleProject.py:162
 msgid "Reloading subtitles from the source file"
 msgstr "Opětovné načítání titulků ze zdrojového souboru"
 
-#: GuiSubtrans/SettingsDialog.py:92
+#: GuiSubtrans/SettingsDialog.py:93
 msgid "Remove filler_words and filler words from subtitles"
 msgstr "Odstranit výplňková slova z titulků"
 
@@ -2639,15 +2704,11 @@ msgstr "Požadovaný zdroj nebyl nalezen: {error}. Model '{model}' nemusí být 
 msgid "Response"
 msgstr "Odpověď"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:688
-msgid "Restart Required"
-msgstr "Je vyžadován restart"
-
 #: GuiSubtrans/Commands/DeleteLinesCommand.py:66
 msgid "Restoring deleted lines"
 msgstr "Obnovování smazaných řádků"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:206
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:208
 msgid "Resume"
 msgstr "Pokračovat"
 
@@ -2655,11 +2716,11 @@ msgstr "Pokračovat"
 msgid "Resuming"
 msgstr "Pokračování"
 
-#: PySubtrans/Transcription/TranscriptionRun.py:32
+#: PySubtrans/Transcription/TranscriptionRun.py:33
 msgid "Resuming transcription after {}"
 msgstr "Pokračuji v přepisu po {}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:681
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:687
 msgid "Resuming transcription..."
 msgstr "Pokračuji v přepisu..."
 
@@ -2706,11 +2767,11 @@ msgstr "Uložit soubor projektu"
 msgid "Save Translation"
 msgstr "Uložit překlad"
 
-#: GuiSubtrans/SettingsDialog.py:51
+#: GuiSubtrans/SettingsDialog.py:52
 msgid "Save a backup copy of the project when opening it"
 msgstr "Uložit záložní kopii projektu při otevření"
 
-#: GuiSubtrans/SettingsDialog.py:76
+#: GuiSubtrans/SettingsDialog.py:77
 msgid "Save preprocessed subtitles to a separate file"
 msgstr "Uložit předzpracované titulky do samostatného souboru"
 
@@ -2722,7 +2783,7 @@ msgstr "Uložit projekt/překlad (Podržte shift pro uložení jako...)"
 msgid "Save project/translation as..."
 msgstr "Uložit projekt/překlad jako..."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:173
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:175
 msgid "Save transcribed subtitles"
 msgstr "Uložit přepsané titulky"
 
@@ -2767,11 +2828,11 @@ msgstr "Scéna {scene} dávky {batch}: {translated} přeložených řádků a {u
 msgid "Scene {scene}, batch {batch}"
 msgstr "Scéna {scene}, dávka {batch}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:186
-msgid "Searching for an existing Torch installation..."
-msgstr "Hledá se existující instalace Torch..."
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:171
+msgid "Searching for an existing {runtime} installation..."
+msgstr "Hledá se existující instalace běhového prostředí {runtime}..."
 
-#: GuiSubtrans/SettingsDialog.py:107
+#: GuiSubtrans/SettingsDialog.py:108
 msgid "Seconds to wait before retrying a failed translation"
 msgstr "Počet sekund čekání před opakováním neúspěšného překladu"
 
@@ -2783,29 +2844,29 @@ msgstr "Sekund k čekání na dávkovou překlad před zastavením (0 pro neomez
 msgid "Secret access key must be set in .env or provided as an argument"
 msgstr "Tajný přístupový klíč musí být nastaven v .env nebo poskytnut jako argument"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:474
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:480
 msgid "Select Media File"
 msgstr "Vybrat mediální soubor"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:448
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:456
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:442
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:450
 msgid "Select Torch Installation Directory"
 msgstr "Vyberte instalační adresář Torch"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:197
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:312
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:199
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:318
 msgid "Select a media file to begin."
 msgstr "Chcete-li začít, vyberte mediální soubor."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:545
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:551
 msgid "Select a valid media file first."
 msgstr "Nejprve vyberte platný mediální soubor."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:149
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:151
 msgid "Select a video or audio file..."
 msgstr "Vyberte video nebo zvukový soubor..."
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:398
+#: GuiSubtrans/Widgets/ProjectSettings.py:426
 msgid "Select project to copy settings from"
 msgstr "Vyberte projekt, ze kterého chcete kopírovat nastavení"
 
@@ -2834,15 +2895,19 @@ msgstr "Server vrátil neplatnou odpověď: {text}"
 msgid "Server returned an unexpected response format: {text}"
 msgstr "Server vrátil neočekávaný formát odpovědi: {text}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:127
-msgid "Set Up Local Transcription"
-msgstr "Nastavení místní transkrize"
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:113
+msgid "Set Up {provider}"
+msgstr "Nastavit {provider}"
 
-#: PySubtrans/Transcription/Torch/Runtime.py:23
-msgid "Set up local transcription..."
-msgstr "Nastavení místní transkrize..."
+#: PySubtrans/Transcription/Torch/LocalRuntime.py:39
+msgid "Set up MOSS..."
+msgstr "Nastavit MOSS..."
 
-#: GuiSubtrans/ProjectDataModel.py:126
+#: PySubtrans/Transcription/Torch/LocalRuntime.py:34
+msgid "Set up Qwen..."
+msgstr "Nastavit Qwen..."
+
+#: GuiSubtrans/ProjectDataModel.py:129
 msgid "Setting output path to {}"
 msgstr "Nastavení výstupní cesty na {}"
 
@@ -2850,7 +2915,7 @@ msgstr "Nastavení výstupní cesty na {}"
 msgid "Settings"
 msgstr "Nastavení"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:218
+#: PySubtrans/Transcription/TranscriptionProvider.py:226
 msgid "Shortest audio chunk to send in one request"
 msgstr "Nejkratší audio chunk k odeslání v jedné žádosti"
 
@@ -2872,7 +2937,7 @@ msgstr "Přihlaste se přes ChatGPT a překládejte v rámci svého plánu ChatG
 msgid "Sign in with ChatGPT to translate using your ChatGPT plan, instead of an OpenAI API key"
 msgstr "Přihlaste se přes ChatGPT a překládejte v rámci svého plánu ChatGPT místo použití API klíče OpenAI"
 
-#: GuiSubtrans/SettingsDialog.py:712 GuiSubtrans/SettingsDialog.py:717
+#: GuiSubtrans/SettingsDialog.py:799 GuiSubtrans/SettingsDialog.py:804
 #: PySubtrans/Auth/ChatGPTAuth.py:99
 msgid "Sign out"
 msgstr "Odhlásit se"
@@ -2883,15 +2948,15 @@ msgstr "Odhlásit se a znovu se přihlásit přes ChatGPT"
 
 #: PySubtrans/Providers/Provider_OpenAI.py:204
 msgid "Sign out of ChatGPT, so translation no longer uses your ChatGPT plan"
-msgstr ""
+msgstr "Odhlásit se z ChatGPT, aby překlad už nepoužíval váš plán ChatGPT"
 
-#: GuiSubtrans/SettingsDialog.py:712
+#: GuiSubtrans/SettingsDialog.py:799
 msgid "Sign out of ChatGPT? Translation with OpenAI will need you to sign in again."
 msgstr "Odhlásit se z ChatGPT? Pro překlad přes OpenAI se budete muset znovu přihlásit."
 
 #: PySubtrans/Auth/ChatGPTAuth.py:584
 msgid "Sign-in complete. You can close this window and return to {app}."
-msgstr ""
+msgstr "Přihlášení dokončeno. Toto okno můžete zavřít a vrátit se do {app}."
 
 #: PySubtrans/Auth/ChatGPTAuth.py:526 PySubtrans/Auth/ChatGPTAuth.py:532
 #: PySubtrans/Auth/ChatGPTAuth.py:535
@@ -2958,7 +3023,7 @@ msgstr "Časový limit detekce ticha vypršel po {} sekundách"
 msgid "Silence stream was used outside a with block"
 msgstr "Stream ticha byl použit mimo blok with"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:412
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:430
 msgid "Skipping silent chunk {} before requesting"
 msgstr "Přeskakuji tichý blok {} před odesláním požadavku"
 
@@ -3016,7 +3081,7 @@ msgstr "Rozdělování scény {scene} dávky: {batch} u řádku {line}"
 msgid "Spoken language hint (auto-detected when empty)"
 msgstr "Nápověda mluveného jazyka (prázdné = automatická detekce)"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:104
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:99
 msgid "Spoken language hint (optional, auto-detected when empty)"
 msgstr "Nápověda k mluvenému jazyku (volitelné, při prázdné hodnotě se jazyk automaticky rozpozná)"
 
@@ -3053,24 +3118,24 @@ msgstr "Spustit překlad ve více vláknech (rychlé, ale nebezpečné)"
 msgid "Starting"
 msgstr "Spouštění"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:176
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:162
 msgid "Step 1 of 3 - Choose an environment for local transcription"
 msgstr "Krok 1 z 3 - Vyberte prostředí pro místní transkrizi"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:228
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:218
 msgid "Step 2 of 3 - Choose the installation options"
 msgstr "Krok 2 ze 3 – Zvolte možnosti instalace"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:310
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:482
-msgid "Step 3 of 3 - Installing Torch and the Qwen runtime"
-msgstr "Krok 3 z 3 - Instalace Torchu a runtime Qwen"
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:300
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:484
+msgid "Step 3 of 3 - Installing Torch and the {runtime} runtime"
+msgstr "Krok 3 ze 3 – Instalace Torche a běhového prostředí {runtime}"
 
 #: PySubtrans/Providers/Clients/GeminiClient.py:242
 msgid "Still receiving Gemini response after {seconds} seconds ({characters} characters)"
 msgstr "Stále přijímám odpověď Gemini po {seconds} sekundách ({characters} znaků)"
 
-#: GuiSubtrans/SettingsDialog.py:55
+#: GuiSubtrans/SettingsDialog.py:56
 msgid "Stop translating if an error is encountered"
 msgstr "Zastavit překlad při výskytu chyby"
 
@@ -3098,11 +3163,11 @@ msgstr "Chyba streamování: {error}"
 msgid "Streaming failed before any response was received: {error}"
 msgstr "Streamování selhalo před přijetím jakékoli odpovědi: {error}"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:150
+#: GuiSubtrans/Widgets/ProjectSettings.py:153
 msgid "Substitution Mode"
 msgstr "Režim nahrazování"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:149
+#: GuiSubtrans/Widgets/ProjectSettings.py:152
 msgid "Substitutions"
 msgstr "Nahrazení"
 
@@ -3122,7 +3187,7 @@ msgstr "Titulky nebyly rozděleny do dávek"
 msgid "Subtitles must be batched before translation"
 msgstr "Titulky musí být seskupeny do batchů před překladem"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:397
+#: GuiSubtrans/Widgets/ProjectSettings.py:425
 msgid "Subtrans Files (*.subtrans);;All Files (*)"
 msgstr "Soubory Subtrans (*.subtrans);;Všechny soubory (*)"
 
@@ -3173,7 +3238,7 @@ msgstr "Označovat zvukové efekty a hudbu, např. [smích]"
 msgid "Tag sound effects and music, e.g. [laughter], for closed captions"
 msgstr "Označovat zvukové efekty a hudbu, např. [smích], pro skryté titulky"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:141
+#: GuiSubtrans/Widgets/ProjectSettings.py:144
 msgid "Target Language"
 msgstr "Cílový jazyk"
 
@@ -3185,7 +3250,7 @@ msgstr "Šablona pro výzvu k odeslání na server (použijte značky {prompt} a
 msgid "Terminology"
 msgstr "Terminologie"
 
-#: GuiSubtrans/Widgets/ProjectSettings.py:147
+#: GuiSubtrans/Widgets/ProjectSettings.py:150
 msgid "Terminology Map"
 msgstr "Mapa terminologie"
 
@@ -3193,11 +3258,11 @@ msgstr "Mapa terminologie"
 msgid "Text Files (*.txt);;All Files (*))"
 msgstr "Textové soubory (*.txt);;Všechny soubory (*)"
 
-#: GuiSubtrans/SettingsDialog.py:49
+#: GuiSubtrans/SettingsDialog.py:50
 msgid "The (brief) instruction for each batch of subtitles. Some [tags] are automatically filled in"
 msgstr "(Stručný) pokyn pro každou dávku titulků. Některé [značky] se vyplňují automaticky"
 
-#: GuiSubtrans/NewProjectSettings.py:32 GuiSubtrans/SettingsDialog.py:59
+#: GuiSubtrans/NewProjectSettings.py:32 GuiSubtrans/SettingsDialog.py:60
 msgid "The AI translation service to use"
 msgstr "AI překladová služba k použití"
 
@@ -3218,29 +3283,13 @@ msgstr "Základní URL Azure API pro požadavky."
 msgid "The OpenAI library is out of date and must be updated"
 msgstr "Knihovna OpenAI je zastaralá a musí být aktualizována"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:507
-msgid "The Torch environment at:\n{path}\n\ndoes not include the Qwen runtime that local transcription needs.\n\nInstall it into this environment now? It needs about {size} of disk space."
-msgstr ""
-"Torch prostředí na:\n"
-"{path}\n"
-"\n"
-"neobsahuje runtime Qwen, který místní transkrice potřebuje.\n"
-"\n"
-"Nainstalujte ho do tohoto prostředí nyní? Potřebuje asi {size} místa na disku."
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:524
+msgid "The Torch environment at:\n{path}\n\ndoes not include the {runtime} runtime that {provider} needs.\n\nInstall it into this environment now? It needs about {size} of disk space."
+msgstr "Prostředí Torch v:\n{path}\n\nneobsahuje běhové prostředí {runtime}, které {provider} vyžaduje.\n\nNainstalovat jej nyní do tohoto prostředí? Potřebuje přibližně {size} místa na disku."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:498
-msgid "The Torch environment at:\n{path}\n\ndoes not include the Qwen runtime, and has no Python interpreter to install it with.\n\nSelect a virtual environment, or use the automatic install."
-msgstr ""
-"Torch prostředí na:\n"
-"{path}\n"
-"\n"
-"neobsahuje runtime Qwen, a nemá Python interpreter pro jeho instalaci.\n"
-"\n"
-"Vyberte virtuální prostředí, nebo použijte automatickou instalaci."
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:48
-msgid "The Torch environment does not include the Qwen runtime. Use {button} and select the same environment to install it."
-msgstr "Torch prostředí neobsahuje runtime Qwen. Použijte {button} a vyberte stejné prostředí pro jeho instalaci."
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:515
+msgid "The Torch environment at:\n{path}\n\ndoes not include the {runtime} runtime, and has no Python interpreter to install it with.\n\nSelect a virtual environment, or use the automatic install."
+msgstr "Prostředí Torch v:\n{path}\n\nneobsahuje běhové prostředí {runtime} a nemá žádný interpret Pythonu, kterým by se dalo nainstalovat.\n\nVyberte virtuální prostředí nebo použijte automatickou instalaci."
 
 #: PySubtrans/Providers/Provider_Custom.py:95
 msgid "The address of the server"
@@ -3250,7 +3299,7 @@ msgstr "Adresa serveru"
 #: PySubtrans/Providers/Provider_OpenAI.py:125
 #: PySubtrans/Providers/Provider_OpenAI.py:306
 msgid "The application must identify itself with ConfigureChatGPTApp before signing in with ChatGPT"
-msgstr ""
+msgstr "Aplikace se musí před přihlášením k ChatGPT identifikovat pomocí ConfigureChatGPTApp"
 
 #: PySubtrans/Providers/Provider_DeepSeek.py:61
 msgid "The base URL to use for requests (default is https://api.deepseek.com)"
@@ -3264,47 +3313,27 @@ msgstr "Základní URL pro požadavky (výchozí je https://api.mistral.ai)"
 msgid "The base URL to use for requests - leave as default unless you know you need something else"
 msgstr "Základní URL pro požadavky - ponechte výchozí, pokud nevíte, že potřebujete něco jiného"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:700
-msgid "The compatibility information for this build could not be read: {error}"
-msgstr "Informace o kompatibilitě pro toto sestavení nebylo možné přečíst: {error}"
-
-#: PySubtrans/Transcription/Torch/Runtime.py:41
-msgid "The configured Torch installation directory is invalid. Select the external site-packages directory containing the 'torch' package."
-msgstr "Nakonfigurovaný instalační adresář Torch je neplatný. Vyberte externí adresář site-packages obsahující balíček 'torch'."
+#: PySubtrans/Transcription/Torch/Discovery.py:86
+msgid "The configured Torch environment has no Python interpreter: {}"
+msgstr "Nakonfigurované prostředí Torch nemá žádný interpret Pythonu: {}"
 
 #: PySubtrans/Transcription/AudioExtractor.py:278
 msgid "The configured ffmpeg executable was not found: {}"
 msgstr "Nakonfigurovaný spustitelný soubor ffmpeg nebyl nalezen: {}"
 
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:195
-msgid "The configured {} accelerator is unavailable. Enable 'allow_cpu_fallback' in Qwen Local advanced settings to permit CPU fallback, or choose an available accelerator."
-msgstr "Nakonfigurovaný akcelerátor {} není dostupný. V pokročilých nastaveních Qwen Local povolte volbu 'allow_cpu_fallback', aby bylo možné použít CPU, nebo zvolte dostupný akcelerátor."
-
-#: GuiSubtrans/SettingsDialog.py:44
+#: GuiSubtrans/SettingsDialog.py:45
 msgid "The default language to translate the subtitles to"
 msgstr "Výchozí jazyk pro překlad titulků"
 
-#: PySubtrans/Transcription/Torch/Runtime.py:56
-msgid "The external Torch installation cannot be inspected by this Python interpreter."
-msgstr "Externí instalaci Torch nelze prozkoumat tímto interpretem Pythonu."
-
-#: PySubtrans/Transcription/Torch/Validation.py:205
-msgid "The external Torch installation is incompatible with this application: {}. Install a complete Torch environment matching the application's Python ABI, OS, architecture, and pointer width, then restart."
-msgstr "Externí instalace Torch není kompatibilní s touto aplikací: {}. Nainstalujte kompletní prostředí Torch, které odpovídá ABI Pythonu aplikace, operačnímu systému, architektuře a šířce ukazatele, a poté restartujte."
-
-#: PySubtrans/Transcription/Torch/Runtime.py:89
-msgid "The external Torch installation is missing its native library directory: {}."
-msgstr "V externí instalaci Torch chybí adresář nativních knihoven: {}."
-
-#: PySubtrans/Transcription/Torch/Runtime.py:109
-msgid "The external Torch installation setting was cleared after Torch runtime setup. Restart the application to apply that change."
-msgstr "Nastavení externí instalace Torch bylo po nastavení běhového prostředí Torch vymazáno. Restartujte aplikaci, aby se tato změna projevila."
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:504
+msgid "The environment at:\n{path}\n\nhas the {other} runtime installed. {runtime} needs an environment of its own.\n\nSelect another environment, or use the automatic install."
+msgstr "Prostředí v:\n{path}\n\nmá nainstalované běhové prostředí {other}. {runtime} potřebuje vlastní prostředí.\n\nVyberte jiné prostředí nebo použijte automatickou instalaci."
 
 #: PySubtrans/Transcription/AudioExtractor.py:287
 msgid "The ffprobe executable paired with ffmpeg was not found: {}"
 msgstr "Spustitelný soubor ffprobe přidružený k ffmpeg nebyl nalezen: {}"
 
-#: GuiSubtrans/FirstRunOptions.py:17 GuiSubtrans/SettingsDialog.py:42
+#: GuiSubtrans/FirstRunOptions.py:17 GuiSubtrans/SettingsDialog.py:43
 msgid "The language of the application interface"
 msgstr "Jazyk uživatelského rozhraní aplikace"
 
@@ -3312,6 +3341,10 @@ msgstr "Jazyk uživatelského rozhraní aplikace"
 #: PySubtrans/Providers/Provider_OpenAI.py:213
 msgid "The level of reasoning effort to use for the model (valid options are model-dependent)"
 msgstr "Úroveň úsilí při uvažování, které má model použít (platné možnosti závisí na modelu)"
+
+#: scripts/install_torch.py:59
+msgid "The local runtime environment needs a working Python 3.10 or later."
+msgstr "Místní běhové prostředí vyžaduje funkční Python 3.10 nebo novější."
 
 #: PySubtrans/Providers/Provider_Bedrock.py:94
 msgid "The maximum number of requests to make per minute"
@@ -3341,7 +3374,7 @@ msgstr "ID modelu (u místních serverů obvykle není potřeba)"
 msgid "The model to use for translations"
 msgstr "Model, který se má použít pro překlady"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:209
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:199
 msgid "The next page will ask where to create it and show the detected hardware."
 msgstr "Další stránka se zeptá, kam jej vytvořit, a zobrazí zjištěný hardware."
 
@@ -3349,23 +3382,7 @@ msgstr "Další stránka se zeptá, kam jej vytvořit, a zobrazí zjištěný ha
 msgid "The rate limit to use for translations (default 60.0)"
 msgstr "Omezení rychlosti pro překlady (výchozí 60.0)"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:722
-msgid "The selected Torch environment may be incompatible with this application:\n{details}\n\nTorch is loaded into this application, so its Python ABI, OS, architecture and pointer width should match the build. If Torch fails to load, install a matching environment."
-msgstr ""
-"Vybrané prostředí Torch může být nekompatibilní s touto aplikací:\n"
-"{details}\n"
-"\n"
-"Torch je do této aplikace načítán, takže jeho Python ABI, OS, architektura a šířka ukazatele by měly odpovídat sestavení. Pokud se Torch nepodaří načíst, nainstalujte odpovídající prostředí."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:710
-msgid "The selected environment has no Python interpreter, so its compatibility could not be verified."
-msgstr "Vybrané prostředí nemá interpret Pythonu, takže jeho kompatibilitu nebylo možné ověřit."
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:715
-msgid "The selected environment's Python interpreter could not be checked."
-msgstr "Interpret Pythonu vybraného prostředí nebylo možné zkontrolovat."
-
-#: GuiSubtrans/SettingsDialog.py:63
+#: GuiSubtrans/SettingsDialog.py:64
 msgid "The transcription service to use"
 msgstr "Služba přepisu, která se má použít"
 
@@ -3373,9 +3390,9 @@ msgstr "Služba přepisu, která se má použít"
 msgid "The translation provider to use"
 msgstr "Poskytovatel překladu k použití"
 
-#: PySubtrans/Transcription/Torch/Runtime.py:65
-msgid "This frozen application is missing '{}'. Repair or reinstall the distribution before configuring an external Torch installation."
-msgstr "V této zmrazené aplikaci chybí '{}'. Před konfigurací externí instalace Torch opravte nebo přeinstalujte distribuci."
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:471
+msgid "This folder has the {other} runtime installed. {runtime} needs an environment of its own, so choose another folder."
+msgstr "V této složce je nainstalované běhové prostředí {other}. {runtime} potřebuje vlastní prostředí, proto zvolte jinou složku."
 
 #: PySubtrans/Providers/Provider_Custom.py:110
 msgid "Timeout for the request in seconds (default 300)"
@@ -3383,64 +3400,32 @@ msgstr "Časový limit pro požadavek v sekundách (výchozí 300)"
 
 #: PySubtrans/Providers/Clients/AnthropicClient.py:113
 #: PySubtrans/Providers/Clients/LiteLLMClient.py:69
-#: PySubtrans/Providers/Clients/MistralClient.py:76
+#: PySubtrans/Providers/Clients/MistralClient.py:87
 #: PySubtrans/Providers/Clients/OpenAIClient.py:78
 msgid "Too many tokens in translation"
 msgstr "Příliš mnoho tokenů v překladu"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:682
-msgid "Torch Compatibility Warning"
-msgstr "Varování o kompatibilitě Torch"
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:668
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:687
 msgid "Torch Not Found"
 msgstr "Torch nebyl nalezen"
 
-#: PySubtrans/Transcription/Torch/Validation.py:140
-msgid "Torch compatibility metadata could not be read from '{}': {}"
-msgstr "Metadata kompatibility Torch se nepodařilo přečíst z '{}': {}"
-
-#: PySubtrans/Transcription/Torch/Validation.py:145
-msgid "Torch compatibility metadata has an invalid format: {}"
-msgstr "Metadata kompatibility Torch mají neplatný formát: {}"
-
-#: PySubtrans/Transcription/Torch/Validation.py:150
-msgid "Torch compatibility metadata has an unknown kind: {}"
-msgstr "Metadata kompatibility Torch obsahují neznámý druh: {}"
-
-#: PySubtrans/Transcription/Torch/Validation.py:164
-msgid "Torch compatibility metadata has missing or invalid compatibility fields: {}"
-msgstr "Metadata kompatibility Torch obsahují chybějící nebo neplatná pole kompatibility: {}"
-
-#: PySubtrans/Transcription/Torch/Validation.py:155
-msgid "Torch compatibility metadata schema is unsupported: {}"
-msgstr "Schéma metadat kompatibility Torch není podporováno: {}"
-
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:642
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:663
 msgid "Torch could not be validated. Check the log and try again."
 msgstr "Torch nebylo možné ověřit. Zkontrolujte protokol a zkuste to znovu."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:689
-msgid "Torch environment selected at:\n{path}\n\nThe application needs to be restarted for the change to take effect."
-msgstr ""
-"Prostředí Torch vybráno v:\n"
-"{path}\n"
-"\n"
-"Pro provedení změny je nutné restartovat aplikaci."
+#: scripts/install_torch.py:110
+msgid "Torch installation failed: {}"
+msgstr "Instalace Torche selhala: {}"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:541
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:559
 msgid "Torch installed successfully."
 msgstr "Torch byl úspěšně nainstalován."
 
-#: PySubtrans/Transcription/Torch/Runtime.py:123
-msgid "Torch is already loaded from '{}'. Changing the Torch installation requires restarting the application."
-msgstr "Torch je již načten z '{}'. Změna instalace Torch vyžaduje restartování aplikace."
-
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:205
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:207
 msgid "Transcribe"
 msgstr "Přepsat"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:86
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:88
 msgid "Transcribe Media"
 msgstr "Přepsat média"
 
@@ -3448,19 +3433,19 @@ msgstr "Přepsat média"
 msgid "Transcribe audio/video to subtitles"
 msgstr "Přepsat zvuk/video na titulky"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:183
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:185
 msgid "Transcribed lines will appear here..."
 msgstr "Přepsané řádky se zobrazí zde..."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:825
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:854
 msgid "Transcribed {} lines (saving to {})."
 msgstr "Přepsáno {} řádků (ukládá se do {})."
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:371
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:382
 msgid "Transcribed {} lines from {} chunks"
 msgstr "Přepsáno {} řádků z {} bloků"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:827
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:856
 msgid "Transcribed {} lines."
 msgstr "Přepsáno {} řádků."
 
@@ -3468,55 +3453,61 @@ msgstr "Přepsáno {} řádků."
 msgid "Transcribing chunk {current}"
 msgstr "Přepisuji blok {current}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:146
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:147
 msgid "Transcribing {} with {}"
 msgstr "Přepisuji {} pomocí {} (bloky se streamují, zatímco běží detekce ticha)"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:657
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:663
 msgid "Transcribing..."
 msgstr "Přepisuji..."
 
-#: GuiSubtrans/SettingsDialog.py:116
+#: GuiSubtrans/SettingsDialog.py:118
 msgid "Transcription Settings"
 msgstr "Nastavení přepisu"
 
 #: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:119
 #: PySubtrans/Transcription/Providers/Clients/GeminiTranscriptionClient.py:145
-#: PySubtrans/Transcription/TranscriptionClient.py:79
-#: PySubtrans/Transcription/TranscriptionClient.py:115
+#: PySubtrans/Transcription/Providers/Clients/MossLocalClient.py:80
+#: PySubtrans/Transcription/Providers/Clients/MossLocalClient.py:141
+#: PySubtrans/Transcription/Providers/Clients/MossLocalClient.py:162
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:83
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:141
+#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:162
+#: PySubtrans/Transcription/TranscriptionClient.py:87
+#: PySubtrans/Transcription/TranscriptionClient.py:140
 msgid "Transcription aborted"
 msgstr "Přepis zrušen"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:279
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:283
 msgid "Transcription cancelled after {done} chunks"
 msgstr "Přepis zrušen po {done} blocích"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:374
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:390
 msgid "Transcription cost: ${:.4f}"
 msgstr "Cena přepisu: ${:.4f}"
 
-#: PySubtrans/Transcription/TranscriptionClient.py:226
+#: PySubtrans/Transcription/TranscriptionClient.py:251
 msgid "Transcription failed ({}): non-JSON response: {}"
 msgstr "Přepis selhal ({}): odpověď není ve formátu JSON: {}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:347
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:352
 msgid "Transcription failed at {span}: {error}"
 msgstr "Přepis selhal v {span}: {error}"
 
 #: GuiSubtrans/Commands/TranscribeMediaCommand.py:168
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:819
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:848
 msgid "Transcription failed: {error}"
 msgstr "Přepis selhal: {error}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:818
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:847
 msgid "Transcription failed; partial results ({} lines) are available."
 msgstr "Přepis selhal; částečné výsledky ({} řádků) jsou k dispozici."
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:822
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:851
 msgid "Transcription incomplete - partial results ({} lines)."
 msgstr "Přepis neúplný - částečné výsledky ({} řádků)."
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:103
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:98
 msgid "Transcription model to run"
 msgstr "Model přepisu ke spuštění"
 
@@ -3524,7 +3515,7 @@ msgstr "Model přepisu ke spuštění"
 msgid "Transcription produced no subtitles"
 msgstr "Přepis nevygeneroval žádné titulky"
 
-#: GuiSubtrans/SettingsDialog.py:763
+#: GuiSubtrans/SettingsDialog.py:850
 msgid "Transcription provider is not set"
 msgstr "Poskytovatel přepisu není nastaven"
 
@@ -3532,22 +3523,38 @@ msgstr "Poskytovatel přepisu není nastaven"
 msgid "Transcription provider name is required"
 msgstr "Název poskytovatele transkrice je povinný"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:588
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:594
 msgid "Transcription providers are still loading..."
 msgstr "Poskytovatelé přepisu se stále načítají..."
 
 #: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:111
-#: PySubtrans/Transcription/TranscriptionClient.py:221
+#: PySubtrans/Transcription/TranscriptionClient.py:246
 msgid "Transcription request failed: POST {} returned {}: {}"
 msgstr "Požadavek na přepis selhal: POST {} vrátil {}: {}"
 
-#: PySubtrans/Transcription/TranscriptionClient.py:204
+#: PySubtrans/Transcription/TranscriptionClient.py:229
 msgid "Transcription request failed: {}"
 msgstr "Požadavek na přepis selhal: {}"
 
-#: PySubtrans/Transcription/TranscriptionCoordinator.py:341
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:346
 msgid "Transcription stopped at {span}: {error}"
 msgstr "Přepis zastaven u {span}: {error}"
+
+#: PySubtrans/Transcription/WorkerHost.py:175
+msgid "Transcription worker communication failed: {}"
+msgstr "Komunikace s pracovním procesem přepisu selhala: {}"
+
+#: PySubtrans/Transcription/WorkerHost.py:229
+msgid "Transcription worker exited before replying (exit code {})"
+msgstr "Pracovní proces přepisu skončil před odpovědí (návratový kód {})"
+
+#: PySubtrans/Transcription/WorkerHost.py:167
+msgid "Transcription worker failed ({}): {}"
+msgstr "Pracovní proces přepisu selhal ({}): {}"
+
+#: PySubtrans/Transcription/WorkerHost.py:123
+msgid "Transcription worker was aborted"
+msgstr "Pracovní proces přepisu byl přerušen"
 
 #: GuiSubtrans/Widgets/SelectionView.py:56
 #: GuiSubtrans/Widgets/SelectionView.py:86
@@ -3582,7 +3589,7 @@ msgstr "Překládám s modelem Gemini {model}"
 msgid "Translating with LiteLLM using model: {model}"
 msgstr "Překlad pomocí LiteLLM s modelem: {model}"
 
-#: PySubtrans/Providers/Clients/MistralClient.py:27
+#: PySubtrans/Providers/Clients/MistralClient.py:38
 msgid "Translating with Mistral model {model}, using server: {server_url}"
 msgstr "Překládám s modelem Mistral {model}, používám server: {server_url}"
 
@@ -3635,7 +3642,7 @@ msgstr "Požadavky na překlad přes OpenAI využijí povolenou kvótu vašeho p
 msgid "Translation response error: {error}, retrying in {backoff_time} seconds..."
 msgstr "Chyba odpovědi překladu: {error}, opakuji za {backoff_time} sekund..."
 
-#: GuiSubtrans/SettingsDialog.py:56
+#: GuiSubtrans/SettingsDialog.py:57
 msgid "Treat validation warnings such as long lines as errors"
 msgstr "Považovat validační upozornění, například dlouhé řádky, za chyby"
 
@@ -3662,7 +3669,7 @@ msgstr "Nelze získat zámek titulků"
 msgid "Unable to confirm ChatGPT sign-out: {error}"
 msgstr "Nelze potvrdit odhlášení z ChatGPT: {error}"
 
-#: GuiSubtrans/NewProjectSettings.py:98
+#: GuiSubtrans/NewProjectSettings.py:99
 msgid "Unable to create option widget for {key}: {error}"
 msgstr "Nelze vytvořit widget volby pro {key}: {error}"
 
@@ -3670,7 +3677,7 @@ msgstr "Nelze vytvořit widget volby pro {key}: {error}"
 msgid "Unable to create provider client: {error}"
 msgstr "Nelze vytvořit klienta poskytovatele: {error}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:330
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:336
 msgid "Unable to create transcription provider: {error}"
 msgstr "Nepodařilo se vytvořit poskytovatele přepisu: {error}"
 
@@ -3678,7 +3685,7 @@ msgstr "Nepodařilo se vytvořit poskytovatele přepisu: {error}"
 msgid "Unable to create translation client"
 msgstr "Nelze vytvořit klienta překladu"
 
-#: GuiSubtrans/ProjectDataModel.py:139
+#: GuiSubtrans/ProjectDataModel.py:142
 msgid "Unable to create {provider} provider: {error}"
 msgstr "Nelze vytvořit poskytovatele {provider}: {error}"
 
@@ -3686,14 +3693,14 @@ msgstr "Nelze vytvořit poskytovatele {provider}: {error}"
 msgid "Unable to delete uploaded audio: {}"
 msgstr "Nepodařilo se smazat nahrané audio: {}"
 
-#: PySubtrans/Transcription/Torch/Runtime.py:50
-msgid "Unable to determine the Python process architecture for the external Torch installation."
-msgstr "Nelze určit architekturu procesu Pythonu pro externí instalaci Torch."
-
 #: GuiSubtrans/Commands/EditBatchCommand.py:28
 #: GuiSubtrans/Commands/EditLineCommand.py:29
 msgid "Unable to edit batch because datamodel is invalid"
 msgstr "Nelze upravit dávku, protože datový model je neplatný"
+
+#: PySubtrans/Transcription/WorkerHost.py:33
+msgid "Unable to encode worker message: {}"
+msgstr "Zprávu pracovního procesu nelze zakódovat: {}"
 
 #: GuiSubtrans/Commands/ReparseTranslationsCommand.py:51
 #: GuiSubtrans/Commands/ReparseTranslationsCommand.py:113
@@ -3712,12 +3719,8 @@ msgstr "Nepodařilo se inicializovat Anthropic SDK. Poskytovatel Claude nebude k
 msgid "Unable to list audio tracks: {}"
 msgstr "Nepodařilo se zobrazit seznam zvukových stop: {}"
 
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:320
-msgid "Unable to load Qwen model: {}"
-msgstr "Nepodařilo se načíst model Qwen: {}"
-
-#: GuiSubtrans/NewProjectSettings.py:144 GuiSubtrans/NewProjectSettings.py:198
-#: GuiSubtrans/NewProjectSettings.py:216
+#: GuiSubtrans/NewProjectSettings.py:145 GuiSubtrans/NewProjectSettings.py:199
+#: GuiSubtrans/NewProjectSettings.py:217
 msgid "Unable to load instructions from {file}: {error}"
 msgstr "Nelze načíst pokyny ze souboru {file}: {error}"
 
@@ -3725,7 +3728,7 @@ msgstr "Nelze načíst pokyny ze souboru {file}: {error}"
 msgid "Unable to load models for {provider}: {error}"
 msgstr "Nepodařilo se načíst modely pro {provider}: {error}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:413
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:419
 msgid "Unable to load provider options: {error}"
 msgstr "Nepodařilo se načíst možnosti poskytovatele: {error}"
 
@@ -3733,16 +3736,16 @@ msgstr "Nepodařilo se načíst možnosti poskytovatele: {error}"
 msgid "Unable to load subtitles from {file}"
 msgstr "Nelze načíst titulky ze souboru {file}"
 
-#: GuiSubtrans/SettingsDialog.py:651
+#: GuiSubtrans/SettingsDialog.py:737
 msgid "Unable to load transcription provider options: {error}"
 msgstr "Nepodařilo se načíst možnosti poskytovatele přepisu: {error}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:319
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:325
 msgid "Unable to load transcription providers."
 msgstr "Nepodařilo se načíst poskytovatele přepisu."
 
-#: GuiSubtrans/SettingsDialog.py:593
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:318
+#: GuiSubtrans/SettingsDialog.py:679
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:324
 msgid "Unable to load transcription providers: {error}"
 msgstr "Nepodařilo se načíst poskytovatele přepisu: {error}"
 
@@ -3768,11 +3771,11 @@ msgstr "Nepodařilo se zjistit délku média"
 msgid "Unable to parse server response as JSON: {response_text}"
 msgstr "Nelze zpracovat odpověď serveru jako JSON: {response_text}"
 
-#: PySubtrans/Transcription/TranscriptionClient.py:232
+#: PySubtrans/Transcription/TranscriptionClient.py:257
 msgid "Unable to parse transcription response"
 msgstr "Nepodařilo se zpracovat odpověď přepisu"
 
-#: GuiSubtrans/NewProjectSettings.py:232
+#: GuiSubtrans/NewProjectSettings.py:233
 msgid "Unable to preview batches: {error}"
 msgstr "Nelze zobrazit náhled dávek: {error}"
 
@@ -3788,7 +3791,7 @@ msgstr "ChatGPT je nedostupný: {error}"
 msgid "Unable to read ChatGPT sign-in data: {error}"
 msgstr "Nelze načíst přihlašovací data ChatGPT: {error}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:496
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:502
 msgid "Unable to read media: {error}"
 msgstr "Nelze přečíst médium: {error}"
 
@@ -3796,13 +3799,9 @@ msgstr "Nelze přečíst médium: {error}"
 msgid "Unable to read project file, starting afresh"
 msgstr "Nelze načíst soubor projektu, začíná se znovu"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:568
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:574
 msgid "Unable to record dependency evidence: {error}"
 msgstr "Nelze zaznamenat důkazy o závislostech: {error}"
-
-#: PySubtrans/Transcription/Torch/Runtime.py:94
-msgid "Unable to register Torch native libraries from '{}': {}."
-msgstr "Nelze zaregistrovat nativní knihovny Torch z '{}': {}."
 
 #: PySubtrans/Providers/Gateways/GatewayProvider.py:304
 #: PySubtrans/Providers/Provider_OpenRouter.py:299
@@ -3818,7 +3817,7 @@ msgid "Unable to retrieve Gemini model list: {error}"
 msgstr "Nepodařilo se načíst seznam modelů Gemini: {error}"
 
 #: PySubtrans/Providers/Provider_Bedrock.py:144
-#: PySubtrans/Providers/Provider_Mistral.py:129
+#: PySubtrans/Providers/Provider_Mistral.py:127
 #: PySubtrans/Providers/Provider_OpenAI.py:271
 #: PySubtrans/Providers/Provider_OpenAI.py:287
 msgid "Unable to retrieve available AI models: {error}"
@@ -3853,6 +3852,10 @@ msgstr "Nelze uložit soubor terminologie '{path}': {error}"
 msgid "Unable to save translation: {}"
 msgstr "Nelze uložit překlad: {}"
 
+#: PySubtrans/Transcription/WorkerHost.py:135
+msgid "Unable to start transcription worker: {}"
+msgstr "Nelze spustit pracovní proces přepisu: {}"
+
 #: PySubtrans/SubtitleTranslator.py:281
 msgid "Unable to translate scene {scene} batch {batch}"
 msgstr "Nelze přeložit scénu {scene} dávku {batch}"
@@ -3865,7 +3868,7 @@ msgstr "Nelze vrátit zpět příkaz SplitBatchCommand: {error}"
 msgid "Unable to undo SplitScene command: {error}"
 msgstr "Nelze vrátit zpět příkaz SplitScene: {error}"
 
-#: GuiSubtrans/NewProjectSettings.py:147
+#: GuiSubtrans/NewProjectSettings.py:148
 msgid "Unable to update settings: {error}"
 msgstr "Nelze aktualizovat nastavení: {error}"
 
@@ -3894,7 +3897,7 @@ msgid "Unexpected error communicating with server: {error}"
 msgstr "Neočekávaná chyba při komunikaci se serverem: {error}"
 
 #: PySubtrans/Providers/Clients/LiteLLMClient.py:183
-#: PySubtrans/Providers/Clients/MistralClient.py:136
+#: PySubtrans/Providers/Clients/MistralClient.py:147
 #: PySubtrans/Providers/Clients/OpenAIClient.py:174
 msgid "Unexpected error communicating with the provider"
 msgstr "Nečekaná chyba při komunikaci s poskytovatelem"
@@ -3903,22 +3906,30 @@ msgstr "Nečekaná chyba při komunikaci s poskytovatelem"
 msgid "Unexpected error parsing SRT: {}"
 msgstr "Neočekávaná chyba při analýze SRT: {}"
 
+#: PySubtrans/SubtitleValidator.py:148
+msgid "Unexpected response label {label} inside translated subtitle text"
+msgstr "Neočekávaný štítek odpovědi {label} uvnitř přeloženého textu titulků"
+
 #: PySubtrans/Providers/Clients/ChatGPTClient.py:53
-#: PySubtrans/Providers/Clients/MistralClient.py:108
+#: PySubtrans/Providers/Clients/MistralClient.py:119
 msgid "Unexpected response type: {response_type}"
 msgstr "Nečekaný typ odpovědi: {response_type}"
 
-#: PySubtrans/Transcription/TranscriptionClient.py:235
+#: PySubtrans/Transcription/TranscriptionClient.py:260
 msgid "Unexpected transcription response shape"
 msgstr "Neočekávaná struktura odpovědi přepisu"
+
+#: PySubtrans/Transcription/WorkerHost.py:170
+msgid "Unexpected transcription worker response: {}"
+msgstr "Neočekávaná odpověď pracovního procesu přepisu: {}"
+
+#: PySubtrans/Transcription/WorkerHost.py:59
+msgid "Unexpected worker message shape"
+msgstr "Neočekávaný tvar zprávy pracovního procesu"
 
 #: PySubtrans/Providers/Clients/GeminiClient.py:356
 msgid "Unknown Gemini thinking level {level}, using the model default"
 msgstr "Neznámá úroveň uvažování Gemini {level}, použije se výchozí nastavení modelu"
-
-#: PySubtrans/Transcription/Providers/Clients/QwenLocalClient.py:181
-msgid "Unknown device '{}', using automatic selection"
-msgstr "Neznámé zařízení '{}', použije se automatický výběr"
 
 #: PySubtrans/Subtitles.py:77
 msgid "Unknown original text placement '{}', placing the original above the translation"
@@ -3932,7 +3943,7 @@ msgstr "Neznámý formát titulků: {extension}. Dostupné formáty: {available}
 msgid "Unrecognised language '{}': use a language name or BCP-47 code, or leave empty to auto-detect"
 msgstr "Nerozpoznaný jazyk '{}': použijte název jazyka nebo kód BCP-47, nebo ponechte prázdné pro automatickou detekci"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:257
+#: PySubtrans/Transcription/TranscriptionProvider.py:265
 msgid "Unrecognised language '{}': use a language name or code, or leave empty to auto-detect"
 msgstr "Nerozpoznaný jazyk '{}': použijte název jazyka nebo kód, nebo ponechte prázdné pro automatickou detekci"
 
@@ -3956,15 +3967,15 @@ msgstr "Nahrané audio nemá název; bude ponecháno, aby vypršelo"
 msgid "Uploading audio chunk for Gemini transcription"
 msgstr "Nahrávám zvukový blok pro přepis Gemini"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:245
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:235
 msgid "Use a new or empty folder; existing files will not be overwritten."
 msgstr "Použijte novou nebo prázdnou složku; existující soubory nebudou přepsány."
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:181
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:167
 msgid "Use an existing installation"
 msgstr "Použít existující instalaci"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:351
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:341
 msgid "Use existing installation"
 msgstr "Použít existující instalaci"
 
@@ -3977,15 +3988,15 @@ msgstr "Použít paralelní vlákna pro požadavky na překlad (může být rych
 msgid "Use the default model and hide advanced model options"
 msgstr "Použít výchozí model a skrýt pokročilé možnosti modelu"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:183
-msgid "Use the detected Torch environment"
-msgstr "Použít zjištěné prostředí Torch"
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:176
+msgid "Use the detected {runtime} environment"
+msgstr "Použít zjištěné prostředí {runtime}"
 
 #: PySubtrans/Providers/Provider_OpenAI.py:171
 msgid "Use the httpx library for requests. May help if you receive a 307 redirect error with a custom api_base"
 msgstr "Použít knihovnu httpx pro požadavky. Může pomoci, pokud obdržíte chybu přesměrování 307 s vlastním api_base"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:354
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:344
 msgid "Use this installation"
 msgstr "Použít tuto instalaci"
 
@@ -4004,23 +4015,23 @@ msgstr "Používá se model: {model}"
 msgid "Using proxy: {proxy}"
 msgstr "Používám proxy: {proxy}"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:168
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:170
 msgid "VTT and ASS preserve speaker labels; SRT has no speaker field"
 msgstr "VTT a ASS zachovávají popisky mluvčích; SRT nemá pole pro mluvčího"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:678
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:697
 msgid "Validated Torch installation at {path}."
 msgstr "Ověřena instalace Torch v {path}."
 
-#: GuiSubtrans/SettingsDialog.py:104
+#: GuiSubtrans/SettingsDialog.py:105
 msgid "Validator: Maximum number of characters to allow in a single translated line"
 msgstr "Validátor: Maximální počet znaků povolených v jednom přeloženém řádku"
 
-#: GuiSubtrans/SettingsDialog.py:105
+#: GuiSubtrans/SettingsDialog.py:106
 msgid "Validator: Maximum number of newlines to allow in a single translated line"
 msgstr "Validátor: Maximální počet nových řádků povolených v jednom přeloženém řádku"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:527
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:545
 msgid "Virtual environment created successfully."
 msgstr "Virtuální prostředí bylo úspěšně vytvořeno."
 
@@ -4028,28 +4039,32 @@ msgstr "Virtuální prostředí bylo úspěšně vytvořeno."
 msgid "Warming up translation provider"
 msgstr "Zahřívání překladatelského poskytovatele"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:376
-#: PySubtrans/Transcription/TranscriptionProvider.py:153
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:382
+#: PySubtrans/Transcription/TranscriptionProvider.py:161
 msgid "Warning"
 msgstr "Varování"
 
-#: GuiSubtrans/SettingsDialog.py:109
+#: scripts/install_moss_runtime.py:28 scripts/install_qwen_runtime.py:29
+msgid "Warning: torch installation encountered an error."
+msgstr "Upozornění: při instalaci torch došlo k chybě."
+
+#: GuiSubtrans/SettingsDialog.py:110
 msgid "Whether the original text goes above or below the translation when the original text is included"
 msgstr "Zda původní text patří nad nebo pod překlad, když je původní text zahrnut"
 
-#: GuiSubtrans/SettingsDialog.py:101
+#: GuiSubtrans/SettingsDialog.py:102
 msgid "Whether to substitute whole words or partial matches, or choose automatically based on input language"
 msgstr "Zda nahrazovat celá slova nebo částečné shody, nebo zvolit automaticky na základě vstupního jazyka"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:230
+#: PySubtrans/Transcription/TranscriptionProvider.py:238
 msgid "Widest gap, in seconds, across which lines can be merged when the speaker has not changed"
 msgstr "Největší mezera v sekundách, přes kterou lze řádky sloučit, pokud se mluvčí nezměnil"
 
-#: PySubtrans/Transcription/TranscriptionProvider.py:225
+#: PySubtrans/Transcription/TranscriptionProvider.py:233
 msgid "Widest gap, in seconds, across which transcribed lines can still be merged"
 msgstr "Největší mezera v sekundách, přes kterou lze stále sloučit přepisované řádky"
 
-#: GuiSubtrans/Widgets/TranscriptionDialog.py:78
+#: GuiSubtrans/Widgets/TranscriptionDialog.py:80
 msgid "Write the transcription to a subtitle file alongside the media before translating"
 msgstr "Před překladem zapište přepis do souboru titulků vedle média"
 
@@ -4057,7 +4072,7 @@ msgstr "Před překladem zapište přepis do souboru titulků vedle média"
 msgid "Writing project data to {}"
 msgstr "Zapisování dat projektu do {}"
 
-#: GuiSubtrans/SettingsDialog.py:717
+#: GuiSubtrans/SettingsDialog.py:804
 msgid "You are signed out here, but remote sign-out could not be confirmed. You can disconnect LLM-Subtrans in your ChatGPT settings."
 msgstr "Zde jste odhlášeni, ale vzdálené odhlášení se nepodařilo potvrdit. LLM-Subtrans můžete odpojit v nastavení svého ChatGPT."
 
@@ -4069,7 +4084,7 @@ msgstr "Používáte svůj plán ChatGPT"
 msgid "Your ChatGPT session has expired. Sign in again to continue."
 msgstr "Vaše relace ChatGPT vypršela. Pro pokračování se znovu přihlaste."
 
-#: PySubtrans/Options.py:91
+#: PySubtrans/Options.py:93
 msgid "abbreviations"
 msgstr "zkratky"
 
@@ -4077,7 +4092,7 @@ msgstr "zkratky"
 msgid "access_key"
 msgstr "Přístupový klíč"
 
-#: PySubtrans/Options.py:64
+#: PySubtrans/Options.py:66
 msgid "add_right_to_left_markers"
 msgstr "Přidat značky zprava doleva"
 
@@ -4085,6 +4100,7 @@ msgstr "Přidat značky zprava doleva"
 msgid "aligner_model"
 msgstr "Model zarovnávání"
 
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:0
 #: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
 msgid "allow_cpu_fallback"
 msgstr "Povolit záložní CPU"
@@ -4126,11 +4142,11 @@ msgstr "zvuk přesahuje 10minutový limit, nebo chybně formátovaný požadavek
 msgid "audio_events"
 msgstr "Zvukové události"
 
-#: PySubtrans/Options.py:106
+#: PySubtrans/Options.py:108
 msgid "autosave"
 msgstr "Automatické ukládání"
 
-#: PySubtrans/Options.py:98
+#: PySubtrans/Options.py:100
 msgid "autosplit_on_error"
 msgstr "Automatické rozdělení při chybě"
 
@@ -4138,7 +4154,7 @@ msgstr "Automatické rozdělení při chybě"
 msgid "aws_region"
 msgstr "Region AWS"
 
-#: PySubtrans/Options.py:104
+#: PySubtrans/Options.py:106
 msgid "backoff_time"
 msgstr "Čas odkladu"
 
@@ -4146,15 +4162,15 @@ msgstr "Čas odkladu"
 msgid "body over 32 MB"
 msgstr "tělo požadavku přesahuje 32 MB"
 
-#: PySubtrans/Options.py:80
+#: PySubtrans/Options.py:82
 msgid "break_dialog_on_one_line"
 msgstr "Rozdělit dialog na jeden řádek"
 
-#: PySubtrans/Options.py:79
+#: PySubtrans/Options.py:81
 msgid "break_long_lines"
 msgstr "Rozdělit dlouhé řádky"
 
-#: PySubtrans/Options.py:96
+#: PySubtrans/Options.py:98
 msgid "build_terminology_map"
 msgstr "Vytvořit mapu terminologie"
 
@@ -4166,13 +4182,13 @@ msgstr "Sloučit různé mluvce"
 msgid "chatgpt_account"
 msgstr "Účet ChatGPT"
 
-#: PySubtrans/Options.py:95
+#: PySubtrans/Options.py:97
 msgid "convert_wide_dashes"
 msgstr "Převést široké pomlčky"
 
 #: PySubtrans/Providers/Clients/GeminiClient.py:45
-#: PySubtrans/Providers/Clients/MistralClient.py:28
-#: PySubtrans/Providers/Clients/MistralClient.py:29
+#: PySubtrans/Providers/Clients/MistralClient.py:39
+#: PySubtrans/Providers/Clients/MistralClient.py:40
 #: PySubtrans/Providers/Clients/OpenAIClient.py:34
 msgid "default"
 msgstr "výchozí"
@@ -4185,19 +4201,29 @@ msgstr "výchozí model"
 msgid "deployment_name"
 msgstr "Název nasazení"
 
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:0
 #: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
 msgid "device"
 msgstr "Zařízení"
 
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:0
 #: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:0
 #: PySubtrans/Transcription/Providers/Provider_Muse.py:0
 #: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
 msgid "diarize"
 msgstr "Diarizace"
 
+#: PySubtrans/Options.py:60
+msgid "disabled_cloud_providers"
+msgstr "Zakázaní poskytovatelé cloudu"
+
+#: PySubtrans/Options.py:59
+msgid "disabled_gateways"
+msgstr "Zakázané brány"
+
 #: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:119
-#: PySubtrans/Transcription/TranscriptionClient.py:220
+#: PySubtrans/Transcription/TranscriptionClient.py:245
 msgid "empty response body"
 msgstr "prázdné tělo odpovědi"
 
@@ -4210,7 +4236,7 @@ msgstr "Koncový bod"
 msgid "endpoint not found"
 msgstr "koncový bod nebyl nalezen"
 
-#: PySubtrans/Options.py:74
+#: PySubtrans/Options.py:76
 msgid "extend_short_subtitles"
 msgstr "Prodloužit krátké titulky"
 
@@ -4218,7 +4244,7 @@ msgstr "Prodloužit krátké titulky"
 msgid "ffmpeg and ffprobe are required for transcription but were not found on PATH"
 msgstr "ffmpeg a ffprobe jsou pro přepis vyžadovány, ale nebyly nalezeny v PATH"
 
-#: PySubtrans/Options.py:112
+#: PySubtrans/Options.py:114
 msgid "ffmpeg_path"
 msgstr "Cesta k FFmpeg"
 
@@ -4226,11 +4252,11 @@ msgstr "Cesta k FFmpeg"
 msgid "ffprobe was not found alongside the configured ffmpeg executable or on PATH"
 msgstr "ffprobe nebyl nalezen vedle nakonfigurovaného spustitelného souboru ffmpeg ani v PATH"
 
-#: PySubtrans/Options.py:90
+#: PySubtrans/Options.py:92
 msgid "filler_words"
 msgstr "Výplňková slova"
 
-#: PySubtrans/Options.py:120
+#: PySubtrans/Options.py:122
 msgid "firstrun"
 msgstr "První spuštění"
 
@@ -4238,7 +4264,7 @@ msgstr "První spuštění"
 msgid "free_plan"
 msgstr "Bezplatný plán"
 
-#: PySubtrans/Options.py:94
+#: PySubtrans/Options.py:96
 msgid "full_width_punctuation"
 msgstr "Interpunkce plné šířky"
 
@@ -4247,11 +4273,11 @@ msgstr "Interpunkce plné šířky"
 msgid "google-genai dependencies missing, Gemini transcription unavailable ({})"
 msgstr "Chybí závislosti google-genai, přepis přes Gemini není k dispozici ({})"
 
-#: PySubtrans/Options.py:62
+#: PySubtrans/Options.py:64
 msgid "include_original"
 msgstr "Zahrnout originál"
 
-#: PySubtrans/Options.py:60
+#: PySubtrans/Options.py:62
 msgid "instruction_file"
 msgstr "Soubor s pokyny"
 
@@ -4259,20 +4285,21 @@ msgstr "Soubor s pokyny"
 msgid "language"
 msgstr "Jazyk"
 
-#: PySubtrans/Options.py:111
+#: PySubtrans/Options.py:113
 msgid "last_used_path"
 msgstr "Poslední použitá cesta"
 
-#: PySubtrans/Options.py:67
+#: PySubtrans/Options.py:69
 msgid "max_batch_size"
 msgstr "Maximální velikost dávky"
 
-#: PySubtrans/Options.py:69
+#: PySubtrans/Options.py:71
 msgid "max_characters"
 msgstr "Maximální počet znaků"
 
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:0
 #: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:0
 #: PySubtrans/Transcription/Providers/Provider_Muse.py:0
 #: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
@@ -4284,11 +4311,11 @@ msgstr "Maximální počet sekund na dávku"
 msgid "max_completion_tokens"
 msgstr "Maximální počet tokenů pro dokončení"
 
-#: PySubtrans/Options.py:68
+#: PySubtrans/Options.py:70
 msgid "max_context_summaries"
 msgstr "Maximální počet shrnutí kontextu"
 
-#: PySubtrans/Options.py:86
+#: PySubtrans/Options.py:88
 msgid "max_gap_for_merge"
 msgstr "Maximální mez pro sloučení"
 
@@ -4296,32 +4323,33 @@ msgstr "Maximální mez pro sloučení"
 msgid "max_instruct_tokens"
 msgstr "Maximální počet tokenů pro instrukce"
 
-#: PySubtrans/Options.py:81
+#: PySubtrans/Options.py:83
 msgid "max_line_duration"
 msgstr "Maximální délka řádku"
 
-#: PySubtrans/Options.py:99
+#: PySubtrans/Options.py:101
 msgid "max_lines"
 msgstr "Maximální počet řádků"
 
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:0
 #: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
 msgid "max_new_tokens"
 msgstr "Maximální počet nových tokenů"
 
-#: PySubtrans/Options.py:70
+#: PySubtrans/Options.py:72
 msgid "max_newlines"
 msgstr "Maximální počet nových řádků"
 
-#: PySubtrans/Options.py:102
+#: PySubtrans/Options.py:104
 #: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
 msgid "max_retries"
 msgstr "Maximální počet opakování"
 
-#: PySubtrans/Options.py:71
+#: PySubtrans/Options.py:73
 msgid "max_single_line_length"
 msgstr "Maximální délka jednoho řádku"
 
-#: PySubtrans/Options.py:103
+#: PySubtrans/Options.py:105
 msgid "max_summary_length"
 msgstr "Maximální délka shrnutí"
 
@@ -4329,7 +4357,7 @@ msgstr "Maximální délka shrnutí"
 msgid "max_thinking_tokens"
 msgstr "Maximální počet tokenů pro přemýšlení"
 
-#: PySubtrans/Options.py:100
+#: PySubtrans/Options.py:102
 msgid "max_threads"
 msgstr "Maximální počet vláken"
 
@@ -4346,16 +4374,17 @@ msgstr "Maximální počet tokenů"
 msgid "merge_eligible_gap"
 msgstr "Mezera pro slučování"
 
-#: PySubtrans/Options.py:85
+#: PySubtrans/Options.py:87
 msgid "merge_line_duration"
 msgstr "Sloučit délku řádku"
 
-#: PySubtrans/Options.py:66
+#: PySubtrans/Options.py:68
 msgid "min_batch_size"
 msgstr "Minimální velikost dávky"
 
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:0
 #: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:0
 #: PySubtrans/Transcription/Providers/Provider_Muse.py:0
 #: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
@@ -4363,11 +4392,11 @@ msgstr "Minimální velikost dávky"
 msgid "min_chunk_seconds"
 msgstr "Minimální délka chunku v sekundách"
 
-#: PySubtrans/Options.py:84
+#: PySubtrans/Options.py:86
 msgid "min_gap"
 msgstr "Minimální mezera"
 
-#: PySubtrans/Options.py:82
+#: PySubtrans/Options.py:84
 msgid "min_line_duration"
 msgstr "Minimální délka řádku"
 
@@ -4375,11 +4404,11 @@ msgstr "Minimální délka řádku"
 msgid "min_p"
 msgstr "Minimální pravděpodobnost (min_p)"
 
-#: PySubtrans/Options.py:72
+#: PySubtrans/Options.py:74
 msgid "min_single_line_length"
 msgstr "Minimální délka jednoho řádku"
 
-#: PySubtrans/Options.py:87
+#: PySubtrans/Options.py:89
 msgid "min_split_chars"
 msgstr "Minimální počet znaků pro rozdělení"
 
@@ -4394,6 +4423,7 @@ msgstr "Minimální počet znaků pro rozdělení"
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:0
 #: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:0
 #: PySubtrans/Transcription/Providers/Provider_Muse.py:0
 #: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
@@ -4405,15 +4435,19 @@ msgstr "Model"
 msgid "model_family"
 msgstr "Rodina modelů"
 
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:0
+msgid "moss_installation_directory"
+msgstr "Instalační adresář MOSS"
+
 #: GuiSubtrans/Commands/StartTranslationCommand.py:36
 msgid "multithreaded"
 msgstr "Vícevláknové"
 
-#: PySubtrans/Transcription/TranscriptionClient.py:218
+#: PySubtrans/Transcription/TranscriptionClient.py:243
 msgid "non-JSON response (check the Server address): {}"
 msgstr "odpověď není ve formátu JSON (zkontrolujte adresu serveru): {}"
 
-#: PySubtrans/Options.py:88
+#: PySubtrans/Options.py:90
 msgid "normalise_dialog_tags"
 msgstr "Normalizovat značky dialogu"
 
@@ -4421,39 +4455,39 @@ msgstr "Normalizovat značky dialogu"
 msgid "only_translation_models"
 msgstr "Pouze překladové modely"
 
-#: PySubtrans/Options.py:63
+#: PySubtrans/Options.py:65
 msgid "original_text_placement"
 msgstr "Umístění původního textu"
 
-#: PySubtrans/Options.py:76
+#: PySubtrans/Options.py:78
 msgid "postprocess_transcription"
 msgstr "Postzpracování přepisu"
 
-#: PySubtrans/Options.py:75
+#: PySubtrans/Options.py:77
 msgid "postprocess_translation"
 msgstr "Následné zpracování překladu"
 
-#: PySubtrans/Options.py:77
+#: PySubtrans/Options.py:79
 msgid "preprocess_subtitles"
 msgstr "Předzpracování titulků"
 
-#: PySubtrans/Options.py:73
+#: PySubtrans/Options.py:75
 msgid "prevent_overlapping_times"
 msgstr "Zabránit překrývajícím se časům"
 
-#: PySubtrans/Options.py:107
+#: PySubtrans/Options.py:109
 msgid "preview"
 msgstr "náhled"
 
-#: PySubtrans/Options.py:101
+#: PySubtrans/Options.py:103
 msgid "prewarm_providers"
 msgstr "Předhřát poskytovatele"
 
-#: PySubtrans/Options.py:105
+#: PySubtrans/Options.py:107
 msgid "project_file"
 msgstr "Soubor projektu"
 
-#: PySubtrans/Options.py:59
+#: PySubtrans/Options.py:61
 msgid "prompt"
 msgstr "Výzva"
 
@@ -4485,9 +4519,13 @@ msgstr "Nastavení poskytovatele"
 msgid "proxy"
 msgstr "Proxy"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:555
-msgid "qwen-asr installed successfully."
-msgstr "Qwen ASR byl úspěšně nainstalován."
+#: scripts/install_qwen_runtime.py:42
+msgid "qwen-asr was installed but its package metadata could not be found."
+msgstr "qwen-asr byl nainstalován, ale jeho metadata balíčku nebyla nalezena."
+
+#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
+msgid "qwen_installation_directory"
+msgstr "Instalační adresář Qwen"
 
 #: PySubtrans/Transcription/Providers/Clients/MuseTranscriptionClient.py:126
 msgid "rate limited"
@@ -4503,6 +4541,7 @@ msgstr "překročen limit požadavků"
 #: PySubtrans/Providers/Provider_OpenRouter.py:0
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:0
 #: PySubtrans/Transcription/Providers/Provider_Gemini.py:0
+#: PySubtrans/Transcription/Providers/Provider_MossLocal.py:0
 #: PySubtrans/Transcription/Providers/Provider_Muse.py:0
 #: PySubtrans/Transcription/Providers/Provider_OpenAI.py:0
 #: PySubtrans/Transcription/Providers/Provider_OpenRouter.py:0
@@ -4514,15 +4553,15 @@ msgstr "Omezení rychlosti"
 msgid "reasoning_effort"
 msgstr "Úsilí pro uvažování"
 
-#: PySubtrans/Options.py:110
+#: PySubtrans/Options.py:112
 msgid "reload"
 msgstr "znovu načíst"
 
-#: PySubtrans/Options.py:89
+#: PySubtrans/Options.py:91
 msgid "remove_filler_words"
 msgstr "Odstranit výplňková slova"
 
-#: PySubtrans/Options.py:109
+#: PySubtrans/Options.py:111
 msgid "reparse"
 msgstr "znovu parsovat"
 
@@ -4538,11 +4577,11 @@ msgstr "Penalizace opakování"
 msgid "request_timeout"
 msgstr "Časový limit požadavku"
 
-#: PySubtrans/Options.py:108
+#: PySubtrans/Options.py:110
 msgid "retranslate"
 msgstr "přeložit znovu"
 
-#: PySubtrans/Options.py:97
+#: PySubtrans/Options.py:99
 msgid "retry_on_error"
 msgstr "Opakovat při chybě"
 
@@ -4555,15 +4594,15 @@ msgstr "Znovu použít klienta"
 msgid "same_speaker_merge_eligible_gap"
 msgstr "Mezera pro slučování stejného mluvčího"
 
-#: PySubtrans/Options.py:78
+#: PySubtrans/Options.py:80
 msgid "save_preprocessed_subtitles"
 msgstr "Uložit předzpracované titulky"
 
-#: PySubtrans/Options.py:65
+#: PySubtrans/Options.py:67
 msgid "scene_threshold"
 msgstr "Prahová hodnota scény"
 
-#: PySubtrans/Options.py:83
+#: PySubtrans/Options.py:85
 msgid "seconds_per_character"
 msgstr "Sekund na znak"
 
@@ -4588,7 +4627,7 @@ msgstr "URL serveru"
 msgid "single threaded"
 msgstr "Jednovláknové"
 
-#: PySubtrans/Options.py:115
+#: PySubtrans/Options.py:117
 msgid "stop_on_error"
 msgstr "Zastavit při chybě"
 
@@ -4600,7 +4639,7 @@ msgstr "Zastavit při chybě"
 msgid "stream_responses"
 msgstr "Streamovat odpovědi"
 
-#: PySubtrans/Options.py:92
+#: PySubtrans/Options.py:94
 msgid "substitution_mode"
 msgstr "Režim nahrazování"
 
@@ -4616,7 +4655,7 @@ msgstr "Podporuje paralelní vlákna"
 msgid "supports_system_messages"
 msgstr "Podporuje systémové zprávy"
 
-#: PySubtrans/Options.py:61
+#: PySubtrans/Options.py:63
 msgid "target_language"
 msgstr "Cílový jazyk"
 
@@ -4634,7 +4673,7 @@ msgstr "Teplota"
 msgid "the credential was not accepted"
 msgstr "přihlašovací údaje nebyly přijaty"
 
-#: PySubtrans/Options.py:118
+#: PySubtrans/Options.py:120
 msgid "theme"
 msgstr "Motiv"
 
@@ -4655,15 +4694,11 @@ msgstr "Časový limit"
 msgid "timing_correction_factor"
 msgstr "Faktor korekce časování"
 
-#: PySubtrans/Transcription/Providers/Provider_QwenLocal.py:0
-msgid "torch_installation_directory"
-msgstr "Adresář instalace Torch"
-
 #: PySubtrans/Transcription/Providers/Provider_ElevenLabs.py:0
 msgid "transcribe_whole_clip"
 msgstr "Přepsat celý klip"
 
-#: PySubtrans/Options.py:113
+#: PySubtrans/Options.py:115
 msgid "transcription_ffmpeg_available"
 msgstr "Dostupnost ffmpeg pro přepis"
 
@@ -4671,11 +4706,11 @@ msgstr "Dostupnost ffmpeg pro přepis"
 msgid "transcription_provider"
 msgstr "Poskytovatel přepisu"
 
-#: PySubtrans/Options.py:114
+#: PySubtrans/Options.py:116
 msgid "transcription_torch_device"
 msgstr "Zařízení PyTorch pro přepis"
 
-#: PySubtrans/Options.py:119
+#: PySubtrans/Options.py:121
 msgid "ui_language"
 msgstr "Jazyk uživatelského rozhraní"
 
@@ -4699,15 +4734,15 @@ msgstr "Použít httpx"
 msgid "version"
 msgstr "Verze"
 
-#: PySubtrans/Options.py:116
+#: PySubtrans/Options.py:118
 msgid "warnings_as_errors"
 msgstr "Považovat varování za chyby"
 
-#: PySubtrans/Options.py:93
+#: PySubtrans/Options.py:95
 msgid "whitespaces_to_newline"
 msgstr "Bílé znaky na nový řádek"
 
-#: PySubtrans/Options.py:117
+#: PySubtrans/Options.py:119
 msgid "write_backup"
 msgstr "Zapsat zálohu"
 
@@ -4735,11 +4770,11 @@ msgstr "{command} vráceno zpět."
 msgid "{command} was successful."
 msgstr "{command} bylo úspěšné."
 
-#: GuiSubtrans/GuiHelpers.py:114 GuiSubtrans/ViewModel/BatchItem.py:231
+#: GuiSubtrans/GuiHelpers.py:141 GuiSubtrans/ViewModel/BatchItem.py:231
 msgid "{count} lines"
 msgstr "{count} řádků"
 
-#: GuiSubtrans/GuiHelpers.py:116
+#: GuiSubtrans/GuiHelpers.py:143
 msgid "{count} lines translated"
 msgstr "{count} řádků přeloženo"
 
@@ -4751,7 +4786,7 @@ msgstr "{count} přeloženo"
 msgid "{done} of {total} batches translated"
 msgstr "{done} z {total} dávek přeloženo"
 
-#: GuiSubtrans/GuiHelpers.py:118
+#: GuiSubtrans/GuiHelpers.py:145
 msgid "{done} of {total} lines translated"
 msgstr "{done} z {total} řádků přeloženo"
 
@@ -4759,7 +4794,7 @@ msgstr "{done} z {total} řádků přeloženo"
 msgid "{lines} lines in {batches} batches"
 msgstr "{lines} řádků v {batches} dávkách"
 
-#: GuiSubtrans/NewProjectSettings.py:288
+#: GuiSubtrans/NewProjectSettings.py:289
 msgid "{lines} lines in {scenes} scenes and {batches} batches"
 msgstr "{lines} řádků v {scenes} scénách a {batches} dávkách"
 
@@ -4767,9 +4802,26 @@ msgstr "{lines} řádků v {scenes} scénách a {batches} dávkách"
 msgid "{num} commands in queue."
 msgstr "{num} příkazů ve frontě."
 
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:576
+msgid "{package} installed successfully."
+msgstr "{package} byl úspěšně nainstalován."
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:503
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:514
+msgid "{runtime} Runtime Not Found"
+msgstr "Běhové prostředí {runtime} nebylo nalezeno"
+
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:583
+msgid "{runtime} runtime dependencies installed successfully."
+msgstr "Závislosti běhového prostředí {runtime} byly úspěšně nainstalovány."
+
 #: GuiSubtrans/Commands/StartTranslationCommand.py:37
 msgid "{starting} {threaded} translation"
 msgstr "{starting} {threaded} překlad"
+
+#: PySubtrans/Transcription/TranscriptionCoordinator.py:386
+msgid "{} lines are longer than the maximum line duration, with no word timings to split them"
+msgstr "{} řádků je delších než maximální délka řádku a nemá časování slov k jejich rozdělení"
 
 #: PySubtrans/Formats/SrtFileHandler.py:79
 msgid "{} lines were empty and were not written to the output file"
@@ -4779,22 +4831,270 @@ msgstr "{} řádků bylo prázdných a nebylo zapsáno do výstupního souboru"
 msgid "{} lines were invalid and were not written to the output file"
 msgstr "{} řádků bylo neplatných a nebylo zapsáno do výstupního souboru"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:68
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:69
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:54
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:55
 msgid "~1 GB"
 msgstr "~1 GB"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:67
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:53
 msgid "~4 GB"
 msgstr "~4 GB"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:66
+#: GuiSubtrans/Widgets/TorchSetupDialog.py:52
 msgid "~5.5 GB"
 msgstr "~5,5 GB"
 
-#: GuiSubtrans/Widgets/TorchSetupDialog.py:72
+#: PySubtrans/Transcription/Torch/LocalRuntime.py:77
+#: PySubtrans/Transcription/Torch/LocalRuntime.py:92
 msgid "~600 MB"
 msgstr "~600 MB"
+
+#~ msgid "A different external Torch installation was already selected. Restart the application after changing Torch installation settings."
+#~ msgstr "Již byla vybrána jiná externí instalace Torch. Po změně nastavení instalace Torch restartujte aplikaci."
+
+#~ msgid "ABI compatibility check passed."
+#~ msgstr "Kontrola kompatibility ABI proběhla úspěšně."
+
+#~ msgid "Alignment failed, timestamps will be approximate"
+#~ msgstr "Zarovnání selhalo, časové údaje budou přibližné"
+
+#~ msgid "CPU inference is disabled. Enable 'allow_cpu_fallback' in Qwen Local advanced settings to give consent for this emergency fallback."
+#~ msgstr "Inference na CPU je zakázána. Povolte 'allow_cpu_fallback' v pokročilých nastaveních Qwen Local, abyste souhlasili s tímto nouzovým přepnutím."
+
+#~ msgid "Create a new environment and install Torch and the Qwen runtime"
+#~ msgstr "Vytvořte nové prostředí a nainstalujte Torch a runtime Qwen"
+
+#~ msgid "Detected language unsupported by aligner, retrying with English"
+#~ msgstr "Detekovaný jazyk aligner nepodporuje, opakuji s angličtinou"
+
+#~ msgid "Error: Qwen runtime dependency installation failed (exit code {code}). Check the output above for details."
+#~ msgstr "Chyba: Instalace závislostí runtime Qwen selhala (kód ukončení {code}). Zkontrolujte výše uvedený výpis pro podrobnosti."
+
+#~ msgid "Error: The Qwen runtime could not be found in {path} after installation."
+#~ msgstr "Chyba: Po instalaci nebyl runtime Qwen nalezen v {path}."
+
+#~ msgid "Error: The qwen-asr package metadata could not be found in {path}."
+#~ msgstr "Chyba: Metadatová informace balíčku qwen-asr nebyla v {path} nalezena."
+
+#~ msgid "Error: qwen-asr installation failed (exit code {code}). Check the output above for details."
+#~ msgstr "Chyba: Instalace qwen-asr selhala (kód ukončení {code}). Zkontrolujte výše uvedený výpis pro podrobnosti."
+
+#~ msgid "Found an existing Torch installation at: {path}"
+#~ msgstr "Nalezena existující instalace Torch v: {path}"
+
+#~ msgid "Importing qwen_asr (this can take a while on first run)..."
+#~ msgstr "Importování qwen_asr (při prvním spuštění to může chvíli trvat)..."
+
+#~ msgid "Importing qwen_asr.inference.utils..."
+#~ msgstr "Importování qwen_asr.inference.utils..."
+
+#~ msgid "Importing torch..."
+#~ msgstr "Importování torch..."
+
+#~ msgid "Install Qwen Runtime"
+#~ msgstr "Nainstalovat runtime Qwen"
+
+#~ msgid "Installing qwen-asr..."
+#~ msgstr "Instaluji qwen-asr..."
+
+#~ msgid "Installing the Qwen runtime"
+#~ msgstr "Instaluji runtime Qwen"
+
+#~ msgid "Installing the Qwen runtime dependencies (this may take several minutes)..."
+#~ msgstr "Instaluji závislosti runtime Qwen (může to trvat několik minut)..."
+
+#~ msgid "Installing the Qwen runtime dependencies..."
+#~ msgstr "Instaluji závislosti runtime Qwen..."
+
+#~ msgid "It does not include the Qwen runtime yet, which will be installed into it ({size})."
+#~ msgstr "Zatím neobsahuje runtime Qwen, který bude nainstalován do něj ({size})."
+
+#~ msgid "Korean word timestamps need the soynlp package, which is not installed in the Torch environment. Aligning Korean text on spaces instead, so timestamps are less precise."
+#~ msgstr "Korejské časové značky slov potřebují balíček soynlp, který není nainstalován v prostředí Torch. Namísto toho text na korejštině vyrovnávám na mezery, takže časové značky jsou méně přesné."
+
+#~ msgid "Loading Qwen model {} on {}"
+#~ msgstr "Načítání modelu Qwen {} na {}"
+
+#~ msgid "Long transcription line ({:.1f}s, no word timings to split it): '{}'"
+#~ msgstr "Dlouhý řádek přepisu ({:.1f} s, chybí časování slov pro jeho rozdělení): '{}'"
+
+#~ msgid "No existing Torch installation found on this system."
+#~ msgstr "Na tomto systému nebyla nalezena žádná existující instalace Torch."
+
+#~ msgid "No supported hardware accelerator is available. Enable 'allow_cpu_fallback' in Qwen Local advanced settings to permit CPU inference."
+#~ msgstr "Není k dispozici žádný podporovaný hardwarový akcelerátor. V pokročilých nastaveních Qwen Local povolte volbu 'allow_cpu_fallback', aby byla povolena inference na CPU."
+
+#~ msgid "Path to a Python virtual environment containing torch"
+#~ msgstr "Cesta k virtuálnímu prostředí Pythonu obsahujícímu Torch"
+
+#~ msgid "Preparing Torch runtime..."
+#~ msgstr "Připravuje se běhové prostředí Torch..."
+
+#~ msgid "Qwen Runtime Not Found"
+#~ msgstr "Qwen Runtime nebyl nalezen"
+
+#~ msgid "Qwen runtime dependencies installed successfully."
+#~ msgstr "Závislosti runtime Qwen byly nainstalovány úspěšně."
+
+#~ msgid "Qwen runtime imports complete"
+#~ msgstr "Importy běhového prostředí Qwen jsou dokončeny"
+
+#~ msgid "Qwen transcription failed: {}"
+#~ msgstr "Přepis Qwen selhal: {}"
+
+#~ msgid "Qwen transcription runtime could not be loaded. Check that the configured external Torch installation is compatible with this application, then restart after changing the Torch installation setting. Details: {}"
+#~ msgstr "Běhové prostředí pro přepis Qwen se nepodařilo načíst. Ověřte, že nakonfigurovaná externí instalace Torch je kompatibilní s touto aplikací, a po změně nastavení instalace Torch restartujte. Podrobnosti: {}"
+
+#~ msgid "Qwen transcription runtime could not be loaded: {}. Restart after changing the Torch installation setting."
+#~ msgstr "Běhové prostředí pro přepis Qwen se nepodařilo načíst: {}. Po změně nastavení instalace Torch restartujte."
+
+#~ msgid "Qwen transcription runtime is not installed"
+#~ msgstr "Běhové prostředí pro přepis Qwen není nainstalováno"
+
+#~ msgid "Releasing previously loaded Qwen model {}"
+#~ msgstr "Uvolňuji dříve načtený model Qwen {}"
+
+#~ msgid "Restart Required"
+#~ msgstr "Je vyžadován restart"
+
+#~ msgid "Searching for an existing Torch installation..."
+#~ msgstr "Hledá se existující instalace Torch..."
+
+#~ msgid "Set Up Local Transcription"
+#~ msgstr "Nastavení místní transkrize"
+
+#~ msgid "Set up local transcription..."
+#~ msgstr "Nastavení místní transkrize..."
+
+#~ msgid "Step 3 of 3 - Installing Torch and the Qwen runtime"
+#~ msgstr "Krok 3 z 3 - Instalace Torchu a runtime Qwen"
+
+#~ msgid ""
+#~ "The Torch environment at:\n"
+#~ "{path}\n"
+#~ "\n"
+#~ "does not include the Qwen runtime that local transcription needs.\n"
+#~ "\n"
+#~ "Install it into this environment now? It needs about {size} of disk space."
+#~ msgstr ""
+#~ "Torch prostředí na:\n"
+#~ "{path}\n"
+#~ "\n"
+#~ "neobsahuje runtime Qwen, který místní transkrice potřebuje.\n"
+#~ "\n"
+#~ "Nainstalujte ho do tohoto prostředí nyní? Potřebuje asi {size} místa na disku."
+
+#~ msgid ""
+#~ "The Torch environment at:\n"
+#~ "{path}\n"
+#~ "\n"
+#~ "does not include the Qwen runtime, and has no Python interpreter to install it with.\n"
+#~ "\n"
+#~ "Select a virtual environment, or use the automatic install."
+#~ msgstr ""
+#~ "Torch prostředí na:\n"
+#~ "{path}\n"
+#~ "\n"
+#~ "neobsahuje runtime Qwen, a nemá Python interpreter pro jeho instalaci.\n"
+#~ "\n"
+#~ "Vyberte virtuální prostředí, nebo použijte automatickou instalaci."
+
+#~ msgid "The Torch environment does not include the Qwen runtime. Use {button} and select the same environment to install it."
+#~ msgstr "Torch prostředí neobsahuje runtime Qwen. Použijte {button} a vyberte stejné prostředí pro jeho instalaci."
+
+#~ msgid "The compatibility information for this build could not be read: {error}"
+#~ msgstr "Informace o kompatibilitě pro toto sestavení nebylo možné přečíst: {error}"
+
+#~ msgid "The configured Torch installation directory is invalid. Select the external site-packages directory containing the 'torch' package."
+#~ msgstr "Nakonfigurovaný instalační adresář Torch je neplatný. Vyberte externí adresář site-packages obsahující balíček 'torch'."
+
+#~ msgid "The configured {} accelerator is unavailable. Enable 'allow_cpu_fallback' in Qwen Local advanced settings to permit CPU fallback, or choose an available accelerator."
+#~ msgstr "Nakonfigurovaný akcelerátor {} není dostupný. V pokročilých nastaveních Qwen Local povolte volbu 'allow_cpu_fallback', aby bylo možné použít CPU, nebo zvolte dostupný akcelerátor."
+
+#~ msgid "The external Torch installation cannot be inspected by this Python interpreter."
+#~ msgstr "Externí instalaci Torch nelze prozkoumat tímto interpretem Pythonu."
+
+#~ msgid "The external Torch installation is incompatible with this application: {}. Install a complete Torch environment matching the application's Python ABI, OS, architecture, and pointer width, then restart."
+#~ msgstr "Externí instalace Torch není kompatibilní s touto aplikací: {}. Nainstalujte kompletní prostředí Torch, které odpovídá ABI Pythonu aplikace, operačnímu systému, architektuře a šířce ukazatele, a poté restartujte."
+
+#~ msgid "The external Torch installation is missing its native library directory: {}."
+#~ msgstr "V externí instalaci Torch chybí adresář nativních knihoven: {}."
+
+#~ msgid "The external Torch installation setting was cleared after Torch runtime setup. Restart the application to apply that change."
+#~ msgstr "Nastavení externí instalace Torch bylo po nastavení běhového prostředí Torch vymazáno. Restartujte aplikaci, aby se tato změna projevila."
+
+#~ msgid ""
+#~ "The selected Torch environment may be incompatible with this application:\n"
+#~ "{details}\n"
+#~ "\n"
+#~ "Torch is loaded into this application, so its Python ABI, OS, architecture and pointer width should match the build. If Torch fails to load, install a matching environment."
+#~ msgstr ""
+#~ "Vybrané prostředí Torch může být nekompatibilní s touto aplikací:\n"
+#~ "{details}\n"
+#~ "\n"
+#~ "Torch je do této aplikace načítán, takže jeho Python ABI, OS, architektura a šířka ukazatele by měly odpovídat sestavení. Pokud se Torch nepodaří načíst, nainstalujte odpovídající prostředí."
+
+#~ msgid "The selected environment has no Python interpreter, so its compatibility could not be verified."
+#~ msgstr "Vybrané prostředí nemá interpret Pythonu, takže jeho kompatibilitu nebylo možné ověřit."
+
+#~ msgid "The selected environment's Python interpreter could not be checked."
+#~ msgstr "Interpret Pythonu vybraného prostředí nebylo možné zkontrolovat."
+
+#~ msgid "This frozen application is missing '{}'. Repair or reinstall the distribution before configuring an external Torch installation."
+#~ msgstr "V této zmrazené aplikaci chybí '{}'. Před konfigurací externí instalace Torch opravte nebo přeinstalujte distribuci."
+
+#~ msgid "Torch Compatibility Warning"
+#~ msgstr "Varování o kompatibilitě Torch"
+
+#~ msgid "Torch compatibility metadata could not be read from '{}': {}"
+#~ msgstr "Metadata kompatibility Torch se nepodařilo přečíst z '{}': {}"
+
+#~ msgid "Torch compatibility metadata has an invalid format: {}"
+#~ msgstr "Metadata kompatibility Torch mají neplatný formát: {}"
+
+#~ msgid "Torch compatibility metadata has an unknown kind: {}"
+#~ msgstr "Metadata kompatibility Torch obsahují neznámý druh: {}"
+
+#~ msgid "Torch compatibility metadata has missing or invalid compatibility fields: {}"
+#~ msgstr "Metadata kompatibility Torch obsahují chybějící nebo neplatná pole kompatibility: {}"
+
+#~ msgid "Torch compatibility metadata schema is unsupported: {}"
+#~ msgstr "Schéma metadat kompatibility Torch není podporováno: {}"
+
+#~ msgid ""
+#~ "Torch environment selected at:\n"
+#~ "{path}\n"
+#~ "\n"
+#~ "The application needs to be restarted for the change to take effect."
+#~ msgstr ""
+#~ "Prostředí Torch vybráno v:\n"
+#~ "{path}\n"
+#~ "\n"
+#~ "Pro provedení změny je nutné restartovat aplikaci."
+
+#~ msgid "Torch is already loaded from '{}'. Changing the Torch installation requires restarting the application."
+#~ msgstr "Torch je již načten z '{}'. Změna instalace Torch vyžaduje restartování aplikace."
+
+#~ msgid "Unable to determine the Python process architecture for the external Torch installation."
+#~ msgstr "Nelze určit architekturu procesu Pythonu pro externí instalaci Torch."
+
+#~ msgid "Unable to load Qwen model: {}"
+#~ msgstr "Nepodařilo se načíst model Qwen: {}"
+
+#~ msgid "Unable to register Torch native libraries from '{}': {}."
+#~ msgstr "Nelze zaregistrovat nativní knihovny Torch z '{}': {}."
+
+#~ msgid "Unknown device '{}', using automatic selection"
+#~ msgstr "Neznámé zařízení '{}', použije se automatický výběr"
+
+#~ msgid "Use the detected Torch environment"
+#~ msgstr "Použít zjištěné prostředí Torch"
+
+#~ msgid "qwen-asr installed successfully."
+#~ msgstr "Qwen ASR byl úspěšně nainstalován."
+
+#~ msgid "torch_installation_directory"
+#~ msgstr "Adresář instalace Torch"
 
 #~ msgid "Sign-in complete. You can close this window and return to LLM-Subtrans."
 #~ msgstr "Přihlášení dokončeno. Toto okno můžete zavřít a vrátit se do LLM-Subtrans."

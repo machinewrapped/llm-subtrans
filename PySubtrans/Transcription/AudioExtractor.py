@@ -169,7 +169,7 @@ class AudioExtractor:
         if not samples:
             return True
 
-        peak = max(abs(sample) for sample in samples)
+        peak = max(max(samples), -min(samples))
         if peak == 0:
             return True
 

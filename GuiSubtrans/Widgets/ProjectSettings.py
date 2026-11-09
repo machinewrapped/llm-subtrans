@@ -14,6 +14,8 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QEvent, QObject, Signal, QSignalBlocker
 from GuiSubtrans.EditInstructionsDialog import EditInstructionsDialog
+from GuiSubtrans.GuiHelpers import GetProviderDropdownValues
+from GuiSubtrans.Widgets.OptionsWidgets import DropdownHeader
 from GuiSubtrans.ProjectActions import ProjectActions
 from GuiSubtrans.ProjectDataModel import ProjectDataModel
 
@@ -153,8 +155,11 @@ class ProjectSettings(QGroupBox):
             self.AddButton("", _("Edit Instructions"), self._edit_instructions)
             self.AddButton("", _("Copy From Another Project"), self._copy_from_another_project)
 
-            if len(self.provider_list) > 1:
-                self.AddDropdownOption(_("Provider"), settings, 'provider', self.provider_list)
+            disabled = self.datamodel.project_options.get_str_list('disabled_gateways') if self.datamodel else []
+            disabled_cloud = self.datamodel.project_options.get_str_list('disabled_cloud_providers') if self.datamodel else []
+            providers = [name for name in GetProviderDropdownValues(self.provider_list, disabled, disabled_cloud) if not isinstance(name, DropdownHeader)]
+            if len(providers) > 1:
+                self.AddDropdownOption(_("Provider"), settings, 'provider', providers)
             if len(self.model_list) > 0:
                 self.AddDropdownOption(_("Model"), settings, 'model', self.model_list)
 

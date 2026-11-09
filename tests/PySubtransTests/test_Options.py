@@ -1,4 +1,6 @@
+import tempfile
 import unittest
+from pathlib import Path
 from datetime import timedelta
 from typing import TypeVar
 from collections.abc import Mapping
@@ -437,6 +439,19 @@ class TestOptions(LoggedTestCase):
         self.assertTrue(result)
         mock_file.assert_called_once()
         mock_makedirs.assert_called_once()
+
+    def test_provider_availability_saved_and_loaded(self) -> None:
+        """Disabled providers survive a settings file round trip."""
+        with tempfile.TemporaryDirectory() as directory:
+            settings_path = str(Path(directory) / 'settings.json')
+            options = Options({'disabled_gateways': ['Gateway A'], 'disabled_cloud_providers': ['Cloud A']})
+            with patch('PySubtrans.Options.GetConfigDir', return_value=directory), \
+                    patch('PySubtrans.Options.GetSettingsPath', return_value=settings_path):
+                self.assertLoggedTrue("settings saved", options.SaveSettings())
+                loaded = Options()
+                self.assertLoggedTrue("settings loaded", loaded.LoadSettings())
+            self.assertLoggedEqual("gateways retained", ['Gateway A'], loaded.get_str_list('disabled_gateways'))
+            self.assertLoggedEqual("cloud providers retained", ['Cloud A'], loaded.get_str_list('disabled_cloud_providers'))
 
     def test_build_user_prompt(self):
         """Test BuildUserPrompt method"""

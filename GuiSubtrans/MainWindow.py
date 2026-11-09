@@ -251,6 +251,8 @@ class MainWindow(QMainWindow):
 
     def _settings_changed(self, settings : dict):
         self.toolbar.UpdateToolbar()
+        if ('disabled_gateways' in settings or 'disabled_cloud_providers' in settings) and self.project_settings.datamodel is not None:
+            self.project_settings.BuildForm(self.project_settings.settings)
 
     def _show_project_settings(self, show):
         self.model_viewer.ShowProjectSettings(show)

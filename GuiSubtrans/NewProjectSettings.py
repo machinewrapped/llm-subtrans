@@ -56,7 +56,8 @@ class NewProjectSettings(QDialog):
         self.settings = datamodel.project_options.GetSettings()
 
         self.providers = datamodel.available_providers
-        provider_values = GetProviderDropdownValues(self.providers)
+        provider_values = GetProviderDropdownValues(self.providers, self.settings.get_str_list('disabled_gateways'),
+                                                    self.settings.get_str_list('disabled_cloud_providers'))
         self.OPTIONS['provider'] = (provider_values, self.OPTIONS['provider'][1])
         self.settings['provider'] = datamodel.provider
 

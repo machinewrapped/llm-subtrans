@@ -28,7 +28,8 @@ class FirstRunOptions(QDialog):
         self.options = Options(options)
 
         # Populate provider list
-        provider_values = GetProviderDropdownValues(options.available_providers)
+        provider_values = GetProviderDropdownValues(options.available_providers, options.get_str_list('disabled_gateways'),
+                                                    options.get_str_list('disabled_cloud_providers'))
         self.OPTIONS['provider'] = (provider_values, self.OPTIONS['provider'][1])
 
         # Populate theme list

@@ -161,7 +161,7 @@ It requires a separate [PyTorch](https://pytorch.org/get-started/locally/) insta
 
 The source runtime installer accepts Python 3.10 or later. Qwen runs in a worker process using `envqwen`'s own interpreter, so Torch and Transformers are kept out of `envsubtrans`. With no explicit Torch directory setting, source runs prefer `envqwen` in the project root and fall back to the current interpreter for older installs that already contain Qwen.
 
-**MOSS Local** runs MOSS-Transcribe-Diarize on your computer, and labels speakers. It returns short, closely timed segments without word timings. The first run downloads about 2 GB of model weights. MOSS needs its own environment, `envmoss`, since it uses a newer Transformers than Qwen. It currently has no setup wizard, so it is for source installs.
+**MOSS Local** runs MOSS-Transcribe-Diarize on your computer, and labels speakers. It returns short, closely timed segments without word timings. The first run downloads about 2 GB of model weights. MOSS needs its own environment, since it uses a newer Transformers than Qwen. For packaged builds, use **Set up MOSS...** in MOSS Local's settings, which installs Torch and the MOSS runtime into a separate environment. Source installs use `envmoss`.
 
 ## Installing from source
 If you want to use the command line tools or modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.

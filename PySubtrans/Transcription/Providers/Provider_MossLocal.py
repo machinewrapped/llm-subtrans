@@ -9,6 +9,7 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.AudioChunker import DEFAULT_LOOKAHEAD_SECONDS
 from PySubtrans.Transcription.Providers.Clients.MossLocalClient import MossLocalClient
 from PySubtrans.Transcription.Torch.Discovery import ApplicationRoot
+from PySubtrans.Transcription.Torch.LocalRuntime import MossConfigOption
 from PySubtrans.Transcription.Torch.MossRuntime import (
     HasMossRuntime,
     MOSS_ENVIRONMENT_NAME,
@@ -78,7 +79,7 @@ try:
             Until an environment with the MOSS runtime is found, only its directory is shown.
             """
             directory_option : GuiSettingsType = {
-                'moss_installation_directory': (str, _("Python environment with the MOSS runtime (envmoss beside the application when empty)")),
+                'moss_installation_directory': (MossConfigOption, _("Install Torch and the MOSS runtime, or choose an environment that has them")),
             }
 
             if not self._runtime_configured(settings):
@@ -124,9 +125,10 @@ try:
             notes : list[str] = []
 
             if not self._runtime_configured(self.settings):
-                notes.append(_("<p><b>Setup required:</b> MOSS runs in its own Python environment. "
-                               "For a source install, run <code>scripts/install_moss_runtime.py {folder}</code> "
-                               "with the application's Python, or set the directory of an environment that has it.</p>").format(folder=MOSS_ENVIRONMENT_NAME))
+                notes.extend([
+                    _("<p><b>Setup required:</b> MOSS runs on PyTorch in its own Python environment, installed separately from the application. The correct Torch build depends on your operating system and hardware.</p>"),
+                    _("<p>Click <b>{button}</b> to detect available hardware and install them.</p>").format(button=MossConfigOption.label),
+                ])
 
             parts = [part for part in [base, *notes] if part]
             return "\n".join(parts) if parts else None

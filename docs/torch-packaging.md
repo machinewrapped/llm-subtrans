@@ -4,7 +4,7 @@ Packaged builds bundle neither Torch nor the Qwen runtime (qwen-asr, Transformer
 
 The venv contributes site-packages but not a standard library, so `hooks/hook-PySubtrans.py` bundles the whole standard library apart from Tk, IDLE and CPython's tests. The distro scripts exclude `numpy` and the packages built on it (`scipy`, `numba`, `llvmlite`, `pandas`, `PIL`): openai and pygments import them optionally, and a bundled numpy would shadow the one the venv's scipy and numba were built against.
 
-Local transcription setup (the Torch setup wizard) installs the Qwen runtime after Torch. Source installs use `scripts/install_qwen_runtime.py <directory>` to create or reuse a dedicated runtime venv, install the hardware-appropriate Torch build, and then install Qwen. qwen-asr is installed with `--no-deps` at the version `QwenRuntime.py` pins, then the dependencies its metadata declares are installed as declared, minus those only its demo apps use (gradio, flask, sox, qwen-omni-utils, pytz). The source installer reads this metadata from the target venv's site-packages and runs every pip step with its interpreter. Bumping qwen-asr's pin brings its dependency pins with it. Environments set up by 1.7.0 contain Torch alone; the provider reports the missing runtime, and selecting the environment in the setup wizard offers to install it there.
+Local transcription setup (the Torch setup wizard) installs a runtime after Torch: Qwen from **Set up Qwen...**, MOSS from **Set up MOSS...**, each into its own environment. The wizard will not add a runtime to an environment that has the other one. Source installs use `scripts/install_qwen_runtime.py <directory>` to create or reuse a dedicated runtime venv, install the hardware-appropriate Torch build, and then install Qwen. qwen-asr is installed with `--no-deps` at the version `QwenRuntime.py` pins, then the dependencies its metadata declares are installed as declared, minus those only its demo apps use (gradio, flask, sox, qwen-omni-utils, pytz). The source installer reads this metadata from the target venv's site-packages and runs every pip step with its interpreter. Bumping qwen-asr's pin brings its dependency pins with it. Environments set up by 1.7.0 contain Torch alone; the provider reports the missing runtime, and selecting the environment in the setup wizard offers to install it there.
 
 Distribution scripts do not install Torch or qwen-asr into the build environment. Dependency-audit checks remain a release gate for the bundled packages.
 
@@ -32,12 +32,13 @@ Five modules that handle external Torch installations live in their own subpacka
 | `Runtime.py` | Loads an external Torch venv at runtime (`sys.path` + DLL registration), validates compatibility first |
 | `QwenRuntime.py` | Pins qwen-asr, lists the dependencies to install with it, and checks whether a Torch venv contains the Qwen runtime |
 | `MossRuntime.py` | Pins the MOSS package, model revision and dependencies, and checks whether a venv contains the MOSS runtime |
+| `LocalRuntime.py` | Describes each runtime for the setup wizard: its environment, setup option, pip steps and runtime check |
 
 Consumers:
 
 | Consumer | Imports from |
 |----------|-------------|
-| `TorchSetupDialog.py` (GUI wizard) | `Hardware` (detection, index URLs), `Validation` (ABI checking), `Discovery` (interpreter and existing-install discovery), `QwenRuntime` (requirements and runtime checks) |
+| `TorchSetupDialog.py` (GUI wizard) | `Hardware` (detection, index URLs), `Validation` (ABI checking), `Discovery` (interpreter and existing-install discovery), `LocalRuntime` (the runtime being set up) |
 | `prepare_external_torch.py` (build tool) | `Validation` (metadata stamping and venv probing) |
 | `install_torch.py` (installer helpers) | `Hardware` (Torch build selection), `Discovery` (runtime interpreter discovery and minimum version checks) |
 | `install_qwen_runtime.py` (source installer) | `install_torch` (venv preparation and target Torch installation), `QwenRuntime` (requirements), `Validation` (target site-packages lookup) |

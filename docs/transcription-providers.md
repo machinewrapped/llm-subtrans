@@ -136,7 +136,7 @@ A safety filter was suggested as a cause, but the raw responses showed no safety
 
 ## MOSS Local
 
-**Source setup.** Choose MOSS (or both runtimes) for local transcription in `install.bat` / `install.sh`, or run `scripts/install_moss_runtime.py envmoss` with `envsubtrans`'s Python. This creates a separate venv and installs Torch and MOSS there. MOSS needs Transformers 5, while `qwen-asr` 0.0.6 pins Transformers 4.57.6, so the two runtimes cannot share an environment. Source runs use `envmoss` in the project root unless an environment directory is configured. Packaged builds have no setup wizard for MOSS yet.
+**Source setup.** Choose MOSS (or both runtimes) for local transcription in `install.bat` / `install.sh`, or run `scripts/install_moss_runtime.py envmoss` with `envsubtrans`'s Python. This creates a separate venv and installs Torch and MOSS there. MOSS needs Transformers 5, while `qwen-asr` 0.0.6 pins Transformers 4.57.6, so the two runtimes cannot share an environment. Source runs use `envmoss` in the project root unless an environment directory is configured. Packaged builds use **Set up MOSS...** in MOSS Local's settings.
 
 **Model.** `OpenMOSS-Team/MOSS-Transcribe-Diarize` (0.9B), about 1.8 GB, at a pinned revision. MOSS is not on PyPI, so its package is installed from a GitHub archive at a pinned commit. The worker loads the model with the package's own classes rather than `trust_remote_code`. Loading in the stored dtype and then casting gives output identical to the package's own loader (checked on a 60 s clip in November 2026).
 

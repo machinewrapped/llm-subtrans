@@ -15,7 +15,7 @@ from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.Substitutions import Substitutions
 from PySubtrans.Subtitles import OriginalTextPlacement
-from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
+from PySubtrans.Transcription.Torch.LocalRuntime import LocalRuntimeForOption
 from PySubtrans.TranslationProvider import TranslationProvider
 from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider
 from PySubtrans.Helpers.Localization import LocaleDisplayItem, _, get_locale_display_items
@@ -679,13 +679,14 @@ class SettingsDialog(QDialog):
         The handler takes the current setting value and returns the new value
         (or None to cancel).
         """
-        if issubclass(key_type, TorchConfigOption):
-            def _torch_handler(current_path : str) -> str|None:
-                dialog = TorchSetupDialog(current_path, parent=self)
+        runtime = LocalRuntimeForOption(key_type)
+        if runtime is not None:
+            def _runtime_setup_handler(current_path : str) -> str|None:
+                dialog = TorchSetupDialog(current_path, parent=self, runtime=runtime)
                 if dialog.exec() == QDialog.DialogCode.Accepted:
                     return dialog.chosen_path
                 return None
-            return _torch_handler
+            return _runtime_setup_handler
 
         if issubclass(key_type, ChatGPTSignInOption):
             return self._sign_in_with_chatgpt

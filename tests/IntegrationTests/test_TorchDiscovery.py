@@ -33,7 +33,7 @@ class TestTorchDiscovery(LoggedTestCase):
         """The install location beside the application is checked first."""
         with patch.object(Discovery, 'ApplicationRoot', return_value=Path('app')), \
                 patch.object(Discovery, 'HasTorchPackage', return_value=True):
-            found = Discovery.FindExistingTorch('envqwen')
+            found = Discovery.FindExistingTorch('envqwen', lambda _root: False)
 
         self.assertLoggedEqual('default location returned', os.path.join('app', 'envqwen'), found)
 
@@ -42,9 +42,19 @@ class TestTorchDiscovery(LoggedTestCase):
         with patch.object(Discovery, 'ApplicationRoot', return_value=Path('app')), \
                 patch.object(Discovery, 'HasTorchPackage', return_value=False), \
                 patch.object(Discovery.importlib.util, 'find_spec', return_value=None):
-            found = Discovery.FindExistingTorch('envqwen')
+            found = Discovery.FindExistingTorch('envqwen', lambda _root: True)
 
         self.assertLoggedIsNone('no installation found', found)
+
+    def test_find_existing_torch_on_path_needs_runtime(self) -> None:
+        """The Torch environment on the path is offered only if it has the runtime, since it may belong to another one."""
+        with patch.object(Discovery, 'FindDefaultEnvironment', return_value=None), \
+                patch.object(Discovery, 'FindTorchOnPath', return_value='other_env'):
+            with_runtime = Discovery.FindExistingTorch('envqwen', lambda _root: True)
+            without_runtime = Discovery.FindExistingTorch('envqwen', lambda _root: False)
+
+        self.assertLoggedEqual('environment with the runtime offered', 'other_env', with_runtime)
+        self.assertLoggedIsNone('environment without the runtime not offered', without_runtime)
 
     def test_find_compatible_python_prefers_abi_match_over_newer_interpreter(self) -> None:
         """A matching interpreter is selected ahead of a newer mismatched one."""

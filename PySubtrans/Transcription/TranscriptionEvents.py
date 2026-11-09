@@ -21,8 +21,9 @@ class TranscriptionEvents:
             Emitted as audio seconds are processed, once the media duration
             is known.
 
-        segment(sender, segment : TranscriptionSegment):
+        segment(sender, segment : TranscriptionSegment, overlong : bool):
             Emitted for each timed subtitle line as it is produced.
+            Overlong lines are over the maximum line duration, with no word timings to split them.
     """
     status : Signal
     progress : Signal

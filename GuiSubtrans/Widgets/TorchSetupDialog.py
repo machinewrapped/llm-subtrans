@@ -1,4 +1,4 @@
-"""Dialog for setting up the Torch environment and Qwen runtime for local transcription."""
+"""Dialog for setting up a Torch environment with a local transcription runtime."""
 
 from __future__ import annotations
 
@@ -37,7 +37,6 @@ from PySubtrans.Transcription.Torch.Discovery import (
     ApplicationRoot,
     ExpectedCompatibility,
     FindCompatiblePython,
-    FindExistingTorch,
 )
 from PySubtrans.Transcription.Torch.Hardware import (
     CPU_INDEX_URL,
@@ -45,14 +44,7 @@ from PySubtrans.Transcription.Torch.Hardware import (
     HardwareDetection,
     ROCM_INDEX_URL,  # pyright: ignore[reportUnusedImport] — only reached on Linux; false positive on Windows
 )
-from PySubtrans.Transcription.Torch.Runtime import TorchConfigOption
-from PySubtrans.Transcription.Torch.QwenRuntime import (
-    QWEN_ASR_REQUIREMENT,
-    QWEN_ENVIRONMENT_NAME,
-    NeedsQwenRuntime,
-    QwenAsrPipArguments,
-    QwenDependencyPipArguments,
-)
+from PySubtrans.Transcription.Torch.LocalRuntime import LocalRuntime, OtherRuntimesIn, QWEN_RUNTIME
 from PySubtrans.Transcription.Torch.Validation import (
     CompareCompatibility,
     FindTorchSitePackages,
@@ -62,14 +54,11 @@ from PySubtrans.Transcription.Torch.Validation import (
 )
 
 
-# Approximate total disk usage (venv + torch + Qwen runtime) by build variant.
+# Approximate total disk usage (venv + torch + runtime) by build variant.
 _ESTIMATED_SIZE_CUDA = _("~5.5 GB")
 _ESTIMATED_SIZE_ROCM = _("~4 GB")
 _ESTIMATED_SIZE_CPU = _("~1 GB")
 _ESTIMATED_SIZE_MPS = _("~1 GB")
-
-# Approximate disk usage of the Qwen runtime on its own, when adding it to an existing environment
-_ESTIMATED_SIZE_QWEN_RUNTIME = _("~600 MB")
 
 
 @dataclass(frozen=True)
@@ -82,49 +71,52 @@ class _InstallStep:
     command : Callable[[], tuple[str, list[str]]|None]
 
 
-# Answers for the "what GPU do you have?" fallback question
-_GPU_VENDOR_OPTIONS : dict[str, HardwareDetection] = {
-    _("NVIDIA"): HardwareDetection(
-        description=_("NVIDIA selected -- install the NVIDIA driver before setting up Torch"),
-        index_url=CPU_INDEX_URL,
-        is_gpu=False,
-        guidance=_("Install the latest NVIDIA driver for this GPU from nvidia.com, "
-                   "restart the computer, and choose {button} again.").format(button=TorchConfigOption.label),
-        hardware_detected=True,
-        estimated_size=_ESTIMATED_SIZE_CPU,
-    ),
-    _("AMD"): HardwareDetection(
-        description=_("AMD selected"),
-        index_url=ROCM_INDEX_URL if sys.platform == 'linux' else CPU_INDEX_URL,
-        is_gpu=sys.platform == 'linux',
-        guidance='' if sys.platform == 'linux'
-                 else _("PyTorch GPU support for AMD requires Linux with ROCm."),
-        hardware_detected=sys.platform != 'linux',
-        estimated_size=_ESTIMATED_SIZE_ROCM if sys.platform == 'linux' else _ESTIMATED_SIZE_CPU,
-    ),
-    _("Intel"): HardwareDetection(
-        description=_("Intel selected"),
-        index_url=CPU_INDEX_URL,
-        is_gpu=False,
-        guidance=_("PyTorch XPU support requires the Intel oneAPI toolkit (intel.com/oneapi)."),
-        hardware_detected=True,
-        estimated_size=_ESTIMATED_SIZE_CPU,
-    ),
-    _("No GPU / CPU only"): HardwareDetection(
-        description=_("CPU selected -- transcription will work but will be significantly slower than with a GPU"),
-        index_url=CPU_INDEX_URL,
-        is_gpu=False,
-        estimated_size=_ESTIMATED_SIZE_CPU,
-    ),
-}
+def _GpuVendorOptions(setup_label : str) -> dict[str, HardwareDetection]:
+    """Answers for the "what GPU do you have?" fallback question."""
+    return {
+        _("NVIDIA"): HardwareDetection(
+            description=_("NVIDIA selected -- install the NVIDIA driver before setting up Torch"),
+            index_url=CPU_INDEX_URL,
+            is_gpu=False,
+            guidance=_("Install the latest NVIDIA driver for this GPU from nvidia.com, "
+                       "restart the computer, and choose {button} again.").format(button=setup_label),
+            hardware_detected=True,
+            estimated_size=_ESTIMATED_SIZE_CPU,
+        ),
+        _("AMD"): HardwareDetection(
+            description=_("AMD selected"),
+            index_url=ROCM_INDEX_URL if sys.platform == 'linux' else CPU_INDEX_URL,
+            is_gpu=sys.platform == 'linux',
+            guidance='' if sys.platform == 'linux'
+                     else _("PyTorch GPU support for AMD requires Linux with ROCm."),
+            hardware_detected=sys.platform != 'linux',
+            estimated_size=_ESTIMATED_SIZE_ROCM if sys.platform == 'linux' else _ESTIMATED_SIZE_CPU,
+        ),
+        _("Intel"): HardwareDetection(
+            description=_("Intel selected"),
+            index_url=CPU_INDEX_URL,
+            is_gpu=False,
+            guidance=_("PyTorch XPU support requires the Intel oneAPI toolkit (intel.com/oneapi)."),
+            hardware_detected=True,
+            estimated_size=_ESTIMATED_SIZE_CPU,
+        ),
+        _("No GPU / CPU only"): HardwareDetection(
+            description=_("CPU selected -- transcription will work but will be significantly slower than with a GPU"),
+            index_url=CPU_INDEX_URL,
+            is_gpu=False,
+            estimated_size=_ESTIMATED_SIZE_CPU,
+        ),
+    }
 
 
 class TorchSetupDialog(QDialog):
-    """Step-by-step dialog that helps users choose or install an environment with Torch and the Qwen runtime."""
+    """Step-by-step dialog that helps users choose or install an environment with Torch and a local transcription runtime."""
 
-    def __init__(self, current_path : str = '', parent=None):
+    def __init__(self, current_path : str = '', parent=None, runtime : LocalRuntime = QWEN_RUNTIME):
         super().__init__(parent)
-        self.setWindowTitle(_("Set Up Local Transcription"))
+        self.runtime : LocalRuntime = runtime
+        self._gpu_vendor_options : dict[str, HardwareDetection] = _GpuVendorOptions(runtime.setup_option.label)
+        self.setWindowTitle(_("Set Up {provider}").format(provider=runtime.provider_name))
         self.setMinimumWidth(680)
         self.setMinimumHeight(600)
 
@@ -182,12 +174,12 @@ class TorchSetupDialog(QDialog):
         existing_layout = QVBoxLayout(self._existing_group)
 
         # The scan result comes first, so the radio below it reads as the choice to use it
-        self._existing_label = QLabel(_("Searching for an existing Qwen installation..."), self._existing_group)
+        self._existing_label = QLabel(_("Searching for an existing {runtime} installation...").format(runtime=self.runtime.name), self._existing_group)
         self._existing_label.setWordWrap(True)
         self._existing_label.setTextFormat(Qt.TextFormat.RichText)
         existing_layout.addWidget(self._existing_label)
 
-        self._existing_radio = QRadioButton(_("Use the detected Qwen environment"), self._existing_group)
+        self._existing_radio = QRadioButton(_("Use the detected {runtime} environment").format(runtime=self.runtime.name), self._existing_group)
         self._existing_radio.setEnabled(False)
         existing_layout.addWidget(self._existing_radio)
 
@@ -195,7 +187,7 @@ class TorchSetupDialog(QDialog):
         existing_layout.addWidget(self._manual_radio)
         manual_row = QHBoxLayout()
         self._manual_path_field = QLineEdit(self._existing_group)
-        self._manual_path_field.setPlaceholderText(_("Path to a Python virtual environment containing Qwen"))
+        self._manual_path_field.setPlaceholderText(_("Path to a Python virtual environment containing {runtime}").format(runtime=self.runtime.name))
         self._manual_path_field.textChanged.connect(self._on_choice_changed)
         manual_row.addWidget(self._manual_path_field)
         manual_browse_button = QPushButton(_("Browse..."), self._existing_group)
@@ -207,7 +199,7 @@ class TorchSetupDialog(QDialog):
 
         install_group = QGroupBox(_("Install automatically"), page)
         install_layout = QVBoxLayout(install_group)
-        self._automatic_radio = QRadioButton(_("Create a new environment and install Qwen"), install_group)
+        self._automatic_radio = QRadioButton(_("Create a new environment and install {runtime}").format(runtime=self.runtime.name), install_group)
         self._automatic_radio.setChecked(True)
         install_layout.addWidget(self._automatic_radio)
         install_layout.addWidget(QLabel(_("The next page will ask where to create it and show the detected hardware.")))
@@ -237,7 +229,7 @@ class TorchSetupDialog(QDialog):
         directory_group = QGroupBox(_("Installation folder"), page)
         directory_layout = QVBoxLayout(directory_group)
         dir_row = QHBoxLayout()
-        default_path = current_path or str(ApplicationRoot() / QWEN_ENVIRONMENT_NAME)
+        default_path = current_path or str(ApplicationRoot() / self.runtime.environment_name)
         self._dir_field = QLineEdit(default_path, directory_group)
         self._dir_field.setCursorPosition(0)
         self._dir_field.setToolTip(_("A new Python virtual environment will be created here."))
@@ -276,7 +268,7 @@ class TorchSetupDialog(QDialog):
         else:
             hardware_layout.addWidget(QLabel(_("GPU detection was inconclusive. Choose the closest option:"), hardware_group))
             self._gpu_combo = QComboBox(hardware_group)
-            for vendor_label in _GPU_VENDOR_OPTIONS:
+            for vendor_label in self._gpu_vendor_options:
                 self._gpu_combo.addItem(vendor_label)
             self._gpu_combo.setCurrentIndex(self._gpu_combo.count() - 1)
             self._gpu_combo.currentTextChanged.connect(self._on_gpu_vendor_changed)
@@ -311,7 +303,7 @@ class TorchSetupDialog(QDialog):
         """Build the page that reports the installation subprocesses."""
         page = QWidget(self)
         page_layout = QVBoxLayout(page)
-        self._progress_title = QLabel(_("Step 3 of 3 - Installing Torch and the Qwen runtime"))
+        self._progress_title = QLabel(_("Step 3 of 3 - Installing Torch and the {runtime} runtime").format(runtime=self.runtime.name))
         self._progress_title.setStyleSheet("font-weight: bold;")
         page_layout.addWidget(self._progress_title)
         self._step_status_label = QLabel(_("Preparing installation..."), page)
@@ -417,7 +409,7 @@ class TorchSetupDialog(QDialog):
 
     def _on_gpu_vendor_changed(self, vendor_text : str) -> None:
         """Update hardware selection when the user picks a GPU vendor."""
-        selection = _GPU_VENDOR_OPTIONS.get(vendor_text)
+        selection = self._gpu_vendor_options.get(vendor_text)
         if selection:
             self._hardware = selection
             self._vendor_guidance_label.setText(selection.guidance)
@@ -431,20 +423,22 @@ class TorchSetupDialog(QDialog):
 
     def _scan_for_existing_torch(self) -> None:
         """Look for a torch installation already on the system."""
-        existing = FindExistingTorch(QWEN_ENVIRONMENT_NAME)
+        runtime = self.runtime
+        existing = runtime.find_existing()
         if existing:
             # Rich text, so the path stands out; everything else is escaped
             bold_path = f"<b>{html.escape(existing)}</b>"
-            description = html.escape(_("Found an existing Qwen environment at: {path}")).format(path=bold_path)
-            if NeedsQwenRuntime(Path(existing)):
-                description += "<br>" + html.escape(_("It does not include the Qwen runtime yet, which will be installed into it ({size}).").format(size=_ESTIMATED_SIZE_QWEN_RUNTIME))
+            found = _("Found an existing {runtime} environment at: {path}").format(runtime=runtime.name, path='{path}')
+            description = html.escape(found).format(path=bold_path)
+            if runtime.needs_runtime(Path(existing)):
+                description += "<br>" + html.escape(_("It does not include the {runtime} runtime yet, which will be installed into it ({size}).").format(runtime=runtime.name, size=runtime.runtime_size))
             self._existing_label.setText(description)
             self._existing_path = existing
             self._existing_radio.setEnabled(True)
             self._existing_radio.setChecked(True)
             self._automatic_radio.setChecked(False)
         else:
-            self._existing_label.setText(_("No existing Qwen installation found on this system."))
+            self._existing_label.setText(_("No existing {runtime} installation found on this system.").format(runtime=runtime.name))
             self._existing_path = None
             self._existing_radio.setEnabled(False)
 
@@ -476,6 +470,14 @@ class TorchSetupDialog(QDialog):
             self._install_error_label.setText(_("Choose an installation folder before continuing."))
             return False
 
+        # Installing into another runtime's environment would replace dependency versions that runtime needs
+        others = OtherRuntimesIn(self.runtime, Path(target_dir).expanduser())
+        if others:
+            self._install_error_label.setText(
+                _("This folder has the {other} runtime installed. {runtime} needs an environment of its own, so choose another folder.").format(
+                    other=others[0].name, runtime=self.runtime.name))
+            return False
+
         # Find a Python interpreter to create the venv with
         python = FindCompatiblePython()
         if not python:
@@ -485,42 +487,58 @@ class TorchSetupDialog(QDialog):
         self._install_error_label.clear()
         self._target_dir = target_dir
         self._retry_page = 1
-        self._progress_title.setText(_("Step 3 of 3 - Installing Torch and the Qwen runtime"))
+        self._progress_title.setText(_("Step 3 of 3 - Installing Torch and the {runtime} runtime").format(runtime=self.runtime.name))
 
-        steps = [self._create_venv_step(python), self._install_torch_step(), *self._qwen_runtime_steps()]
+        steps = [self._create_venv_step(python), self._install_torch_step(), *self._runtime_steps()]
         self._run_steps(steps)
         return True
 
-    def _offer_qwen_runtime_install(self, directory : str) -> bool:
+    def _offer_runtime_install(self, directory : str) -> bool:
         """
-        Offer to install the Qwen runtime into a Torch environment that lacks it, such as one set up for an earlier version.
+        Offer to install the runtime into a Torch environment that lacks it, such as one set up for an earlier version.
+        An environment with another runtime is refused, since their dependency versions conflict.
         Returns whether the installation was started.
         """
+        runtime = self.runtime
         root = Path(directory).expanduser()
+
+        others = OtherRuntimesIn(runtime, root)
+        if others:
+            QMessageBox.warning(
+                self,
+                _("{runtime} Runtime Not Found").format(runtime=runtime.name),
+                _("The environment at:\n{path}\n\n"
+                  "has the {other} runtime installed. {runtime} needs an environment of its own.\n\n"
+                  "Select another environment, or use the automatic install.").format(
+                      path=directory, other=others[0].name, runtime=runtime.name),
+            )
+            return False
+
         if FindVenvPython(root) is None:
             QMessageBox.warning(
                 self,
-                _("Qwen Runtime Not Found"),
+                _("{runtime} Runtime Not Found").format(runtime=runtime.name),
                 _("The Torch environment at:\n{path}\n\n"
-                  "does not include the Qwen runtime, and has no Python interpreter to install it with.\n\n"
-                  "Select a virtual environment, or use the automatic install.").format(path=directory),
+                  "does not include the {runtime} runtime, and has no Python interpreter to install it with.\n\n"
+                  "Select a virtual environment, or use the automatic install.").format(path=directory, runtime=runtime.name),
             )
             return False
 
         answer = QMessageBox.question(
             self,
-            _("Install Qwen Runtime"),
+            _("Install {runtime} Runtime").format(runtime=runtime.name),
             _("The Torch environment at:\n{path}\n\n"
-              "does not include the Qwen runtime that local transcription needs.\n\n"
-              "Install it into this environment now? It needs about {size} of disk space.").format(path=directory, size=_ESTIMATED_SIZE_QWEN_RUNTIME),
+              "does not include the {runtime} runtime that {provider} needs.\n\n"
+              "Install it into this environment now? It needs about {size} of disk space.").format(
+                  path=directory, runtime=runtime.name, provider=runtime.provider_name, size=runtime.runtime_size),
         )
         if answer != QMessageBox.StandardButton.Yes:
             return False
 
         self._target_dir = directory
         self._retry_page = 0
-        self._progress_title.setText(_("Installing the Qwen runtime"))
-        self._run_steps(self._qwen_runtime_steps())
+        self._progress_title.setText(_("Installing the {runtime} runtime").format(runtime=runtime.name))
+        self._run_steps(self._runtime_steps())
         self._show_page(2)
         return True
 
@@ -549,34 +567,37 @@ class TorchSetupDialog(QDialog):
             command=lambda: self._pip_command(arguments),
         )
 
-    def _qwen_runtime_steps(self) -> list[_InstallStep]:
+    def _runtime_steps(self) -> list[_InstallStep]:
         """
-        Install the Qwen runtime into the venv.
-        qwen-asr goes in without its dependencies, then the dependencies it declares follow, minus those only its demo apps use.
+        Install the runtime into the venv.
+        Its package goes in without its dependencies, then the dependencies it needs follow, without those only its demo apps use.
         """
+        runtime = self.runtime
+
+        # The exit code placeholder stays escaped, since it is filled in when a step fails
         return [
             _InstallStep(
-                status=_("Installing qwen-asr..."),
-                start_message=_("Installing {requirement}...").format(requirement=QWEN_ASR_REQUIREMENT),
-                success_message=_("qwen-asr installed successfully."),
-                failure_message=_("Error: qwen-asr installation failed (exit code {code}). Check the output above for details."),
-                command=lambda: self._pip_command(QwenAsrPipArguments()),
+                status=_("Installing {package}...").format(package=runtime.package_name),
+                start_message=_("Installing {requirement}...").format(requirement=runtime.package_requirement),
+                success_message=_("{package} installed successfully.").format(package=runtime.package_name),
+                failure_message=_("Error: {package} installation failed (exit code {{code}}). Check the output above for details.").format(package=runtime.package_name),
+                command=lambda: self._pip_command(runtime.package_pip_arguments()),
             ),
             _InstallStep(
-                status=_("Installing the Qwen runtime dependencies..."),
-                start_message=_("Installing the Qwen runtime dependencies (this may take several minutes)..."),
-                success_message=_("Qwen runtime dependencies installed successfully."),
-                failure_message=_("Error: Qwen runtime dependency installation failed (exit code {code}). Check the output above for details."),
-                command=self._qwen_dependencies_command,
+                status=_("Installing the {runtime} runtime dependencies...").format(runtime=runtime.name),
+                start_message=_("Installing the {runtime} runtime dependencies (this may take several minutes)...").format(runtime=runtime.name),
+                success_message=_("{runtime} runtime dependencies installed successfully.").format(runtime=runtime.name),
+                failure_message=_("Error: {runtime} runtime dependency installation failed (exit code {{code}}). Check the output above for details.").format(runtime=runtime.name),
+                command=self._dependencies_command,
             ),
         ]
 
-    def _qwen_dependencies_command(self) -> tuple[str, list[str]]|None:
-        """Build the pip command for the dependencies of the qwen-asr just installed into the venv."""
+    def _dependencies_command(self) -> tuple[str, list[str]]|None:
+        """Build the pip command for the dependencies of the runtime package just installed into the venv."""
         site_packages = FindTorchSitePackages(Path(self._target_dir).expanduser())
-        arguments = QwenDependencyPipArguments([str(site_packages)]) if site_packages else None
+        arguments = self.runtime.dependency_pip_arguments([str(site_packages)]) if site_packages else None
         if arguments is None:
-            self._log(_("Error: The qwen-asr package metadata could not be found in {path}.").format(path=self._target_dir))
+            self._log(_("Error: The {package} package metadata could not be found in {path}.").format(package=self.runtime.package_name, path=self._target_dir))
             return None
 
         return self._pip_command(arguments)
@@ -639,8 +660,8 @@ class TorchSetupDialog(QDialog):
         """Validate the environment once every installer step has succeeded."""
         self._step_status_label.setText(_("Installation finished. Verifying the Torch environment..."))
 
-        if NeedsQwenRuntime(Path(self._target_dir).expanduser()):
-            self._log(_("Error: The Qwen runtime could not be found in {path} after installation.").format(path=self._target_dir))
+        if self.runtime.needs_runtime(Path(self._target_dir).expanduser()):
+            self._log(_("Error: The {runtime} runtime could not be found in {path} after installation.").format(runtime=self.runtime.name, path=self._target_dir))
         elif self._validate_and_accept(self._target_dir):
             return
 
@@ -660,7 +681,7 @@ class TorchSetupDialog(QDialog):
         """Validate that the directory contains a usable torch installation.
 
         A missing Torch package is a hard error, since transcription would fail
-        when it starts.  A missing Qwen runtime is offered for installation,
+        when it starts.  A missing runtime is offered for installation,
         and the environment is validated again once it is installed.  An
         interpreter mismatch is a strong warning instead: the environment may
         still work, and if it does not the user needs to know what to change.
@@ -677,8 +698,8 @@ class TorchSetupDialog(QDialog):
             )
             return False
 
-        if NeedsQwenRuntime(root):
-            self._offer_qwen_runtime_install(directory)
+        if self.runtime.needs_runtime(root):
+            self._offer_runtime_install(directory)
             return False
 
         self._log(_("Validated Torch installation at {path}.").format(path=directory))

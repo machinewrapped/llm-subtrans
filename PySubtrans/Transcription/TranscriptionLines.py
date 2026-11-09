@@ -57,16 +57,10 @@ class TranscriptionLineBuilder:
 
         return []
 
-    def WarnIfOverlong(self, line : TranscriptionSegment) -> bool:
-        """Log a warning for a line over the duration limit, returning whether one was logged."""
-        # Only untimed engine spans can get here too long, and their boundaries deserve a human glance
-        duration = (line.end - line.start).total_seconds()
-        if not self.settings.FitsDuration(duration):
-            logging.warning(_("Long transcription line ({:.1f}s, no word timings to split it): '{}'").format(
-                duration, line.text[:120]))
-            return True
-
-        return False
+    def IsOverlong(self, line : TranscriptionSegment) -> bool:
+        """Whether a line is over the duration limit."""
+        # Lines with word timings are split to fit, so only untimed engine spans get here too long
+        return not self.settings.FitsDuration((line.end - line.start).total_seconds())
 
     def _lines_from_parts(self, segment : TranscriptionSegment, parts : list[TranscriptionSegment]) -> list[TranscriptionSegment]:
         """Lines from the provider's sub-segments."""
@@ -104,9 +98,6 @@ class TranscriptionLineBuilder:
 
         # Providers that segment for us still strand fragments, which translate badly in isolation
         merged = self.merger.MergeSlivers(lines, limit=segment.end)
-        for line in merged:
-            self.WarnIfOverlong(line)
-
         return merged or [segment]
 
     def _fit_part(self, part : TranscriptionSegment, words : list[WordTiming],

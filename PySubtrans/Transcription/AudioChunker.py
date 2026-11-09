@@ -11,6 +11,7 @@ from datetime import timedelta
 DEFAULT_SILENCE_MIN_DURATION = 0.8
 DEFAULT_FALLBACK_SILENCE_MIN_DURATION = 0.3
 DEFAULT_QUIET_SCAN_SECONDS = 5.0
+DEFAULT_LOOKAHEAD_SECONDS = 30.0
 
 @dataclass
 class AudioChunk:
@@ -80,7 +81,7 @@ class AudioChunker:
         Hard cuts can land mid-sentence or mid-word, so an over-long
         stretch extends to the next natural pause when one is nearby.
         """
-        return self.settings.get_float('lookahead_seconds', 30.0) or 0.0
+        return self.settings.get_float('lookahead_seconds', DEFAULT_LOOKAHEAD_SECONDS) or 0.0
 
     @property
     def silence_min_duration(self) -> float:
@@ -154,6 +155,7 @@ class AudioChunker:
         silence_index = 0
 
         while cursor < duration and (duration - cursor).total_seconds() >= self.min_chunk_seconds:
+            chunk_silence_index = silence_index
             target = cursor + timedelta(seconds=self.max_chunk_seconds)
             window = min(target, duration)
 
@@ -181,12 +183,47 @@ class AudioChunker:
             else:
                 end = next_cursor = self._quietest_cut(media_path, track_index, cursor, target)
 
-            # A remainder too small to stand alone is absorbed into this chunk
+            # A remainder too small to stand alone is absorbed into this chunk, if the chunk still fits the maximum.
+            # Otherwise what is left is split in two, so the last chunk is not far longer than the rest.
             if (duration - next_cursor).total_seconds() < self.min_chunk_seconds:
-                end = next_cursor = duration
+                if (duration - cursor).total_seconds() <= self.max_chunk_seconds:
+                    end = next_cursor = duration
+                else:
+                    fill(duration)
+                    end, next_cursor = self._balanced_cut(media_path, track_index, buffered, chunk_silence_index, cursor, duration)
+                    yield AudioChunk(start=cursor, end=end)
+                    yield AudioChunk(start=next_cursor, end=duration)
+                    return
 
             yield AudioChunk(start=cursor, end=end)
             cursor = next_cursor
+
+    def _balanced_cut(self, media_path : str, track_index : int, silences : list[tuple[timedelta, timedelta]],
+                      index : int, cursor : timedelta, duration : timedelta) -> tuple[timedelta, timedelta]:
+        """
+        Split the rest of the media in two at the pause nearest its midpoint, returning the end of the first part and the start of the second.
+
+        Either part may be shorter than the minimum, which is better than a last chunk far longer than the maximum.
+        Without a pause that keeps both parts within the maximum, the cut goes in the quietest stretch before the midpoint.
+        """
+        midpoint = cursor + (duration - cursor) / 2
+        maximum = timedelta(seconds=self.max_chunk_seconds)
+
+        best : tuple[timedelta, timedelta]|None = None
+        for silence_start, silence_end in silences[index:]:
+            if silence_start <= cursor or silence_end >= duration:
+                continue
+
+            fits = silence_start - cursor <= maximum and duration - silence_end <= maximum
+            long_enough = (silence_end - silence_start).total_seconds() >= self.fallback_silence_min_duration
+            if fits and long_enough and (best is None or abs(silence_start - midpoint) < abs(best[0] - midpoint)):
+                best = (silence_start, silence_end)
+
+        if best is not None:
+            return best
+
+        cut = self._quietest_cut(media_path, track_index, cursor, midpoint)
+        return cut, cut
 
     def _quietest_cut(self, media_path : str, track_index : int, cursor : timedelta, target : timedelta) -> timedelta:
         """

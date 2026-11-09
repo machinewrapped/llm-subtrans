@@ -4,9 +4,12 @@ import atexit
 import json
 import logging
 import subprocess
+from collections.abc import Callable
 from pathlib import Path
 from threading import RLock, Thread
 from typing import Any
+
+import regex
 
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleError import SubtitleError
@@ -52,11 +55,28 @@ def _RejectConstant(value : str) -> None:
 def ValidateMessage(message : Any) -> None:
     """Validate the envelope; runtime-specific payloads belong to the client."""
     if not isinstance(message, dict) or message.get('type') not in (
-            'load', 'ready', 'transcribe', 'result', 'error', 'shutdown'):
+            'load', 'ready', 'transcribe', 'segment', 'result', 'error', 'shutdown'):
         raise WorkerError(_("Unexpected worker message shape"))
 
     if message['type'] == 'error' and not all(isinstance(message.get(key), str) for key in ('error_type', 'message')):
         raise WorkerError(_("Malformed worker error"))
+
+
+# A progress bar update, such as 'Loading weights:  65%|######5   | 444/683 [...]'.
+# The bar redraws itself with carriage returns, which the text-mode stream reads as separate lines.
+_PROGRESS_BAR = regex.compile(r'^\s*(?:(?P<label>[^|]*?):\s*)?(?P<percent>\d{1,3})%\|')
+
+
+def ProgressBarStatus(line : str) -> tuple[str, bool]|None:
+    """The status text for a progress bar update, with whether the bar is complete, or None if the line is not one."""
+    match = _PROGRESS_BAR.match(line)
+    if match is None:
+        return None
+
+    label = (match.group('label') or '').strip()
+    percent = int(match.group('percent'))
+    text = f"{label}: {percent}%" if label else f"{percent}%"
+    return text, percent >= 100
 
 
 def WorkerScriptPath(name : str) -> Path:
@@ -87,6 +107,7 @@ class WorkerHost:
         self._state_lock = RLock()
         self._stderr_thread : Thread|None = None
         self._aborted : bool = False
+        self._on_progress : Callable[[str], None]|None = None
         atexit.register(self.Abort)
 
     @property
@@ -116,24 +137,32 @@ class WorkerHost:
             self._stderr_thread = Thread(target=self._ForwardStderr, args=(self._process,), daemon=True)
             self._stderr_thread.start()
 
-    def Request(self, message : dict[str, Any], expected : str) -> dict[str, Any]:
-        """Send a request and wait for exactly one response or an error."""
+    def Request(self, message : dict[str, Any], expected : str,
+                on_segment : Callable[[dict[str, Any]], None]|None = None,
+                on_progress : Callable[[str], None]|None = None) -> dict[str, Any]:
+        """
+        Send a request and wait for exactly one response or an error.
+        Segment messages sent while the request runs are passed to on_segment.
+        Progress bars the worker's libraries draw while it runs are passed to on_progress as status text, from the stderr thread.
+        """
         encoded = EncodeMessage(message)
 
         with self._request_lock:
             self.Start()
             process = self._process
             assert process is not None and process.stdin is not None and process.stdout is not None
+            self._on_progress = on_progress
 
             try:
                 process.stdin.write(encoded)
                 process.stdin.flush()
 
-                line = process.stdout.readline()
-                if not line:
-                    raise WorkerError(_("Transcription worker exited before replying (exit code {})").format(process.poll()))
+                response = self._ReadMessage(process)
+                while response['type'] == 'segment':
+                    if on_segment is not None:
+                        on_segment(response)
+                    response = self._ReadMessage(process)
 
-                response = DecodeMessage(line)
                 if response['type'] == 'error':
                     raise WorkerError(_("Transcription worker failed ({}): {}").format(
                         response['error_type'], response['message']), response['error_type'])
@@ -144,9 +173,12 @@ class WorkerHost:
             except (OSError, ValueError) as error:
                 self.Abort()
                 raise WorkerError(_("Transcription worker communication failed: {}").format(error)) from error
-            except WorkerError:
+            except Exception:
+                # The worker may still be mid-request, so its later output would answer the next request
                 self.Abort()
                 raise
+            finally:
+                self._on_progress = None
 
     def Shutdown(self) -> None:
         """Ask an idle worker to exit, with bounded termination as a fallback."""
@@ -188,6 +220,16 @@ class WorkerHost:
 
             atexit.unregister(self.Abort)
 
+    @staticmethod
+    def _ReadMessage(process : subprocess.Popen[str]) -> dict[str, Any]:
+        """Read the next protocol message from the worker."""
+        assert process.stdout is not None
+        line = process.stdout.readline()
+        if not line:
+            raise WorkerError(_("Transcription worker exited before replying (exit code {})").format(process.poll()))
+
+        return DecodeMessage(line)
+
     def _ForwardStderr(self, process : subprocess.Popen[str]) -> None:
         """Drain diagnostics concurrently so library output cannot stall inference."""
         assert process.stderr is not None
@@ -198,6 +240,17 @@ class WorkerHost:
 
                 level = logging.INFO
                 message = line.rstrip()
+
+                # Progress bars go to the request's status rather than the log, apart from their completion
+                progress = ProgressBarStatus(message)
+                if progress is not None:
+                    text, complete = progress
+                    on_progress = self._on_progress
+                    if on_progress is not None:
+                        on_progress(text)
+                    if complete:
+                        logging.debug("Transcription worker: %s", text)
+                    continue
 
                 # Only worker log records carry this prefix.
                 # Unmarked SDK output and traceback continuations retain INFO.

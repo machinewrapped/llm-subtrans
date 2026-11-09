@@ -99,9 +99,37 @@ function install_bedrock() {
     echo "Bedrock setup complete. Default provider set to Bedrock."
 }
 
-function install_qwen_local() {
-    # Qwen and Torch are installed in envqwen -- do not add to extras.
-    :
+function install_local_runtime() {
+    # Install Torch and a local transcription runtime in its own environment, not in envsubtrans.
+    # Usage: install_local_runtime runtime_name installer_script environment_folder provider_name
+    local runtime_name="$1" installer="$2" environment="$3" provider_name="$4"
+
+    echo
+    if [ -d "$environment" ]; then
+        echo "Updating the existing $runtime_name environment in \"$environment\"."
+        echo "If $provider_name is not working, delete the \"$environment\" folder and run this installer again."
+    else
+        echo "Installing Torch and the $runtime_name runtime into \"$environment\"..."
+    fi
+    echo "Detecting GPU hardware and installing torch..."
+
+    # CPU-only success returns 1, so capture it without triggering set -e.
+    local runtime_exit=0
+    ./envsubtrans/bin/python "scripts/$installer" "$environment" || runtime_exit=$?
+
+    echo
+    if [ $runtime_exit -eq 2 ]; then
+        echo "Failed to install the $runtime_name runtime."
+        echo "Skipping $provider_name; cloud transcription remains available."
+    elif [ $runtime_exit -eq 1 ]; then
+        echo "No GPU-accelerated torch variant was detected."
+        echo "CPU inference is disabled by default. Enable allow_cpu_fallback in $provider_name advanced settings to consent to slow CPU inference."
+        echo "For GPU acceleration, install the hardware-appropriate PyTorch build from:"
+        echo "  https://pytorch.org/get-started/locally/"
+    else
+        echo "$provider_name installed successfully with GPU support."
+    fi
+    echo
 }
 
 if [ ! -d "scripts" ]; then
@@ -228,12 +256,7 @@ while true; do
     read -p "Install local transcription? (y/n): " install_transcription
 
     case $install_transcription in
-        y|Y)
-            install_qwen_local
-            break
-            ;;
-        n|N)
-            echo "No local transcription selected."
+        y|Y|n|N)
             break
             ;;
         *)
@@ -241,6 +264,28 @@ while true; do
             ;;
     esac
 done
+
+install_qwen=""
+install_moss=""
+if [ "$install_transcription" = "y" ] || [ "$install_transcription" = "Y" ]; then
+    echo
+    echo "Local transcription runtimes, each installed in its own environment:"
+    echo "1 = Qwen Local: Qwen3-ASR with word timings"
+    echo "2 = MOSS Local: MOSS-Transcribe-Diarize with speaker labels"
+    echo "3 = Both"
+    while true; do
+        read -p "Enter your choice (1/2/3): " runtime_choice
+
+        case $runtime_choice in
+            1) install_qwen=1; break ;;
+            2) install_moss=1; break ;;
+            3) install_qwen=1; install_moss=1; break ;;
+            *) echo "Please enter 1, 2 or 3." ;;
+        esac
+    done
+else
+    echo "No local transcription selected."
+fi
 
 if [ ! -d "envsubtrans" ]; then
     echo
@@ -270,34 +315,11 @@ pip install --upgrade "$upload_cooldown" -e "$install_target"
 qt_fonts_dir=$(python3 -c "import PySide6, os; print(os.path.join(os.path.dirname(PySide6.__file__), 'lib', 'fonts'))" 2>/dev/null || true)
 [ -n "$qt_fonts_dir" ] && mkdir -p "$qt_fonts_dir"
 
-if [ "$install_transcription" = "y" ] || [ "$install_transcription" = "Y" ]; then
-    echo
-    if [ -d "envqwen" ]; then
-        echo "Updating the existing local transcription environment in \"envqwen\"."
-        echo "If local transcription is not working, delete the \"envqwen\" folder and run this installer again."
-    else
-        echo "Installing Torch and the Qwen runtime into \"envqwen\"..."
-    fi
-    echo "Detecting GPU hardware and installing torch..."
-    # CPU-only success returns 1, so capture it without triggering set -e.
-    torch_exit=0
-    ./envsubtrans/bin/python scripts/install_qwen_runtime.py envqwen || torch_exit=$?
-
-    if [ $torch_exit -eq 2 ]; then
-        echo
-        echo "Failed to install the Qwen runtime."
-        echo "Skipping local transcription; cloud transcription remains available."
-    elif [ $torch_exit -eq 1 ]; then
-        echo
-        echo "No GPU-accelerated torch variant was detected."
-        echo "CPU inference is disabled by default. Enable allow_cpu_fallback in Qwen Local advanced settings to consent to slow CPU inference."
-        echo "For GPU acceleration, install the hardware-appropriate PyTorch build from:"
-        echo "  https://pytorch.org/get-started/locally/"
-    else
-        echo
-        echo "Local transcription installed successfully with GPU support."
-    fi
-    echo
+if [ -n "$install_qwen" ]; then
+    install_local_runtime "Qwen" install_qwen_runtime.py envqwen "Qwen Local"
+fi
+if [ -n "$install_moss" ]; then
+    install_local_runtime "MOSS" install_moss_runtime.py envmoss "MOSS Local"
 fi
 
 for script in "${scripts_to_generate[@]}"; do

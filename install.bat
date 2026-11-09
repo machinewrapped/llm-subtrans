@@ -173,14 +173,40 @@ echo.
 set "install_transcription="
 set /p install_transcription="Install local transcription? (y/n): "
 
+set "INSTALL_QWEN="
+set "INSTALL_MOSS="
 if /i "!install_transcription!"=="y" (
-    call :install_qwen_local
+    goto prompt_local_runtime
 ) else if /i "!install_transcription!"=="n" (
     echo No local transcription selected. Cloud transcription remains available.
+    goto local_transcription_chosen
 ) else (
     echo Please enter y or n.
     goto prompt_local_transcription
 )
+
+:prompt_local_runtime
+echo.
+echo Local transcription runtimes, each installed in its own environment:
+echo 1 = Qwen Local: Qwen3-ASR with word timings
+echo 2 = MOSS Local: MOSS-Transcribe-Diarize with speaker labels
+echo 3 = Both
+set "runtime_choice="
+set /p runtime_choice="Enter your choice (1/2/3): "
+
+if "!runtime_choice!"=="1" (
+    set "INSTALL_QWEN=1"
+) else if "!runtime_choice!"=="2" (
+    set "INSTALL_MOSS=1"
+) else if "!runtime_choice!"=="3" (
+    set "INSTALL_QWEN=1"
+    set "INSTALL_MOSS=1"
+) else (
+    echo Please enter 1, 2 or 3.
+    goto prompt_local_runtime
+)
+
+:local_transcription_chosen
 
 REM Create or update the virtual environment
 if not exist "envsubtrans" (
@@ -228,34 +254,8 @@ REM discovery does not emit a warning when running headless (offscreen) tests.
 for /f "delims=" %%P in ('.\envsubtrans\Scripts\python.exe -c "import PySide6, os; print(os.path.join(os.path.dirname(PySide6.__file__), 'lib', 'fonts'))"') do set "QT_FONTS_DIR=%%P"
 if not exist "!QT_FONTS_DIR!" mkdir "!QT_FONTS_DIR!" >nul 2>&1
 
-if /i "!install_transcription!"=="y" (
-    echo.
-    if exist "envqwen" (
-        echo Updating the existing local transcription environment in "envqwen".
-        echo If local transcription is not working, delete the "envqwen" folder and run this installer again.
-    ) else (
-        echo Installing Torch and the Qwen runtime into "envqwen"...
-    )
-    echo Detecting GPU hardware and installing torch...
-    .\envsubtrans\Scripts\python.exe scripts\install_qwen_runtime.py envqwen
-    set TORCH_EXIT=!errorlevel!
-
-    if !TORCH_EXIT! equ 2 (
-        echo.
-        echo Failed to install the Qwen runtime.
-        echo Skipping local transcription; cloud transcription remains available.
-    ) else if !TORCH_EXIT! equ 1 (
-        echo.
-        echo No GPU-accelerated torch variant was detected.
-        echo CPU inference is disabled by default. Enable allow_cpu_fallback in Qwen Local advanced settings to consent to slow CPU inference.
-        echo For GPU acceleration, install the hardware-appropriate PyTorch build from:
-        echo   https://pytorch.org/get-started/locally/
-    ) else (
-        echo.
-        echo Local transcription installed successfully with GPU support.
-    )
-    echo.
-)
+if defined INSTALL_QWEN call :install_local_runtime "Qwen" install_qwen_runtime.py envqwen "Qwen Local"
+if defined INSTALL_MOSS call :install_local_runtime "MOSS" install_moss_runtime.py envmoss "MOSS Local"
 
 REM Generate command scripts
 for %%s in (!SCRIPTS!) do (
@@ -311,8 +311,33 @@ set "SCRIPTS=!SCRIPTS! bedrock-subtrans"
 echo Bedrock setup complete. Default provider set to Bedrock.
 goto :eof
 
-:install_qwen_local
-REM Qwen and Torch are installed in envqwen -- do not add to EXTRAS
+:install_local_runtime
+REM Install Torch and a local transcription runtime in its own environment, not in envsubtrans.
+REM Usage: call :install_local_runtime runtime_name installer_script environment_folder provider_name
+echo.
+if exist "%~3" (
+    echo Updating the existing %~1 environment in "%~3".
+    echo If %~4 is not working, delete the "%~3" folder and run this installer again.
+) else (
+    echo Installing Torch and the %~1 runtime into "%~3"...
+)
+echo Detecting GPU hardware and installing torch...
+.\envsubtrans\Scripts\python.exe scripts\%~2 %~3
+set RUNTIME_EXIT=!errorlevel!
+
+echo.
+if !RUNTIME_EXIT! equ 2 (
+    echo Failed to install the %~1 runtime.
+    echo Skipping %~4; cloud transcription remains available.
+) else if !RUNTIME_EXIT! equ 1 (
+    echo No GPU-accelerated torch variant was detected.
+    echo CPU inference is disabled by default. Enable allow_cpu_fallback in %~4 advanced settings to consent to slow CPU inference.
+    echo For GPU acceleration, install the hardware-appropriate PyTorch build from:
+    echo   https://pytorch.org/get-started/locally/
+) else (
+    echo %~4 installed successfully with GPU support.
+)
+echo.
 goto :eof
 
 :set_env_var

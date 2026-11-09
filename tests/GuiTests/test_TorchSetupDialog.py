@@ -1,6 +1,7 @@
 import tempfile
+from dataclasses import replace
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from tests.GuiTestSupport import ConfigureOffscreenPlatform
 
@@ -11,6 +12,8 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from GuiSubtrans.Widgets.TorchSetupDialog import TorchSetupDialog
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Transcription.Torch.LocalRuntime import MOSS_RUNTIME, QWEN_RUNTIME
+from PySubtrans.Transcription.Torch.MossRuntime import MossPipArguments
 from PySubtrans.Transcription.Torch.QwenRuntime import QwenAsrPipArguments
 from PySubtrans.Transcription.Torch.Hardware import (
     DetectHardware,
@@ -69,16 +72,16 @@ class TestTorchSetupSelection(LoggedTestCase):
         cls.application = existing if isinstance(existing, QApplication) else QApplication([])
 
     def setUp(self) -> None:
-        """Treat environments as having the Qwen runtime unless a test says otherwise."""
+        """Treat environments as having the Qwen runtime unless a test says otherwise, with no existing installation found."""
         super().setUp()
-        needs_runtime = patch('GuiSubtrans.Widgets.TorchSetupDialog.NeedsQwenRuntime', return_value=False)
-        self.needs_qwen_runtime = needs_runtime.start()
-        self.addCleanup(needs_runtime.stop)
+        self.needs_qwen_runtime = Mock(return_value=False)
+        self.dependency_pip_arguments = Mock(return_value=['install', 'transformers==4.57.6'])
+        self.runtime = replace(QWEN_RUNTIME, needs_runtime=self.needs_qwen_runtime,
+                               dependency_pip_arguments=self.dependency_pip_arguments, find_existing=lambda: None)
 
     def _new_dialog(self) -> TorchSetupDialog:
-        """Create a dialog with existing-installation detection disabled."""
-        with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindExistingTorch', return_value=None):
-            return TorchSetupDialog()
+        """Create a dialog for the test runtime."""
+        return TorchSetupDialog(runtime=self.runtime)
 
     def _dispose(self, dialog : TorchSetupDialog) -> None:
         """Release a dialog after a test."""
@@ -222,13 +225,12 @@ class TestTorchSetupSelection(LoggedTestCase):
             site_packages = Path(dialog._target_dir) / 'Lib' / 'site-packages'
             dependency_arguments = ['install', 'transformers==4.57.6']
             with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=venv_python), \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=site_packages), \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QwenDependencyPipArguments', return_value=dependency_arguments) as dependency_pip_arguments:
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=site_packages):
                 qwen_command = steps[2].command()
                 dependencies_command = steps[3].command()
 
             self.assertLoggedEqual('qwen-asr installed with the venv pip', (str(venv_python), ['-m', 'pip', *QwenAsrPipArguments()]), qwen_command)
-            self.assertLoggedEqual('dependencies read from the venv', [str(site_packages)], dependency_pip_arguments.call_args.args[0])
+            self.assertLoggedEqual('dependencies read from the venv', [str(site_packages)], self.dependency_pip_arguments.call_args.args[0])
             self.assertLoggedEqual('dependencies installed with the venv pip', (str(venv_python), ['-m', 'pip', *dependency_arguments]), dependencies_command)
         finally:
             self._dispose(dialog)
@@ -239,10 +241,10 @@ class TestTorchSetupSelection(LoggedTestCase):
 
         try:
             dialog._target_dir = '/some/torch/env'
-            steps = dialog._qwen_runtime_steps()
+            steps = dialog._runtime_steps()
+            self.dependency_pip_arguments.return_value = None
 
-            with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=Path('/some/torch/env/Lib/site-packages')), \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QwenDependencyPipArguments', return_value=None):
+            with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=Path('/some/torch/env/Lib/site-packages')):
                 command = steps[1].command()
 
             self.assertLoggedIsNone('no dependencies command', command)
@@ -318,7 +320,7 @@ class TestTorchSetupSelection(LoggedTestCase):
 
         try:
             dialog._target_dir = '/some/torch/env'
-            steps = dialog._qwen_runtime_steps()
+            steps = dialog._runtime_steps()
 
             with patch.object(dialog, '_start_process') as start_process, \
                     patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=Path('/some/torch/env/bin/python')):
@@ -337,13 +339,12 @@ class TestTorchSetupSelection(LoggedTestCase):
 
         try:
             dialog._target_dir = '/some/torch/env'
-            steps = dialog._qwen_runtime_steps()
+            steps = dialog._runtime_steps()
 
             with patch.object(dialog, '_start_process') as start_process, \
                     patch.object(dialog, '_on_steps_finished') as steps_finished, \
                     patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=Path('/some/torch/env/bin/python')), \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=Path('/some/torch/env/Lib/site-packages')), \
-                    patch('GuiSubtrans.Widgets.TorchSetupDialog.QwenDependencyPipArguments', return_value=['install', 'transformers==4.57.6']):
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindTorchSitePackages', return_value=Path('/some/torch/env/Lib/site-packages')):
                 dialog._run_steps(steps)
                 dialog._on_step_finished(0, QProcess.ExitStatus.NormalExit)
                 self.assertLoggedEqual('second step started', 2, start_process.call_count)
@@ -351,5 +352,64 @@ class TestTorchSetupSelection(LoggedTestCase):
 
             self.assertLoggedEqual('environment verified once all steps finish', 1, steps_finished.call_count)
             self.assertLoggedFalse('installation not failed', dialog._installation_failed)
+        finally:
+            self._dispose(dialog)
+
+    def test_moss_installs_its_own_package(self) -> None:
+        """The MOSS wizard installs the MOSS package into its new environment."""
+        dialog = TorchSetupDialog(runtime=replace(MOSS_RUNTIME, find_existing=lambda: None))
+
+        try:
+            with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindCompatiblePython', return_value='python'), \
+                    patch.object(dialog, '_run_steps') as run_steps:
+                dialog._on_install()
+
+            steps = run_steps.call_args.args[0]
+            venv_python = Path(dialog._target_dir) / 'Scripts' / 'python.exe'
+            with patch('GuiSubtrans.Widgets.TorchSetupDialog.FindVenvPython', return_value=venv_python):
+                package_command = steps[2].command()
+
+            self.assertLoggedEqual('default folder', 'envmoss', Path(dialog._target_dir).name)
+            self.assertLoggedEqual('MOSS installed with the venv pip', (str(venv_python), ['-m', 'pip', *MossPipArguments()]), package_command)
+        finally:
+            self._dispose(dialog)
+
+    def test_environment_with_another_runtime_is_refused(self) -> None:
+        """MOSS is not installed into an environment that has the Qwen runtime, since their dependencies conflict."""
+        moss = replace(MOSS_RUNTIME, find_existing=lambda: None, needs_runtime=Mock(return_value=True))
+        dialog = TorchSetupDialog(runtime=moss)
+
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                (Path(directory) / 'torch').mkdir()
+
+                with patch('PySubtrans.Transcription.Torch.LocalRuntime.LOCAL_RUNTIMES', [replace(QWEN_RUNTIME, has_runtime=Mock(return_value=True)), moss]), \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.warning') as warning, \
+                        patch('GuiSubtrans.Widgets.TorchSetupDialog.QMessageBox.question') as question, \
+                        patch.object(dialog, '_run_steps') as run_steps:
+                    accepted = dialog._validate_and_accept(directory)
+
+            self.assertLoggedFalse('environment not accepted', accepted)
+            self.assertLoggedEqual('user is warned', 1, warning.call_count)
+            self.assertLoggedEqual('install not offered', 0, question.call_count)
+            self.assertLoggedEqual('nothing installed', 0, run_steps.call_count)
+        finally:
+            self._dispose(dialog)
+
+    def test_automatic_install_refuses_another_runtimes_folder(self) -> None:
+        """The automatic install will not put MOSS in a folder that has the Qwen runtime, since their dependencies conflict."""
+        moss = replace(MOSS_RUNTIME, find_existing=lambda: None)
+        dialog = TorchSetupDialog(runtime=moss)
+
+        try:
+            dialog._dir_field.setText('/some/envqwen')
+            with patch('PySubtrans.Transcription.Torch.LocalRuntime.LOCAL_RUNTIMES', [replace(QWEN_RUNTIME, has_runtime=Mock(return_value=True)), moss]), \
+                    patch.object(dialog, '_can_start_install', return_value=True), \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindCompatiblePython', return_value='python'), \
+                    patch.object(dialog, '_run_steps') as run_steps:
+                started = dialog._on_install()
+
+            self.assertLoggedFalse('install not started', started)
+            self.assertLoggedEqual('nothing installed', 0, run_steps.call_count)
         finally:
             self._dispose(dialog)

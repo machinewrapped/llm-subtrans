@@ -13,6 +13,7 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from pathlib import Path
 
 import regex
@@ -93,16 +94,31 @@ def ResolveEnvironmentPython(directory : str|None, default_environment : str|Non
     raise SubtitleError(_("The configured Torch environment has no Python interpreter: {}").format(directory))
 
 
-def FindExistingTorch(default_environment : str) -> str|None:
-    """Locate an existing Torch installation, or return None.
-
-    Checks the runtime's default environment next to the application first.
-    Falls back to scanning ``sys.path``.
-    """
+def FindDefaultEnvironment(default_environment : str) -> str|None:
+    """Return the runtime's default environment next to the application, if it has Torch."""
     default_path = str(ApplicationRoot() / default_environment)
-    if HasTorchPackage(Path(default_path)):
+    return default_path if HasTorchPackage(Path(default_path)) else None
+
+
+def FindExistingTorch(default_environment : str, has_runtime : Callable[[Path], bool]) -> str|None:
+    """Locate an existing Torch environment for a runtime, or return None.
+
+    The runtime's default environment next to the application is offered even without the runtime, so a partial install can be completed.
+    The Torch environment on ``sys.path`` is only offered if it has the runtime, since it may belong to another runtime or the application.
+    """
+    default_path = FindDefaultEnvironment(default_environment)
+    if default_path is not None:
         return default_path
 
+    path_environment = FindTorchOnPath()
+    if path_environment is not None and has_runtime(Path(path_environment)):
+        return path_environment
+
+    return None
+
+
+def FindTorchOnPath() -> str|None:
+    """Return the environment that provides Torch on ``sys.path``, or None."""
     spec = importlib.util.find_spec('torch')
     if spec and spec.origin:
         torch_path = Path(spec.origin).parent

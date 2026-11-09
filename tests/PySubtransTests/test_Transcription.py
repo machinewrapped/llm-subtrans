@@ -242,6 +242,27 @@ class TestAudioChunker(LoggedTestCase):
                 actual = [(chunk.start.total_seconds(), chunk.end.total_seconds()) for chunk in chunks]
                 self.assertLoggedEqual(label, expected, actual)
 
+    def test_short_tail_never_takes_last_chunk_past_maximum(self):
+        """A short remainder joins the last chunk only if it still fits the maximum; otherwise the rest is split in two."""
+        cases = [
+            ("absorbed within the maximum", 58, [(50, 51)], 10, 60, [(0, 58)]),
+            ("split at the pause nearest the midpoint", 140, [(40, 41), (68, 69), (88, 89)], 60, 90, [(0, 68), (69, 140)]),
+            ("split at the midpoint without a pause", 140, [], 60, 90, [(0, 70), (70, 140)]),
+        ]
+        for label, duration, gaps, minimum, maximum, expected in cases:
+            with self.subTest(label=label):
+                chunker = AudioChunker(SettingsType({
+                    'min_chunk_seconds': minimum, 'max_chunk_seconds': maximum, 'lookahead_seconds': 30.0}))
+                silences = [(timedelta(seconds=start), timedelta(seconds=end)) for start, end in gaps]
+
+                with patch.object(chunker.extractor, 'GetDuration', return_value=timedelta(seconds=duration)), \
+                     patch.object(chunker.extractor, 'DetectSilencesStream', return_value=iter(silences)), \
+                     patch.object(chunker.extractor, 'ReadChunkBytes', return_value=b''):
+                    chunks = chunker.PlanChunks('fake.wav')
+
+                actual = [(chunk.start.total_seconds(), chunk.end.total_seconds()) for chunk in chunks]
+                self.assertLoggedEqual(label, expected, actual)
+
     def test_quietest_stretch_used_when_there_is_no_pause(self):
         """Without any pause the chunk ends in the quietest stretch before the cap."""
         chunker = AudioChunker(SettingsType({'min_chunk_seconds': 30.0, 'max_chunk_seconds': 60.0}))
@@ -774,24 +795,23 @@ class TestOverlongSpans(LoggedTestCase):
         return TranscriptionSegment(start=chunk.start, end=chunk.end, text="monologue",
                                     language="Chinese", parts=[part])
 
-    def test_long_part_flags_warning(self):
+    def test_long_part_flagged(self):
         """Untimed engine spans beyond the line cap are flagged, not split."""
         builder = self._builder()
-        with self.assertLogs(level=logging.WARNING):
-            lines = builder.LinesForSegment(self._part_segment(20.0))
-            flagged = builder.WarnIfOverlong(lines[0])
+        lines = builder.LinesForSegment(self._part_segment(20.0))
+        flagged = builder.IsOverlong(lines[0])
 
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("span kept", timedelta(seconds=120), lines[0].end)
         self.assertLoggedEqual("flagged", True, flagged)
 
-    def test_short_part_no_warning(self):
-        """Ordinary parts pass without warnings."""
+    def test_short_part_not_flagged(self):
+        """Ordinary parts are not flagged."""
         builder = self._builder()
         lines = builder.LinesForSegment(self._part_segment(3.0))
 
         self.assertLoggedEqual("line count", 1, len(lines))
-        self.assertLoggedEqual("flagged", False, builder.WarnIfOverlong(lines[0]))
+        self.assertLoggedEqual("flagged", False, builder.IsOverlong(lines[0]))
 
     def test_same_speaker_part_fragments_merge(self):
         """Fragments the provider segmented for us are still reunited when one speaker owns both."""
@@ -892,7 +912,7 @@ class TestOverlongSpans(LoggedTestCase):
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("duration", timedelta(seconds=60), lines[0].end - lines[0].start)
 
-    def test_timed_line_no_warning(self):
+    def test_timed_line_not_flagged(self):
         """Word-timed lines are already capped, so they never flag."""
         builder = self._builder()
         chunk = AudioChunk(start=timedelta(seconds=100), end=timedelta(seconds=160))
@@ -901,7 +921,7 @@ class TestOverlongSpans(LoggedTestCase):
         lines = builder.LinesForSegment(segment)
 
         self.assertLoggedEqual("line count", 1, len(lines))
-        self.assertLoggedEqual("flagged", False, builder.WarnIfOverlong(lines[0]))
+        self.assertLoggedEqual("flagged", False, builder.IsOverlong(lines[0]))
 
     def test_boundary_not_flagged(self):
         """A line exactly at the cap is fine; only overruns flag."""
@@ -909,7 +929,7 @@ class TestOverlongSpans(LoggedTestCase):
         line = TranscriptionSegment(start=timedelta(seconds=100), end=timedelta(seconds=104),
                                     text="exactly four seconds")
 
-        self.assertLoggedEqual("flagged", False, builder.WarnIfOverlong(line))
+        self.assertLoggedEqual("flagged", False, builder.IsOverlong(line))
 
 
 def _part(text : str, start : float, end : float, speaker : str|None = None) -> TranscriptionSegment:
@@ -1013,9 +1033,8 @@ class TestPartsFirst(LoggedTestCase):
         parts = [_part("要不要跳进去？", 0.0, 19.0)]
         words = [_word("别的", 1.0, 1.8), _word("东西", 1.8, 2.5)]
         builder = _default_builder()
-        with self.assertLogs(level=logging.WARNING):
-            lines = self._lines(parts, words, builder)
-            flagged = builder.WarnIfOverlong(lines[0])
+        lines = self._lines(parts, words, builder)
+        flagged = builder.IsOverlong(lines[0])
 
         self.assertLoggedEqual("line count", 1, len(lines))
         self.assertLoggedEqual("span kept", timedelta(seconds=119.0), lines[0].end)
@@ -1071,8 +1090,7 @@ class TestPartsFirst(LoggedTestCase):
         """A line spanning the whole chunk overlaps everything, but must not chain every later line into one run."""
         parts = [_part("嗨", 0.0, 50.0), _part("你好", 1.0, 3.0),
                  _part("哎呀", 10.0, 10.5), _part("是", 10.9, 11.2), _part("我们走吧。", 20.0, 22.0)]
-        with self.assertLogs(level=logging.WARNING):
-            lines = self._lines(parts, [])
+        lines = self._lines(parts, [])
 
         texts = [line.text for line in lines]
         self.assertLoggedIn("brief fragments still pair up", "哎呀是", texts)
@@ -1993,7 +2011,7 @@ class TestTranscriptionCoordinator(LoggedTestCase):
 
         seen : list = []
         with tempfile.NamedTemporaryFile(suffix=".mkv") as media:
-            coordinator.events.segment.connect(lambda sender, segment: seen.append(segment), weak=False)
+            coordinator.events.segment.connect(lambda sender, segment, overlong: seen.append(segment), weak=False)
             coordinator.TranscribeMedia(media.name)
 
         self.assertLoggedEqual("callback count", 2, len(seen))

@@ -46,7 +46,7 @@ class TestTranscriptionRegressions(LoggedTestCase):
         run = TranscriptionRun(None)
         with patch.object(self.coordinator.extractor, 'IsSilent', return_value=False), \
                 patch.object(client, 'TranscribeChunk', return_value=TranscriptionResult(text='', cost=0.125)):
-            result, provider_responded = self.coordinator._transcribe_audio(run, client, chunk, b'audio')
+            result, provider_responded = self.coordinator._transcribe_audio(run, client, chunk, b'audio', lambda _position: None)
         self.assertLoggedEqual('no subtitle from empty text', None, result)
         self.assertLoggedTrue('provider response recorded', provider_responded)
         self.assertLoggedEqual('billed usage retained', 0.125, run.total_cost)
@@ -111,3 +111,21 @@ class TestTranscriptionRegressions(LoggedTestCase):
             TranscriptionSegment(timedelta(seconds=0.3), timedelta(seconds=1.0), '- B\n- C')])
         self.assertLoggedEqual('merged text', '- A\n- B\n- C', lines[0].text)
         self.assertLoggedEqual('mixed attribution stays empty', None, lines[0].speaker)
+
+    def test_overlong_lines_flagged_and_counted(self) -> None:
+        """Lines too long to split are flagged as they are produced, with a single warning for the run."""
+        self.provider.parts = [
+            TranscriptionSegment(timedelta(seconds=0), timedelta(seconds=12), 'first long span', speaker='S01'),
+            TranscriptionSegment(timedelta(seconds=14), timedelta(seconds=26), 'second long span', speaker='S02'),
+            TranscriptionSegment(timedelta(seconds=30), timedelta(seconds=32), 'a short line', speaker='S01'),
+        ]
+        stub_media(self, self.coordinator, [AudioChunk(timedelta(), timedelta(seconds=60))])
+        flags : list[bool] = []
+        self.coordinator.events.segment.connect(lambda sender, segment, overlong: flags.append(overlong), weak=False)
+
+        with patch.object(self.coordinator.extractor, 'IsSilent', return_value=False), \
+                self.assertLogs(level=logging.WARNING) as logs:
+            self.coordinator.TranscribeMedia('readme.md')
+
+        self.assertLoggedEqual('long lines flagged', [True, True, False], flags)
+        self.assertLoggedEqual('one warning for the run', 1, len(logs.records))

@@ -68,6 +68,7 @@ def generate_english_name(key: str) -> str:
         r"\bUri\b": "URI",
         r"\bUi\b": "UI",
         r"\bChatgpt\b": "ChatGPT",
+        r"\bMoss\b": "MOSS",
     }
     for pattern, repl in replacements.items():
         name = re.sub(pattern, repl, name)

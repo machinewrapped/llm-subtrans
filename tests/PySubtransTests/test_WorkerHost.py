@@ -21,6 +21,7 @@ class TestWorkerProtocol(LoggedTestCase):
         for message in (
                 {'type': 'load', 'checkpoint': 'model'}, {'type': 'ready', 'device': 'cpu'},
                 {'type': 'transcribe', 'path': 'a.wav'},
+                {'type': 'segment', 'segment': {'start': 0.5, 'end': 1.5, 'speaker': 'S01', 'text': 'hello'}},
                 {'type': 'result', 'text': '\u4f60\u597d\nworld', 'time_stamps': [{'start_time': 0.5}]},
                 {'type': 'error', 'error_type': 'ValueError', 'message': 'first\nsecond'},
                 {'type': 'shutdown'}):
@@ -79,6 +80,33 @@ class TestWorkerHost(LoggedTestCase):
         self.assertLoggedEqual('isolated invocation', ['environment-python', '-I', 'worker.py'], args[0])
         self.assertLoggedEqual('UTF-8 channel', 'utf-8', kwargs['encoding'])
         self.assertLoggedEqual('stderr is piped', subprocess.PIPE, kwargs['stderr'])
+
+    def test_segments_before_result(self) -> None:
+        """Segments sent while a request runs reach the callback, and the request still returns its result."""
+        segments = [{'type': 'segment', 'segment': {'start': index, 'end': index + 1, 'text': 'text'}} for index in range(2)]
+        self.process.stdout = io.StringIO(''.join(EncodeMessage(message) for message in [*segments, {'type': 'result'}]))
+        received : list[dict] = []
+
+        response = self.host.Request({'type': 'transcribe'}, 'result', received.append)
+
+        self.assertLoggedEqual('segments passed on in order', segments, received)
+        self.assertLoggedEqual('result returned', 'result', response['type'])
+
+    def test_segments_ignored_without_callback(self) -> None:
+        """A caller that does not stream still gets the result."""
+        self.process.stdout = io.StringIO(EncodeMessage({'type': 'segment', 'segment': {}}) + EncodeMessage({'type': 'result'}))
+
+        self.assertLoggedEqual('result returned', 'result', self.host.Request({'type': 'transcribe'}, 'result')['type'])
+
+    @skip_if_debugger_attached
+    def test_failed_callback_stops_worker(self) -> None:
+        """The worker is stopped if the callback fails, since its remaining output would answer the next request."""
+        self.process.stdout = io.StringIO(EncodeMessage({'type': 'segment', 'segment': {}}) + EncodeMessage({'type': 'result'}))
+
+        with self.assertRaises(RuntimeError):
+            self.host.Request({'type': 'transcribe'}, 'result', Mock(side_effect=RuntimeError('callback failure')))
+
+        self.assertLoggedFalse('worker retired', self.host.running)
 
     @skip_if_debugger_attached
     def test_early_exit(self) -> None:
@@ -140,6 +168,22 @@ class TestWorkerHost(LoggedTestCase):
 
                 self.assertLoggedEqual('forwarded record count', 1, len(logs.records))
                 self.assertLoggedEqual('forwarded log level', expected, logs.records[0].levelno)
+
+    def test_progress_bars_become_status(self) -> None:
+        """Progress bar updates go to the request's callback, not the log, and only the finished bar is logged at DEBUG."""
+        updates = ['Loading weights:   4%|3         | 25/683 [00:00<00:02, 238.14it/s]',
+                   'Loading weights: 100%|##########| 683/683 [00:00<00:00, 729.39it/s]']
+
+        # Universal newlines, as the worker's text-mode stream reads them, so each redraw is its own line
+        self.process.stderr = io.StringIO('\r'.join(updates) + '\nmodel loaded\n', newline=None)
+        statuses : list[str] = []
+        self.host._on_progress = statuses.append
+
+        with self.assertLogs(level=logging.DEBUG) as logs:
+            self.host._ForwardStderr(self.process)
+
+        self.assertLoggedEqual('each update reported', 2, len(statuses))
+        self.assertLoggedEqual('log levels', [logging.DEBUG, logging.INFO], [record.levelno for record in logs.records])
 
     def test_abort(self) -> None:
         """Abort terminates and waits without sending another protocol request."""

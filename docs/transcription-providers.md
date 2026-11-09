@@ -14,6 +14,7 @@ How the project uses each provider (requests, parsing, retries) is documented in
 | ElevenLabs Scribe v2 (direct) | Transcript plus words | Yes, attached to words | Yes, short words clipped | Yes, with diarization |
 | Gemini 3.5 Transcribe | Transcript plus words | Varies, absent in some captures | Yes | Yes, with diarization, verbatim mode only |
 | Qwen Local | Transcript plus aligned words | In the transcript only | Partial, from a forced aligner | No |
+| MOSS Local | Short segments | In the transcript | No, segment timings only | Yes, per chunk |
 | OpenAI `whisper-1` | Segments plus words | Not checked | Yes | No |
 | OpenAI `gpt-4o-transcribe-diarize` | Segments | Not checked | No, segment timings only | Yes |
 | Muse | Turns | Mostly | No, turn timings only | Yes, with diarization |
@@ -117,7 +118,7 @@ A safety filter was suggested as a cause, but the raw responses showed no safety
 
 ## Qwen Local
 
-**Source setup.** Select local transcription in `install.bat` / `install.sh`, or run `scripts/install_qwen_runtime.py envqwen` with `envsubtrans`'s Python. This creates a separate venv and installs Torch and Qwen there. Source runs automatically prefer `envqwen` in the project root unless an explicit Torch installation directory is configured. Older installs with Qwen in the active app environment still work when `envqwen` is absent.
+**Source setup.** Choose Qwen (or both runtimes) for local transcription in `install.bat` / `install.sh`, or run `scripts/install_qwen_runtime.py envqwen` with `envsubtrans`'s Python. This creates a separate venv and installs Torch and Qwen there. Source runs automatically prefer `envqwen` in the project root unless an explicit Torch installation directory is configured. Older installs with Qwen in the active app environment still work when `envqwen` is absent.
 
 **Models.** `Qwen/Qwen3-ASR-1.7B` by default, or `Qwen/Qwen3-ASR-0.6B`, with `Qwen/Qwen3-ForcedAligner-0.6B` for word timings. The models are about 6.1 GB in total, downloaded to the Hugging Face cache on first use.
 
@@ -132,6 +133,28 @@ A safety filter was suggested as a cause, but the raw responses showed no safety
 **Korean.** Korean alignment needs `soynlp`, which the local transcription setup installs with `qwen-asr`. In an environment prepared by hand without it, Korean is split on spaces instead of into morphemes, so the timings are coarser.
 
 **Speed.** About 18 s per 30-second chunk with the 1.7B model and aligner on one CUDA machine, at about 33% GPU utilisation. That is roughly ten times slower than MAI.
+
+## MOSS Local
+
+**Source setup.** Choose MOSS (or both runtimes) for local transcription in `install.bat` / `install.sh`, or run `scripts/install_moss_runtime.py envmoss` with `envsubtrans`'s Python. This creates a separate venv and installs Torch and MOSS there. MOSS needs Transformers 5, while `qwen-asr` 0.0.6 pins Transformers 4.57.6, so the two runtimes cannot share an environment. Source runs use `envmoss` in the project root unless an environment directory is configured. Packaged builds use **Set up MOSS...** in MOSS Local's settings.
+
+**Model.** `OpenMOSS-Team/MOSS-Transcribe-Diarize` (0.9B), about 1.8 GB, at a pinned revision. MOSS is not on PyPI, so its package is installed from a GitHub archive at a pinned commit. The worker loads the model with the package's own classes rather than `trust_remote_code`. Loading in the stored dtype and then casting gives output identical to the package's own loader (checked on a 60 s clip in November 2026).
+
+**What it returns.** Segments in the form `[start][Sxx]text[end]`, each with a speaker label. There are no word timings, so each segment becomes a part. The prompt is fixed and takes no language hint.
+
+**Streaming.** The worker decodes the transcript as it is generated and sends each segment once the next one starts. Progress moves with each segment, and lines appear at each pause too long for lines to merge across, instead of when the whole chunk is finished.
+
+**Timing.** Measured against MAI on Fist of Fury (Cantonese, 93 min) and La Madre Muerta (Spanish, 111 min) in 1200 s chunks, in November 2026:
+- 97.7% and 96.0% of MAI's words fall inside a MOSS segment.
+- The median segment start is within 0.02 s of the first MAI word, with P10 to P90 between -0.12 s and +0.28 s. Ends are similar.
+- On the same comparison over the first 20 minutes, Qwen Local's start offsets had a P90 of 1.72 s.
+- Segments are short: the median is about 1.5 s and the longest 11 s.
+
+**Speakers.** Labels are per chunk, so the same person may have a different label in the next chunk. Within MAI's request windows, MOSS kept 91% of MAI's same-speaker pairs together on La Madre Muerta but only 45% on Fist of Fury, where it finds about 4 speakers per window to MAI's 2. MAI is not ground truth for speakers.
+
+**Chunk length.** The model's context is 40,960 tokens, and audio takes about 12.5 tokens per second. Single passes of 2400 s and longer stopped at about 16,500 output tokens, so the provider limits chunks to 1200 s. The chunker can run a chunk up to 30 s past the maximum to reach a pause, so the maximum chunk setting can be at most 1170 s. The defaults are 60 to 900 s. The client warns when a chunk stops at its `max_new_tokens` budget.
+
+**Speed.** On an RTX 5070 Ti in bf16, Fist of Fury took 2062 s and La Madre Muerta 862 s, with peak GPU memory of 4.3 and 3.8 GB. CPU and macOS (MPS) are unmeasured.
 
 ## OpenAI
 
@@ -158,4 +181,4 @@ No OpenAI transcription has been assessed on real media yet.
 - **Punctuation tokens.** Of the providers with captures, only MAI returns punctuation as separate timed words. Gemini and Qwen return none.
 - **Empty audio.** Music or noise returns a successful empty result from all the API providers.
 - **Zero-length words.** Gemini and ElevenLabs Scribe return words whose start and end are the same. Every client keeps them, since the start is still usable, and drops only words that end before they start.
-- **Chunk lengths are project choices.** The defaults (Qwen Local 30–60 s, OpenAI and Muse 8–60 s, OpenRouter 30–120 s, chunked ElevenLabs 10–15 minutes, Gemini 10–15 minutes) were chosen by the project. ElevenLabs accepts files of up to 5 GB, and can send the whole clip in one request.
+- **Chunk lengths are project choices.** The defaults (Qwen Local 30–60 s, MOSS Local 1–15 minutes, OpenAI and Muse 8–60 s, OpenRouter 30–120 s, chunked ElevenLabs 10–15 minutes, Gemini 10–15 minutes) were chosen by the project. ElevenLabs accepts files of up to 5 GB, and can send the whole clip in one request.

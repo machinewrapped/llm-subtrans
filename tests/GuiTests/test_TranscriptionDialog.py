@@ -1,6 +1,7 @@
 """Exercise synchronous transcription settings and result handling."""
 import logging
 import os
+from datetime import timedelta
 from unittest.mock import patch
 
 from tests.GuiTestSupport import ConfigureOffscreenPlatform
@@ -28,6 +29,7 @@ from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.Transcription.AudioExtractor import AudioTrack
 from PySubtrans.Transcription.TranscriptionProvider import OptionsScope, TranscriptionProvider
 from PySubtrans.Transcription.TranscriptionOutcome import TranscriptionStatus
+from PySubtrans.Transcription.TranscriptionSegment import TranscriptionSegment
 from tests.PySubtransTests.test_Transcription import FakeTranscriptionProvider
 
 
@@ -155,6 +157,20 @@ class TestTranscriptionRunEvidence(LoggedTestCase):
         command.audioProgressed.connect(dialog._on_audio_progress)
         command.segmented.connect(dialog._on_segment)
         command.commandCompleted.connect(dialog._on_command_completed)
+
+    def test_dialogue_turns_keep_their_lines(self) -> None:
+        """A line with several dialogue turns shows each turn on its own line in the results pane, highlighted or not."""
+        with patch.object(TranscriptionDialog, '_refresh_providers'):
+            dialog = TranscriptionDialog(Options())
+        try:
+            segment = TranscriptionSegment(timedelta(seconds=1), timedelta(seconds=3), "- Who is it?\n- It's me.")
+            for overlong in (False, True):
+                dialog.results_view.clear()
+                dialog._on_segment(segment, overlong)
+                self.assertLoggedEqual('lines shown', 2, len(dialog.results_view.toPlainText().splitlines()), input_value=overlong)
+        finally:
+            dialog.deleteLater()
+            self.application.processEvents()
 
     def test_completion_records_dependency_evidence(self) -> None:
         """A completed run persists proven dependency facts for future sessions."""

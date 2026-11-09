@@ -7,7 +7,7 @@ from PySide6.QtCore import Qt, QModelIndex, QRecursiveMutex, QMutexLocker, Signa
 from PySide6.QtGui import QStandardItemModel, QStandardItem
 
 from GuiSubtrans.ViewModel.BatchItem import BatchItem
-from GuiSubtrans.ViewModel.LineItem import LineItem
+from GuiSubtrans.ViewModel.LineItem import LineDurationLimits, LineItem
 from GuiSubtrans.ViewModel.SceneItem import SceneItem
 from GuiSubtrans.ViewModel.ViewModelError import ViewModelError
 
@@ -38,9 +38,10 @@ class ProjectViewModel(QStandardItemModel):
     """
     updatesPending = Signal()
 
-    def __init__(self):
+    def __init__(self, duration_limits : LineDurationLimits|None = None):
         super().__init__()
         self.model : dict[int, SceneItem] = {}
+        self.duration_limits : LineDurationLimits = duration_limits or LineDurationLimits()
         self.updates : list[Callable[[ProjectViewModel], None]] = []
         self.update_lock = QRecursiveMutex()
         self.debug_view : bool = os.environ.get("DEBUG_MODE") == "1"
@@ -136,6 +137,8 @@ class ProjectViewModel(QStandardItemModel):
                 'start': line.txt_start,
                 'end': line.txt_end,
                 'duration': line.txt_duration,
+                'duration_seconds': line.duration.total_seconds(),
+                'duration_check': self.duration_limits.Classify(line.duration).value,
                 'gap': TimedeltaToText(line.start - gap_start) if gap_start else "",
                 'text': line.text,
                 'style': line.metadata.get('style'),
@@ -185,6 +188,19 @@ class ProjectViewModel(QStandardItemModel):
                     line_item: LineItem = line_item_qt
                     if line_item.number == line_number:
                         return line_item
+
+    def SetDurationLimits(self, limits : LineDurationLimits) -> None:
+        """Check every line against new duration limits, and repaint them."""
+        if limits == self.duration_limits:
+            return
+
+        self.duration_limits = limits
+        for scene_item in self.model.values():
+            for batch_item in scene_item.batches.values():
+                for line_item in batch_item.lines.values():
+                    line_item.ApplyDurationLimits(limits)
+
+                batch_item.emitDataChanged()
 
     def GetBatchNumbers(self):
         """
@@ -456,6 +472,8 @@ class ProjectViewModel(QStandardItemModel):
                 'start': line.txt_start,
                 'end': line.txt_end,
                 'duration': line.txt_duration,
+                'duration_seconds': line.duration.total_seconds(),
+                'duration_check': self.duration_limits.Classify(line.duration).value,
                 'gap': TimedeltaToText(gap_duration),
                 'text': line.text,
                 'style': line.metadata.get('style'),

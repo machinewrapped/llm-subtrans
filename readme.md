@@ -157,9 +157,11 @@ From the GUI, click **Transcribe Audio** in the toolbar (Ctrl+R) to open a separ
 ### Local transcription
 **Qwen Local** runs Qwen3-ASR on your computer without sending audio to a transcription service. This is a beta feature.
 
-It requires a separate [PyTorch](https://pytorch.org/get-started/locally/) installation suitable for your hardware. The first run downloads about 6 GB of model weights. For packaged builds, use **Set up Qwen...** in Qwen Local's settings, which installs Torch and the Qwen runtime into a separate environment. If you set up Torch with an earlier version, run the setup again and select the same environment to add the Qwen runtime. For source installs, `install.bat` and `install.sh` create `envqwen` beside the application's `envsubtrans` environment and install the runtime there.
+It requires a separate [PyTorch](https://pytorch.org/get-started/locally/) installation suitable for your hardware. The first run downloads about 6 GB of model weights. For packaged builds, use **Set up Qwen...** in Qwen Local's settings, which installs Torch and the Qwen runtime into a separate environment. If you set up Torch with an earlier version, run the setup again and select the same environment to add the Qwen runtime. For source installs, `install.bat` and `install.sh` offer Qwen Local, MOSS Local or both, and install each runtime in its own environment beside `envsubtrans`: `envqwen` for Qwen and `envmoss` for MOSS.
 
 The source runtime installer accepts Python 3.10 or later. Qwen runs in a worker process using `envqwen`'s own interpreter, so Torch and Transformers are kept out of `envsubtrans`. With no explicit Torch directory setting, source runs prefer `envqwen` in the project root and fall back to the current interpreter for older installs that already contain Qwen.
+
+**MOSS Local** runs MOSS-Transcribe-Diarize on your computer, and labels speakers. It returns short, closely timed segments without word timings. The first run downloads about 2 GB of model weights. MOSS needs its own environment, since it uses a newer Transformers than Qwen. For packaged builds, use **Set up MOSS...** in MOSS Local's settings, which installs Torch and the MOSS runtime into a separate environment. Source installs use `envmoss`.
 
 ## Installing from source
 If you want to use the command line tools or modify the program, you will need to have Python 3.10+ and pip installed on your system, then follow these steps.
@@ -243,6 +245,15 @@ During the installing process, you can choose to input an API key for each selec
 
     The script creates `envqwen` if needed, detects your hardware, installs the appropriate Torch build there, and then installs qwen-asr and its runtime dependencies without its demo app web frameworks. Run the installer with `envsubtrans`'s Python; the target environment does not need PySubtrans installed. A different directory can be used by configuring Qwen Local's Torch installation directory setting. Existing environments with Python 3.10 or later can be reused without matching the application's Python version.
 
+6. Optionally install the MOSS runtime for local transcription with speaker labels into its own environment:
+
+    ```sh
+    ./envsubtrans/Scripts/python.exe scripts/install_moss_runtime.py envmoss  # Windows
+    ./envsubtrans/bin/python scripts/install_moss_runtime.py envmoss          # Mac/Linux
+    ```
+
+    The script creates `envmoss` if needed, installs the appropriate Torch build there, and then installs MOSS and its dependencies. MOSS Local uses `envmoss` in the project root unless its installation directory is configured.
+
 ## Usage
 The program works by dividing the subtitles up into batches and sending each one to the translation service in turn. 
 
@@ -304,6 +315,9 @@ python scripts/transcribe.py movie.mkv --apikey sk-or-... --language Japanese
 
 # Transcribe locally with Qwen3-ASR (requires Torch and the Qwen runtime)
 python scripts/transcribe.py movie.mkv --provider "Qwen Local" --language Chinese --format ass
+
+# Transcribe locally with MOSS, with speaker labels (requires the MOSS runtime)
+python scripts/transcribe.py movie.mkv --provider "MOSS Local" --format ass
 ```
 
 Transcription options:

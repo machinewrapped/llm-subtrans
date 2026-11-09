@@ -48,6 +48,8 @@ def AlignWords(text : str, words : list[WordTiming]) -> list[AlignedWord]:
 
     word_chars = ''.join(spoken)
     text_chars = ''.join(text[offset] for offset in offsets)
+    if not word_chars or not text_chars:
+        return []
 
     def longest_match(alo : int, ahi : int, blo : int, bhi : int) -> tuple[int, int, int]:
         """

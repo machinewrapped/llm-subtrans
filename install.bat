@@ -170,43 +170,30 @@ if "!provider_choice!"=="0" (
 
 echo.
 :prompt_local_transcription
-set "install_transcription="
-set /p install_transcription="Install local transcription? (y/n): "
+echo Select local transcription to install, each in its own environment:
+echo 0 = None
+echo 1 = Qwen Local: Qwen3-ASR with word timings
+echo 2 = MOSS Local: MOSS-Transcribe-Diarize with speaker labels
+echo a = All
+set "transcription_choice="
+set /p transcription_choice="Enter your choice (0/1/2/a): "
 
 set "INSTALL_QWEN="
 set "INSTALL_MOSS="
-if /i "!install_transcription!"=="y" (
-    goto prompt_local_runtime
-) else if /i "!install_transcription!"=="n" (
+if "!transcription_choice!"=="0" (
     echo No local transcription selected. Cloud transcription remains available.
-    goto local_transcription_chosen
+) else if "!transcription_choice!"=="1" (
+    set "INSTALL_QWEN=1"
+) else if "!transcription_choice!"=="2" (
+    set "INSTALL_MOSS=1"
+) else if /i "!transcription_choice!"=="a" (
+    set "INSTALL_QWEN=1"
+    set "INSTALL_MOSS=1"
 ) else (
-    echo Please enter y or n.
+    echo Please enter 0, 1, 2 or a.
+    echo.
     goto prompt_local_transcription
 )
-
-:prompt_local_runtime
-echo.
-echo Local transcription runtimes, each installed in its own environment:
-echo 1 = Qwen Local: Qwen3-ASR with word timings
-echo 2 = MOSS Local: MOSS-Transcribe-Diarize with speaker labels
-echo 3 = Both
-set "runtime_choice="
-set /p runtime_choice="Enter your choice (1/2/3): "
-
-if "!runtime_choice!"=="1" (
-    set "INSTALL_QWEN=1"
-) else if "!runtime_choice!"=="2" (
-    set "INSTALL_MOSS=1"
-) else if "!runtime_choice!"=="3" (
-    set "INSTALL_QWEN=1"
-    set "INSTALL_MOSS=1"
-) else (
-    echo Please enter 1, 2 or 3.
-    goto prompt_local_runtime
-)
-
-:local_transcription_chosen
 
 REM Create or update the virtual environment
 if not exist "envsubtrans" (

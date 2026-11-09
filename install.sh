@@ -252,40 +252,25 @@ case $provider_choice in
 esac
 
 echo
-while true; do
-    read -p "Install local transcription? (y/n): " install_transcription
-
-    case $install_transcription in
-        y|Y|n|N)
-            break
-            ;;
-        *)
-            echo "Please enter y or n."
-            ;;
-    esac
-done
+echo "Select local transcription to install, each in its own environment:"
+echo "0 = None"
+echo "1 = Qwen Local: Qwen3-ASR with word timings"
+echo "2 = MOSS Local: MOSS-Transcribe-Diarize with speaker labels"
+echo "a = All"
 
 install_qwen=""
 install_moss=""
-if [ "$install_transcription" = "y" ] || [ "$install_transcription" = "Y" ]; then
-    echo
-    echo "Local transcription runtimes, each installed in its own environment:"
-    echo "1 = Qwen Local: Qwen3-ASR with word timings"
-    echo "2 = MOSS Local: MOSS-Transcribe-Diarize with speaker labels"
-    echo "3 = Both"
-    while true; do
-        read -p "Enter your choice (1/2/3): " runtime_choice
+while true; do
+    read -p "Enter your choice (0/1/2/a): " transcription_choice
 
-        case $runtime_choice in
-            1) install_qwen=1; break ;;
-            2) install_moss=1; break ;;
-            3) install_qwen=1; install_moss=1; break ;;
-            *) echo "Please enter 1, 2 or 3." ;;
-        esac
-    done
-else
-    echo "No local transcription selected."
-fi
+    case $transcription_choice in
+        0) echo "No local transcription selected."; break ;;
+        1) install_qwen=1; break ;;
+        2) install_moss=1; break ;;
+        a|A) install_qwen=1; install_moss=1; break ;;
+        *) echo "Please enter 0, 1, 2 or a." ;;
+    esac
+done
 
 if [ ! -d "envsubtrans" ]; then
     echo

@@ -13,6 +13,7 @@ This guide maps the main components, where they live, and how they connect.
 
 - [System Overview](#system-overview)
 - [Entry Points](#entry-points)
+- [Python Library Integration](#python-library-integration)
 - [Module Structure](#module-structure)
 - [Data Organization](#data-organization)
 - [Translation Architecture](#translation-architecture)
@@ -41,6 +42,18 @@ Supports translating subtitle files and transcribing subtitles from video/audio.
 | `scripts/gui-subtrans.py` | Launches the GUI, loads persistent settings, and initializes providers |
 | `scripts/llm-subtrans.py` | Translates a subtitle file using the selected provider and model |
 | `scripts/transcribe.py` | Transcribes media through the shared transcription coordinator |
+
+## Python Library Integration
+
+`PySubtrans` is usable as a Python library independently of the GUI. The `llm-subtrans` distribution includes the core package, GUI, and scripts; GUI dependencies are optional. See `pyproject.toml` for packaging and extras.
+
+The package root, `PySubtrans/__init__.py`, exports core classes and integration helpers:
+
+- `init_options`, `init_subtitles`, and `init_project` prepare settings and subtitle data or a project.
+- `init_translation_provider` and `init_translator` prepare translation; `init_transcription_provider`, `init_transcription`, and `transcribe_media` prepare and run transcription.
+- `preprocess_subtitles` and `batch_subtitles` expose common preparation steps.
+
+Callers can use these helpers or work with the core classes directly. The package-root docstrings contain usage examples. `scripts/transcribe.py` uses the transcription helpers; the GUI and CLI also use the underlying core directly.
 
 ## Module Structure
 
@@ -104,16 +117,12 @@ For provider registration, model discovery, streaming, and provider-specific set
 Media transcription lives in `PySubtrans/Transcription/`:
 
 - `AudioExtractor` and `AudioChunker` read media audio and plan chunks.
-- `TranscriptionProvider` and `TranscriptionClient` provide pluggable speech-to-text backends in `PySubtrans/Transcription/Providers/`.
-- `WorkerHost` owns isolated local runtime processes and their JSON-line transport, forwards stderr to logging, and terminates workers on abort. Standalone scripts in `Transcription/Workers/` ship as data files and import no application modules.
-- `QwenLocalClient` shares one Qwen worker across chunks, replaces it when load settings change, and converts raw transcripts and word stamps into application results. `Torch/Discovery` resolves the environment's interpreter from a venv root or site-packages path; source runs prefer the runtime's default environment beside the application, then fall back to the current interpreter.
-- `MossLocalClient` does the same for MOSS, in its own environment, and converts MOSS's speaker-labelled segments into parts. Its worker streams each segment as soon as it is complete, and the client passes them on as parts while the chunk is still being transcribed. `Torch/MossRuntime` pins the MOSS package, model revision and dependencies.
-- `Torch/LocalRuntime` describes each runtime (Qwen, MOSS) for the GUI's `TorchSetupDialog`, which installs a runtime into its own environment from that provider's setup button.
-- `scripts/install_qwen_runtime.py` prepares the source runtime in `envqwen`, separate from the application's `envsubtrans`. It shares venv preparation and hardware-specific Torch installation with `scripts/install_torch.py`, then installs Qwen using the target environment's metadata and pip. `scripts/install_moss_runtime.py` does the same for MOSS in `envmoss`.
+- `TranscriptionProvider` and `TranscriptionClient` provide pluggable speech-to-text backends in `PySubtrans/Transcription/Providers/`. Each provider declares whether it runs in the cloud or locally, which the GUI uses to group provider selectors.
+- Local providers use `WorkerHost` and standalone scripts in `Transcription/Workers/` to run models in separate environments. `Transcription/Torch/` describes and discovers those runtimes; `scripts/install_qwen_runtime.py`, `scripts/install_moss_runtime.py`, and the GUI's `TorchSetupDialog` prepare them.
 - `TranscriptionLineBuilder` assembles timed subtitle lines. `TranscriptCutter`, `UtteranceSplitter`, `WordAlignment`, and `LineMerger` support segmentation, timing, and line assembly.
-- `TranscriptionCoordinator` plans chunks, calls the selected provider client, applies the resume/abort/failure policy, returns a `TranscriptionOutcome`, and emits progress, audio-progress, and segment events. Expected failures are reported in the outcome. For clients that stream parts, `StreamedChunk` releases them as lines at pauses no line can merge across, and each part reports audio progress within the chunk.
+- `TranscriptionCoordinator` plans chunks, calls the selected provider client, handles resume, abort and failure, and reports outcomes and progress. It can also process streamed segments as they arrive.
 
-The package-root helpers `init_transcription` and `transcribe_media`, which `scripts/transcribe.py` uses, and the GUI's `TranscribeMediaCommand` drive the same coordinator. For capture and replay tools used to tune line assembly, see [transcription-tuning.md](transcription-tuning.md). What each provider returns and how it behaves on real media is recorded in [transcription-providers.md](transcription-providers.md). `Provider_QwenLocal` and `Provider_MossLocal` run their models in their own environment's Python. The legacy in-process `Torch/Runtime`, ABI validation, and packaging compatibility machinery remain for a separate cleanup phase; see [torch-packaging.md](torch-packaging.md) for those packaging details.
+The package-root helpers `init_transcription` and `transcribe_media`, which `scripts/transcribe.py` uses, and the GUI's `TranscribeMediaCommand` drive the same coordinator. See [transcription-tuning.md](transcription-tuning.md) for capture and replay tools, [transcription-providers.md](transcription-providers.md) for provider behavior, and [torch-packaging.md](torch-packaging.md) for runtime packaging.
 
 ## Command-Line Architecture
 

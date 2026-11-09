@@ -26,6 +26,12 @@ class OptionsScope(str, Enum):
     PER_RUN = "per_run"
 
 
+class TranscriptionProviderKind(Enum):
+    """Where a transcription provider runs."""
+    Cloud = "cloud"
+    Local = "local"
+
+
 class TranscriptionProvider:
     """
     Base class for transcription service providers.
@@ -35,6 +41,8 @@ class TranscriptionProvider:
     from translation ones. API keys are shared at the Options level instead
     (see ResolveProviderSettings).
     """
+    kind : TranscriptionProviderKind = TranscriptionProviderKind.Cloud
+
     # Optional no-key walkthrough; keyed providers define information_noapikey
     information_noapikey : str|None = None
 

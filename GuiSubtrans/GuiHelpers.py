@@ -13,6 +13,7 @@ from PySubtrans.Helpers.Resources import GetResourcePath
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.SubtitleFormatRegistry import SubtitleFormatRegistry
 from PySubtrans.Transcription.AudioExtractor import SUPPORTED_MEDIA_EXTENSIONS
+from PySubtrans.Transcription.TranscriptionProvider import TranscriptionProvider, TranscriptionProviderKind
 from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
 class FileKind(Enum):
@@ -48,6 +49,24 @@ def GetProviderDropdownValues(provider_names : list[str]) -> list[str|DropdownHe
             values.extend(groups[kind])
 
     return values
+
+def GetTranscriptionProviderDropdownValues(provider_names : list[str]) -> list[str|DropdownHeader]:
+    """Group transcription providers by where they run."""
+    providers = TranscriptionProvider.get_providers()
+    groups : dict[TranscriptionProviderKind, list[str]] = {}
+    for name in provider_names:
+        groups.setdefault(providers[name].kind, []).append(name)
+
+    if len(groups) < 2:
+        return list(provider_names)
+
+    values : list[str|DropdownHeader] = []
+    for kind, heading in ((TranscriptionProviderKind.Cloud, _("Cloud")), (TranscriptionProviderKind.Local, _("Local"))):
+        if kind in groups:
+            values.append(DropdownHeader(heading))
+            values.extend(groups[kind])
+    return values
+
 
 def GetThemeNames():
     themes = []

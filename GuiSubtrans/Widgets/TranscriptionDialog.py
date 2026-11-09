@@ -760,9 +760,10 @@ class TranscriptionDialog(QDialog):
         start = TimedeltaToText(segment.start) or ""
         end = TimedeltaToText(segment.end) or ""
         speaker = f"[{segment.speaker}] " if segment.speaker else ""
-        line = html.escape(f"[{start} --> {end}] {speaker}{segment.text}")
+        line = html.escape(f"[{start} --> {end}] {speaker}{segment.text}").replace('\n', '<br>')
 
-        # Every line is a span, so the pane always reads it as rich text and shows escaped characters as themselves
+        # Every line is a span, so the pane always reads it as rich text and shows escaped characters as themselves.
+        # Rich text collapses newlines, so dialogue turns are kept on their own lines with explicit breaks.
         if overlong:
             duration = (segment.end - segment.start).total_seconds()
             label = html.escape(_("({:.1f}s)").format(duration))

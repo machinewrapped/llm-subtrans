@@ -103,4 +103,4 @@ def LocalRuntimeForOption(option : type) -> LocalRuntime|None:
 
 def OtherRuntimesIn(runtime : LocalRuntime, root : Path) -> list[LocalRuntime]:
     """Other runtimes installed in an environment, which installing this one could break."""
-    return [other for other in LOCAL_RUNTIMES if other is not runtime and other.has_runtime(root)]
+    return [other for other in LOCAL_RUNTIMES if other.name != runtime.name and other.has_runtime(root)]

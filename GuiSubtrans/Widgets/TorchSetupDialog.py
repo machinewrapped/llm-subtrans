@@ -470,6 +470,14 @@ class TorchSetupDialog(QDialog):
             self._install_error_label.setText(_("Choose an installation folder before continuing."))
             return False
 
+        # Installing into another runtime's environment would replace dependency versions that runtime needs
+        others = OtherRuntimesIn(self.runtime, Path(target_dir).expanduser())
+        if others:
+            self._install_error_label.setText(
+                _("This folder has the {other} runtime installed. {runtime} needs an environment of its own, so choose another folder.").format(
+                    other=others[0].name, runtime=self.runtime.name))
+            return False
+
         # Find a Python interpreter to create the venv with
         python = FindCompatiblePython()
         if not python:

@@ -395,3 +395,21 @@ class TestTorchSetupSelection(LoggedTestCase):
             self.assertLoggedEqual('nothing installed', 0, run_steps.call_count)
         finally:
             self._dispose(dialog)
+
+    def test_automatic_install_refuses_another_runtimes_folder(self) -> None:
+        """The automatic install will not put MOSS in a folder that has the Qwen runtime, since their dependencies conflict."""
+        moss = replace(MOSS_RUNTIME, find_existing=lambda: None)
+        dialog = TorchSetupDialog(runtime=moss)
+
+        try:
+            dialog._dir_field.setText('/some/envqwen')
+            with patch('PySubtrans.Transcription.Torch.LocalRuntime.LOCAL_RUNTIMES', [replace(QWEN_RUNTIME, has_runtime=Mock(return_value=True)), moss]), \
+                    patch.object(dialog, '_can_start_install', return_value=True), \
+                    patch('GuiSubtrans.Widgets.TorchSetupDialog.FindCompatiblePython', return_value='python'), \
+                    patch.object(dialog, '_run_steps') as run_steps:
+                started = dialog._on_install()
+
+            self.assertLoggedFalse('install not started', started)
+            self.assertLoggedEqual('nothing installed', 0, run_steps.call_count)
+        finally:
+            self._dispose(dialog)

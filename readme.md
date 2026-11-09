@@ -118,6 +118,13 @@ https://www.atlascloud.ai/privacy
 
 Models are named provider/model and grouped by provider, e.g. `openai/gpt-6-luna`, which is selected by default. Image generation models are excluded.
 
+#### Runcrate
+https://runcrate.ai/privacy
+
+[Runcrate](https://runcrate.ai) serves open-weight models through an OpenAI-compatible API. You will need a [Runcrate API key](https://runcrate.ai/dashboard/api-keys) and sufficient account credit to use the service (the app will look for RUNCRATE_API_KEY in the environment if this is not provided).
+
+Models are named maker/model and grouped by maker, e.g. `deepseek-ai/DeepSeek-V4.1-Flash`, which is selected by default. Speech, embedding, image and moderation models are excluded.
+
 ### Cloud platforms
 
 #### Amazon Bedrock

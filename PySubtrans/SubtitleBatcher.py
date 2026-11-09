@@ -16,8 +16,7 @@ class SubtitleBatcher:
         self.scene_threshold : timedelta = timedelta(seconds=scene_threshold_seconds)
 
     def BatchSubtitles(self, lines : list[SubtitleLine]) -> list[SubtitleScene]:
-        if self.min_batch_size > self.max_batch_size:
-            raise ValueError("min_batch_size must be less than max_batch_size.")
+        self._check_batch_sizes()
 
         scenes : list[SubtitleScene] = []
         current_lines : list[SubtitleLine] = []
@@ -69,6 +68,9 @@ class SubtitleBatcher:
         """
         Divide the lines at the largest gap until there is no batch larger than the maximum batch size
         """
+        # SubtitleBuilder calls this directly, so check here too: the split cannot progress if min exceeds max
+        self._check_batch_sizes()
+
         num_lines = len(lines)
         batches : list[list[SubtitleLine]] = []
 
@@ -105,3 +107,10 @@ class SubtitleBatcher:
             ranges.append((start, split_index))
 
         return batches
+
+    def _check_batch_sizes(self) -> None:
+        """
+        Reject settings where the minimum batch size exceeds the maximum
+        """
+        if self.min_batch_size > self.max_batch_size:
+            raise ValueError("min_batch_size must be less than max_batch_size.")

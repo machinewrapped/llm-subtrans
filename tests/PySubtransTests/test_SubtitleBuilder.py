@@ -5,6 +5,7 @@ from PySubtrans.SubtitleBuilder import SubtitleBuilder
 from PySubtrans.SubtitleLine import SubtitleLine
 from PySubtrans.Subtitles import Subtitles
 from PySubtrans.Helpers.TestCases import LoggedTestCase
+from PySubtrans.Helpers.Tests import skip_if_debugger_attached
 
 
 class TestSubtitleBuilder(LoggedTestCase):
@@ -281,6 +282,33 @@ class TestSubtitleBuilder(LoggedTestCase):
                 len(batch.originals),
                 1,
             )
+
+    def test_long_scene_with_equal_gaps(self):
+        """Test splitting a scene long enough to exceed the recursion limit of a recursive split."""
+        line_count = 2400
+        builder = SubtitleBuilder(max_batch_size=100, min_batch_size=2)
+        for i in range(line_count):
+            builder.BuildLine(timedelta(seconds=i * 2), timedelta(seconds=i * 2 + 1), f"Line {i + 1}")
+
+        subtitles = builder.Build()
+        batches = subtitles.scenes[0].batches
+
+        # Equal gaps split at the first allowed index, so batches have min_batch_size lines until the rest fits
+        expected_sizes = [2] * 1150 + [100]
+        self.assertLoggedEqual("batch sizes", expected_sizes, [len(batch.originals) for batch in batches])
+
+        line_numbers = [line.number for batch in batches for line in batch.originals]
+        self.assertLoggedEqual("line numbers in order", list(range(1, line_count + 1)), line_numbers)
+
+    @skip_if_debugger_attached
+    def test_min_batch_size_greater_than_max_raises(self):
+        """Test that Build() rejects a minimum batch size larger than the maximum instead of hanging."""
+        builder = SubtitleBuilder(max_batch_size=2, min_batch_size=3)
+        for i in range(3):
+            builder.BuildLine(timedelta(seconds=i * 2), timedelta(seconds=i * 2 + 1), f"Line {i + 1}")
+
+        with self.assertRaises(ValueError):
+            builder.Build()
 
 if __name__ == '__main__':
     unittest.main()

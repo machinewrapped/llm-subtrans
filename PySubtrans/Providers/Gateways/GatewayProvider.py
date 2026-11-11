@@ -7,6 +7,7 @@ from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import env_float, env_int
 from PySubtrans.Providers.Clients.CustomClient import CustomClient
 from PySubtrans.Providers.Gateways.GatewayDefinition import GatewayDefinition, GatewayProtocol
+from PySubtrans.Providers.Gateways.GatewayInformation import GatewayInformation
 from PySubtrans.Providers.Gateways.ModelCatalogue import FamilySource
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.TranslationClient import TranslationClient
@@ -188,14 +189,13 @@ class GatewayProvider(TranslationProvider):
 
     def GetInformation(self) -> str:
         definition = self.definition
+        description = definition.description
         if not self.api_key:
-            return f'<p>To use this provider you need <a href="{definition.api_key_url}">an API key from {self.name}</a>.</p>'
-
-        information = f'<p>Select the <a href="{definition.models_url}">model</a> to use as a translator.</p>\n{definition.description}'
+            description += f'<p>To use this provider you need <a href="{definition.api_key_url}">an API key from {self.name}</a>.</p>'
         if definition.catalogue.family_source != FamilySource.Single:
-            information += '\n<p>Models are grouped by model maker to make selection easier.</p>'
+            description += '\n<p>Models are grouped by model maker to make selection easier.</p>'
 
-        return information
+        return GatewayInformation(description, definition.homepage_url, definition.models_url, definition.privacy_url, definition.terms_url)
 
     def ValidateSettings(self) -> bool:
         """

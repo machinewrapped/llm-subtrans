@@ -5,6 +5,7 @@ import os
 from PySubtrans.Helpers.Localization import _
 from PySubtrans.Options import SettingsType, env_float, env_int
 from PySubtrans.Providers.Clients.OpenRouterClient import OpenRouterClient
+from PySubtrans.Providers.Gateways.GatewayInformation import GatewayInformation
 from PySubtrans.SettingsType import GuiSettingsType, SettingsType
 from PySubtrans.TranslationClient import TranslationClient
 from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
@@ -182,9 +183,12 @@ class OpenRouterProvider(TranslationProvider):
         return sorted(family_models.keys())
 
     def GetInformation(self) -> str:
+        description = self.information
         if not self.api_key:
-            return self.information_noapikey
-        return self.information
+            description += self.information_noapikey
+
+        return GatewayInformation(description, "https://openrouter.ai/", "https://openrouter.ai/models",
+                                  "https://openrouter.ai/privacy", "https://openrouter.ai/terms")
 
     def ValidateSettings(self) -> bool:
         """

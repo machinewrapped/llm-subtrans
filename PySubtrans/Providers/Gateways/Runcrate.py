@@ -10,6 +10,9 @@ RUNCRATE = GatewayDefinition(
     default_model="deepseek-ai/DeepSeek-V4.1-Flash",
     default_family="deepseek-ai",
     api_key_url="https://runcrate.ai/dashboard/api-keys",
+    homepage_url="https://www.runcrate.ai/",
+    privacy_url="https://www.runcrate.ai/privacy",
+    terms_url="https://www.runcrate.ai/terms",
     models_url="https://runcrate.ai/inference",
     description="""
     <p>Runcrate serves open-weight models through an OpenAI-compatible API.</p>

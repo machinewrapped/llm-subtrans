@@ -10,6 +10,9 @@ ATLAS_CLOUD = GatewayDefinition(
     default_model="openai/gpt-6-luna",
     default_family="openai",
     api_key_url="https://www.atlascloud.ai/console/api-keys",
+    homepage_url="https://www.atlascloud.ai/",
+    privacy_url="https://www.atlascloud.ai/docs/privacy",
+    terms_url="https://www.atlascloud.ai/privacy",
     models_url="https://www.atlascloud.ai/models",
     description="""
     <p>Atlas Cloud exposes models from many providers through an OpenAI-compatible API.</p>

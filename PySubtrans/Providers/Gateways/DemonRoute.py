@@ -10,6 +10,9 @@ DEMONROUTE = GatewayDefinition(
     default_model="openai/gpt-oss-120b",
     default_family="openai",
     api_key_url="https://demonroute.com/login",
+    homepage_url="https://demonroute.com/",
+    privacy_url="https://demonroute.com/privacy",
+    terms_url="",  # No public terms URL has been verified yet
     models_url="https://demonroute.com/models",
     description="""
     <p>DemonRoute is a prepaid OpenAI-compatible gateway for open-weight models served by third-party hosts.</p>

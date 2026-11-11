@@ -9,6 +9,7 @@ from PySubtrans.Providers.Gateways.GatewayProvider import GatewayProvider
 from PySubtrans.Providers.Gateways.ModelCatalogue import FamilySource, ModelCatalogue
 from PySubtrans.Providers.Gateways.Opper import OPPER, OpperProvider
 from PySubtrans.Providers.Gateways.Requesty import REQUESTY, RequestyProvider
+from PySubtrans.Providers.Provider_OpenRouter import OpenRouterProvider
 from PySubtrans.SettingsType import SettingsType
 from PySubtrans.TranslationProvider import ProviderKind, TranslationProvider
 
@@ -32,6 +33,29 @@ class TestGatewayRegistration(LoggedTestCase):
     def test_gateways_report_gateway_kind(self) -> None:
         for definition in (REQUESTY, OPPER):
             self.assertLoggedEqual(f"{definition.name} kind", ProviderKind.Gateway, TranslationProvider.get_provider_kind(definition.name))
+
+
+class TestGatewayInformation(LoggedTestCase):
+    """Provider links remain accessible before and after entering an API key."""
+
+    def test_gateway_links_are_shown_with_and_without_key(self) -> None:
+        gateways = [provider for provider in TranslationProvider.get_providers().values() if issubclass(provider, GatewayProvider)]
+        self.assertLoggedGreater("registered gateways", len(gateways), 0)
+
+        for provider_class in gateways:
+            definition = provider_class.definition
+            for api_key in ('', 'test-key'):
+                provider = provider_class(SettingsType({'api_key': api_key}))
+                information = provider.GetInformation()
+                for url in (definition.homepage_url, definition.models_url, definition.privacy_url, definition.terms_url):
+                    if url:
+                        self.assertLoggedIn(f"{definition.name} information link", url, information)
+
+    def test_openrouter_links_are_shown_with_and_without_key(self) -> None:
+        for api_key in ('', 'test-key'):
+            information = OpenRouterProvider(SettingsType({'api_key': api_key})).GetInformation()
+            for url in ('https://openrouter.ai/', 'https://openrouter.ai/models', 'https://openrouter.ai/privacy', 'https://openrouter.ai/terms'):
+                self.assertLoggedIn("OpenRouter information link", url, information)
 
 
 class TestGatewayCatalogue(LoggedTestCase):

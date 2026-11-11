@@ -12,6 +12,9 @@ API_ROUTE = GatewayDefinition(
     default_model="gpt-6.1-sol",
     default_family="API Route",
     api_key_url="https://www.api-route.com/api-keys",
+    homepage_url="https://www.api-route.com/",
+    privacy_url="https://www.api-route.com/privacy-policy",
+    terms_url="https://www.api-route.com/terms-of-service",
     models_url="https://www.api-route.com/pricing",
     description="""
     <p>API Route is a paid OpenAI-compatible gateway for chat models.</p>

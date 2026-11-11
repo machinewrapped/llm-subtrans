@@ -11,6 +11,9 @@ REQUESTY = GatewayDefinition(
     default_model="openai/gpt-4o-mini",
     default_family="openai",
     api_key_url="https://app.requesty.ai/api-keys",
+    homepage_url="https://www.requesty.ai/",
+    privacy_url="https://www.requesty.ai/privacy",
+    terms_url="https://www.requesty.ai/terms",
     models_url="https://app.requesty.ai/models",
     description="""
     <p>Requesty is an OpenAI-compatible LLM gateway that provides access to many different AI models from various providers.</p>

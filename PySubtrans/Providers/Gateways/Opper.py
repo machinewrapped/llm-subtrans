@@ -10,6 +10,9 @@ OPPER = GatewayDefinition(
     default_model="gemini-3.8-flash",
     default_family="google",
     api_key_url="https://platform.opper.ai",
+    homepage_url="https://opper.ai/",
+    privacy_url="https://opper.ai/privacy-policy",
+    terms_url="https://opper.ai/terms-of-service",
     models_url="https://opper.ai/models",
     description="""
     <p>Opper is an EU-hosted AI gateway with an OpenAI-compatible API, giving access to models from many different providers.</p>

@@ -22,7 +22,10 @@ class GatewayDefinition:
     default_model : str
     default_family : str
     api_key_url : str
+    homepage_url : str
     models_url : str
+    privacy_url : str
+    terms_url : str
     description : str                               # HTML paragraph(s) shown in the provider information
     catalogue : ModelCatalogue
     protocol : GatewayProtocol = GatewayProtocol.ChatCompletions

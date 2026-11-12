@@ -10,6 +10,9 @@ UBERLLM = GatewayDefinition(
     default_model="deepseek/deepseek-v4.1-flash",
     default_family="deepseek",
     api_key_url="https://uberllm.dev/signup",
+    homepage_url="https://uberllm.dev/",
+    privacy_url="https://uberllm.dev/privacy",
+    terms_url="https://uberllm.dev/terms",
     models_url="https://uberllm.dev/models",
     description="""
     <p>UberLLM exposes models from many providers through an OpenAI-compatible API, with prepaid pay-as-you-go credit.</p>

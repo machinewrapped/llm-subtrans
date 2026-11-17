@@ -125,6 +125,13 @@ https://runcrate.ai/privacy
 
 Models are named maker/model and grouped by maker, e.g. `deepseek-ai/DeepSeek-V4.1-Flash`, which is selected by default. Speech, embedding, image and moderation models are excluded.
 
+#### UberLLM
+https://uberllm.dev/privacy
+
+[UberLLM](https://uberllm.dev) provides an OpenAI-compatible API for models from many providers, with prepaid pay-as-you-go credit. You will need an [UberLLM API key](https://uberllm.dev/signup) and sufficient account credit to use the service (the app will look for UBERLLM_API_KEY in the environment if this is not provided). Current per-model prices are listed on the [models page](https://uberllm.dev/models).
+
+Models are named provider/model and grouped by provider, e.g. `deepseek/deepseek-v4.1-flash`, which is selected by default. Unavailable models and safety classifiers are excluded.
+
 ### Cloud platforms
 
 #### Amazon Bedrock
